@@ -15,7 +15,6 @@ def run() -> int:
     from .exit_resolver import ExitCodeResolver
     from .linters import build_linters
     from .models import Report
-    from .renderer import ReportRenderer
     from .settings import load_settings
     from .staged_files import StagedFilesReader
 
@@ -64,8 +63,14 @@ def run() -> int:
     resolver = ExitCodeResolver(config)
     exit_code = resolver.resolve(report) if not dry_run else 0
 
-    renderer = ReportRenderer()
-    renderer.render(report, blocked=(exit_code == 1))
+    # ANSI report always goes to stderr (visible in terminal and hook output)
+    from .renderer import ReportRenderer
+    ReportRenderer().render(report, blocked=(exit_code == 1))
+
+    # JSON output goes to stdout when requested (consumed by VS Code extension / CI)
+    if settings.json_mode:
+        from .json_renderer import JsonRenderer
+        JsonRenderer().render(report, exit_code, repo_path=str(repo_path))
 
     return exit_code
 

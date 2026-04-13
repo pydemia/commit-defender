@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from .config import AIReviewConfig
-from .models import LintFinding, ReviewResult
+from .models import FileComment, LintFinding, ReviewResult
 from .settings import load_settings
 
 _SYSTEM_PROMPT = """\
@@ -25,11 +25,22 @@ actionable review that helps the developer understand what needs to be fixed bef
 ## Output format
 Respond ONLY with a valid JSON object matching this schema:
 {
-  "summary": "<concise narrative review, markdown allowed>",
-  "blocking": <true if you believe the code should not be committed as-is, false otherwise>
+  "summary": "<concise narrative review, markdown allowed, under 300 words>",
+  "blocking": <true if the code should not be committed as-is, false otherwise>,
+  "file_comments": [
+    {
+      "file": "<path relative to repo root, e.g. src/main.py>",
+      "line": <1-based line number from the diff; 0 for a file-level comment>,
+      "comment": "<short actionable suggestion, markdown allowed>"
+    }
+  ]
 }
 
-Do not include anything outside the JSON object.
+Rules for file_comments:
+- Only reference lines that appear in the provided diff.
+- Limit to at most 10 comments total.
+- Omit the array entirely (or use []) if there is nothing specific to annotate.
+- Do not include anything outside the JSON object.
 """
 
 
@@ -105,10 +116,20 @@ Please review the above and respond with the JSON object as instructed.
             raw = response.choices[0].message.content.strip()
             data = json.loads(raw)
 
+            file_comments = [
+                FileComment(
+                    file=fc["file"],
+                    line=int(fc.get("line", 0)),
+                    comment=fc["comment"],
+                )
+                for fc in data.get("file_comments", [])
+                if "file" in fc and "comment" in fc
+            ]
             return ReviewResult(
                 summary=data.get("summary", "(no summary)"),
                 blocking=bool(data.get("blocking", False)),
                 raw_response=raw,
+                file_comments=file_comments,
             )
 
         except AuthenticationError as e:

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # Operational flags (non-secret, passed as -e by the hook)
     cd_skip_ai: str = "0"
     cd_dry_run: str = "0"
+    cd_json: str = "0"
     cd_staged_files: str = ""
     cd_repo_path: str = "/repo"
 
@@ -57,6 +58,10 @@ class Settings(BaseSettings):
     @property
     def dry_run(self) -> bool:
         return self.cd_dry_run.strip() == "1"
+
+    @property
+    def json_mode(self) -> bool:
+        return self.cd_json.strip() == "1"
 
     def missing_azure_fields(self) -> list[str]:
         missing = []

@@ -23,12 +23,20 @@ class LintFinding:
 
 
 @dataclass
+class FileComment:
+    file: str   # repo-relative path
+    line: int   # 1-based; 0 = file-level comment
+    comment: str
+
+
+@dataclass
 class ReviewResult:
     summary: str
     findings: list[LintFinding] = field(default_factory=list)
     blocking: bool = False
     raw_response: str = ""
     is_error: bool = False  # True when review failed (always blocks commit)
+    file_comments: list[FileComment] = field(default_factory=list)
 
     @classmethod
     def skipped(cls) -> "ReviewResult":
