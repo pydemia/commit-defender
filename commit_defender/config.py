@@ -18,7 +18,7 @@ class LinterConfig(BaseModel):
 
 class AIReviewConfig(BaseModel):
     enabled: bool = True
-    model: str = "claude-sonnet-4-6"
+    model: str = "gpt-5.1"
     max_tokens: int = 1024
     blocking: bool = False
     system_prompt_suffix: str = ""

@@ -11,6 +11,7 @@ WORKDIR /build
 
 # Copy dependency manifest first for layer caching
 COPY pyproject.toml .
+COPY LICENSE .
 COPY commit_defender/ ./commit_defender/
 
 # Install into the system Python (no venv needed in a container)
@@ -40,7 +41,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy Python packages from builder stage
 COPY --from=builder /usr/local/lib/python3.12 /usr/local/lib/python3.12
-COPY --from=builder /usr/local/bin/ruff /usr/local/bin/ruff 2>/dev/null || true
 
 # Install ruff binary directly (fastest linter, self-contained)
 RUN pip install --no-cache-dir ruff

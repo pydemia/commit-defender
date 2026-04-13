@@ -8,6 +8,18 @@
 
 set -e
 
+# Credentials are loaded inside the container from (highest priority first):
+#   1. Environment variables (os.environ)
+#   2. .commit-defender.env in the repo root
+#   3. ~/.commit-defender.env (home fallback)
+HOME_ENV="${HOME}/.commit-defender.env"
+
+# Build optional home-dir mount flag
+HOME_ENV_MOUNT=""
+if [ -f "$HOME_ENV" ]; then
+    HOME_ENV_MOUNT="-v ${HOME_ENV}:/run/secrets/home.env:ro"
+fi
+
 # Resolve repo root (works in worktrees too)
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
@@ -19,33 +31,32 @@ STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
 
 # Nothing staged = nothing to check
 if [ -z "$STAGED" ]; then
-  exit 0
+    exit 0
 fi
 
 # Check docker is available
 if ! command -v docker >/dev/null 2>&1; then
-  echo "commit-defender: docker not found — skipping pre-commit checks." >&2
-  echo "Install Docker to enable commit-defender: https://docs.docker.com/get-docker/" >&2
-  exit 0
+    echo "commit-defender: docker not found — skipping pre-commit checks." >&2
+    echo "Install Docker to enable commit-defender: https://docs.docker.com/get-docker/" >&2
+    exit 0
 fi
 
-# Check the image exists locally; try to pull if not
+# Check the image exists locally
 if ! docker image inspect "${IMAGE}" >/dev/null 2>&1; then
-  echo "commit-defender: image '${IMAGE}' not found locally." >&2
-  echo "Build it with:  docker build -t ${IMAGE} <path-to-commit-defender-repo>" >&2
-  echo "Skipping pre-commit checks." >&2
-  exit 0
+    echo "commit-defender: image '${IMAGE}' not found locally." >&2
+    echo "Build it with:  docker build -t ${IMAGE} <path-to-commit-defender-repo>" >&2
+    echo "Skipping pre-commit checks." >&2
+    exit 0
 fi
 
 # Run the validator container:
-#   -v repo:ro  — mount the repo read-only
-#   1>&2        — redirect stdout → stderr (git captures stdout for commit messages)
+#   Credentials are mounted read-only — never appear in docker run args or docker inspect.
+#   Only non-secret operational vars are passed via -e.
 docker run --rm \
-  -v "${REPO_ROOT}:/repo:ro" \
-  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
-  -e CD_STAGED_FILES="${STAGED}" \
-  -e CD_REPO_PATH="/repo" \
-  "${IMAGE}" 1>&2
+    -v "${REPO_ROOT}:/repo:ro" \
+    ${HOME_ENV_MOUNT} \
+    -e CD_STAGED_FILES="${STAGED}" \
+    -e CD_REPO_PATH="/repo" \
+    "${IMAGE}" 1>&2
 
-# Forward the container's exit code to git
 exit $?

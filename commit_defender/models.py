@@ -28,14 +28,19 @@ class ReviewResult:
     findings: list[LintFinding] = field(default_factory=list)
     blocking: bool = False
     raw_response: str = ""
+    is_error: bool = False  # True when review failed (always blocks commit)
 
     @classmethod
     def skipped(cls) -> "ReviewResult":
-        return cls(summary="AI review skipped (CD_SKIP_AI=1)", blocking=False)
+        return cls(summary="AI review skipped (CD_SKIP_AI=1)", blocking=False, is_error=False)
 
     @classmethod
     def error(cls, message: str) -> "ReviewResult":
-        return cls(summary=f"AI review unavailable: {message}", blocking=False)
+        return cls(
+            summary=f"AI review unavailable: {message}",
+            blocking=True,
+            is_error=True,
+        )
 
 
 @dataclass

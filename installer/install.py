@@ -11,6 +11,16 @@ from pathlib import Path
 
 TEMPLATE_PATH = Path(__file__).parent / "hook_template.sh"
 DEFAULT_IMAGE = "commit-defender:latest"
+ENV_FILE = Path.home() / ".commit-defender.env"
+
+_ENV_TEMPLATE = """\
+# commit-defender credentials
+# This file is sourced by the pre-commit hook — keep it out of any git repo.
+AZURE_OPENAI_API_KEY=your-api-key-here
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-5.1
+AZURE_OPENAI_API_VERSION=2024-08-01-preview
+"""
 
 
 def install(
@@ -46,8 +56,18 @@ def install(
 
     print(f"commit-defender: hook installed at {hook_path}")
     print(f"  Image: {image}")
-    print(f"  Build the image: docker build -t {image} <path-to-commit-defender-repo>")
-    print(f"  Set ANTHROPIC_API_KEY in your shell to enable AI review.")
+    _ensure_env_file()
+
+
+def _ensure_env_file() -> None:
+    """Create ~/.commit-defender.env with a template if it doesn't exist."""
+    if ENV_FILE.exists():
+        print(f"  Credentials file: {ENV_FILE} (already exists)")
+    else:
+        ENV_FILE.write_text(_ENV_TEMPLATE)
+        ENV_FILE.chmod(0o600)  # owner read/write only
+        print(f"  Credentials file created: {ENV_FILE}")
+        print(f"  *** Edit it and fill in your Azure OpenAI credentials. ***")
 
 
 def uninstall(repo_path: Path) -> None:

@@ -4,7 +4,7 @@
 
 The user wants to build `commit-defender`: a Python-based AI agent that runs as a git pre-commit hook, validates staged code changes (linting, syntax, conventions), calls the Claude API for an AI review, and interrupts the commit with a human-readable report so the developer can fix issues before the commit lands.
 
-The tool must work as a self-contained Docker container — no dependency on host Python, Node, or any linter being pre-installed. The only host requirement is `docker` and the `ANTHROPIC_API_KEY` environment variable.
+The tool must work as a self-contained Docker container — no dependency on host Python, Node, or any linter being pre-installed. The only host requirements are `docker` and the Azure OpenAI environment variables (`AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`).
 
 ---
 
@@ -18,7 +18,9 @@ git commit
     │  1. collect staged files: git diff --cached --name-only --diff-filter=ACMR
     │  2. docker run --rm \
     │       -v "$(git rev-parse --show-toplevel):/repo:ro" \
-    │       -e ANTHROPIC_API_KEY \
+    │       -e AZURE_OPENAI_API_KEY \
+    │       -e AZURE_OPENAI_ENDPOINT \
+    │       -e AZURE_OPENAI_DEPLOYMENT \
     │       -e CD_STAGED_FILES="<newline-separated paths>" \
     │       commit-defender:latest  1>&2
     │
@@ -29,7 +31,7 @@ Docker container (commit-defender image)
     ├─► StagedFilesReader   resolves staged paths, routes by language
     ├─► DiffExtractor       git diff --cached per file against /repo/.git
     ├─► LinterRunner        ruff / eslint / shellcheck / markdownlint → LintFindings
-    ├─► AIReviewAgent       Claude API: diff + findings → ReviewResult
+    ├─► AIReviewAgent       Azure OpenAI API: diff + findings → ReviewResult
     ├─► ReportRenderer      formats ANSI terminal report to stderr
     └─► ExitCodeResolver    exit 0 (pass) or exit 1 (blocked)
     │
@@ -106,7 +108,7 @@ commit-defender/
 | JS/TS linting | `eslint` v9 flat config | De facto standard, JSON output, embedded fallback config |
 | Shell linting | `shellcheck` | Single binary, apt-installable, JSON output |
 | Markdown | `markdownlint-cli2` | Lightweight, JSON output |
-| AI model | `claude-sonnet-4-6` | Fast, capable, configurable in yaml |
+| AI model | Azure OpenAI (`gpt-5.1`) | Enterprise-grade, configurable deployment via env vars |
 | Container base | `python:3.12-slim-bookworm` | Slim Debian, multi-stage to keep final image lean |
 | Package mgr | `uv` | Fast, lockfile-based, good Docker layer caching |
 | Config format | YAML + Pydantic | Human-readable, validated at load time |
@@ -135,13 +137,13 @@ class Report:
     review: ReviewResult; duration_ms: int
 ```
 
-### `ai_agent.py` — Claude API Integration
+### `ai_agent.py` — Azure OpenAI Integration
 
-- Uses `anthropic` Python SDK (prompt caching on system prompt)
-- System prompt: static role definition (cached, reduces latency/cost)
-- User message: `<diff>` + `<lint_findings>` → asks for JSON ReviewResult
+- Uses `openai` Python SDK with `AzureOpenAI` client
+- System prompt: static role definition sent as `{"role": "system"}` message
+- User message: `<diff>` + `<lint_findings>` → asks for JSON via `response_format: json_object`
 - Env var `CD_SKIP_AI=1` skips AI call (offline/CI mode)
-- Model configurable via `commit-defender.yaml` (default: `claude-sonnet-4-6`)
+- Deployment configurable via `AZURE_OPENAI_DEPLOYMENT` env var or `ai_review.model` in config (default: `gpt-5.1`)
 
 ### `installer/hook_template.sh`
 
@@ -154,7 +156,10 @@ STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
 [ -z "$STAGED" ] && exit 0  # nothing staged
 docker run --rm \
   -v "${REPO_ROOT}:/repo:ro" \
-  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
+  -e AZURE_OPENAI_API_KEY="${AZURE_OPENAI_API_KEY}" \
+  -e AZURE_OPENAI_ENDPOINT="${AZURE_OPENAI_ENDPOINT}" \
+  -e AZURE_OPENAI_DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT}" \
+  -e AZURE_OPENAI_API_VERSION="${AZURE_OPENAI_API_VERSION}" \
   -e CD_STAGED_FILES="${STAGED}" \
   "${IMAGE}" 1>&2
 exit $?
@@ -195,7 +200,10 @@ Eight skill files in `.claude/skills/`, each self-contained and buildable indepe
 
 | Variable | Source | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | host env | Claude API auth |
+| `AZURE_OPENAI_API_KEY` | host env | Azure OpenAI API key |
+| `AZURE_OPENAI_ENDPOINT` | host env | `https://<resource>.openai.azure.com/` |
+| `AZURE_OPENAI_DEPLOYMENT` | host env | Deployment name (e.g. `gpt-5.1`) — overrides `ai_review.model` |
+| `AZURE_OPENAI_API_VERSION` | optional | API version (default: `2024-08-01-preview`) |
 | `CD_STAGED_FILES` | hook | newline-separated staged file paths |
 | `CD_REPO_PATH` | hook | always `/repo` inside container |
 | `CD_SKIP_AI` | optional | skip AI call (offline/CI) |
@@ -219,7 +227,7 @@ linters:
 
 ai_review:
   enabled: true
-  model: claude-sonnet-4-6
+  model: gpt-5.1              # Azure deployment name (overridden by AZURE_OPENAI_DEPLOYMENT)
   max_tokens: 1024
   blocking: false            # AI findings are advisory by default
   system_prompt_suffix: ""   # project-specific context injection

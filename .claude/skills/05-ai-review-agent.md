@@ -1,37 +1,36 @@
 # Skill 05 — AI Review Agent
 
 ## Purpose
-Implement `commit_defender/ai_agent.py`: send the staged diff + linter findings to Claude and get a structured, actionable review comment back.
+Implement `commit_defender/ai_agent.py`: send the staged diff + linter findings to Azure OpenAI and get a structured, actionable review comment back.
 
 ---
 
-## Anthropic SDK setup
+## Azure OpenAI SDK setup
 
 ```python
-import anthropic
+from openai import AzureOpenAI
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = AzureOpenAI(
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_version=os.environ.get("AZURE_OPENAI_API_VERSION", "2024-08-01-preview"),
+)
 ```
 
-Install: `pip install anthropic` (already in `pyproject.toml` dependencies).
+Install: `pip install openai` (already in `pyproject.toml` dependencies).
 
 ---
 
-## Prompt caching
+## Required environment variables
 
-The system prompt is large (static role definition) and identical on every commit. Cache it to avoid re-billing it:
+| Variable | Description |
+|---|---|
+| `AZURE_OPENAI_API_KEY` | API key from your Azure OpenAI resource |
+| `AZURE_OPENAI_ENDPOINT` | `https://<resource-name>.openai.azure.com/` |
+| `AZURE_OPENAI_DEPLOYMENT` | Deployment name (e.g. `gpt-5.1`, `gpt-5.1-mini`) — overrides `ai_review.model` in config |
+| `AZURE_OPENAI_API_VERSION` | Optional, defaults to `2024-08-01-preview` |
 
-```python
-system=[
-    {
-        "type": "text",
-        "text": SYSTEM_PROMPT,
-        "cache_control": {"type": "ephemeral"},  # ← prompt caching
-    }
-]
-```
-
-This reduces latency from ~2s to ~0.5s after the first call, and saves ~80% of input token costs on the system prompt.
+These are passed from the host shell into the container by the pre-commit hook (`-e VAR="${VAR}"`).
 
 ---
 
@@ -58,6 +57,28 @@ Respond ONLY with a valid JSON object:
 
 ---
 
+## JSON mode
+
+Azure OpenAI supports `response_format={"type": "json_object"}`, which guarantees valid JSON output and removes the need for fragile JSON parsing heuristics:
+
+```python
+response = client.chat.completions.create(
+    model=deployment,
+    max_tokens=config.max_tokens,
+    response_format={"type": "json_object"},
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ],
+)
+raw = response.choices[0].message.content.strip()
+data = json.loads(raw)
+```
+
+Note: `json_object` mode requires the prompt to explicitly mention JSON output (which the system prompt does).
+
+---
+
 ## User message structure
 
 ```python
@@ -80,19 +101,14 @@ Please review and respond with the JSON object.
 
 ---
 
-## Full API call
+## Deployment vs model name
 
-```python
-response = client.messages.create(
-    model=config.model,            # "claude-sonnet-4-6"
-    max_tokens=config.max_tokens,  # 1024
-    system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-    messages=[{"role": "user", "content": user_message}],
-)
-raw = response.content[0].text.strip()
-data = json.loads(raw)
-return ReviewResult(summary=data["summary"], blocking=data.get("blocking", False), raw_response=raw)
-```
+In Azure OpenAI, the `model` parameter in API calls refers to the **deployment name** (not the underlying model family). The deployment name is set when you deploy a model in Azure AI Studio and can be anything (e.g., `my-gpt4o-prod`).
+
+Priority for resolving the deployment name:
+1. `AZURE_OPENAI_DEPLOYMENT` env var (highest priority)
+2. `ai_review.model` in `commit-defender.yaml`
+3. Default: `gpt-5.1`
 
 ---
 
@@ -102,48 +118,37 @@ return ReviewResult(summary=data["summary"], blocking=data.get("blocking", False
 |---|---|
 | `CD_SKIP_AI=1` | Return `ReviewResult.skipped()` immediately |
 | `config.enabled=False` | Same as above |
-| `ANTHROPIC_API_KEY` missing | Return `ReviewResult.error("ANTHROPIC_API_KEY not set")` |
+| `AZURE_OPENAI_API_KEY` missing | Return `ReviewResult.error("AZURE_OPENAI_API_KEY not set")` |
+| `AZURE_OPENAI_ENDPOINT` missing | Return `ReviewResult.error("AZURE_OPENAI_ENDPOINT not set")` |
 | `json.JSONDecodeError` | Return `ReviewResult.error("Could not parse AI response: ...")` |
 | Any other exception | Return `ReviewResult.error(str(e))` |
 
-Never raise exceptions from this module — always return a `ReviewResult` so the pipeline continues and can still report linter findings.
-
----
-
-## Model selection
-
-Configurable in `commit-defender.yaml`:
-
-```yaml
-ai_review:
-  model: claude-sonnet-4-6        # fast, default
-  # model: claude-opus-4-6        # higher quality, ~4× slower
-  # model: claude-haiku-4-5-20251001  # fastest, cheapest
-```
+Never raise exceptions from this module — always return a `ReviewResult`.
 
 ---
 
 ## Blocking behavior
 
-By default (`ai_review.blocking: false`), the AI review is advisory — it never causes a commit abort on its own. If `ai_review.blocking: true`, then `ReviewResult.blocking=True` from Claude will cause exit code 1.
-
-This prevents a flaky AI from becoming a hard gate. Users opt in to hard blocking deliberately.
+By default (`ai_review.blocking: false`), the AI review is advisory — it never causes a commit abort on its own. If `ai_review.blocking: true` is set, then `ReviewResult.blocking=True` from the model will cause exit code 1.
 
 ---
 
 ## Testing (unit)
 
-Mock `anthropic.Anthropic` to avoid real API calls:
+Mock `openai.AzureOpenAI` to avoid real API calls:
 
 ```python
 from unittest.mock import MagicMock, patch
 
-mock_client = MagicMock()
-mock_client.messages.create.return_value = MagicMock(
-    content=[MagicMock(text='{"summary": "Looks good.", "blocking": false}')]
-)
+mock_message = MagicMock()
+mock_message.content = '{"summary": "Looks good.", "blocking": false}'
+mock_response = MagicMock()
+mock_response.choices = [MagicMock(message=mock_message)]
 
-with patch("anthropic.Anthropic", return_value=mock_client):
+mock_client = MagicMock()
+mock_client.chat.completions.create.return_value = mock_response
+
+with patch("openai.AzureOpenAI", return_value=mock_client):
     agent = AIReviewAgent(config)
     result = agent.review(diff, findings)
 
@@ -157,12 +162,16 @@ See `tests/test_ai_agent.py` for complete test cases.
 ## Integration test (live)
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+export AZURE_OPENAI_API_KEY=...
+export AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com/
+export AZURE_OPENAI_DEPLOYMENT=gpt-5.1
 export CD_STAGED_FILES="tests/fixtures/sample_python_dirty.py"
 
 docker run --rm \
   -v "$(pwd):/repo:ro" \
-  -e ANTHROPIC_API_KEY \
+  -e AZURE_OPENAI_API_KEY \
+  -e AZURE_OPENAI_ENDPOINT \
+  -e AZURE_OPENAI_DEPLOYMENT \
   -e CD_STAGED_FILES \
   commit-defender:latest
 ```

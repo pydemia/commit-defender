@@ -29,17 +29,20 @@ linters:
 
 ai_review:
   enabled: true
-  # Model to use for AI review. Options:
-  #   claude-sonnet-4-6  (fast, default)
-  #   claude-opus-4-6    (higher quality, slower)
-  #   claude-haiku-4-5-20251001  (fastest, cheapest)
-  model: claude-sonnet-4-6
+  # Azure OpenAI deployment name — must match the deployment in your Azure resource.
+  model: gpt-5.1
   max_tokens: 1024
   # If true, a blocking=true AI review will abort the commit.
   # By default AI review is advisory only.
   blocking: false
   # Add project-specific context to the AI reviewer's system prompt.
   system_prompt_suffix: ""
+
+# Azure OpenAI credentials are supplied via environment variables (not stored here):
+#   AZURE_OPENAI_API_KEY      — your Azure OpenAI key
+#   AZURE_OPENAI_ENDPOINT     — https://<resource>.openai.azure.com/
+#   AZURE_OPENAI_DEPLOYMENT   — deployment name (overrides ai_review.model above)
+#   AZURE_OPENAI_API_VERSION  — optional, defaults to 2024-08-01-preview
 
 # Patterns to exclude from analysis (gitignore syntax).
 exclude:

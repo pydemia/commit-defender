@@ -1,3 +1,6 @@
+# commit-defender credentials — never commit this
+.commit-defender.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

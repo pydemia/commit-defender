@@ -1,11 +1,12 @@
-"""AI review agent using the Anthropic SDK with prompt caching."""
+"""AI review agent using the Azure OpenAI SDK."""
 
 from __future__ import annotations
 
 import json
-import os
 
-from .models import AIReviewConfig, LintFinding, ReviewResult
+from .config import AIReviewConfig
+from .models import LintFinding, ReviewResult
+from .settings import load_settings
 
 _SYSTEM_PROMPT = """\
 You are commit-defender, an AI code reviewer integrated into a git pre-commit hook.
@@ -37,19 +38,36 @@ class AIReviewAgent:
         self.config = config
 
     def review(self, diff: str, lint_findings: list[LintFinding]) -> ReviewResult:
-        if not self.config.enabled or os.environ.get("CD_SKIP_AI", "").strip() == "1":
+        settings = load_settings()
+
+        if not self.config.enabled or settings.skip_ai:
             return ReviewResult.skipped()
 
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-        if not api_key:
-            return ReviewResult.error("ANTHROPIC_API_KEY not set")
+        missing = settings.missing_azure_fields()
+        if missing:
+            return ReviewResult.error(
+                f"Missing credentials in ~/.commit-defender.env: {', '.join(missing)}"
+            )
 
         try:
-            import anthropic
+            from openai import (
+                AzureOpenAI,
+                APIConnectionError,
+                APIStatusError,
+                APITimeoutError,
+                AuthenticationError,
+                RateLimitError,
+            )
         except ImportError:
-            return ReviewResult.error("anthropic package not installed")
+            return ReviewResult.error("openai package not installed")
 
-        client = anthropic.Anthropic(api_key=api_key)
+        client = AzureOpenAI(
+            api_key=settings.azure_openai_api_key,
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_version=settings.azure_openai_api_version,
+        )
+
+        deployment = settings.azure_openai_deployment or self.config.model
 
         findings_text = "\n".join(str(f) for f in lint_findings) if lint_findings else "None"
 
@@ -74,21 +92,17 @@ Please review the above and respond with the JSON object as instructed.
 """
 
         try:
-            response = client.messages.create(
-                model=self.config.model,
-                max_tokens=self.config.max_tokens,
-                system=[
-                    {
-                        "type": "text",
-                        "text": system_content,
-                        # Enable prompt caching for the large static system prompt
-                        "cache_control": {"type": "ephemeral"},
-                    }
+            response = client.chat.completions.create(
+                model=deployment,
+                max_completion_tokens=self.config.max_tokens,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": user_message},
                 ],
-                messages=[{"role": "user", "content": user_message}],
             )
 
-            raw = response.content[0].text.strip()
+            raw = response.choices[0].message.content.strip()
             data = json.loads(raw)
 
             return ReviewResult(
@@ -97,7 +111,33 @@ Please review the above and respond with the JSON object as instructed.
                 raw_response=raw,
             )
 
+        except AuthenticationError as e:
+            return ReviewResult.error(
+                f"Authentication failed — check AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT.\n"
+                f"  Detail: {e.message}"
+            )
+        except APIConnectionError as e:
+            return ReviewResult.error(
+                f"Could not reach Azure OpenAI endpoint '{settings.azure_openai_endpoint}'.\n"
+                f"  Check your network and AZURE_OPENAI_ENDPOINT value.\n"
+                f"  Detail: {e}"
+            )
+        except APITimeoutError:
+            return ReviewResult.error(
+                "Request to Azure OpenAI timed out. "
+                "Check network connectivity or increase max_tokens."
+            )
+        except RateLimitError as e:
+            return ReviewResult.error(
+                f"Azure OpenAI rate limit exceeded — try again in a moment.\n"
+                f"  Detail: {e.message}"
+            )
+        except APIStatusError as e:
+            return ReviewResult.error(
+                f"Azure OpenAI returned HTTP {e.status_code}.\n"
+                f"  Detail: {e.message}"
+            )
         except json.JSONDecodeError as e:
-            return ReviewResult.error(f"Could not parse AI response: {e}")
+            return ReviewResult.error(f"Could not parse AI response as JSON: {e}")
         except Exception as e:
-            return ReviewResult.error(str(e))
+            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}")

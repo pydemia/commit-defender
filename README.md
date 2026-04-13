@@ -27,7 +27,7 @@ Tests — tests/ with fixtures and unit tests for config, models, linters, rende
 Quick start
 
 # 1. Build the image
-docker build -t commit-defender:latest .
+docker build -t commit-defender:latest . 2>&1
 
 # 2. Install the hook into any repo
 python -m installer.install install /path/to/your-repo
@@ -37,3 +37,4 @@ export ANTHROPIC_API_KEY=sk-ant-...
 
 # 4. Stage files and commit — defender runs automatically
 git add . && git commit -m "my changes"
+

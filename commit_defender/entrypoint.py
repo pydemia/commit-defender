@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 import time
 from pathlib import Path
@@ -17,10 +16,12 @@ def run() -> int:
     from .linters import build_linters
     from .models import Report
     from .renderer import ReportRenderer
+    from .settings import load_settings
     from .staged_files import StagedFilesReader
 
-    repo_path = Path(os.environ.get("CD_REPO_PATH", "/repo"))
-    dry_run = os.environ.get("CD_DRY_RUN", "").strip() == "1"
+    settings = load_settings()
+    repo_path = Path(settings.cd_repo_path)
+    dry_run = settings.dry_run
 
     config = load_config(repo_path)
 
