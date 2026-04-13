@@ -1,0 +1,36 @@
+services:
+  commit-defender:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: commit-defender:latest
+    # Mount a target repo for manual testing:
+    #   docker compose run --rm commit-defender
+    # with CD_STAGED_FILES and ANTHROPIC_API_KEY set in the environment.
+    volumes:
+      - ${CD_TARGET_REPO:-./}:/repo:ro
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CD_STAGED_FILES=${CD_STAGED_FILES:-}
+      - CD_REPO_PATH=/repo
+      - CD_SKIP_AI=${CD_SKIP_AI:-0}
+      - CD_DRY_RUN=${CD_DRY_RUN:-0}
+    # Output goes to stderr so it's always visible
+    # Exit code is forwarded from the container
+
+  # Dev/test runner with source mounted for fast iteration
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: commit-defender:dev
+    volumes:
+      - .:/app
+      - ${CD_TARGET_REPO:-./}:/repo:ro
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CD_STAGED_FILES=${CD_STAGED_FILES:-}
+      - CD_REPO_PATH=/repo
+      - CD_SKIP_AI=1
+      - CD_DRY_RUN=1
+    entrypoint: ["python", "-m", "pytest", "tests/", "-v"]

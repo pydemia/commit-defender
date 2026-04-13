@@ -1,0 +1,52 @@
+version: 1
+
+# Severity level that causes a commit to be blocked.
+# Options: error | warning | info
+blocking_severity: error
+
+linters:
+  python:
+    enabled: true
+    tool: ruff
+    # Pass any ruff rule selectors here; leave empty for defaults
+    args: ["--select", "E,W,F,I"]
+
+  javascript:
+    enabled: true
+    tool: eslint
+
+  typescript:
+    enabled: true
+    tool: eslint
+
+  shell:
+    enabled: true
+    tool: shellcheck
+
+  markdown:
+    enabled: false
+    tool: markdownlint
+
+ai_review:
+  enabled: true
+  # Model to use for AI review. Options:
+  #   claude-sonnet-4-6  (fast, default)
+  #   claude-opus-4-6    (higher quality, slower)
+  #   claude-haiku-4-5-20251001  (fastest, cheapest)
+  model: claude-sonnet-4-6
+  max_tokens: 1024
+  # If true, a blocking=true AI review will abort the commit.
+  # By default AI review is advisory only.
+  blocking: false
+  # Add project-specific context to the AI reviewer's system prompt.
+  system_prompt_suffix: ""
+
+# Patterns to exclude from analysis (gitignore syntax).
+exclude:
+  - "*.lock"
+  - "dist/**"
+  - "build/**"
+  - "node_modules/**"
+  - "*.min.js"
+  - ".venv/**"
+  - "venv/**"

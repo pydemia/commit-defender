@@ -1,0 +1,16 @@
+diff --git a/sample.py b/sample.py
+index 0000000..1234567 100644
+--- a/sample.py
++++ b/sample.py
+@@ -1,5 +1,10 @@
+ import os
++import json  # unused import
+
+-def greet(name):
+-    return f"Hello {name}"
++def greet( name ):
++    x=1
++    y = x+2
++    return f"Hello {name}"
++
++print(greet("world"))

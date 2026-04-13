@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "commit-defender"
+version = "0.1.0"
+description = "AI-powered git pre-commit code validator"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=0.40.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+    "pathspec>=0.12.0",
+]
+
+[project.scripts]
+commit-defender = "commit_defender.entrypoint:cli"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
