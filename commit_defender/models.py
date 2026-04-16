@@ -8,6 +8,19 @@ Severity = Literal["error", "warning", "info"]
 
 SEVERITY_RANK: dict[str, int] = {"error": 3, "warning": 2, "info": 1}
 
+VALID_GRADES = ("exceptional", "proficient", "adequate", "insufficient", "critical")
+GRADE_RANK: dict[str, int] = {
+    "exceptional": 5, "proficient": 4, "adequate": 3, "insufficient": 2, "critical": 1,
+}
+
+
+def worst_grade(grades: list[str]) -> str:
+    """Return the worst grade from a list, ignoring empty/invalid entries."""
+    valid = [g for g in grades if g in GRADE_RANK]
+    if not valid:
+        return ""
+    return min(valid, key=lambda g: GRADE_RANK[g])
+
 
 @dataclass
 class LintFinding:
@@ -24,9 +37,10 @@ class LintFinding:
 
 @dataclass
 class FileComment:
-    file: str   # repo-relative path
-    line: int   # 1-based; 0 = file-level comment
+    file: str       # repo-relative path
+    line: int       # 1-based; 0 = file-level comment
     comment: str
+    category: str = ""  # correctness | security | maintenance | optimization | review-history | setting
 
 
 @dataclass
@@ -37,6 +51,7 @@ class ReviewResult:
     raw_response: str = ""
     is_error: bool = False  # True when review failed (always blocks commit)
     file_comments: list[FileComment] = field(default_factory=list)
+    grade: str = ""
 
     @classmethod
     def skipped(cls) -> "ReviewResult":

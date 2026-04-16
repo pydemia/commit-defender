@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
+
+AnalysisMode = Literal["hybrid", "ai-powered", "rule-based"]
+SeverityLevel = Literal["severe", "rigorous", "moderate", "generous", "lean"]
+RichnessLevel = Literal["colorful", "chatty", "moderate", "simple", "silent"]
+Locale = Literal["en", "ko"]
 
 
 class LinterConfig(BaseModel):
@@ -34,6 +40,15 @@ class LinterMap(BaseModel):
     )
 
 
+class ReviewSettings(BaseModel):
+    """Loaded from .commit-defender/settings.json; overridden by env vars."""
+    analysisMode: AnalysisMode = "hybrid"
+    severityLevel: SeverityLevel = "moderate"
+    richnessLevel: RichnessLevel = "moderate"
+    locale: Locale = "en"
+    excludePatterns: list[str] = Field(default_factory=list)
+
+
 class Config(BaseModel):
     version: int = 1
     blocking_severity: str = "error"
@@ -42,10 +57,24 @@ class Config(BaseModel):
     exclude: list[str] = Field(
         default_factory=lambda: ["*.lock", "dist/**", "node_modules/**", "*.min.js"]
     )
+    # Loaded from .commit-defender/settings.json; env vars take priority at runtime
+    review_settings: ReviewSettings = Field(default_factory=ReviewSettings)
+
+
+def _load_review_settings(repo_path: Path) -> ReviewSettings:
+    """Read .commit-defender/settings.json if present."""
+    settings_file = repo_path / ".commit-defender" / "settings.json"
+    if not settings_file.exists():
+        return ReviewSettings()
+    try:
+        raw: dict[str, Any] = json.loads(settings_file.read_text(encoding="utf-8"))
+        return ReviewSettings.model_validate(raw)
+    except Exception:
+        return ReviewSettings()
 
 
 def load_config(repo_path: Path | None = None) -> Config:
-    """Load config from commit-defender.yaml, falling back to defaults."""
+    """Load config from commit-defender.yaml and .commit-defender/settings.json."""
     config_path_env = os.environ.get("CD_CONFIG_PATH")
 
     candidates: list[Path] = []
@@ -55,9 +84,16 @@ def load_config(repo_path: Path | None = None) -> Config:
         candidates.append(repo_path / "commit-defender.yaml")
     candidates.append(Path("/repo/commit-defender.yaml"))
 
+    cfg_dict: dict[str, Any] = {}
     for candidate in candidates:
         if candidate.exists():
-            raw: dict[str, Any] = yaml.safe_load(candidate.read_text()) or {}
-            return Config.model_validate(raw)
+            cfg_dict = yaml.safe_load(candidate.read_text()) or {}
+            break
 
-    return Config()
+    config = Config.model_validate(cfg_dict)
+
+    # Overlay review_settings from .commit-defender/settings.json
+    resolved_repo = repo_path or Path("/repo")
+    config.review_settings = _load_review_settings(resolved_repo)
+
+    return config

@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "env":{
+            "PYTHONPATH": "${workspaceFolder}:${env:PYTHONPATH}:${workspaceFolder}/../",
+            "PACKAGE_NAME": "agentstore",
+        },
+        "envFile": "${workspaceFolder}/.env"
+    },
+    "tasks": [
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "pytest -v --cov=agentstore --cov-report=html --cov-report=xml",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "uv-build-versionup",
+            "type": "shell",
+            "command": "uv build --versionup",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}

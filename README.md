@@ -1,40 +1,140 @@
-commit-defender — Complete Blueprint Implemented
-What was created (50 files)
-Python package commit_defender/
+# commit-defender
 
-models.py — shared LintFinding, ReviewResult, Report dataclasses
-config.py — Pydantic-validated YAML loader with defaults
-staged_files.py — reads CD_STAGED_FILES, routes by language, respects exclude patterns
-diff_extractor.py — git diff --cached against the mounted repo, handles initial commits + truncation
-ai_agent.py — Anthropic SDK with prompt caching on system prompt, JSON structured output, offline escape hatch
-renderer.py — ANSI-colored terminal report written to stderr
-exit_resolver.py — decides exit 0/1 based on severity thresholds
-entrypoint.py — pipeline orchestrator
-linters/ — ruff, eslint, shellcheck, markdownlint-cli2 wrappers (JSON output, graceful if binary missing)
-Infrastructure
+AI-powered git pre-commit code review. Catches bugs, security issues, and style violations before they land — right in your terminal or VS Code.
 
-Dockerfile — multi-stage build (python builder → node tools → final slim image)
-docker-compose.yml — local dev + test runner
-commit-defender.yaml — annotated config reference
-Installer
+## How it works
 
-installer/hook_template.sh — the actual git hook script
-installer/install.py — install / uninstall CLI
-Tests — tests/ with fixtures and unit tests for config, models, linters, renderer, and AI agent (mocked).
+```
+git commit
+    │
+    ▼
+pre-commit hook  ──►  commit-defender
+                            │
+                            ├── ruff / eslint / shellcheck (linters)
+                            ├── git diff → Azure OpenAI (AI review)
+                            └── ANSI report → stderr → you fix it
+```
 
-8 Skills files in .claude/skills/ covering every module in depth.
+commit-defender runs as a git pre-commit hook. It:
+1. Reads your staged files
+2. Runs language-appropriate linters (ruff, eslint, shellcheck, markdownlint)
+3. Sends the diff to an AI model for a code review
+4. Prints a human-readable report and blocks the commit if issues are found
 
-Quick start
+## Requirements
 
-# 1. Build the image
-docker build -t commit-defender:latest . 2>&1
+- Python 3.12+
+- Azure OpenAI credentials (API key, endpoint, deployment)
+- Git
 
-# 2. Install the hook into any repo
-python -m installer.install install /path/to/your-repo
+## Installation
 
-# 3. Set your API key
-export ANTHROPIC_API_KEY=sk-ant-...
+```bash
+pip install commit-defender
+```
 
-# 4. Stage files and commit — defender runs automatically
-git add . && git commit -m "my changes"
+## Setup
 
+### 1. Credentials
+
+Create `~/.commit-defender.env`:
+
+```env
+AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+AZURE_OPENAI_DEPLOYMENT=gpt-4o
+```
+
+Or set the environment variables directly.
+
+### 2. Install the pre-commit hook
+
+```bash
+# Install into the current repo
+commit-defender install
+
+# Install into a specific repo
+commit-defender install /path/to/your-repo
+```
+
+### 3. Commit as usual
+
+```bash
+git add .
+git commit -m "my changes"
+# commit-defender runs automatically
+```
+
+## VS Code Extension
+
+Install the **Commit Defender** VS Code extension for inline AI suggestions, CodeLens, and hover cards — no terminal required.
+
+Commands available:
+- **Commit Defender: Analyze Staged Files** — review what's about to be committed
+- **Commit Defender: Analyze Current File** — review the file open in the editor
+- **Commit Defender: Analyze Directory...** — pick a directory to review
+
+Extension settings:
+
+| Setting | Default | Description |
+|---|---|---|
+| `commitDefender.pythonExecutable` | `${workspaceFolder}/.venv/bin/python` | Python with commit-defender installed |
+| `commitDefender.analysisMode` | `` | `hybrid` / `ai-powered` / `rule-based` |
+| `commitDefender.severityLevel` | `moderate` | How strict the AI review is |
+| `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is |
+| `commitDefender.locale` | `en` | Language (`en` / `ko`) |
+| `commitDefender.excludePatterns` | `[]` | Extra gitignore-style patterns to skip |
+
+## Configuration
+
+Place a `.commit-defender/settings.json` in your repo:
+
+```json
+{
+  "analysisMode": "hybrid",
+  "severityLevel": "moderate",
+  "richnessLevel": "moderate",
+  "locale": "en",
+  "excludePatterns": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "*.min.js",
+    "dist/**"
+  ]
+}
+```
+
+### Analysis modes
+
+| Mode | Linters | AI | Use case |
+|---|---|---|---|
+| `hybrid` | ✓ | ✓ | Default — thorough review |
+| `ai-powered` | ✗ | ✓ | Faster, no toolchain needed |
+| `rule-based` | ✓ | ✗ | Offline, deterministic |
+
+### Severity levels
+
+`lean` → `generous` → `moderate` → `rigorous` → `severe`
+
+### Skill files
+
+Drop `.commit-defender/<skill-name>/SKILL.md` files in your repo to inject project-specific context into the AI review (e.g. your coding conventions, security requirements, or architecture notes).
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `CD_REPO_PATH` | Repo root (set automatically by the hook) |
+| `CD_STAGED_FILES` | Newline-separated staged file paths |
+| `CD_TARGET_FILES` | Explicit file list for on-demand analysis |
+| `CD_JSON` | `1` = emit machine-readable JSON to stdout |
+| `CD_ANALYSIS_MODE` | Override analysis mode |
+| `CD_SEVERITY_LEVEL` | Override severity level |
+| `CD_RICHNESS_LEVEL` | Override richness level |
+| `CD_LOCALE` | Override output language |
+| `CD_DRY_RUN` | `1` = always exit 0 (analysis only) |
+| `CD_HOME_ENV_FILE` | Path to credentials .env file |
+
+## License
+
+MIT

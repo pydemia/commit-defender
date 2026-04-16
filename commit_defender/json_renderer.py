@@ -39,11 +39,13 @@ class JsonRenderer:
                 "summary": report.review.summary,
                 "blocking": report.review.blocking,
                 "is_error": report.review.is_error,
+                "grade": report.review.grade,
                 "file_comments": [
                     {
                         "file": fc.file,
                         "line": fc.line,
                         "comment": fc.comment,
+                        "category": fc.category,
                     }
                     for fc in report.review.file_comments
                 ],

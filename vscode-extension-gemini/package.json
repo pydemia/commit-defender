@@ -1,0 +1,251 @@
+{
+  "name": "commit-defender-gemini",
+  "displayName": "Commit Defender",
+  "description": "AI-powered pre-commit code review with inline suggestions",
+  "version": "0.1.0",
+  "publisher": "commit-defender",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/commit-defender/commit-defender.git"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.git"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "commitDefender.analyze",
+        "title": "Commit Defender: Analyze Staged Files",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "commitDefender.clearFindings",
+        "title": "Commit Defender: Clear Findings"
+      },
+      {
+        "command": "commitDefender.showLineSuggestion",
+        "title": "Commit Defender: Show Line Suggestion"
+      },
+      {
+        "command": "commitDefender.analyzeCurrentFile",
+        "title": "Commit Defender: Analyze Current File",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "commitDefender.analyzeDirectory",
+        "title": "Commit Defender: Analyze Directory...",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "commitDefender.analyzeRepository",
+        "title": "Commit Defender: Analyze Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "commitDefender.showSummary",
+        "title": "Commit Defender: Show Summary Panel",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "commitDefender.showHistoryEntry",
+        "title": "Commit Defender: Show History Entry"
+      }
+    ],
+    "configuration": {
+      "title": "Commit Defender",
+      "properties": {
+        "commitDefender.pythonExecutable": {
+          "type": "string",
+          "default": "${workspaceFolder}/.venv/bin/python",
+          "description": "Path to the python executable that has commit-defender installed. You can use ${workspaceFolder} as a prefix."
+        },
+        "commitDefender.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "description": "Maximum seconds to wait for the Docker container."
+        },
+        "commitDefender.runOnStage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the shield icon."
+        },
+        "commitDefender.homeEnvFile": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to credentials .env file. Defaults to ~/.commit-defender.env."
+        },
+        "commitDefender.analysisMode": {
+          "type": "string",
+          "enum": ["hybrid", "ai-powered", "rule-based"],
+          "enumDescriptions": [
+            "hybrid: Run linters first, then send results + diff to AI for a combined review. (default)",
+            "ai-powered: Skip linters — send only the diff to the AI. Faster, no toolchain required.",
+            "rule-based: Run linters only — no AI call. Fully offline, deterministic."
+          ],
+          "default": "",
+          "description": "Controls which analysis engines run. Leave empty to use the value in .commit-defender/settings.json (default: hybrid)."
+        },
+        "commitDefender.severityLevel": {
+          "type": "string",
+          "enum": ["severe", "rigorous", "moderate", "generous", "lean"],
+          "enumDescriptions": [
+            "severe: Flag everything, zero tolerance for any deviation.",
+            "rigorous: Strict — flag most issues including minor style and best-practice deviations.",
+            "moderate: Balanced review, standard strictness. (default)",
+            "generous: Only flag significant issues, allow minor deviations.",
+            "lean: Only flag critical issues that would break functionality or introduce security risk."
+          ],
+          "default": "moderate",
+          "description": "Controls the strictness and harshness of the review. Lower levels produce fewer, higher-priority findings."
+        },
+        "commitDefender.richnessLevel": {
+          "type": "string",
+          "enum": ["colorful", "chatty", "moderate", "simple", "silent"],
+          "enumDescriptions": [
+            "colorful: Elaborate feedback with examples, alternatives, and detailed explanations.",
+            "chatty: Detailed feedback with helpful context for each finding.",
+            "moderate: Standard amount of detail — clear but concise. (default)",
+            "simple: Brief, to-the-point findings with minimal explanation.",
+            "silent: One-line summaries only — no elaboration."
+          ],
+          "default": "moderate",
+          "description": "Controls the quantity, detail level, and verbosity of the AI review output."
+        },
+        "commitDefender.locale": {
+          "type": "string",
+          "enum": ["en", "ko"],
+          "enumDescriptions": [
+            "en: English",
+            "ko: 한국어"
+          ],
+          "default": "en",
+          "description": "Language for AI review output."
+        },
+        "commitDefender.excludePatterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). These are merged with patterns in .commit-defender/settings.json."
+        },
+        "commitDefender.aiProvider": {
+          "type": "string",
+          "enum": ["azure-openai", "anthropic", "openai"],
+          "enumDescriptions": [
+            "azure-openai: Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
+            "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
+            "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc."
+          ],
+          "default": "azure-openai",
+          "description": "AI provider to use for code review."
+        },
+        "commitDefender.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure). Leave empty to use the value in commit-defender.yaml."
+        },
+        "commitDefender.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "API endpoint URL. Required for azure-openai (e.g. https://YOUR_RESOURCE.openai.azure.com). For openai or anthropic, leave empty to use the default public endpoint."
+        },
+        "commitDefender.apiVersion": {
+          "type": "string",
+          "default": "2024-08-01-preview",
+          "description": "API version string. Used by azure-openai only (e.g. 2024-08-01-preview). Ignored for anthropic and openai."
+        },
+        "commitDefender.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control. Alternatively, set AZURE_OPENAI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY in ~/.commit-defender.env."
+        },
+        "commitDefender.maxTokens": {
+          "type": "number",
+          "default": 4096,
+          "minimum": 512,
+          "maximum": 32000,
+          "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large files (response was truncated mid-JSON)."
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        { "command": "commitDefender.analyze" },
+        { "command": "commitDefender.analyzeCurrentFile", "when": "editorIsOpen" },
+        { "command": "commitDefender.analyzeDirectory" },
+        { "command": "commitDefender.analyzeRepository" },
+        { "command": "commitDefender.showSummary" },
+        { "command": "commitDefender.clearFindings" },
+        { "command": "commitDefender.showLineSuggestion", "when": "false" },
+        { "command": "commitDefender.showHistoryEntry", "when": "false" }
+      ],
+      "scm/title": [
+        {
+          "command": "commitDefender.analyze",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "commitDefender.analyzeCurrentFile",
+          "group": "navigation",
+          "when": "scmProvider == git && editorIsOpen"
+        },
+        {
+          "command": "commitDefender.analyzeDirectory",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "commitDefender.analyzeRepository",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "commitDefender.analyzeCurrentFile",
+          "group": "navigation",
+          "when": "resourceScheme == file"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "commitDefender",
+          "title": "Commit Defender",
+          "icon": "media/shield.svg"
+        }
+      ]
+    },
+    "views": {
+      "commitDefender": [
+        {
+          "id": "commitDefender.history",
+          "name": "Commit Defender",
+          "icon": "media/shield.svg"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

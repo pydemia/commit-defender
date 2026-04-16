@@ -1,0 +1,90 @@
+{
+  "name": "commit-defender",
+  "displayName": "Commit Defender",
+  "description": "AI-powered pre-commit code review with inline suggestions",
+  "version": "0.1.0",
+  "publisher": "commit-defender",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.git"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "commitDefender.analyze",
+        "title": "Commit Defender: Analyze Staged Files",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "commitDefender.clearFindings",
+        "title": "Commit Defender: Clear Findings"
+      }
+    ],
+    "configuration": {
+      "title": "Commit Defender",
+      "properties": {
+        "commitDefender.runnerMode": {
+          "type": "string",
+          "enum": ["docker", "local"],
+          "default": "docker",
+          "description": "How to run commit-defender: 'docker' (requires Docker Desktop) or 'local' (requires the commit_defender Python package installed on the host)."
+        },
+        "commitDefender.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Path to the Python executable that has commit_defender installed. Used when runnerMode is 'local'. Can be a virtualenv path, e.g. /path/to/.venv/bin/python."
+        },
+        "commitDefender.image": {
+          "type": "string",
+          "default": "commit-defender:latest",
+          "description": "Docker image to use for analysis. Used when runnerMode is 'docker'."
+        },
+        "commitDefender.timeoutSeconds": {
+          "type": "number",
+          "default": 120,
+          "description": "Maximum seconds to wait for the analysis to complete."
+        },
+        "commitDefender.runOnStage": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically re-analyze when the git index changes (files are staged)."
+        },
+        "commitDefender.homeEnvFile": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to credentials .env file. Defaults to ~/.commit-defender.env. Used when runnerMode is 'docker'."
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        { "command": "commitDefender.analyze" },
+        { "command": "commitDefender.clearFindings" }
+      ],
+      "scm/title": [
+        {
+          "command": "commitDefender.analyze",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

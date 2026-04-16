@@ -11,6 +11,7 @@ from pathlib import Path
 
 TEMPLATE_PATH = Path(__file__).parent / "hook_template.sh"
 DEFAULT_IMAGE = "commit-defender:latest"
+DEFAULT_PYTHON = "python3"
 ENV_FILE = Path.home() / ".commit-defender.env"
 
 _ENV_TEMPLATE = """\
@@ -26,6 +27,8 @@ AZURE_OPENAI_API_VERSION=2024-08-01-preview
 def install(
     repo_path: Path,
     image: str = DEFAULT_IMAGE,
+    mode: str = "docker",
+    python: str = DEFAULT_PYTHON,
     force: bool = False,
 ) -> None:
     """Write the pre-commit hook into repo_path/.git/hooks/pre-commit."""
@@ -47,7 +50,12 @@ def install(
             )
 
     template = TEMPLATE_PATH.read_text()
-    hook_content = template.replace("{{IMAGE}}", image)
+    hook_content = (
+        template
+        .replace("{{IMAGE}}", image)
+        .replace("{{MODE}}", mode)
+        .replace("{{PYTHON}}", python)
+    )
     hook_path.write_text(hook_content)
 
     # Make executable
@@ -55,7 +63,10 @@ def install(
     hook_path.chmod(current | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
     print(f"commit-defender: hook installed at {hook_path}")
-    print(f"  Image: {image}")
+    if mode == "local":
+        print(f"  Mode:   local (Python: {python})")
+    else:
+        print(f"  Mode:   docker (Image: {image})")
     _ensure_env_file()
 
 
@@ -106,9 +117,20 @@ def main() -> None:
         help="Path to the target git repository (default: current directory)",
     )
     p_install.add_argument(
+        "--mode",
+        choices=["docker", "local"],
+        default="docker",
+        help="Runner mode: 'docker' (default) or 'local' (no Docker required)",
+    )
+    p_install.add_argument(
         "--image",
         default=DEFAULT_IMAGE,
-        help=f"Docker image to use (default: {DEFAULT_IMAGE})",
+        help=f"Docker image to use in docker mode (default: {DEFAULT_IMAGE})",
+    )
+    p_install.add_argument(
+        "--python",
+        default=DEFAULT_PYTHON,
+        help=f"Python executable to use in local mode (default: {DEFAULT_PYTHON})",
     )
     p_install.add_argument(
         "--force",
@@ -127,14 +149,17 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if not check_docker():
-        print("Warning: docker not found on PATH. The hook requires Docker at commit time.", file=sys.stderr)
-
     repo_path = Path(args.repo).resolve()
+
+    if args.command == "install":
+        if args.mode == "docker" and not check_docker():
+            print("Warning: docker not found on PATH. The hook requires Docker at commit time.", file=sys.stderr)
+        if args.mode == "local" and not shutil.which(args.python):
+            print(f"Warning: '{args.python}' not found on PATH. Ensure it is installed before committing.", file=sys.stderr)
 
     try:
         if args.command == "install":
-            install(repo_path, image=args.image, force=args.force)
+            install(repo_path, image=args.image, mode=args.mode, python=args.python, force=args.force)
         elif args.command == "uninstall":
             uninstall(repo_path)
     except (ValueError, FileExistsError) as e:
