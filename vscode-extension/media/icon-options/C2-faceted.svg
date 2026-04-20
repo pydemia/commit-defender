@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C2 — FACETED
+  Gem-cut shield: inner polygon creates a faceted/crystalline look.
+  Same sunset colors, zero blur, sharp edges everywhere.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="shield" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <!-- Lighter tint for upper facets -->
+    <linearGradient id="facet-tl" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="64" y2="66">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+    </linearGradient>
+    <!-- Darker tint for lower-right facet -->
+    <linearGradient id="facet-br" gradientUnits="userSpaceOnUse" x1="64" y1="66" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.28"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#18181b"/>
+
+  <!-- Base shield -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="url(#shield)"/>
+
+  <!-- Facet: top-left triangle (lighter) -->
+  <polygon points="64,12 20,29 64,66" fill="url(#facet-tl)"/>
+
+  <!-- Facet: top-right triangle (neutral) -->
+  <polygon points="64,12 108,29 64,66" fill="#ffffff" opacity="0.06"/>
+
+  <!-- Facet: bottom-right (darker) -->
+  <!-- (the curved bottom — approximate with a polygon) -->
+  <polygon points="64,66 108,66 86,102 64,119" fill="url(#facet-br)"/>
+
+  <!-- Internal facet edge lines (crisp, no blur) -->
+  <line x1="64" y1="12" x2="64" y2="66"  stroke="#ffffff" stroke-width="1" opacity="0.4"/>
+  <line x1="20" y1="29" x2="64" y2="66"  stroke="#ffffff" stroke-width="0.8" opacity="0.25"/>
+  <line x1="108" y1="29" x2="64" y2="66" stroke="#000000" stroke-width="0.8" opacity="0.2"/>
+
+  <!-- Outer border -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="#fda4af" stroke-width="1.5"/>
+
+  <!-- </> white -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#ffffff"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#ffffff"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#ffffff"/>
+</svg>

@@ -87,7 +87,7 @@ def load_config(repo_path: Path | None = None) -> Config:
     cfg_dict: dict[str, Any] = {}
     for candidate in candidates:
         if candidate.exists():
-            cfg_dict = yaml.safe_load(candidate.read_text()) or {}
+            cfg_dict = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
             break
 
     config = Config.model_validate(cfg_dict)

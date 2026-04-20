@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C — SUNSET
+  Mood: Vibrant / energetic
+  Palette: Charcoal · Orange → Hot pink gradient shield · White code
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#1c0f1a"/>
+    </linearGradient>
+    <linearGradient id="shield" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#e11d84"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <linearGradient id="gloss" gradientUnits="userSpaceOnUse" x1="64" y1="12" x2="64" y2="66">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>
+      <feFlood flood-color="#f97316" flood-opacity="0.3" result="c"/>
+      <feComposite in="c" in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="url(#bg)"/>
+
+  <!-- Shield body -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="url(#shield)" filter="url(#shadow)"/>
+
+  <!-- Top gloss -->
+  <path d="M64 12 L108 29 L108 66 L20 66 L20 29 Z"
+        fill="url(#gloss)"/>
+
+  <!-- Border -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="#fda4af" stroke-width="1" opacity="0.5"/>
+
+  <!-- </> white -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#ffffff"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#ffffff"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#ffffff"/>
+</svg>

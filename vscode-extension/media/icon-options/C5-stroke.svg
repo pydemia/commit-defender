@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C5 — STROKE
+  Hollow shield: gradient stroke only, transparent interior.
+  Three nested outlines at decreasing opacity — no fill, no blur.
+  The </> symbol gets the full sunset gradient.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="grad" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <!-- Gradient for code symbol -->
+    <linearGradient id="code-grad" gradientUnits="userSpaceOnUse" x1="41" y1="51" x2="89" y2="79">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#18181b"/>
+
+  <!-- Very faint shield fill to anchor shape -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="#ec4899" opacity="0.07"/>
+
+  <!-- Outermost ring — thickest, full opacity -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="url(#grad)" stroke-width="5" stroke-linejoin="miter"/>
+
+  <!-- Middle ring — medium -->
+  <path d="M64 20 L101 34 L101 66 Q101 94 64 113 Q27 94 27 66 L27 34 Z"
+        fill="none" stroke="url(#grad)" stroke-width="2" stroke-linejoin="miter" opacity="0.5"/>
+
+  <!-- Inner ring — thinnest -->
+  <path d="M64 28 L94 39 L94 66 Q94 90 64 107 Q34 90 34 66 L34 39 Z"
+        fill="none" stroke="url(#grad)" stroke-width="1" stroke-linejoin="miter" opacity="0.25"/>
+
+  <!-- Horizontal crossbar (like a badge/crest detail) -->
+  <line x1="25" y1="50" x2="103" y2="50"
+        stroke="url(#grad)" stroke-width="1" opacity="0.3"/>
+
+  <!-- </> with gradient fill -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="url(#code-grad)"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="url(#code-grad)"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="url(#code-grad)"/>
+</svg>

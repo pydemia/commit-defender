@@ -35,12 +35,28 @@ class LintFinding:
         return f"{self.file}:{self.line}:{self.col} [{self.severity}] {self.rule}: {self.message}"
 
 
+PRIORITY_RANK: dict[str, int] = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+PRIORITY_LABEL: dict[str, str] = {
+    "P0": "Praise",
+    "P1": "Info",
+    "P2": "Warning",
+    "P3": "Critical",
+}
+PRIORITY_EMOJI: dict[str, str] = {
+    "P0": "🟩",
+    "P1": "🟦",
+    "P2": "🟧",
+    "P3": "🟥",
+}
+
+
 @dataclass
 class FileComment:
     file: str       # repo-relative path
     line: int       # 1-based; 0 = file-level comment
     comment: str
-    category: str = ""  # correctness | security | maintenance | optimization | review-history | setting
+    category: str = ""   # correctness | security | maintenance | optimization | review-history | setting
+    priority: str = "P1" # P0=Praise | P1=Nitpick | P2=Suggestion | P3=Critical
 
 
 @dataclass
@@ -61,7 +77,7 @@ class ReviewResult:
     def error(cls, message: str) -> "ReviewResult":
         return cls(
             summary=f"AI review unavailable: {message}",
-            blocking=True,
+            blocking=False,  # ExitCodeResolver gates on ai_review.blocking config; errors are advisory
             is_error=True,
         )
 

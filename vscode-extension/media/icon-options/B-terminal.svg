@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  B — TERMINAL
+  Mood: Hacker / dev-tool
+  Palette: Near-black · Bright green outline shield · Green code symbol
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/>
+      <feFlood flood-color="#22c55e" flood-opacity="0.6" result="c"/>
+      <feComposite in="c" in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#090f0f"/>
+
+  <!-- Outer shield outline (thick, glowing) -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="#22c55e" stroke-width="5"
+        stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- Inner shield outline (thinner) -->
+  <path d="M64 22 L99 36 L99 66 Q99 92 64 109 Q29 92 29 66 L29 36 Z"
+        fill="none" stroke="#16a34a" stroke-width="2"
+        stroke-linejoin="round" opacity="0.7"/>
+
+  <!-- </> bright green -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#4ade80" filter="url(#glow)"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#4ade80" filter="url(#glow)"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#4ade80" filter="url(#glow)"/>
+</svg>

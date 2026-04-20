@@ -39,27 +39,47 @@ def _load_skills(repo_path: Path) -> str:
 
 _SEVERITY_PROMPTS: dict[str, str] = {
     "severe": (
-        "Apply the absolute strictest possible review. Flag every deviation from "
-        "best practice, every style inconsistency, every potential issue — no matter "
-        "how minor. Zero tolerance."
+        "Apply the strictest possible review. Flag every deviation from best practice, "
+        "every style inconsistency, every potential issue no matter how minor. "
+        "Use all priority levels: P3 (Critical), P2 (Warning), P1 (Info), and P0 (Praise). "
+        "Zero tolerance — emit as many findings as warranted."
     ),
     "rigorous": (
-        "Apply a strict review. Flag most issues including minor style and "
-        "best-practice deviations. Err on the side of raising concerns."
+        "Apply a strict review. Flag most issues including minor style and best-practice deviations. "
+        "Use P3, P2, and P1. Include P0 Praise only for genuinely exemplary code. "
+        "Err on the side of raising concerns."
     ),
     "moderate": (
-        "Apply a balanced review. Flag meaningful issues and genuine best-practice "
-        "violations, but do not nitpick trivial style details."
+        "Apply a balanced review. Flag meaningful issues and genuine best-practice violations. "
+        "Use P3 and P2 freely. Limit P1 Info to at most 2 per file — only the most impactful optional improvements. "
+        "Do not emit P0 Praise unless every aspect of the file is truly exemplary. "
+        "Do not nitpick trivial style details."
     ),
     "generous": (
-        "Apply a lenient review. Only flag significant issues that carry clear risk "
-        "or that deviate substantially from convention. Allow minor imperfections."
+        "Apply a lenient review. Only flag issues with clear, concrete risk. "
+        "Use P3 (Critical) and P2 (Warning) only — do NOT emit P1 Info or P0 Praise. "
+        "Allow minor imperfections and style deviations without comment."
     ),
     "lean": (
-        "Apply a minimal review. Only flag critical issues: those that will break "
-        "functionality, introduce security vulnerabilities, or cause data loss."
+        "Apply a minimal review. ONLY flag P3 Critical issues: broken functionality, "
+        "security vulnerabilities, or data loss risk. "
+        "Do NOT emit P2, P1, or P0 findings under any circumstances. "
+        "If there are no P3 issues, return an empty file_comments array."
     ),
 }
+
+# Minimum priority level that may appear in output, per severity setting.
+# Comments below this level are dropped from the result after AI parsing.
+_SEVERITY_MIN_PRIORITY: dict[str, int] = {
+    # Priority rank: P3=3 (highest urgency), P2=2, P1=1, P0=0
+    "lean":      3,  # P3 only
+    "generous":  2,  # P2 and P3
+    "moderate":  1,  # P1, P2, P3
+    "rigorous":  1,  # P1, P2, P3
+    "severe":    0,  # all (P0 Praise included)
+}
+
+_PRIORITY_RANK: dict[str, int] = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 
 _RICHNESS_PROMPTS: dict[str, str] = {
     "colorful": (
@@ -99,15 +119,17 @@ _COMMENT_SCHEMA = """\
       "file": "<path relative to repo root, e.g. src/main.py>",
       "line": <1-based line number; 0 for a file-level comment>,
       "category": "<one of: correctness | security | maintenance | optimization | review-history | setting>",
+      "priority": "<one of: P0 | P1 | P2 | P3>",
       "comment": "<actionable suggestion, markdown allowed>"
     }"""
 
 _BASE_SYSTEM_PROMPT_DIFF = f"""\
 You are commit-defender, an AI code reviewer integrated into a git pre-commit hook.
 
-Your job is to review the provided git diff and static analysis findings, then produce a
-concise, actionable review that helps the developer understand what needs to be fixed
-before committing.
+You run AFTER a static linter. The linter has already identified errors (P3) and warnings (P2).
+Your job has two parts:
+1. **Linter-flagged code** — confirm, synthesize, and contextualize linter findings. Do not downgrade their priority.
+2. **Clean code** — act as the final checker for code the linter passed. Look for logic errors, security issues, and architectural problems the linter cannot detect.
 
 ## Review categories
 Every file comment must be tagged with one of these categories:
@@ -117,6 +139,26 @@ Every file comment must be tagged with one of these categories:
 - **optimization** — performance, complexity, N+1 queries, memory leaks
 - **review-history** — recurring review patterns, MR best practices, knowledge transfer
 - **setting** — env vars, secrets management, deployment config, infrastructure safety
+
+## Acceptance level (priority)
+Every comment requires a "priority" field. Before choosing a level, run through the P3 gate first.
+
+### STEP 1 — P3 gate (check this before anything else)
+Assign **P3 Critical 🟥** if the issue falls into ANY of these categories — no exceptions, no downgrading to P2 or P1:
+- Syntax error or incomplete statement (e.g. `from module im`, `def foo(`, missing colon, truncated expression)
+- Import that will raise `ImportError` or `SyntaxError` at parse time
+- Undefined variable, missing required argument, wrong number of arguments
+- Security vulnerability: hardcoded secret, SQL/command injection, broken auth, path traversal
+- Data-loss risk: unguarded `DELETE`, file overwrite without backup, destructive operation without confirmation
+- Runtime crash that is certain to occur (not "might" — will)
+- Any finding from static analysis that is classified as an **error** (not warning, not info)
+
+If ANY of the above applies, the priority is **P3**. Do not reassign to P2 or P1 for any reason. Move to the next comment.
+
+### STEP 2 — remaining levels (only when P3 does not apply)
+- **P2** Warning 🟧 — Code runs but carries real risk: potential (not certain) runtime errors, deprecated APIs, poor error handling, bad performance patterns, maintainability problems likely to cause future bugs. Highly recommended to fix.
+- **P1** Info 🟦 — Code is syntactically valid, logically correct, and the linter raised NO error or warning for it. Purely optional improvement: better naming, cleaner structure, readability. **Never assign P1 to code that has a linter error, a syntax problem, or any runtime risk.**
+- **P0** Praise 🟩 — Positive feedback ONLY. Use at file level (line 0) when the code is genuinely clean with nothing to flag. Never mix praise with a concern.
 
 ## Code quality grade
 Assign ONE grade that reflects the overall quality of the reviewed code:
@@ -129,15 +171,14 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 ## Core guidelines
 - Be direct and specific. Reference file names and line numbers.
 - Group related issues together.
-- Distinguish between must-fix issues (errors) and suggestions (warnings/style).
 - Do not repeat every lint finding verbatim — synthesize patterns and highlight the most important ones.
-- If the changes look good overall, say so clearly.
+- If the changes look good overall, say so clearly with a P0 Praise comment.
 
 ## Output format
 Respond ONLY with a valid JSON object matching this schema:
 {{
   "summary": "<narrative review, markdown allowed>",
-  "blocking": <true if the code should not be committed as-is, false otherwise>,
+  "blocking": <true if any P3 comment exists, false otherwise>,
   "grade": "<one of: exceptional | proficient | adequate | insufficient | critical>",
   "file_comments": [
 {_COMMENT_SCHEMA}
@@ -147,7 +188,7 @@ Respond ONLY with a valid JSON object matching this schema:
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
 - Limit to at most 15 comments total.
-- Every comment must include a "category" field.
+- Every comment must include both "category" and "priority" fields.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 """
@@ -155,8 +196,10 @@ Rules for file_comments:
 _BASE_SYSTEM_PROMPT_FILE = f"""\
 You are commit-defender, an AI code reviewer.
 
-Your job is to review the provided file contents and static analysis findings, then
-produce a concise, actionable review that helps the developer improve the code.
+You run AFTER a static linter. The linter has already identified errors (P3) and warnings (P2).
+Your job has two parts:
+1. **Linter-flagged code** — confirm, synthesize, and contextualize linter findings. Do not downgrade their priority.
+2. **Clean code** — act as the final checker for code the linter passed. Look for logic errors, security issues, and architectural problems the linter cannot detect.
 
 ## Review categories
 Every file comment must be tagged with one of these categories:
@@ -166,6 +209,26 @@ Every file comment must be tagged with one of these categories:
 - **optimization** — performance, complexity, N+1 queries, memory leaks
 - **review-history** — recurring review patterns, MR best practices, knowledge transfer
 - **setting** — env vars, secrets management, deployment config, infrastructure safety
+
+## Acceptance level (priority)
+Every comment requires a "priority" field. Before choosing a level, run through the P3 gate first.
+
+### STEP 1 — P3 gate (check this before anything else)
+Assign **P3 Critical 🟥** if the issue falls into ANY of these categories — no exceptions, no downgrading to P2 or P1:
+- Syntax error or incomplete statement (e.g. `from module im`, `def foo(`, missing colon, truncated expression)
+- Import that will raise `ImportError` or `SyntaxError` at parse time
+- Undefined variable, missing required argument, wrong number of arguments
+- Security vulnerability: hardcoded secret, SQL/command injection, broken auth, path traversal
+- Data-loss risk: unguarded `DELETE`, file overwrite without backup, destructive operation without confirmation
+- Runtime crash that is certain to occur (not "might" — will)
+- Any finding from static analysis that is classified as an **error** (not warning, not info)
+
+If ANY of the above applies, the priority is **P3**. Do not reassign to P2 or P1 for any reason. Move to the next comment.
+
+### STEP 2 — remaining levels (only when P3 does not apply)
+- **P2** Warning 🟧 — Code runs but carries real risk: potential (not certain) runtime errors, deprecated APIs, poor error handling, bad performance patterns, maintainability problems likely to cause future bugs. Highly recommended to fix.
+- **P1** Info 🟦 — Code is syntactically valid, logically correct, and the linter raised NO error or warning for it. Purely optional improvement: better naming, cleaner structure, readability. **Never assign P1 to code that has a linter error, a syntax problem, or any runtime risk.**
+- **P0** Praise 🟩 — Positive feedback ONLY. Use at file level (line 0) when the code is genuinely clean with nothing to flag. Never mix praise with a concern.
 
 ## Code quality grade
 Assign ONE grade that reflects the overall quality of the reviewed code:
@@ -178,15 +241,14 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 ## Core guidelines
 - Be direct and specific. Reference file names and exact line numbers.
 - Group related issues together.
-- Distinguish between must-fix issues (bugs, security) and suggestions (style, design).
 - Do not repeat every lint finding verbatim — synthesize patterns and highlight important ones.
-- If the code looks good overall, say so clearly.
+- If the code looks good overall, say so clearly with a P0 Praise comment.
 
 ## Output format
 Respond ONLY with a valid JSON object matching this schema:
 {{
   "summary": "<narrative review, markdown allowed>",
-  "blocking": false,
+  "blocking": <true if any P3 comment exists, false otherwise>,
   "grade": "<one of: exceptional | proficient | adequate | insufficient | critical>",
   "file_comments": [
 {_COMMENT_SCHEMA}
@@ -196,10 +258,70 @@ Respond ONLY with a valid JSON object matching this schema:
 Rules for file_comments:
 - You may reference any line number in the file — not limited to changed lines.
 - Limit to at most 20 comments total across all files.
-- Every comment must include a "category" field.
+- Every comment must include both "category" and "priority" fields.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 """
+
+
+def _build_lint_section(lint_findings: list) -> str:
+    """Build the static-analysis section of the user message.
+
+    Errors become P3 Critical, warnings become P2 Warning, info becomes P1 Info.
+    Files with no findings are listed separately so the AI knows to apply its
+    deep review there.
+    """
+    from .models import PRIORITY_LABEL, PRIORITY_EMOJI
+
+    sev_to_priority = {"error": "P3", "warning": "P2", "info": "P1"}
+
+    if not lint_findings:
+        return (
+            "## Static analysis findings\n\n"
+            "No linter issues found. Apply thorough AI review to all code as the final checker."
+        )
+
+    errors   = [f for f in lint_findings if f.severity == "error"]
+    warnings = [f for f in lint_findings if f.severity == "warning"]
+    infos    = [f for f in lint_findings if f.severity == "info"]
+
+    lines: list[str] = [
+        "## Static analysis findings",
+        "",
+        "These issues were identified by the linter BEFORE the AI review.",
+        "Treat linter errors as P3 Critical and linter warnings as P2 Warning — do not downgrade them.",
+        "Your role: synthesize these into actionable comments and perform deep review on code the linter did not flag.",
+        "",
+    ]
+
+    if errors:
+        lines.append(f"### 🟥 P3 Critical — linter errors ({len(errors)})")
+        for f in errors:
+            lines.append(f"  {f.file}:{f.line}:{f.col}  [{f.rule}]  {f.message}")
+        lines.append("")
+
+    if warnings:
+        lines.append(f"### 🟧 P2 Warning — linter warnings ({len(warnings)})")
+        for f in warnings:
+            lines.append(f"  {f.file}:{f.line}:{f.col}  [{f.rule}]  {f.message}")
+        lines.append("")
+
+    if infos:
+        lines.append(f"### 🟦 P1 Info — linter info ({len(infos)})")
+        for f in infos:
+            lines.append(f"  {f.file}:{f.line}:{f.col}  [{f.rule}]  {f.message}")
+        lines.append("")
+
+    # Summarise which files are clean so the AI knows where to focus deep review
+    flagged_files = {f.file for f in lint_findings}
+    lines.append(
+        "### Deep review scope\n"
+        "Apply thorough AI review (logic, security, architecture) to ALL code. "
+        "For linter-flagged lines, confirm and contextualize. "
+        "For clean lines not flagged above, act as the final checker."
+    )
+
+    return "\n".join(lines)
 
 
 def _build_system_prompt(
@@ -237,28 +359,33 @@ def _build_system_prompt(
 # ── JSON parsing ─────────────────────────────────────────────────────────────
 
 def _parse_json(raw: str) -> dict:
-    """Parse JSON from the model response, stripping markdown fences if present.
+    """Parse JSON from the model response.
 
-    Tries three strategies in order:
-    1. Direct parse (works when response_format=json_object is honoured).
-    2. Strip ``` fences and parse the inner block.
-    3. Scan for the first complete top-level {...} object (handles prose wrapping).
+    Tries strategies in order:
+    1. Direct parse.
+    2. Strip markdown fences (```json ... ```).
+    3. Find the first complete top-level {...} block.
+    4. Repair truncated JSON by closing open brackets/strings.
     """
-    # 1. Direct parse
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        pass
+    def _try(text: str) -> dict | None:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return None
 
-    # 2. Strip markdown fences — model sometimes wraps in ```json ... ```
+    # 1. Direct parse
+    result = _try(raw)
+    if result is not None:
+        return result
+
+    # 2. Strip markdown fences
     stripped = re.sub(r'^```(?:json)?\s*', '', raw.strip(), flags=re.MULTILINE)
     stripped = re.sub(r'```\s*$', '', stripped.strip(), flags=re.MULTILINE)
-    try:
-        return json.loads(stripped.strip())
-    except json.JSONDecodeError:
-        pass
+    result = _try(stripped.strip())
+    if result is not None:
+        return result
 
-    # 3. Find the first complete {...} block using brace counting (not greedy regex)
+    # 3. Find first complete {...} block
     depth = 0
     start = None
     for i, ch in enumerate(raw):
@@ -269,14 +396,91 @@ def _parse_json(raw: str) -> dict:
         elif ch == '}':
             depth -= 1
             if depth == 0 and start is not None:
-                candidate = raw[start:i + 1]
-                try:
-                    return json.loads(candidate)
-                except json.JSONDecodeError:
-                    # Keep scanning for another candidate
-                    start = None
+                result = _try(raw[start:i + 1])
+                if result is not None:
+                    return result
+                start = None
+
+    # 4. Repair truncated JSON — find the opening brace and close all open
+    #    brackets/braces/strings so the parser can recover partial content.
+    open_idx = raw.find('{')
+    if open_idx != -1:
+        repaired = _repair_truncated_json(raw[open_idx:])
+        result = _try(repaired)
+        if result is not None:
+            return result
 
     raise json.JSONDecodeError("No valid JSON found in response", raw, 0)
+
+
+def _repair_truncated_json(text: str) -> str:
+    """Best-effort repair of a truncated JSON string.
+
+    Walks the text tracking open braces, brackets, and strings.
+    Appends whatever closing tokens are needed to make it valid.
+    The result may have empty/null values where content was cut off.
+    """
+    stack: list[str] = []
+    in_string = False
+    escape_next = False
+
+    for ch in text:
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\' and in_string:
+            escape_next = True
+            continue
+        if ch == '"':
+            if in_string:
+                in_string = False
+            else:
+                in_string = True
+            continue
+        if in_string:
+            continue
+        if ch in ('{', '['):
+            stack.append(ch)
+        elif ch == '}' and stack and stack[-1] == '{':
+            stack.pop()
+        elif ch == ']' and stack and stack[-1] == '[':
+            stack.pop()
+
+    # Close any open string first
+    suffix = '"' if in_string else ''
+    # Close open containers in reverse order
+    for token in reversed(stack):
+        suffix += '}' if token == '{' else ']'
+
+    return text + suffix
+
+
+# ── Priority enforcement ──────────────────────────────────────────────────────
+
+# Keywords that signal the comment describes a P3-level issue regardless of
+# what the model assigned. Matched case-insensitively against the comment text.
+_P3_PATTERNS = re.compile(
+    r"syntax error|syntaxerror"
+    r"|import error|importerror"
+    r"|parse error|cannot be parsed|fails to parse|파싱"
+    r"|undefined variable|nameerror|attributeerror"
+    r"|cannot be executed|won't run|will not run|실행.*불가|불가.*실행"
+    r"|incomplete (import|statement|expression|syntax)"
+    r"|missing (colon|parenthes|bracket|quote)"
+    r"|security (vulnerabilit|risk|flaw)|취약|injection|secret.*expos|hardcoded.*(key|secret|password|token)"
+    r"|data.?loss|data.?corrupt|unrecoverable"
+    r"|문법 오류|구문 오류|임포트 오류",
+    re.IGNORECASE,
+)
+
+def _enforce_priority(assigned: str, comment_text: str) -> str:
+    """Upgrade to P3 when the comment text describes an inherently critical issue,
+    regardless of what the model assigned."""
+    if assigned == "P3":
+        return "P3"
+    if _P3_PATTERNS.search(comment_text):
+        return "P3"
+    return assigned
 
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
@@ -392,8 +596,6 @@ class AIReviewAgent:
             review_mode=review_mode,
         )
 
-        findings_text = "\n".join(str(f) for f in lint_findings) if lint_findings else "None"
-
         if review_mode == "file":
             content_header = "## File contents"
             content_body = diff or "(no content available)"
@@ -401,16 +603,14 @@ class AIReviewAgent:
             content_header = "## Staged diff"
             content_body = f"```diff\n{diff or '(no diff available)'}\n```"
 
+        lint_section = _build_lint_section(lint_findings)
+
         user_message = f"""\
 {content_header}
 
 {content_body}
 
-## Static analysis findings
-
-```
-{findings_text}
-```
+{lint_section}
 
 Please review the above and respond with the JSON object as instructed.
 """
@@ -418,18 +618,46 @@ Please review the above and respond with the JSON object as instructed.
         # Route to the correct provider
         provider = settings.cd_ai_provider.strip().lower() or "azure-openai"
         if provider == "anthropic":
-            return self._review_anthropic(settings, system_content, user_message, max_tokens)
+            result = self._review_anthropic(settings, system_content, user_message, max_tokens, lint_findings)
         elif provider == "openai":
-            return self._review_openai(settings, system_content, user_message, max_tokens)
+            result = self._review_openai(settings, system_content, user_message, max_tokens, lint_findings)
+        elif provider == "gemini":
+            result = self._review_gemini(settings, system_content, user_message, max_tokens, lint_findings)
         else:
-            return self._review_azure(settings, system_content, user_message, max_tokens)
+            result = self._review_azure(settings, system_content, user_message, max_tokens, lint_findings)
 
-    # ── Shared helper: resolve unified connection params ──────────────────────
+        # Hard-filter file_comments by severity level — the AI may still return
+        # lower-priority findings despite the prompt; this is the enforcement gate.
+        severity = settings.cd_severity_level.strip().lower() or "moderate"
+        min_rank = _SEVERITY_MIN_PRIORITY.get(severity, 1)
+        if not result.is_error:
+            if min_rank > 0:
+                result.file_comments = [
+                    fc for fc in result.file_comments
+                    if _PRIORITY_RANK.get(fc.priority, 1) >= min_rank
+                ]
+            # moderate: cap P1 Info at 2 per file so it doesn't drown out P2/P3
+            if severity == "moderate":
+                p1_count: dict[str, int] = {}
+                filtered = []
+                for fc in result.file_comments:
+                    if fc.priority == "P1":
+                        p1_count[fc.file] = p1_count.get(fc.file, 0) + 1
+                        if p1_count[fc.file] > 2:
+                            continue
+                    filtered.append(fc)
+                result.file_comments = filtered
 
-    def _resolve(self, settings: "Settings", key: str, fallback: str) -> str:
-        """Return VS Code override (cd_*) if non-empty, else the env-file fallback."""
-        override = getattr(settings, f"cd_{key}", "").strip()
-        return override if override else fallback
+        return result
+
+    @staticmethod
+    def _ctx(provider: str, model: str = "", endpoint: str = "", api_version: str = "") -> str:
+        """Return a one-line config context string (no API key)."""
+        parts = [f"provider={provider}"]
+        if model:       parts.append(f"model={model}")
+        if endpoint:    parts.append(f"endpoint={endpoint}")
+        if api_version: parts.append(f"api_version={api_version}")
+        return "  Config: " + ", ".join(parts)
 
     # ── Azure OpenAI ──────────────────────────────────────────────────────────
 
@@ -439,22 +667,22 @@ Please review the above and respond with the JSON object as instructed.
         system_content: str,
         user_message: str,
         max_tokens: int,
+        lint_findings: "list[LintFinding] | None" = None,
     ) -> ReviewResult:
-        api_key    = self._resolve(settings, "api_key",    settings.azure_openai_api_key)
-        endpoint   = self._resolve(settings, "endpoint",   settings.azure_openai_endpoint)
-        api_version= self._resolve(settings, "api_version",settings.azure_openai_api_version)
-        model      = self._resolve(settings, "model",      settings.azure_openai_deployment or self.config.model)
+        api_key     = settings.cd_api_key.strip()
+        endpoint    = settings.cd_endpoint.strip()
+        api_version = settings.cd_api_version.strip() or "2024-08-01-preview"
+        model       = settings.cd_model.strip() or self.config.model
 
-        missing = [f for f, v in [
-            ("AZURE_OPENAI_API_KEY",    api_key),
-            ("AZURE_OPENAI_ENDPOINT",   endpoint),
-            ("AZURE_OPENAI_DEPLOYMENT", model),
+        ctx = self._ctx("azure-openai", model=model, endpoint=endpoint, api_version=api_version)
+        missing = [s for s, v in [
+            ("commitDefender.apiKey",    api_key),
+            ("commitDefender.endpoint",  endpoint),
+            ("commitDefender.model",     model),
         ] if not v]
         if missing:
             return ReviewResult.error(
-                f"Missing Azure OpenAI credentials: {', '.join(missing)}\n"
-                f"  Set them in VS Code settings (commitDefender.apiKey / endpoint / model)\n"
-                f"  or in ~/.commit-defender.env."
+                f"Missing Azure OpenAI settings: {', '.join(missing)}\n{ctx}"
             )
 
         try:
@@ -495,22 +723,22 @@ Please review the above and respond with the JSON object as instructed.
                     ],
                 )
             raw = response.choices[0].message.content.strip()
-            return self._parse_result(raw, max_tokens)
+            return self._parse_result(raw, max_tokens, lint_findings)
 
         except AuthenticationError as e:
-            return ReviewResult.error(f"Azure OpenAI authentication failed.\n  Detail: {e.message}")
+            return ReviewResult.error(f"Azure OpenAI authentication failed.\n  Detail: {e.message}\n{ctx}")
         except APIConnectionError as e:
-            return ReviewResult.error(f"Could not reach Azure OpenAI endpoint '{endpoint}'.\n  Detail: {e}")
+            return ReviewResult.error(f"Could not reach Azure OpenAI endpoint.\n  Detail: {e}\n{ctx}")
         except APITimeoutError:
-            return ReviewResult.error(f"Azure OpenAI request timed out (max_tokens={max_tokens}).")
+            return ReviewResult.error(f"Azure OpenAI request timed out (max_tokens={max_tokens}).\n{ctx}")
         except RateLimitError as e:
-            return ReviewResult.error(f"Azure OpenAI rate limit exceeded.\n  Detail: {e.message}")
+            return ReviewResult.error(f"Azure OpenAI rate limit exceeded.\n  Detail: {e.message}\n{ctx}")
         except APIStatusError as e:
-            return ReviewResult.error(f"Azure OpenAI HTTP {e.status_code}.\n  Detail: {e.message}")
+            return ReviewResult.error(f"Azure OpenAI HTTP {e.status_code}.\n  Detail: {e.message}\n{ctx}")
         except json.JSONDecodeError:
             return self._json_error(max_tokens)
         except Exception as e:
-            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}")
+            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}\n{ctx}")
 
     # ── OpenAI (api.openai.com) ───────────────────────────────────────────────
 
@@ -520,16 +748,16 @@ Please review the above and respond with the JSON object as instructed.
         system_content: str,
         user_message: str,
         max_tokens: int,
+        lint_findings: "list[LintFinding] | None" = None,
     ) -> ReviewResult:
-        api_key  = self._resolve(settings, "api_key", settings.azure_openai_api_key)
-        model    = self._resolve(settings, "model",   self.config.model or "gpt-4o")
-        endpoint = self._resolve(settings, "endpoint", "")  # empty = use openai default
+        api_key  = settings.cd_api_key.strip()
+        model    = settings.cd_model.strip() or self.config.model or "gpt-4o"
+        endpoint = settings.cd_endpoint.strip()
+        ctx = self._ctx("openai", model=model, endpoint=endpoint)
 
         if not api_key:
             return ReviewResult.error(
-                "Missing OpenAI API key.\n"
-                "  Set commitDefender.apiKey in VS Code settings (User scope)\n"
-                "  or add OPENAI_API_KEY to ~/.commit-defender.env."
+                f"Missing OpenAI API key. Set commitDefender.apiKey in VS Code settings (User scope).\n{ctx}"
             )
 
         try:
@@ -573,22 +801,22 @@ Please review the above and respond with the JSON object as instructed.
                     ],
                 )
             raw = response.choices[0].message.content.strip()
-            return self._parse_result(raw, max_tokens)
+            return self._parse_result(raw, max_tokens, lint_findings)
 
         except AuthenticationError as e:
-            return ReviewResult.error(f"OpenAI authentication failed — check your API key.\n  Detail: {e.message}")
+            return ReviewResult.error(f"OpenAI authentication failed — check your API key.\n  Detail: {e.message}\n{ctx}")
         except APIConnectionError as e:
-            return ReviewResult.error(f"Could not reach OpenAI API.\n  Detail: {e}")
+            return ReviewResult.error(f"Could not reach OpenAI API.\n  Detail: {e}\n{ctx}")
         except APITimeoutError:
-            return ReviewResult.error(f"OpenAI request timed out (max_tokens={max_tokens}).")
+            return ReviewResult.error(f"OpenAI request timed out (max_tokens={max_tokens}).\n{ctx}")
         except RateLimitError as e:
-            return ReviewResult.error(f"OpenAI rate limit exceeded.\n  Detail: {e.message}")
+            return ReviewResult.error(f"OpenAI rate limit exceeded.\n  Detail: {e.message}\n{ctx}")
         except APIStatusError as e:
-            return ReviewResult.error(f"OpenAI HTTP {e.status_code}.\n  Detail: {e.message}")
+            return ReviewResult.error(f"OpenAI HTTP {e.status_code}.\n  Detail: {e.message}\n{ctx}")
         except json.JSONDecodeError:
             return self._json_error(max_tokens)
         except Exception as e:
-            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}")
+            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}\n{ctx}")
 
     # ── Anthropic ─────────────────────────────────────────────────────────────
 
@@ -598,15 +826,15 @@ Please review the above and respond with the JSON object as instructed.
         system_content: str,
         user_message: str,
         max_tokens: int,
+        lint_findings: "list[LintFinding] | None" = None,
     ) -> ReviewResult:
-        api_key = self._resolve(settings, "api_key", settings.anthropic_api_key)
-        model   = self._resolve(settings, "model",   "claude-sonnet-4-6")
+        api_key = settings.cd_api_key.strip()
+        model   = settings.cd_model.strip() or "claude-sonnet-4-6"
+        ctx = self._ctx("anthropic", model=model)
 
         if not api_key:
             return ReviewResult.error(
-                "Missing Anthropic API key.\n"
-                "  Set commitDefender.apiKey in VS Code settings (User scope)\n"
-                "  or add ANTHROPIC_API_KEY to ~/.commit-defender.env."
+                f"Missing Anthropic API key. Set commitDefender.apiKey in VS Code settings (User scope).\n{ctx}"
             )
 
         try:
@@ -623,32 +851,154 @@ Please review the above and respond with the JSON object as instructed.
                 messages=[{"role": "user", "content": user_message}],
             )
             raw = response.content[0].text.strip()
-            return self._parse_result(raw, max_tokens)
+            return self._parse_result(raw, max_tokens, lint_findings)
 
         except _anthropic.AuthenticationError as e:
-            return ReviewResult.error(f"Anthropic authentication failed — check your API key.\n  Detail: {e}")
+            return ReviewResult.error(f"Anthropic authentication failed — check your API key.\n  Detail: {e}\n{ctx}")
         except _anthropic.APIConnectionError as e:
-            return ReviewResult.error(f"Could not reach Anthropic API.\n  Detail: {e}")
+            return ReviewResult.error(f"Could not reach Anthropic API.\n  Detail: {e}\n{ctx}")
         except _anthropic.RateLimitError as e:
-            return ReviewResult.error(f"Anthropic rate limit exceeded.\n  Detail: {e}")
+            return ReviewResult.error(f"Anthropic rate limit exceeded.\n  Detail: {e}\n{ctx}")
         except _anthropic.APIStatusError as e:
-            return ReviewResult.error(f"Anthropic HTTP {e.status_code}.\n  Detail: {e.message}")
+            return ReviewResult.error(f"Anthropic HTTP {e.status_code}.\n  Detail: {e.message}\n{ctx}")
         except json.JSONDecodeError:
             return self._json_error(max_tokens)
         except Exception as e:
-            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}")
+            return ReviewResult.error(f"Unexpected error: {type(e).__name__}: {e}\n{ctx}")
 
-    def _parse_result(self, raw: str, max_tokens: int) -> ReviewResult:
+    # ── Google Gemini ─────────────────────────────────────────────────────────
+
+    def _review_gemini(
+        self,
+        settings: "Settings",
+        system_content: str,
+        user_message: str,
+        max_tokens: int,
+        lint_findings: "list[LintFinding] | None" = None,
+    ) -> ReviewResult:
+        api_key = settings.cd_api_key.strip()
+        model   = settings.cd_model.strip() or "gemini-2.5-flash"
+        ctx = self._ctx("gemini", model=model)
+
+        if not api_key:
+            return ReviewResult.error(
+                f"Missing Gemini API key. Set commitDefender.apiKey in VS Code settings (User scope).\n{ctx}"
+            )
+
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+        except ImportError:
+            return ReviewResult.error(
+                "google-genai package not installed. Run: pip install google-genai"
+            )
+
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model=model,
+                contents=user_message,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_content,
+                    max_output_tokens=max_tokens,
+                    response_mime_type="application/json",
+                ),
+            )
+            raw = response.text.strip()
+            return self._parse_result(raw, max_tokens, lint_findings)
+
+        except Exception as e:
+            # google-genai surfaces errors through google.api_core.exceptions;
+            # catch broadly and inspect the message for actionable hints.
+            msg = str(e)
+            if "API_KEY" in msg or "api key" in msg.lower() or "401" in msg or "403" in msg:
+                return ReviewResult.error(
+                    f"Gemini authentication failed — check your API key.\n  Detail: {msg}\n{ctx}"
+                )
+            if "429" in msg or "quota" in msg.lower() or "rate" in msg.lower():
+                return ReviewResult.error(
+                    f"Gemini rate limit or quota exceeded — try again later.\n  Detail: {msg}\n{ctx}"
+                )
+            if "404" in msg or "not found" in msg.lower():
+                return ReviewResult.error(
+                    f"Gemini model not found — check commitDefender.model.\n  Detail: {msg}\n{ctx}"
+                )
+            return ReviewResult.error(f"Gemini error: {type(e).__name__}: {msg}\n{ctx}")
+
+    def _parse_result(
+        self,
+        raw: str,
+        max_tokens: int,
+        lint_findings: "list[LintFinding] | None" = None,
+    ) -> ReviewResult:
         """Parse the raw model response string into a ReviewResult."""
+        truncated = False
         try:
             data = _parse_json(raw)
         except json.JSONDecodeError:
             return self._json_error(max_tokens, raw)
 
+        # Heuristic: if the raw text doesn't end with '}' (ignoring whitespace/fences),
+        # the response was likely truncated and we recovered only partial data.
+        clean_end = raw.rstrip().rstrip('`').rstrip()
+        if not clean_end.endswith('}'):
+            truncated = True
+
+        # Build lookup structures from linter results so we can enforce
+        # minimum priority without relying on text pattern matching.
+        #   files_with_error  → file had at least one linter error  → AI comment ≥ P3
+        #   files_with_warning → file had at least one linter warning → AI comment ≥ P2
+        #   error_lines → (normalised_file, line) pairs with a linter error → that line ≥ P3
+        #
+        # Paths are normalised: we store both the raw path and the basename so that
+        # absolute lint paths (/repo/app.py) match relative AI comment paths (app.py).
+        lint_findings = lint_findings or []
+        files_with_error:   set[str] = set()
+        files_with_warning: set[str] = set()
+        error_lines:        set[tuple[str, int]] = set()
+
+        def _norm_paths(p: str) -> list[str]:
+            from pathlib import Path as _P
+            pp = _P(p)
+            parts = pp.parts
+            variants = [str(_P(*parts[i:])) for i in range(len(parts))]
+            return list(dict.fromkeys([p] + variants))
+
+        for lf in lint_findings:
+            for np in _norm_paths(lf.file):
+                if lf.severity == "error":
+                    files_with_error.add(np)
+                    error_lines.add((np, lf.line))
+                elif lf.severity == "warning":
+                    files_with_warning.add(np)
+
         valid_categories = {
             "correctness", "security", "maintenance",
             "optimization", "review-history", "setting",
         }
+        valid_priorities = {"P0", "P1", "P2", "P3"}
+
+        def _resolve_priority(fc: dict) -> str:
+            raw_p = fc.get("priority", "P1").upper()
+            p = raw_p if raw_p in valid_priorities else "P1"
+            # 1. Text-pattern enforcement (catches AI comments that name the error)
+            p = _enforce_priority(p, fc.get("comment", ""))
+            # 2. Structural enforcement based on linter results.
+            #    Normalise AI comment file path the same way lint paths were normalised.
+            file = fc.get("file", "")
+            line = int(fc.get("line", 0))
+            file_variants = _norm_paths(file)
+            on_error_line  = any((fv, line) in error_lines    for fv in file_variants)
+            in_error_file  = any(fv in files_with_error       for fv in file_variants)
+            in_warning_file = any(fv in files_with_warning    for fv in file_variants)
+            if on_error_line:
+                p = "P3"
+            elif in_error_file and p in ("P0", "P1"):
+                p = "P2"
+            elif in_warning_file and p == "P1":
+                p = "P2"
+            return p
+
         file_comments = [
             FileComment(
                 file=fc["file"],
@@ -657,16 +1007,58 @@ Please review the above and respond with the JSON object as instructed.
                 category=fc.get("category", "").lower()
                          if fc.get("category", "").lower() in valid_categories
                          else "",
+                priority=_resolve_priority(fc),
             )
             for fc in data.get("file_comments", [])
             if "file" in fc and "comment" in fc
         ]
+
+        # Inject synthetic comments for lint findings not already covered by the AI.
+        # This guarantees every linter error/warning surfaces as an explicit comment
+        # with the exact rule code and message, regardless of AI output.
+        covered = {(fc.file, fc.line) for fc in file_comments}
+        covered_variants = set()
+        for (f, l) in covered:
+            for nf in _norm_paths(f):
+                covered_variants.add((nf, l))
+
+        sev_to_priority = {"error": "P3", "warning": "P2"}
+        sev_to_category = {"error": "correctness", "warning": "correctness"}
+
+        for lf in lint_findings:
+            if lf.severity not in sev_to_priority:
+                continue
+            # Check if any AI comment already covers this file+line
+            if any((nf, lf.line) in covered_variants for nf in _norm_paths(lf.file)):
+                continue
+            file_comments.append(FileComment(
+                file=lf.file,
+                line=lf.line,
+                comment=f"`{lf.rule}` {lf.message}",
+                category=sev_to_category[lf.severity],
+                priority=sev_to_priority[lf.severity],
+            ))
         raw_grade = data.get("grade", "").strip().lower()
         grade = raw_grade if raw_grade in {
             "exceptional", "proficient", "adequate", "insufficient", "critical"
         } else ""
+
+        summary = data.get("summary", "(no summary)")
+        if truncated:
+            print(
+                f"[commit-defender] Warning: AI response was truncated "
+                f"(max_tokens={max_tokens}). Partial results recovered. "
+                f"Increase commitDefender.maxTokens to get the full review.",
+                file=sys.stderr, flush=True,
+            )
+            summary = (
+                f"⚠ Response truncated (max_tokens={max_tokens}) — "
+                f"increase `commitDefender.maxTokens` for a complete review.\n\n"
+                + summary
+            )
+
         return ReviewResult(
-            summary=data.get("summary", "(no summary)"),
+            summary=summary,
             blocking=bool(data.get("blocking", False)),
             raw_response=raw,
             file_comments=file_comments,

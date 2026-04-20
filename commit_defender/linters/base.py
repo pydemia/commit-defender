@@ -25,6 +25,8 @@ class BaseLinter(ABC):
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",  # linter output is UTF-8; replace any stray bytes safely
             cwd=str(cwd) if cwd else None,
         )
 

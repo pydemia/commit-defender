@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C1 — RAZOR
+  Classic pointed shield, zero blur, hard gradient fill.
+  A crisp angled gloss line (not a soft gradient) separates top/bottom.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="shield" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <!-- Hard-edge gloss: white top half, fully transparent bottom -->
+    <linearGradient id="gloss" gradientUnits="userSpaceOnUse" x1="64" y1="12" x2="64" y2="60">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#18181b"/>
+
+  <!-- Shield fill -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="url(#shield)"/>
+
+  <!-- Gloss panel (upper half only, hard-clipped to straight section) -->
+  <path d="M64 12 L108 29 L108 66 L20 66 L20 29 Z"
+        fill="url(#gloss)"/>
+
+  <!-- Single crisp highlight line across the top shoulder -->
+  <line x1="20" y1="29" x2="108" y2="29" stroke="#ffffff" stroke-width="1" opacity="0.35"/>
+
+  <!-- Sharp outer border -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="#fda4af" stroke-width="1.5"/>
+
+  <!-- </> white -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#ffffff"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#ffffff"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#ffffff"/>
+</svg>

@@ -21,6 +21,10 @@ class ExitCodeResolver:
         if blocking_findings:
             return 1
 
+        # P3 (Critical) comments always block, regardless of config.
+        if any(fc.priority == "P3" for fc in report.review.file_comments):
+            return 1
+
         # AI review blocks only when both the config gate and the AI say so.
         if self.config.ai_review.blocking and report.review.blocking:
             return 1

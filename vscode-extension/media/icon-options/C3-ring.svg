@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C3 — RING
+  Shield outlined by a thick glowing ring + thin inner ring.
+  Interior is dark/transparent — the rings carry the color.
+  Zero blur. Bold strokes only.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="ring" gradientUnits="userSpaceOnUse" x1="20" y1="12" x2="108" y2="119">
+      <stop offset="0%"   stop-color="#fb923c"/>
+      <stop offset="50%"  stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <!-- Subtle dark fill so the shield reads as a shape -->
+    <linearGradient id="fill" gradientUnits="userSpaceOnUse" x1="64" y1="12" x2="64" y2="119">
+      <stop offset="0%"   stop-color="#fb923c" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#9333ea" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#18181b"/>
+
+  <!-- Shield subtle fill -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="url(#fill)"/>
+
+  <!-- Outer thick ring stroke -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="url(#ring)" stroke-width="7" stroke-linejoin="miter"/>
+
+  <!-- Inner thin ring stroke (offset inward ~8px) -->
+  <path d="M64 20 L101 34 L101 66 Q101 94 64 113 Q27 94 27 66 L27 34 Z"
+        fill="none" stroke="url(#ring)" stroke-width="1.5" stroke-linejoin="miter" opacity="0.5"/>
+
+  <!-- Corner accent dots at shield vertices -->
+  <circle cx="64"  cy="12"  r="3" fill="#fb923c"/>
+  <circle cx="108" cy="29"  r="3" fill="#ec4899"/>
+  <circle cx="108" cy="66"  r="3" fill="#ec4899"/>
+  <circle cx="20"  cy="29"  r="3" fill="#fb923c"/>
+  <circle cx="20"  cy="66"  r="3" fill="#9333ea"/>
+
+  <!-- </> sunset-colored code symbol -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#fb923c"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#ec4899"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#c084fc"/>
+</svg>

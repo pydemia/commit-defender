@@ -35,6 +35,17 @@ def run() -> int:
     repo_path = Path(settings.repo_path)
     dry_run = settings.dry_run
 
+    print(
+        f"[commit-defender] settings:"
+        f"  provider={settings.cd_ai_provider or '(not set)'},"
+        f"  model={settings.cd_model or '(not set)'},"
+        f"  endpoint={settings.cd_endpoint or '(not set)'},"
+        f"  api_version={settings.cd_api_version or '(not set)'},"
+        f"  api_key={'(set, ' + str(len(settings.cd_api_key)) + ' chars)' if settings.cd_api_key else '(NOT SET)'},"
+        f"  mode={settings.cd_analysis_mode or '(not set)'}",
+        file=sys.stderr, flush=True,
+    )
+
     config = load_config(repo_path)
 
     reader = StagedFilesReader(repo_path, config, settings)
@@ -58,6 +69,45 @@ def run() -> int:
             )
             JsonRenderer().render(empty_report, exit_code=0, repo_path=str(repo_path))
         return 0
+
+    # ── Many-files guard (interactive / hook mode only; VS Code handles this itself) ──
+    if not settings.json_mode:
+        on_demand_early = bool(settings.cd_target_files)
+        try:
+            threshold = int(
+                (settings.cd_repo_analysis_warn_threshold if on_demand_early else settings.cd_staged_files_warn_threshold)
+                or ("80" if on_demand_early else "20")
+            )
+        except ValueError:
+            threshold = 80 if on_demand_early else 20
+
+        if threshold > 0 and len(staged) > threshold:
+            action = settings.cd_many_files_action.strip().lower()
+            if not action:
+                print(
+                    f"\n⚠  commit-defender: {len(staged)} files are staged.\n"
+                    "  Analyzing this many files may take a while.\n"
+                    "  [1] Proceed to analyze  [2] Skip  [3] Abort commit",
+                    file=sys.stderr, flush=True,
+                )
+                try:
+                    choice = input("  Choose (1/2/3) [default: 1]: ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    choice = "3"
+                if choice == "2":
+                    action = "skip"
+                elif choice == "3":
+                    action = "abort"
+                else:
+                    action = "proceed"
+
+            if action == "skip":
+                print("[commit-defender] Analysis skipped.", file=sys.stderr, flush=True)
+                return 0
+            if action == "abort":
+                print("[commit-defender] Commit aborted.", file=sys.stderr, flush=True)
+                return 1
+            # "proceed" → fall through
 
     # Resolve analysis mode: env var > settings.json > default
     mode = (settings.cd_analysis_mode.strip() or config.review_settings.analysisMode)
@@ -131,7 +181,13 @@ def run() -> int:
 
 
 def cli() -> None:
-    """CLI entry point (used by installer for direct invocation)."""
+    """CLI entry point: commit-defender [install|uninstall|<run>]."""
+    # Sub-commands: install / uninstall are handled by the installer module.
+    if len(sys.argv) > 1 and sys.argv[1] in ("install", "uninstall"):
+        from installer.install import main as _installer_main
+        _installer_main(sys.argv[1:])
+        return
+
     json_mode = os.environ.get("CD_JSON", "0").strip() == "1"
     try:
         sys.exit(run())

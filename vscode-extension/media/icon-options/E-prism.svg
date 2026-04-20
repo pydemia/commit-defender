@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  E — PRISM
+  Mood: Bold / colorful / playful
+  Palette: Dark slate · Shield split into 4 colored quadrants · White code
+  Quadrants: TL=green  TR=blue  BL=amber  BR=pink
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <!-- Clip each shield copy to one quadrant -->
+    <clipPath id="tl"><rect x="0"  y="0"  width="64" height="66"/></clipPath>
+    <clipPath id="tr"><rect x="64" y="0"  width="64" height="66"/></clipPath>
+    <clipPath id="bl"><rect x="0"  y="66" width="64" height="62"/></clipPath>
+    <clipPath id="br"><rect x="64" y="66" width="64" height="62"/></clipPath>
+  </defs>
+
+  <rect width="128" height="128" rx="22" fill="#12151f"/>
+
+  <!-- Shield — 4 colored quadrant fills -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="#4ade80" clip-path="url(#tl)"/>
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="#60a5fa" clip-path="url(#tr)"/>
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="#fbbf24" clip-path="url(#bl)"/>
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="#f472b6" clip-path="url(#br)"/>
+
+  <!-- Dividing cross lines (subtle, dark) -->
+  <line x1="64" y1="12" x2="64" y2="119" stroke="#12151f" stroke-width="2" opacity="0.7"/>
+  <line x1="20" y1="66" x2="108" y2="66" stroke="#12151f" stroke-width="2" opacity="0.7"/>
+
+  <!-- Outer border -->
+  <path d="M64 12 L108 29 L108 66 Q108 97 64 119 Q20 97 20 66 L20 29 Z"
+        fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.2"/>
+
+  <!-- </> white -->
+  <path d="M55 51 L41 65 L55 79 L58 79 L44 65 L58 51 Z" fill="#ffffff"/>
+  <path d="M67 51 L63 51 L59 79 L63 79 Z"               fill="#ffffff"/>
+  <path d="M73 51 L70 51 L86 65 L70 79 L73 79 L89 65 Z" fill="#ffffff"/>
+</svg>

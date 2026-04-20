@@ -33,6 +33,32 @@
                 "reveal": "always",
                 "panel": "shared"
             }
+        },
+        {
+            "label": "vsce build",
+            "type": "shell",
+            "command": "vsce build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "vsce publish",
+            "type": "shell",
+            "command": "vsce publish",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
         }
     ]
 }

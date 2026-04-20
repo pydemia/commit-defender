@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor">
+  <!--
+    Activity-bar icon for VS Code.
+    Uses evenodd fill rule so the inner </ > paths punch holes through the shield fill.
+    VS Code applies its theme foreground color via CSS mask-image.
+  -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="
+    M8 1L2 3.5V8.5C2 12.5 4.6 15.2 8 16 11.4 15.2 14 12.5 14 8.5V3.5Z
+
+    M4.6 7.2L3.2 8.5L4.6 9.8L5.1 9.3L4.2 8.5L5.1 7.7Z
+    M8.9 7L8.3 7L7.2 9.9L7.8 9.9Z
+    M11.4 7.2L12.8 8.5L11.4 9.8L10.9 9.3L11.8 8.5L10.9 7.7Z
+  "/>
+</svg>

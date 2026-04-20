@@ -11,20 +11,20 @@ git commit
 pre-commit hook  ──►  commit-defender
                             │
                             ├── ruff / eslint / shellcheck (linters)
-                            ├── git diff → Azure OpenAI (AI review)
+                            ├── git diff → AI model (code review)
                             └── ANSI report → stderr → you fix it
 ```
 
 commit-defender runs as a git pre-commit hook. It:
 1. Reads your staged files
 2. Runs language-appropriate linters (ruff, eslint, shellcheck, markdownlint)
-3. Sends the diff to an AI model for a code review
-4. Prints a human-readable report and blocks the commit if issues are found
+3. Sends the diff to an AI model for a priority-graded code review
+4. Prints a human-readable report and blocks the commit if P3 Critical findings are found
 
 ## Requirements
 
 - Python 3.12+
-- Azure OpenAI credentials (API key, endpoint, deployment)
+- An API key for your chosen AI provider (Azure OpenAI, Anthropic, OpenAI, or Gemini)
 - Git
 
 ## Installation
@@ -35,27 +35,48 @@ pip install commit-defender
 
 ## Setup
 
-### 1. Credentials
+### 1. Set credentials as environment variables
 
-Create `~/.commit-defender.env`:
+Set the credentials for your chosen provider in your shell profile (e.g. `~/.zshrc` or `~/.bashrc`):
 
-```env
-AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
-AZURE_OPENAI_DEPLOYMENT=gpt-4o
+```bash
+# Azure OpenAI
+export CD_AI_PROVIDER=azure-openai
+export CD_API_KEY=your-key
+export CD_ENDPOINT=https://your-resource.openai.azure.com
+export CD_MODEL=your-deployment-name
+export CD_API_VERSION=2024-08-01-preview
+
+# Anthropic
+export CD_AI_PROVIDER=anthropic
+export CD_API_KEY=your-key
+export CD_MODEL=claude-sonnet-4-6
+
+# OpenAI
+export CD_AI_PROVIDER=openai
+export CD_API_KEY=your-key
+export CD_MODEL=gpt-4o
+
+# Google Gemini
+export CD_AI_PROVIDER=gemini
+export CD_API_KEY=your-key
+export CD_MODEL=gemini-2.5-flash
 ```
-
-Or set the environment variables directly.
 
 ### 2. Install the pre-commit hook
 
 ```bash
 # Install into the current repo
-commit-defender install
+commit-defender install .
 
 # Install into a specific repo
 commit-defender install /path/to/your-repo
+
+# Overwrite an existing hook
+commit-defender install . --force
 ```
+
+This writes `.git/hooks/pre-commit` in the target repository.
 
 ### 3. Commit as usual
 
@@ -65,46 +86,59 @@ git commit -m "my changes"
 # commit-defender runs automatically
 ```
 
+### 4. Remove the hook
+
+```bash
+commit-defender uninstall .
+```
+
+## Priority Levels
+
+Every finding is assigned one of four priority levels:
+
+| Level | Name | Meaning |
+|---|---|---|
+| **P0** | Praise | Clean code — positive feedback, nothing to fix |
+| **P1** | Info | Optional improvement — code works as-is |
+| **P2** | Warning | Highly recommended — potential runtime error or bad practice |
+| **P3** | Critical | Must fix — syntax error, security vulnerability, or data-loss risk. **Blocks commit** |
+
+P3 findings unconditionally block the commit. P0–P2 are advisory.
+
 ## VS Code Extension
 
-Install the **Commit Defender** VS Code extension for inline AI suggestions, CodeLens, and hover cards — no terminal required.
+Install the **Commit Defender** VS Code extension for inline AI suggestions, CodeLens annotations, inline comment threads, and a summary panel — no terminal required.
 
-Commands available:
-- **Commit Defender: Analyze Staged Files** — review what's about to be committed
-- **Commit Defender: Analyze Current File** — review the file open in the editor
-- **Commit Defender: Analyze Directory...** — pick a directory to review
+Commands available via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
-Extension settings:
+| Command | Description |
+|---|---|
+| `Commit Defender: Analyze Staged Files` | Review what's about to be committed |
+| `Commit Defender: Analyze Current File` | Review the file open in the editor |
+| `Commit Defender: Analyze Directory...` | Pick a directory to review |
+| `Commit Defender: Analyze Repository` | Analyze every file in the workspace |
+| `Commit Defender: Cancel Analysis` | Stop the running analysis |
+| `Commit Defender: Show Summary Panel` | Open the summary webview |
+| `Commit Defender: Clear Findings` | Remove all diagnostics and decorations |
+
+Extension settings (configure in VS Code **Settings → Extensions → Commit Defender**):
 
 | Setting | Default | Description |
 |---|---|---|
-| `commitDefender.pythonExecutable` | `${workspaceFolder}/.venv/bin/python` | Python with commit-defender installed |
-| `commitDefender.analysisMode` | `` | `hybrid` / `ai-powered` / `rule-based` |
+| `commitDefender.pythonExecutable` | *(auto)* | Python interpreter with commit-defender installed |
+| `commitDefender.aiProvider` | `azure-openai` | `azure-openai` / `anthropic` / `openai` / `gemini` |
+| `commitDefender.model` | *(required)* | Model or deployment name |
+| `commitDefender.endpoint` | *(Azure only)* | Azure OpenAI endpoint URL |
+| `commitDefender.apiKey` | *(required)* | API key — set in User Settings, not Workspace |
+| `commitDefender.analysisMode` | `hybrid` | `hybrid` / `ai-powered` / `rule-based` |
 | `commitDefender.severityLevel` | `moderate` | How strict the AI review is |
 | `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is |
 | `commitDefender.locale` | `en` | Language (`en` / `ko`) |
+| `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis |
+| `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis |
 | `commitDefender.excludePatterns` | `[]` | Extra gitignore-style patterns to skip |
 
-## Configuration
-
-Place a `.commit-defender/settings.json` in your repo:
-
-```json
-{
-  "analysisMode": "hybrid",
-  "severityLevel": "moderate",
-  "richnessLevel": "moderate",
-  "locale": "en",
-  "excludePatterns": [
-    "**/node_modules/**",
-    "**/.venv/**",
-    "*.min.js",
-    "dist/**"
-  ]
-}
-```
-
-### Analysis modes
+## Analysis Modes
 
 | Mode | Linters | AI | Use case |
 |---|---|---|---|
@@ -112,18 +146,21 @@ Place a `.commit-defender/settings.json` in your repo:
 | `ai-powered` | ✗ | ✓ | Faster, no toolchain needed |
 | `rule-based` | ✓ | ✗ | Offline, deterministic |
 
-### Severity levels
+## Severity Levels
 
 `lean` → `generous` → `moderate` → `rigorous` → `severe`
 
-### Skill files
+Controls how strictly the AI assigns priority levels. Higher strictness pushes more findings toward P2/P3.
 
-Drop `.commit-defender/<skill-name>/SKILL.md` files in your repo to inject project-specific context into the AI review (e.g. your coding conventions, security requirements, or architecture notes).
-
-## Environment variables
+## Environment Variables
 
 | Variable | Purpose |
 |---|---|
+| `CD_AI_PROVIDER` | AI provider (`azure-openai` / `anthropic` / `openai` / `gemini`) |
+| `CD_API_KEY` | API key for the chosen provider |
+| `CD_MODEL` | Model or deployment name |
+| `CD_ENDPOINT` | API endpoint URL (required for Azure OpenAI) |
+| `CD_API_VERSION` | Azure API version (default: `2024-08-01-preview`) |
 | `CD_REPO_PATH` | Repo root (set automatically by the hook) |
 | `CD_STAGED_FILES` | Newline-separated staged file paths |
 | `CD_TARGET_FILES` | Explicit file list for on-demand analysis |
@@ -132,8 +169,8 @@ Drop `.commit-defender/<skill-name>/SKILL.md` files in your repo to inject proje
 | `CD_SEVERITY_LEVEL` | Override severity level |
 | `CD_RICHNESS_LEVEL` | Override richness level |
 | `CD_LOCALE` | Override output language |
-| `CD_DRY_RUN` | `1` = always exit 0 (analysis only) |
-| `CD_HOME_ENV_FILE` | Path to credentials .env file |
+| `CD_DRY_RUN` | `1` = always exit 0 (analysis only, never blocks) |
+| `CD_SKIP_AI` | `1` = skip AI call (linters only, offline mode) |
 
 ## License
 

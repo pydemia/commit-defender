@@ -75,5 +75,7 @@ class DiffExtractor:
             ["git", "-C", str(self.repo_path)] + args,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",  # never crash on non-UTF-8 bytes in diff output
             check=True,
         )

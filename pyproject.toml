@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "commit-defender"
-version = "0.2.0"
+version = "1.0.1"
 description = "AI-powered git pre-commit code review — catches issues before they land"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "openai>=1.0.0",
     "anthropic>=0.40.0",
+    "google-genai>=1.0.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0.0",
@@ -49,20 +50,19 @@ dev = [
     "pytest>=8.0.0",
     "pytest-mock>=3.12.0",
     "ruff>=0.8.0",
+    "black>=24.0.0",
     "build>=1.0.0",
     "twine>=5.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["commit_defender"]
+packages = ["commit_defender", "installer"]
 
 [tool.hatch.build.targets.sdist]
 exclude = [
     ".venv",
     "dist",
     "tests",
-    ".commit-defender",
-    ".commit-defender.env",
     ".env",
     "vscode-extension-gemini",
     "vscode-extension-old",
@@ -70,10 +70,13 @@ exclude = [
     "blueprint.md",
     "docker-compose.yml",
     "Dockerfile",
-    "installer",
     "package-lock.json",
     "uv.lock",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
 
 [tool.ruff]
 line-length = 100

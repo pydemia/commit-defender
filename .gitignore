@@ -1,4 +1,5 @@
 # commit-defender credentials — never commit this
+.DS_Store
 .commit-defender.env
 
 # Byte-compiled / optimized / DLL files
