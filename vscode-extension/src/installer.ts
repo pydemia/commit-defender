@@ -113,12 +113,55 @@ export async function ensurePreCommitHook(
   }
 }
 
+/**
+ * Remove the commit-defender pre-commit hook from `repoRoot`.
+ * Does nothing if the hook was not installed by commit-defender.
+ */
+export async function uninstallPreCommitHook(
+  pythonExecutable: string,
+  repoRoot: string,
+): Promise<void> {
+  const hookPath = path.join(repoRoot, '.git', 'hooks', 'pre-commit');
+
+  try {
+    const content = fs.readFileSync(hookPath, 'utf8');
+    if (!content.includes(HOOK_SIGNATURE)) {
+      vscode.window.showInformationMessage(
+        'Commit Defender: Pre-commit hook was not installed by Commit Defender — skipping removal.',
+      );
+      return;
+    }
+  } catch {
+    vscode.window.showInformationMessage('Commit Defender: No pre-commit hook found.');
+    return;
+  }
+
+  const channel = getOutputChannel();
+  channel.appendLine(`\n[Commit Defender] Uninstalling pre-commit hook from ${repoRoot} …`);
+
+  const ok = await runPythonHook(pythonExecutable, ['uninstall', repoRoot], channel);
+  if (ok) {
+    channel.appendLine('[Commit Defender] Pre-commit hook removed.');
+    vscode.window.showInformationMessage('Commit Defender: Pre-commit hook removed.');
+  } else {
+    channel.appendLine('[Commit Defender] Pre-commit hook removal failed. Run manually: commit-defender uninstall .');
+    vscode.window.showWarningMessage(
+      'Commit Defender: Could not remove pre-commit hook automatically.',
+      'Show Output',
+    ).then(action => { if (action === 'Show Output') { channel.show(); } });
+  }
+}
+
 /** Run `python -m commit_defender.entrypoint install <repoRoot> --force`. */
 function runInstall(python: string, repoRoot: string, channel: vscode.OutputChannel): Promise<boolean> {
+  return runPythonHook(python, ['install', repoRoot, '--force'], channel);
+}
+
+function runPythonHook(python: string, args: string[], channel: vscode.OutputChannel): Promise<boolean> {
   return new Promise(resolve => {
     let proc: ReturnType<typeof spawn>;
     try {
-      proc = spawn(python, ['-m', 'commit_defender.entrypoint', 'install', repoRoot, '--force'], {
+      proc = spawn(python, ['-m', 'commit_defender.entrypoint', ...args], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch {

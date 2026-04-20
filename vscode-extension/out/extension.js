@@ -58,19 +58,53 @@ function activate(context) {
     // Keep the promise so analysis commands can await it — instant if already resolved.
     const backendReady = (0, installer_js_1.ensurePackageInstalled)(cfg.pythonExecutable, extensionVersion, context)
         .catch(() => { });
-    // Install the git pre-commit hook after the backend is ready, if enabled.
-    if (cfg.preCommitHook === 'enable') {
+    // ── Helper: resolve repo root for hook commands ───────────────────────────
+    async function resolveRepoRoot() {
         const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (ws) {
-            backendReady.then(async () => {
-                try {
-                    const { getRepoRoot } = await import('./gitHelper.js');
-                    const repoRoot = await getRepoRoot(ws);
-                    (0, installer_js_1.ensurePreCommitHook)(cfg.pythonExecutable, repoRoot).catch(() => { });
-                }
-                catch { /* not a git repo — skip */ }
-            });
+        if (!ws) {
+            return undefined;
         }
+        try {
+            return await (0, gitHelper_js_1.getRepoRoot)(ws);
+        }
+        catch {
+            return undefined;
+        }
+    }
+    // ── Install Pre-commit Hook command ───────────────────────────────────────
+    context.subscriptions.push(vscode.commands.registerCommand('commitDefender.installPreCommitHook', async () => {
+        const repoRoot = await resolveRepoRoot();
+        if (!repoRoot) {
+            vscode.window.showWarningMessage('Commit Defender: No git repository found in workspace.');
+            return;
+        }
+        await backendReady;
+        await (0, installer_js_1.ensurePreCommitHook)((0, config_js_1.getConfig)().pythonExecutable, repoRoot);
+    }));
+    // ── Uninstall Pre-commit Hook command ─────────────────────────────────────
+    context.subscriptions.push(vscode.commands.registerCommand('commitDefender.uninstallPreCommitHook', async () => {
+        const repoRoot = await resolveRepoRoot();
+        if (!repoRoot) {
+            vscode.window.showWarningMessage('Commit Defender: No git repository found in workspace.');
+            return;
+        }
+        await (0, installer_js_1.uninstallPreCommitHook)((0, config_js_1.getConfig)().pythonExecutable, repoRoot);
+    }));
+    // ── React to preCommitHook setting changes ────────────────────────────────
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('commitDefender.preCommitHook')) {
+            const hook = (0, config_js_1.getConfig)().preCommitHook;
+            if (hook === 'enable') {
+                vscode.commands.executeCommand('commitDefender.installPreCommitHook');
+            }
+            else {
+                vscode.commands.executeCommand('commitDefender.uninstallPreCommitHook');
+            }
+        }
+    }));
+    // ── On activation: install hook if already enabled ────────────────────────
+    if (cfg.preCommitHook === 'enable') {
+        backendReady.then(() => vscode.commands.executeCommand('commitDefender.installPreCommitHook'));
     }
     const diagnostics = vscode.languages.createDiagnosticCollection('commit-defender');
     const commentCtrl = vscode.comments.createCommentController('commit-defender', 'Commit Defender');

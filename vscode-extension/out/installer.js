@@ -46,6 +46,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensurePackageInstalled = ensurePackageInstalled;
 exports.ensurePreCommitHook = ensurePreCommitHook;
+exports.uninstallPreCommitHook = uninstallPreCommitHook;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
@@ -125,12 +126,46 @@ async function ensurePreCommitHook(pythonExecutable, repoRoot) {
         } });
     }
 }
+/**
+ * Remove the commit-defender pre-commit hook from `repoRoot`.
+ * Does nothing if the hook was not installed by commit-defender.
+ */
+async function uninstallPreCommitHook(pythonExecutable, repoRoot) {
+    const hookPath = path.join(repoRoot, '.git', 'hooks', 'pre-commit');
+    try {
+        const content = fs.readFileSync(hookPath, 'utf8');
+        if (!content.includes(HOOK_SIGNATURE)) {
+            vscode.window.showInformationMessage('Commit Defender: Pre-commit hook was not installed by Commit Defender — skipping removal.');
+            return;
+        }
+    }
+    catch {
+        vscode.window.showInformationMessage('Commit Defender: No pre-commit hook found.');
+        return;
+    }
+    const channel = (0, outputChannel_js_1.getOutputChannel)();
+    channel.appendLine(`\n[Commit Defender] Uninstalling pre-commit hook from ${repoRoot} …`);
+    const ok = await runPythonHook(pythonExecutable, ['uninstall', repoRoot], channel);
+    if (ok) {
+        channel.appendLine('[Commit Defender] Pre-commit hook removed.');
+        vscode.window.showInformationMessage('Commit Defender: Pre-commit hook removed.');
+    }
+    else {
+        channel.appendLine('[Commit Defender] Pre-commit hook removal failed. Run manually: commit-defender uninstall .');
+        vscode.window.showWarningMessage('Commit Defender: Could not remove pre-commit hook automatically.', 'Show Output').then(action => { if (action === 'Show Output') {
+            channel.show();
+        } });
+    }
+}
 /** Run `python -m commit_defender.entrypoint install <repoRoot> --force`. */
 function runInstall(python, repoRoot, channel) {
+    return runPythonHook(python, ['install', repoRoot, '--force'], channel);
+}
+function runPythonHook(python, args, channel) {
     return new Promise(resolve => {
         let proc;
         try {
-            proc = (0, child_process_1.spawn)(python, ['-m', 'commit_defender.entrypoint', 'install', repoRoot, '--force'], {
+            proc = (0, child_process_1.spawn)(python, ['-m', 'commit_defender.entrypoint', ...args], {
                 stdio: ['ignore', 'pipe', 'pipe'],
             });
         }
