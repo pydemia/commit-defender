@@ -51,7 +51,7 @@ function getConfig() {
     }
     return {
         pythonExecutable,
-        preCommitHook: (cfg.get('preCommitHook') ?? 'enable'),
+        preCommitHook: (cfg.get('preCommitHook') ?? 'disable'),
         fileTimeoutSeconds: cfg.get('fileTimeoutSeconds') ?? 120,
         directoryTimeoutSeconds: cfg.get('directoryTimeoutSeconds') ?? 360,
         stagedFilesWarnThreshold: cfg.get('stagedFilesWarnThreshold') ?? 20,

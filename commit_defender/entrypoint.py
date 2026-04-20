@@ -158,6 +158,12 @@ def run() -> int:
 
     duration_ms = int((time.monotonic() - start) * 1000)
 
+    # Apply inline skip directives (# CD:skip, # type: ignore, # TODO)
+    from .skip_markers import apply_markers
+    review.file_comments, lint_findings = apply_markers(
+        review.file_comments, lint_findings, staged, repo_path
+    )
+
     report = Report(
         staged_files=[str(f.relative_to(repo_path)) for f in staged],
         lint_findings=lint_findings,

@@ -138,6 +138,30 @@ Extension settings (configure in VS Code **Settings → Extensions → Commit De
 | `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis |
 | `commitDefender.excludePatterns` | `[]` | Extra gitignore-style patterns to skip |
 
+## Inline Skip Directives
+
+Add these comments directly in your code to fully suppress all findings on that line. The line is excluded from both the AI review and linter output — no finding of any priority level is generated for it.
+
+| Directive | When to use |
+|---|---|
+| `# CD:skip` | Explicitly suppress review for this line |
+| `# CD:skip:<reason>` | Same suppression — the `<reason>` is a human-readable note for teammates |
+| `# type: ignore` | Existing type-checker suppression; also suppresses commit-defender |
+| `# TODO` | Known unfinished work; suppress until it is addressed |
+
+```python
+risky_call()  # CD:skip
+
+password = TEST_PASSWORD  # CD:skip:test fixture, never used in production
+
+result = cast(int, value)  # type: ignore
+
+def stub():  # TODO: implement proper validation
+    pass
+```
+
+Suppression is enforced at two layers: the AI is instructed to omit marked lines from `file_comments`, and a post-processing step removes any findings that slipped through.
+
 ## Analysis Modes
 
 | Mode | Linters | AI | Use case |

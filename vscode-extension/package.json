@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -116,7 +116,7 @@
             "enable: Automatically install the git pre-commit hook in the workspace repository on activation. The hook runs commit-defender on every git commit.",
             "disable: Do not install or manage the git pre-commit hook. Analysis is still available manually and on git stage."
           ],
-          "default": "enable",
+          "default": "disable",
           "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository."
         },
         "commitDefender.runOnStage": {

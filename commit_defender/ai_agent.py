@@ -168,6 +168,13 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 - **insufficient** — Significant problems that need addressing before this can be considered ready.
 - **critical** — Severe issues: security vulnerabilities, data-loss risk, or logic-breaking bugs. Must not be committed as-is.
 
+## Inline skip directives
+If any of these markers appear on a line, do not emit any finding for that line — omit it entirely from `file_comments`:
+- `# CD:skip` — developer explicitly suppresses review for this line
+- `# CD:skip:<reason>` — same suppression; the reason is a human note, not a condition
+- `# type: ignore` — intentional type-checker suppression; skip this line
+- `# TODO` — known unfinished work; skip this line
+
 ## Core guidelines
 - Be direct and specific. Reference file names and line numbers.
 - Group related issues together.
@@ -237,6 +244,13 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 - **adequate** — Acceptable code. Notable issues that should be fixed but are not blocking.
 - **insufficient** — Significant problems that need addressing before this can be considered ready.
 - **critical** — Severe issues: security vulnerabilities, data-loss risk, or logic-breaking bugs. Must not be committed as-is.
+
+## Inline skip directives
+If any of these markers appear on a line, do not emit any finding for that line — omit it entirely from `file_comments`:
+- `# CD:skip` — developer explicitly suppresses review for this line
+- `# CD:skip:<reason>` — same suppression; the reason is a human note, not a condition
+- `# type: ignore` — intentional type-checker suppression; skip this line
+- `# TODO` — known unfinished work; skip this line
 
 ## Core guidelines
 - Be direct and specific. Reference file names and exact line numbers.

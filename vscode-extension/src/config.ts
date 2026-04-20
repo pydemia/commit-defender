@@ -49,7 +49,7 @@ export function getConfig(): ExtensionConfig {
 
   return {
     pythonExecutable,
-    preCommitHook: (cfg.get<string>('preCommitHook') ?? 'enable') as PreCommitHook,
+    preCommitHook: (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
     fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 120,
     directoryTimeoutSeconds:   cfg.get<number>('directoryTimeoutSeconds')   ?? 360,
     stagedFilesWarnThreshold:  cfg.get<number>('stagedFilesWarnThreshold')  ?? 20,

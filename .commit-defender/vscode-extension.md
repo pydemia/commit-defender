@@ -52,3 +52,6 @@ when analyze a file; every analysis is worked on file:
 
 considering the above, refactor `comments.ts` and `buildSummaryHtml` and the other modules related with generating and showing the summary.
 
+# Skip Option
+if the analysis defines the given code critical and blocked, it can be skipped with special code comment: `# CD:skip:<optional-reason>`. only with `# CD:skip` comment AI ignore this code block to prevent commit as blocked. if reason exists, AI consider the mention and determine to block or pass.
+another skip options are: `# type: ignore` and `#TODO`.

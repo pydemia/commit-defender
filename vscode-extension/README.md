@@ -114,6 +114,9 @@ P3 findings unconditionally block the commit regardless of any other configurati
 | `commitDefender.excludePatterns` | `[]` | Gitignore-style patterns to skip (e.g. `tests/**`) |
 | `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis |
 | `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis |
+| `commitDefender.stagedFilesWarnThreshold` | `20` | Warn before analyzing more than N staged files. `0` = no prompt |
+| `commitDefender.repoAnalysisWarnThreshold` | `80` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
+| `commitDefender.preCommitHook` | `disable` | `enable` = auto-install git pre-commit hook on activation · `disable` = skip |
 
 ---
 
@@ -174,6 +177,32 @@ A commit is **blocked** (exit code 1) when any of the following is true:
 3. The AI review itself returns `blocking: true` and the config `ai_review.blocking` gate is enabled
 
 P0, P1, and P2 findings are **never blocking** — they appear in the summary and Problems panel as advisory information only.
+
+---
+
+## Inline Skip Directives
+
+Add these comments directly in your code to fully suppress all findings on that line. The line is excluded from both the AI review and linter output — no finding is generated regardless of priority level.
+
+| Directive | When to use |
+|---|---|
+| `# CD:skip` | Explicitly suppress review for this line |
+| `# CD:skip:<reason>` | Same suppression — the `<reason>` is a human-readable note for teammates |
+| `# type: ignore` | Existing type-checker suppression; also suppresses commit-defender |
+| `# TODO` | Known unfinished work; suppress until it is addressed |
+
+```python
+risky_call()  # CD:skip
+
+password = TEST_PASSWORD  # CD:skip:test fixture, never used in production
+
+result = cast(int, value)  # type: ignore
+
+def stub():  # TODO: implement proper validation
+    pass
+```
+
+Suppression is enforced at two layers: the AI is instructed to omit marked lines from its output, and a post-processing step removes any findings that slipped through.
 
 ---
 
