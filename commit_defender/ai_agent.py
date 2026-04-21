@@ -351,11 +351,9 @@ def _build_system_prompt(
     if skills_text:
         parts.append(skills_text)
 
-    # Priority: env var (set by VS Code / hook) > .commit-defender/settings.json > built-in default
-    rs = config.review_settings
-    severity = settings.cd_severity_level.strip().lower() or rs.severityLevel
-    richness = settings.cd_richness_level.strip().lower() or rs.richnessLevel
-    locale   = settings.cd_locale.strip().lower()          or rs.locale
+    severity = settings.cd_severity_level.strip().lower() or "moderate"
+    richness = settings.cd_richness_level.strip().lower() or "moderate"
+    locale   = settings.cd_locale.strip().lower()          or "en"
 
     modifier_lines = [
         f"- Severity: {_SEVERITY_PROMPTS.get(severity, _SEVERITY_PROMPTS['moderate'])}",
@@ -568,6 +566,11 @@ class AIReviewAgent:
         if not summaries and not all_comments:
             return ReviewResult.skipped()
 
+        # If every file errored (no successful reviews), propagate is_error=True
+        # so the VS Code extension shows "Error" instead of "Pass".
+        if not all_comments and not grades:
+            return ReviewResult.error("\n\n---\n\n".join(summaries))
+
         return ReviewResult(
             summary="\n\n---\n\n".join(summaries),
             blocking=blocking,
@@ -630,7 +633,7 @@ Please review the above and respond with the JSON object as instructed.
 """
 
         # Route to the correct provider
-        provider = settings.cd_ai_provider.strip().lower() or "azure-openai"
+        provider = settings.cd_ai_provider.strip().lower() or "aoai"
         if provider == "anthropic":
             result = self._review_anthropic(settings, system_content, user_message, max_tokens, lint_findings)
         elif provider == "openai":
@@ -688,7 +691,7 @@ Please review the above and respond with the JSON object as instructed.
         api_version = settings.cd_api_version.strip() or "2024-08-01-preview"
         model       = settings.cd_model.strip() or self.config.model
 
-        ctx = self._ctx("azure-openai", model=model, endpoint=endpoint, api_version=api_version)
+        ctx = self._ctx("aoai", model=model, endpoint=endpoint, api_version=api_version)
         missing = [s for s, v in [
             ("commitDefender.apiKey",    api_key),
             ("commitDefender.endpoint",  endpoint),

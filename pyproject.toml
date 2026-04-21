@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "commit-defender"
-version = "1.0.4"
+version = "1.0.7"
 description = "AI-powered git pre-commit code review — catches issues before they land"
 readme = "README.md"
 license = { file = "LICENSE" }

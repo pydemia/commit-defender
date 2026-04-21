@@ -13,6 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PRIORITY_RANK = void 0;
 exports.hasValidPriority = hasValidPriority;
 exports.severityToPriority = severityToPriority;
+exports.lintRuleCategory = lintRuleCategory;
 exports.formatCategory = formatCategory;
 exports.metaForBlock = metaForBlock;
 exports.metaForComment = metaForComment;
@@ -35,6 +36,36 @@ function severityToPriority(severity) {
         return 'P2';
     }
     return 'P1';
+}
+/**
+ * Infer a CommentCategory from a lint rule code.
+ *
+ * Mapping rationale:
+ *  security    — flake8-bandit S-rules (known vulnerability patterns)
+ *  optimization — perflint PERF, McCabe C90, flynt FLY
+ *  maintenance  — style/naming/formatting: pycodestyle E/W, pep8-naming N,
+ *                 pydocstyle D, isort I, quotes Q, pyupgrade UP, annotations ANN,
+ *                 simplify SIM, dead-code ERA, print T20, unused-args ARG,
+ *                 type-check imports TC, tidy-imports TID, pathlib PTH,
+ *                 commas COM, logging-format G, boolean-traps FBT, ISC, ICN,
+ *                 pytest-style PT, future-annotations FA, ruff-specific RUF
+ *  correctness  — everything else (pyflakes F, bugbear B, runtime logic, …)
+ */
+function lintRuleCategory(rule) {
+    if (!rule) {
+        return 'correctness';
+    }
+    const r = rule.toUpperCase();
+    if (/^S\d/.test(r)) {
+        return 'security';
+    }
+    if (/^(PERF|C90|FLY)/.test(r)) {
+        return 'optimization';
+    }
+    if (/^(E|W|N|D|I|Q|UP|ANN|SIM|ERA|T|ARG|TC|TID|PTH|COM|G|FBT|ISC|ICN|PT|FA|RUF)/.test(r)) {
+        return 'maintenance';
+    }
+    return 'correctness';
 }
 /** Capitalise a category slug, e.g. "correctness" → "Correctness". */
 function formatCategory(category) {
@@ -76,6 +107,12 @@ function metaForPriority(p) {
  * Convert a full AnalysisReport into a flat, sorted CommentBlock[].
  * This is the ONLY place where lint findings and AI comments are merged.
  * Order: P3 first → P0 last. Within the same priority: lint before ai, then by line.
+ *
+ * When the AI completed successfully but returned no line-level file_comments
+ * (e.g. the file was too large for the model to map findings to specific lines),
+ * a synthetic block is created at line 1 of each staged file from the overall
+ * summary text. This ensures the COMMENTS tab, Analysis Findings section, and
+ * Problems panel always have something visible after a real review.
  */
 function normalizeReport(report) {
     const blocks = [];
@@ -85,7 +122,7 @@ function normalizeReport(report) {
             line: f.line,
             col: f.col,
             priority: severityToPriority(f.severity),
-            category: 'correctness',
+            category: lintRuleCategory(f.rule),
             comment: f.message,
             source: 'lint',
             rule: f.rule,
@@ -103,6 +140,25 @@ function normalizeReport(report) {
             comment: fc.comment,
             source: 'ai',
         });
+    }
+    // Synthesise a file-level block when the AI gave no line-specific comments.
+    // Covers: large files where the model only produces an overall verdict,
+    // or any other case where file_comments is empty but a real review ran.
+    if (blocks.length === 0 &&
+        !report.review.is_error &&
+        report.review.summary &&
+        report.staged_files.length > 0) {
+        const priority = report.review.blocking ? 'P3' : 'P1';
+        for (const file of report.staged_files) {
+            blocks.push({
+                file,
+                line: 1,
+                priority,
+                category: '',
+                comment: report.review.summary,
+                source: 'ai',
+            });
+        }
     }
     return blocks.sort((a, b) => {
         const ra = exports.PRIORITY_RANK[a.priority] ?? 1;

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any, Literal
@@ -40,15 +39,6 @@ class LinterMap(BaseModel):
     )
 
 
-class ReviewSettings(BaseModel):
-    """Loaded from .commit-defender/settings.json; overridden by env vars."""
-    analysisMode: AnalysisMode = "hybrid"
-    severityLevel: SeverityLevel = "moderate"
-    richnessLevel: RichnessLevel = "moderate"
-    locale: Locale = "en"
-    excludePatterns: list[str] = Field(default_factory=list)
-
-
 class Config(BaseModel):
     version: int = 1
     blocking_severity: str = "error"
@@ -57,24 +47,14 @@ class Config(BaseModel):
     exclude: list[str] = Field(
         default_factory=lambda: ["*.lock", "dist/**", "node_modules/**", "*.min.js"]
     )
-    # Loaded from .commit-defender/settings.json; env vars take priority at runtime
-    review_settings: ReviewSettings = Field(default_factory=ReviewSettings)
-
-
-def _load_review_settings(repo_path: Path) -> ReviewSettings:
-    """Read .commit-defender/settings.json if present."""
-    settings_file = repo_path / ".commit-defender" / "settings.json"
-    if not settings_file.exists():
-        return ReviewSettings()
-    try:
-        raw: dict[str, Any] = json.loads(settings_file.read_text(encoding="utf-8"))
-        return ReviewSettings.model_validate(raw)
-    except Exception:
-        return ReviewSettings()
 
 
 def load_config(repo_path: Path | None = None) -> Config:
-    """Load config from commit-defender.yaml and .commit-defender/settings.json."""
+    """Load config from commit-defender.yaml (linter/blocking settings only).
+
+    All review behaviour (analysis mode, severity, richness, locale, exclude patterns)
+    is controlled exclusively via CD_* environment variables or VS Code settings.
+    """
     config_path_env = os.environ.get("CD_CONFIG_PATH")
 
     candidates: list[Path] = []
@@ -90,10 +70,4 @@ def load_config(repo_path: Path | None = None) -> Config:
             cfg_dict = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
             break
 
-    config = Config.model_validate(cfg_dict)
-
-    # Overlay review_settings from .commit-defender/settings.json
-    resolved_repo = repo_path or Path("/repo")
-    config.review_settings = _load_review_settings(resolved_repo)
-
-    return config
+    return Config.model_validate(cfg_dict)

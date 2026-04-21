@@ -35,13 +35,13 @@ pip install commit-defender
 
 ## Setup
 
-### 1. Set credentials as environment variables
+### 1. Set credentials
 
-Set the credentials for your chosen provider in your shell profile (e.g. `~/.zshrc` or `~/.bashrc`):
+**Option A — shell profile** (export in `~/.zshrc` or `~/.bashrc`):
 
 ```bash
 # Azure OpenAI
-export CD_AI_PROVIDER=azure-openai
+export CD_AI_PROVIDER=aoai
 export CD_API_KEY=your-key
 export CD_ENDPOINT=https://your-resource.openai.azure.com
 export CD_MODEL=your-deployment-name
@@ -62,6 +62,30 @@ export CD_AI_PROVIDER=gemini
 export CD_API_KEY=your-key
 export CD_MODEL=gemini-2.5-flash
 ```
+
+**Option B — env file** (keeps credentials out of shell history and source control):
+
+Create a file at any path (e.g. `~/.commit-defender.env`):
+
+```ini
+# ~/.commit-defender.env
+CD_AI_PROVIDER=anthropic
+CD_API_KEY=sk-ant-...
+CD_MODEL=claude-sonnet-4-6
+
+# Optional overrides
+CD_ANALYSIS_MODE=hybrid
+CD_SEVERITY_LEVEL=moderate
+CD_LOCALE=en
+```
+
+Then point commit-defender to it with the `CD_ENV_FILE` variable:
+
+```bash
+export CD_ENV_FILE=~/.commit-defender.env
+```
+
+Or when using the VS Code extension, set **Commit Defender: Env File** in User Settings to that path — the extension passes it through automatically.
 
 ### 2. Install the pre-commit hook
 
@@ -123,15 +147,16 @@ Commands available via the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
 Extension settings (configure in VS Code **Settings → Extensions → Commit Defender**):
 
-| Setting | Default | Description |
-|---|---|---|
-| `commitDefender.pythonExecutable` | *(auto)* | Python interpreter with commit-defender installed |
-| `commitDefender.aiProvider` | `azure-openai` | `azure-openai` / `anthropic` / `openai` / `gemini` |
-| `commitDefender.model` | *(required)* | Model or deployment name |
-| `commitDefender.endpoint` | *(Azure only)* | Azure OpenAI endpoint URL |
-| `commitDefender.apiKey` | *(required)* | API key — set in User Settings, not Workspace |
-| `commitDefender.analysisMode` | `hybrid` | `hybrid` / `ai-powered` / `rule-based` |
-| `commitDefender.severityLevel` | `moderate` | How strict the AI review is |
+| Setting | Default | Env var | Description |
+|---|---|---|---|
+| `commitDefender.pythonExecutable` | *(auto)* | — | Python interpreter with commit-defender installed |
+| `commitDefender.envFile` | *(none)* | — | Path to a `.env` file with `CD_*` variables |
+| `commitDefender.aiProvider` | `aoai` | `CD_AI_PROVIDER` | `aoai` (Azure OpenAI) / `anthropic` / `openai` / `gemini` |
+| `commitDefender.model` | *(empty)* | `CD_MODEL` | Model or deployment name |
+| `commitDefender.endpoint` | *(Azure only)* | `CD_ENDPOINT` | Azure OpenAI endpoint URL |
+| `commitDefender.apiKey` | *(empty)* | `CD_API_KEY` | API key — set in User Settings or Env File, not Workspace |
+| `commitDefender.analysisMode` | `hybrid` | `CD_ANALYSIS_MODE` | `hybrid` / `ai-powered` / `rule-based` |
+| `commitDefender.severityLevel` | `moderate` | `CD_SEVERITY_LEVEL` | How strict the AI review is |
 | `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is |
 | `commitDefender.locale` | `en` | Language (`en` / `ko`) |
 | `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis |
@@ -178,23 +203,30 @@ Controls how strictly the AI assigns priority levels. Higher strictness pushes m
 
 ## Environment Variables
 
-| Variable | Purpose |
-|---|---|
-| `CD_AI_PROVIDER` | AI provider (`azure-openai` / `anthropic` / `openai` / `gemini`) |
-| `CD_API_KEY` | API key for the chosen provider |
-| `CD_MODEL` | Model or deployment name |
-| `CD_ENDPOINT` | API endpoint URL (required for Azure OpenAI) |
-| `CD_API_VERSION` | Azure API version (default: `2024-08-01-preview`) |
-| `CD_REPO_PATH` | Repo root (set automatically by the hook) |
-| `CD_STAGED_FILES` | Newline-separated staged file paths |
-| `CD_TARGET_FILES` | Explicit file list for on-demand analysis |
-| `CD_JSON` | `1` = emit machine-readable JSON to stdout |
-| `CD_ANALYSIS_MODE` | Override analysis mode |
-| `CD_SEVERITY_LEVEL` | Override severity level |
-| `CD_RICHNESS_LEVEL` | Override richness level |
-| `CD_LOCALE` | Override output language |
-| `CD_DRY_RUN` | `1` = always exit 0 (analysis only, never blocks) |
-| `CD_SKIP_AI` | `1` = skip AI call (linters only, offline mode) |
+Every user-facing setting can be controlled via a `CD_*` environment variable. Set them in your shell profile, or place them in an env file and point `CD_ENV_FILE` to it.
+
+| Variable | VS Code setting | Description |
+|---|---|---|
+| `CD_ENV_FILE` | `commitDefender.envFile` | Path to a `.env` file containing other `CD_*` variables |
+| `CD_AI_PROVIDER` | `commitDefender.aiProvider` | `aoai` / `anthropic` / `openai` / `gemini` |
+| `CD_API_KEY` | `commitDefender.apiKey` | API key for the chosen provider |
+| `CD_MODEL` | `commitDefender.model` | Model or deployment name |
+| `CD_ENDPOINT` | `commitDefender.endpoint` | API endpoint URL (required for Azure OpenAI) |
+| `CD_API_VERSION` | `commitDefender.apiVersion` | Azure API version (default: `2024-08-01-preview`) |
+| `CD_MAX_TOKENS` | `commitDefender.maxTokens` | Max AI output tokens (default: `4096`) |
+| `CD_ANALYSIS_MODE` | `commitDefender.analysisMode` | `hybrid` · `ai-powered` · `rule-based` |
+| `CD_SEVERITY_LEVEL` | `commitDefender.severityLevel` | `severe` · `rigorous` · `moderate` · `generous` · `lean` |
+| `CD_RICHNESS_LEVEL` | `commitDefender.richnessLevel` | `colorful` · `chatty` · `moderate` · `simple` · `silent` |
+| `CD_LOCALE` | `commitDefender.locale` | `en` · `ko` |
+| `CD_EXCLUDE_PATTERNS` | `commitDefender.excludePatterns` | Comma-separated gitignore-style exclude patterns (e.g. `tests/**,*.generated.ts`) |
+| `CD_STAGED_FILES_WARN_THRESHOLD` | `commitDefender.stagedFilesWarnThreshold` | Warn when staged file count exceeds N (default: `20`) |
+| `CD_REPO_ANALYSIS_WARN_THRESHOLD` | `commitDefender.repoAnalysisWarnThreshold` | Confirm when repo file count exceeds N (default: `80`) |
+| `CD_REPO_PATH` | — | Repo root (set automatically by the hook / extension) |
+| `CD_STAGED_FILES` | — | Newline-separated staged file paths (hook mode) |
+| `CD_TARGET_FILES` | — | Explicit file list for on-demand analysis |
+| `CD_JSON` | — | `1` = emit machine-readable JSON to stdout |
+| `CD_DRY_RUN` | — | `1` = always exit 0 (analysis only, never blocks) |
+| `CD_SKIP_AI` | — | `1` = skip AI call (linters only, offline mode) |
 
 ## License
 

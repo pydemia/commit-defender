@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from pydantic import field_validator
@@ -23,9 +24,9 @@ class Settings(BaseSettings):
     cd_repo_path: str = ""
 
     # AI connection — set by VS Code extension (User Settings, application scope)
-    cd_ai_provider: str = ""   # azure-openai | anthropic | openai | gemini
+    cd_ai_provider: str = ""   # aoai | anthropic | openai | gemini
     cd_model: str = ""         # model or deployment name
-    cd_endpoint: str = ""      # API endpoint URL (required for azure-openai)
+    cd_endpoint: str = ""      # API endpoint URL (required for aoai)
     cd_api_version: str = "2024-08-01-preview"
     cd_api_key: str = ""       # API key
     cd_max_tokens: str = ""
@@ -65,5 +66,8 @@ class Settings(BaseSettings):
 
 
 def load_settings() -> Settings:
-    """Instantiate Settings from CD_* environment variables only."""
+    """Instantiate Settings from CD_* environment variables, with optional .env file fallback."""
+    env_file = os.environ.get("CD_ENV_FILE", "").strip()
+    if env_file:
+        return Settings(_env_file=env_file)
     return Settings()

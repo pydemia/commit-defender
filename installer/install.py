@@ -46,7 +46,7 @@ def install(
     print()
     print("Next: export these credentials in ~/.zshenv (or ~/.profile):")
     print()
-    print("  export CD_AI_PROVIDER=azure-openai   # or: anthropic | openai | gemini")
+    print("  export CD_AI_PROVIDER=aoai   # or: anthropic | openai | gemini")
     print("  export CD_API_KEY=your-api-key")
     print("  export CD_MODEL=your-deployment-name")
     print("  export CD_ENDPOINT=https://YOUR.openai.azure.com  # Azure only")

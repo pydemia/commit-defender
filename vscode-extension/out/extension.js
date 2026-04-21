@@ -44,6 +44,7 @@ const config_js_1 = require("./config.js");
 const diagnostics_js_1 = require("./diagnostics.js");
 const findingsStore_js_1 = require("./findingsStore.js");
 const gitHelper_js_1 = require("./gitHelper.js");
+const hoverProvider_js_1 = require("./hoverProvider.js");
 const installer_js_1 = require("./installer.js");
 const historyProvider_js_1 = require("./historyProvider.js");
 const outputChannel_js_1 = require("./outputChannel.js");
@@ -117,7 +118,7 @@ function activate(context) {
         treeDataProvider: historyProvider,
         showCollapseAll: false,
     });
-    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider));
+    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider), vscode.languages.registerHoverProvider(ALL_FILES, new hoverProvider_js_1.SuggestionHoverProvider()));
     // ── Helper: shared analysis pipeline ──────────────────────────────────────
     // repoRoot must be the NON-resolved path (e.g. /Users/… not /private/Users/…)
     // so that VS Code URIs built from it match open editor documents.
@@ -157,10 +158,13 @@ function activate(context) {
         (0, diagnostics_js_1.applyDiagnostics)(blocks, repoRoot, diagnostics);
         commentManager.apply(blocks, repoRoot, commentCtrl);
         const passed = result.report.exit_code === 0;
-        statusBar.setResult(passed, result.report.review.grade);
-        // Notify the user when the AI review failed (auth error, network issue, etc.)
-        if (result.report.review.is_error) {
+        // is_error covers single-call failures; the summary fallback catches the wrapped
+        // per-file error text produced by review_files_separately() (e.g. "**file** — ⚠ AI review unavailable:…")
+        const isAiError = result.report.review.is_error
+            || /AI review unavailable/i.test(result.report.review.summary);
+        if (isAiError) {
             const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
+            statusBar.setError(msg);
             vscode.window.showErrorMessage(`Commit Defender: AI review failed — ${msg}`, 'Show Summary', 'Show Output').then(action => {
                 if (action === 'Show Summary') {
                     showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode);
@@ -170,10 +174,25 @@ function activate(context) {
                 }
             });
         }
-        // Open the summary webview in the editor — this is the "total summary" panel.
+        else {
+            statusBar.setResult(passed, result.report.review.grade);
+        }
+        // Open the summary webview beside the active editor (preserves focus on source file).
         showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode);
-        // Focus the Problems panel so the user sees diagnostics immediately.
-        vscode.commands.executeCommand('workbench.panel.markers.view.focus');
+        // Open the Problems panel so the user sees diagnostics at the bottom.
+        await vscode.commands.executeCommand('workbench.panel.markers.view.focus');
+        // After the Problems panel steals focus, bring the source file back as the active
+        // editor so inline comment threads (CommentController) are immediately visible.
+        // For single-file analysis this is unambiguous; for multi-file we pick the first.
+        const srcFile = result.report.staged_files[0] ?? relPaths[0];
+        if (srcFile) {
+            const absPath = path.join(repoRoot, srcFile);
+            await vscode.window.showTextDocument(vscode.Uri.file(absPath), {
+                preserveFocus: false, // give the editor focus so threads render expanded
+                preview: false,
+                viewColumn: vscode.ViewColumn.One,
+            });
+        }
     }
     // ── 1. Analyze Current File ────────────────────────────────────────────────
     context.subscriptions.push(vscode.commands.registerCommand('commitDefender.analyzeCurrentFile', async (uri) => {
@@ -493,7 +512,7 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
     const blocks = (0, commentFormatter_js_1.normalizeReport)(report);
     const passed = report.exit_code === 0;
     const grade = report.review.grade;
-    const isError = report.review.is_error || report.review.summary.startsWith('AI review unavailable');
+    const isError = report.review.is_error || /AI review unavailable/i.test(report.review.summary);
     const isRuleBased = analysisMode === 'rule-based'
         || (!analysisMode && !grade && report.review.file_comments.length === 0 && !isError);
     // Overall worst p-level across all blocks
@@ -558,8 +577,13 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
             for (const b of fileBlocks) {
                 const meta = (0, commentFormatter_js_1.metaForBlock)(b);
                 const cat = (0, commentFormatter_js_1.formatCategory)(b.category);
+                const catSlug = (b.category || '').toLowerCase();
                 const srcTag = `<span class="source-tag ${b.source}">${b.source}</span>`;
                 const pBadge = `<span class="priority-badge" style="color:${meta.color}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
+                // Show category badge for all findings that carry a viewpoint (everything except P0 Praise)
+                const catBadge = b.priority !== 'P0' && cat
+                    ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>`
+                    : '';
                 const lineRef = b.line > 0
                     ? `<a class="line-link" data-path="${esc(absFile)}" data-line="${b.line}" href="#">line ${b.line}</a>`
                     : '<span class="line-label">file-level</span>';
@@ -568,7 +592,7 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
                     : mdToHtml(b.comment);
                 body += `<div class="suggestion priority-${esc(b.priority)}">
           <div class="suggestion-header">
-            <span class="suggestion-category">${esc(cat)}:</span> ${pBadge} ${srcTag} &nbsp;${lineRef}
+            ${pBadge} ${catBadge} ${srcTag} &nbsp;${lineRef}
           </div>
           <div class="suggestion-body">${bodyHtml}</div>
         </div>`;
@@ -630,7 +654,6 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
     padding: 8px 14px; margin: 5px 0;
   }
   .suggestion-header { font-size: 0.85em; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .suggestion-category { font-weight: 700; color: var(--vscode-foreground); }
   .priority-badge { font-weight: 600; white-space: nowrap; }
   .suggestion.priority-P3 { border-left: 3px solid #ef4444; padding-left: 8px; }
   .suggestion.priority-P2 { border-left: 3px solid #f97316; padding-left: 8px; }
@@ -644,11 +667,12 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
     vertical-align: middle; text-transform: uppercase;
     background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);
   }
-  .cat-security    { background: #c72e2e; color: #fff; }
-  .cat-correctness { background: #b5540b; color: #fff; }
-  .cat-maintenance { background: #0066b8; color: #fff; }
-  .cat-optimization{ background: #5a2d8a; color: #fff; }
-  .cat-setting     { background: #2d7d46; color: #fff; }
+  .cat-security       { background: #c72e2e; color: #fff; }
+  .cat-correctness    { background: #b5540b; color: #fff; }
+  .cat-maintenance    { background: #0066b8; color: #fff; }
+  .cat-optimization   { background: #5a2d8a; color: #fff; }
+  .cat-setting        { background: #2d7d46; color: #fff; }
+  .cat-review-history { background: #6b6b6b; color: #fff; }
   .lint-list { margin: 4px 0; padding-left: 20px; }
   .lint-list li { margin: 3px 0; font-size: 0.9em; }
   .sev-error   { color: var(--vscode-errorForeground);           font-weight: 700; margin: 0 4px; }
@@ -741,19 +765,41 @@ function esc(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 function mdToHtml(md) {
-    return md
+    // Escape HTML first, then apply inline formatting
+    const inline = (s) => s
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-        .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-        .replace(/^# (.+)$/gm, '<h2>$1</h2>')
-        .replace(/^---$/gm, '<hr>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/^- (.+)$/gm, '<li>$1</li>')
-        .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/(.+)/s, '<p>$1</p>');
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Split on blank lines → one block per paragraph
+    const blocks = md.split(/\n{2,}/);
+    return blocks.map(block => {
+        const trimmed = block.trim();
+        if (!trimmed) {
+            return '';
+        }
+        // Headings
+        if (trimmed.startsWith('### ')) {
+            return `<h4>${inline(trimmed.slice(4))}</h4>`;
+        }
+        if (trimmed.startsWith('## ')) {
+            return `<h3>${inline(trimmed.slice(3))}</h3>`;
+        }
+        if (trimmed.startsWith('# ')) {
+            return `<h2>${inline(trimmed.slice(2))}</h2>`;
+        }
+        if (trimmed === '---') {
+            return '<hr>';
+        }
+        // Bullet list: every line starts with "- "
+        const lines = trimmed.split('\n');
+        if (lines.every(l => l.trimStart().startsWith('- '))) {
+            const items = lines.map(l => `<li>${inline(l.trimStart().slice(2))}</li>`).join('');
+            return `<ul>${items}</ul>`;
+        }
+        // Regular paragraph: single newlines become <br>
+        return `<p>${lines.map(inline).join('<br>')}</p>`;
+    }).filter(Boolean).join('');
 }
 function setupIndexWatcher(context) {
     const cfg = (0, config_js_1.getConfig)();

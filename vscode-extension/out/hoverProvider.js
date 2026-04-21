@@ -1,7 +1,8 @@
 "use strict";
 /**
- * HoverProvider — shows findings for a line when the user hovers.
- * NOTE: Not registered in subscriptions; CommentController is the primary inline display.
+ * HoverProvider — shows a compact finding summary when the user hovers over a line.
+ * CommentController threads are the primary inline display (always visible);
+ * this provides the on-hover tooltip as a complement.
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -56,10 +57,11 @@ class SuggestionHoverProvider {
         md.isTrusted = true;
         for (const b of blocks) {
             const meta = (0, commentFormatter_js_1.metaForBlock)(b);
-            const cat = (0, commentFormatter_js_1.formatCategory)(b.category);
-            md.appendMarkdown(`${meta.emoji} **${b.priority} ${meta.label}** — ${cat}\n\n`);
+            const cat = b.category ? (0, commentFormatter_js_1.formatCategory)(b.category) : '';
+            const catPart = cat && b.priority !== 'P0' ? ` — ${cat}` : '';
+            md.appendMarkdown(`${meta.emoji} **${b.priority} ${meta.label}**${catPart}\n\n`);
             if (b.source === 'lint' && b.rule) {
-                md.appendMarkdown(`\`${b.rule}\` ${b.comment}\n\n`);
+                md.appendMarkdown(`\`${b.rule}\` — ${b.comment}\n\n`);
             }
             else {
                 md.appendMarkdown(`${b.comment}\n\n`);

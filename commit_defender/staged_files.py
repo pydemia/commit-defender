@@ -62,18 +62,14 @@ class StagedFilesReader:
         self.repo_path = repo_path
         self.config = config
 
-        # Merge: commit-defender.yaml → settings.json → VS Code setting (CD_EXCLUDE_PATTERNS)
-        combined_patterns = (
-            list(config.exclude)
-            + list(config.review_settings.excludePatterns)
-        )
+        # Merge: commit-defender.yaml base patterns + CD_EXCLUDE_PATTERNS env var
+        combined_patterns = list(config.exclude)
         if settings and settings.cd_exclude_patterns.strip():
-            vscode_patterns = [
+            combined_patterns.extend(
                 p.strip()
-                for p in settings.cd_exclude_patterns.splitlines()
+                for p in settings.cd_exclude_patterns.split(",")
                 if p.strip()
-            ]
-            combined_patterns.extend(vscode_patterns)
+            )
 
         self._exclude_spec = pathspec.PathSpec.from_lines("gitwildmatch", combined_patterns)
 

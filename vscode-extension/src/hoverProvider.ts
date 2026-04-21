@@ -1,6 +1,7 @@
 /**
- * HoverProvider — shows findings for a line when the user hovers.
- * NOTE: Not registered in subscriptions; CommentController is the primary inline display.
+ * HoverProvider — shows a compact finding summary when the user hovers over a line.
+ * CommentController threads are the primary inline display (always visible);
+ * this provides the on-hover tooltip as a complement.
  */
 
 import * as vscode from 'vscode';
@@ -23,11 +24,12 @@ export class SuggestionHoverProvider implements vscode.HoverProvider {
     md.isTrusted = true;
 
     for (const b of blocks) {
-      const meta = metaForBlock(b);
-      const cat  = formatCategory(b.category);
-      md.appendMarkdown(`${meta.emoji} **${b.priority} ${meta.label}** — ${cat}\n\n`);
+      const meta    = metaForBlock(b);
+      const cat     = b.category ? formatCategory(b.category) : '';
+      const catPart = cat && b.priority !== 'P0' ? ` — ${cat}` : '';
+      md.appendMarkdown(`${meta.emoji} **${b.priority} ${meta.label}**${catPart}\n\n`);
       if (b.source === 'lint' && b.rule) {
-        md.appendMarkdown(`\`${b.rule}\` ${b.comment}\n\n`);
+        md.appendMarkdown(`\`${b.rule}\` — ${b.comment}\n\n`);
       } else {
         md.appendMarkdown(`${b.comment}\n\n`);
       }

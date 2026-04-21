@@ -109,8 +109,8 @@ def run() -> int:
                 return 1
             # "proceed" → fall through
 
-    # Resolve analysis mode: env var > settings.json > default
-    mode = (settings.cd_analysis_mode.strip() or config.review_settings.analysisMode)
+    # Resolve analysis mode: env var > default
+    mode = settings.cd_analysis_mode.strip() or "hybrid"
     run_linters = mode in ("hybrid", "rule-based")
     run_ai      = mode in ("hybrid", "ai-powered")
 

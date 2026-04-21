@@ -28,13 +28,19 @@ export function applyDiagnostics(
   for (const [relFile, fileBlocks] of byFile) {
     const uri = vscode.Uri.file(path.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map(b => {
-      const line = Math.max(0, b.line - 1);
-      const col  = Math.max(0, (b.col ?? 1) - 1);
+      const line  = Math.max(0, b.line - 1);
+      const col   = Math.max(0, (b.col ?? 1) - 1);
       const range = new vscode.Range(line, col, line, Number.MAX_SAFE_INTEGER);
 
+      // Message format: "[P3·Security] rule — first line of comment"
+      //                 "[P1·Maintenance] first line of comment"
+      const cat     = b.category ? formatCategory(b.category) : '';
+      const catPart = cat ? `·${cat}` : '';
+      const prefix  = `[${b.priority}${catPart}]`;
+      const body    = b.comment.split('\n')[0].trim();
       const message = b.source === 'lint' && b.rule
-        ? `[${b.rule}] ${b.comment}`
-        : `[${formatCategory(b.category)}] ${b.comment.split('\n')[0]}`;
+        ? `${prefix} ${b.rule} — ${body}`
+        : `${prefix} ${body}`;
 
       const diag = new vscode.Diagnostic(range, message, PRIORITY_SEVERITY[b.priority]);
       diag.source = `commit-defender · ${b.source}`;

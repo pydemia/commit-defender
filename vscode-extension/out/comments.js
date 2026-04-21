@@ -66,16 +66,24 @@ class CommentManager {
         const uri = vscode.Uri.file(path.join(repoRoot, first.file));
         const line = Math.max(0, first.line - 1);
         const range = new vscode.Range(line, 0, line, 0);
-        // One vscode.Comment per block; author carries the p-level label
+        // One vscode.Comment per block; author = priority label, body = category + comment.
         const comments = lineBlocks.map(b => {
             const meta = (0, commentFormatter_js_1.metaForBlock)(b);
-            const cat = (0, commentFormatter_js_1.formatCategory)(b.category);
-            const bodyText = b.source === 'lint' && b.rule
-                ? `\`${b.rule}\` ${b.comment}`
-                : b.comment;
-            const md = new vscode.MarkdownString(`**${cat}**\n\n${bodyText}`);
+            const cat = b.category ? (0, commentFormatter_js_1.formatCategory)(b.category) : '';
+            // Build body: optional category header, then comment text.
+            // Lint blocks prefix the rule code; AI blocks use the raw markdown comment.
+            const md = new vscode.MarkdownString();
             md.isTrusted = true;
             md.supportHtml = false;
+            if (cat && b.priority !== 'P0') {
+                md.appendMarkdown(`**${cat}**\n\n`);
+            }
+            if (b.source === 'lint' && b.rule) {
+                md.appendMarkdown(`\`${b.rule}\` — ${b.comment}`);
+            }
+            else {
+                md.appendMarkdown(b.comment);
+            }
             return {
                 author: { name: `${meta.emoji} ${b.priority} ${meta.label}` },
                 body: md,

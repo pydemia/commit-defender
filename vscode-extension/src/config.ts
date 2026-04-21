@@ -4,11 +4,12 @@ export type AnalysisMode    = 'hybrid' | 'ai-powered' | 'rule-based';
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
 export type RichnessLevel   = 'colorful' | 'chatty' | 'moderate' | 'simple' | 'silent';
 export type Locale          = 'en' | 'ko';
-export type AIProvider      = 'azure-openai' | 'anthropic' | 'openai' | 'gemini';
+export type AIProvider      = 'aoai' | 'anthropic' | 'openai' | 'gemini';
 export type PreCommitHook   = 'enable' | 'disable';
 
 export interface ExtensionConfig {
   pythonExecutable: string;
+  envFile: string;
   preCommitHook: PreCommitHook;
   fileTimeoutSeconds: number;
   directoryTimeoutSeconds: number;
@@ -49,6 +50,7 @@ export function getConfig(): ExtensionConfig {
 
   return {
     pythonExecutable,
+    envFile: cfg.get<string>('envFile') ?? '',
     preCommitHook: (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
     fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 120,
     directoryTimeoutSeconds:   cfg.get<number>('directoryTimeoutSeconds')   ?? 360,
@@ -60,7 +62,7 @@ export function getConfig(): ExtensionConfig {
     richnessLevel: (cfg.get<string>('richnessLevel') ?? '') as RichnessLevel,
     locale: (cfg.get<string>('locale') ?? '') as Locale,
     excludePatterns: cfg.get<string[]>('excludePatterns') ?? [],
-    aiProvider:  (cfg.get<string>('aiProvider') ?? 'azure-openai') as AIProvider,
+    aiProvider:  (cfg.get<string>('aiProvider') ?? 'aoai') as AIProvider,
     model:       cfg.get<string>('model')      ?? '',
     endpoint:    cfg.get<string>('endpoint')   ?? '',
     apiVersion:  cfg.get<string>('apiVersion') ?? '2024-08-01-preview',

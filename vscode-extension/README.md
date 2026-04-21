@@ -68,20 +68,41 @@ Run analysis on:
 pip install commit-defender
 ```
 
-### 2. Set your API key
+### 2. Set your API credentials
 
-Open **Settings → Extensions → Commit Defender** and set `commitDefender.apiKey` (User Settings only, never Workspace — keep it out of source control).
+**Option A — VS Code Settings (User Settings only, never Workspace):**
+
+Open **Settings → Extensions → Commit Defender** and set `commitDefender.apiKey`, `commitDefender.aiProvider`, `commitDefender.model`, and (for Azure) `commitDefender.endpoint`.
+
+**Option B — Env File (recommended for keeping credentials out of VS Code):**
+
+Create a `.env` file anywhere on your machine (e.g. `~/.commit-defender.env`):
+
+```ini
+# ~/.commit-defender.env
+CD_AI_PROVIDER=anthropic
+CD_API_KEY=sk-ant-...
+CD_MODEL=claude-sonnet-4-6
+```
+
+Then point the extension to it in **Settings → Extensions → Commit Defender → Env File**:
+
+```
+~/.commit-defender.env
+```
+
+VS Code settings take precedence over env file values when both are set.
 
 ### 3. Configure your provider
 
 Open **Settings → Extensions → Commit Defender** and set:
 
-| Setting | Description |
-|---|---|
-| `commitDefender.aiProvider` | `azure-openai` / `anthropic` / `openai` / `gemini` |
-| `commitDefender.model` | Model or deployment name |
-| `commitDefender.endpoint` | Required for Azure OpenAI |
-| `commitDefender.apiVersion` | Azure API version (default: `2024-08-01-preview`) |
+| Setting | Env var | Description |
+|---|---|---|
+| `commitDefender.aiProvider` | `CD_AI_PROVIDER` | `aoai` (Azure OpenAI) / `anthropic` / `openai` / `gemini` |
+| `commitDefender.model` | `CD_MODEL` | Model or deployment name |
+| `commitDefender.endpoint` | `CD_ENDPOINT` | Required for Azure OpenAI |
+| `commitDefender.apiVersion` | `CD_API_VERSION` | Azure API version (default: `2024-08-01-preview`) |
 
 ---
 
@@ -102,21 +123,27 @@ P3 findings unconditionally block the commit regardless of any other configurati
 
 ## Extension Settings
 
-| Setting | Default | Description |
-|---|---|---|
-| `commitDefender.pythonExecutable` | *(auto)* | Python interpreter path. Auto-detects from VS Code Python extension when empty. |
-| `commitDefender.analysisMode` | `hybrid` | `hybrid` · `ai-powered` · `rule-based` |
-| `commitDefender.severityLevel` | `moderate` | How strict the AI reviewer is: `severe` → `lean` |
-| `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is: `colorful` → `silent` |
-| `commitDefender.locale` | `en` | Review language: `en` or `ko` (한국어) |
-| `commitDefender.runOnStage` | `true` | Auto-analyze when files are staged |
-| `commitDefender.maxTokens` | `4096` | Max output tokens for the AI response |
-| `commitDefender.excludePatterns` | `[]` | Gitignore-style patterns to skip (e.g. `tests/**`) |
-| `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis |
-| `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis |
-| `commitDefender.stagedFilesWarnThreshold` | `20` | Warn before analyzing more than N staged files. `0` = no prompt |
-| `commitDefender.repoAnalysisWarnThreshold` | `80` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
-| `commitDefender.preCommitHook` | `disable` | `enable` = auto-install git pre-commit hook on activation · `disable` = skip |
+| Setting | Default | Env var | Description |
+|---|---|---|---|
+| `commitDefender.pythonExecutable` | *(auto)* | — | Python interpreter path. Auto-detects from VS Code Python extension when empty. |
+| `commitDefender.envFile` | *(none)* | — | Path to a `.env` file with `CD_*` variables (e.g. `~/.commit-defender.env`). Keeps credentials out of VS Code settings. |
+| `commitDefender.aiProvider` | `aoai` | `CD_AI_PROVIDER` | `aoai` (Azure OpenAI) · `anthropic` · `openai` · `gemini` |
+| `commitDefender.model` | *(empty)* | `CD_MODEL` | Model or deployment name |
+| `commitDefender.endpoint` | *(empty)* | `CD_ENDPOINT` | API endpoint URL (required for Azure OpenAI) |
+| `commitDefender.apiVersion` | `2024-08-01-preview` | `CD_API_VERSION` | Azure API version (ignored for other providers) |
+| `commitDefender.apiKey` | *(empty)* | `CD_API_KEY` | API key — set in User Settings or Env File, never Workspace |
+| `commitDefender.maxTokens` | `4096` | `CD_MAX_TOKENS` | Max output tokens for the AI response |
+| `commitDefender.analysisMode` | `hybrid` | `CD_ANALYSIS_MODE` | `hybrid` · `ai-powered` · `rule-based` |
+| `commitDefender.severityLevel` | `moderate` | `CD_SEVERITY_LEVEL` | How strict the AI reviewer is: `severe` → `lean` |
+| `commitDefender.richnessLevel` | `moderate` | `CD_RICHNESS_LEVEL` | How detailed the feedback is: `colorful` → `silent` |
+| `commitDefender.locale` | `en` | `CD_LOCALE` | Review language: `en` or `ko` (한국어) |
+| `commitDefender.excludePatterns` | `[]` | `CD_EXCLUDE_PATTERNS` | Gitignore-style patterns to skip (comma-separated in env var, e.g. `tests/**,*.generated.ts`) |
+| `commitDefender.stagedFilesWarnThreshold` | `20` | `CD_STAGED_FILES_WARN_THRESHOLD` | Warn before analyzing more than N staged files. `0` = no prompt |
+| `commitDefender.repoAnalysisWarnThreshold` | `80` | `CD_REPO_ANALYSIS_WARN_THRESHOLD` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
+| `commitDefender.runOnStage` | `true` | — | Auto-analyze when files are staged |
+| `commitDefender.preCommitHook` | `disable` | — | `enable` = auto-install git pre-commit hook on activation · `disable` = skip |
+| `commitDefender.fileTimeoutSeconds` | `120` | — | Timeout for single-file analysis |
+| `commitDefender.directoryTimeoutSeconds` | `360` | — | Timeout for directory / repository analysis |
 
 ---
 
@@ -224,20 +251,43 @@ commit-defender install . --force
 
 This writes `.git/hooks/pre-commit` in the target repository.
 
-### 2. Set credentials as environment variables
+### 2. Set credentials
 
-The hook reads credentials from environment variables. Set them in your shell so they are available at commit time:
+**Option A — shell profile** (credentials available at every commit):
+
+```bash
+# ~/.zshrc or ~/.bashrc
+export CD_AI_PROVIDER=anthropic
+export CD_API_KEY=sk-ant-...
+export CD_MODEL=claude-sonnet-4-6
+```
+
+**Option B — env file** (pass path via `CD_ENV_FILE` or point the VS Code extension to it):
+
+```ini
+# ~/.commit-defender.env
+CD_AI_PROVIDER=anthropic
+CD_API_KEY=sk-ant-...
+CD_MODEL=claude-sonnet-4-6
+```
+
+All supported variables:
 
 | Variable | Required | Description |
 |---|---|---|
-| `CD_AI_PROVIDER` | Yes | `azure-openai` · `anthropic` · `openai` · `gemini` |
+| `CD_AI_PROVIDER` | Yes | `aoai` · `anthropic` · `openai` · `gemini` |
 | `CD_API_KEY` | Yes | API key for the chosen provider |
 | `CD_MODEL` | Yes | Deployment name (Azure) or model name (others) |
 | `CD_ENDPOINT` | Azure only | `https://YOUR.openai.azure.com` |
 | `CD_API_VERSION` | Azure only | e.g. `2024-08-01-preview` |
 | `CD_ANALYSIS_MODE` | No | `hybrid` · `ai-powered` · `rule-based` (default: `hybrid`) |
 | `CD_SEVERITY_LEVEL` | No | `severe` · `rigorous` · `moderate` · `generous` · `lean` |
+| `CD_RICHNESS_LEVEL` | No | `colorful` · `chatty` · `moderate` · `simple` · `silent` |
 | `CD_LOCALE` | No | `en` · `ko` |
+| `CD_EXCLUDE_PATTERNS` | No | Comma-separated gitignore-style patterns to skip (e.g. `tests/**,*.generated.ts`) |
+| `CD_STAGED_FILES_WARN_THRESHOLD` | No | Warn when more than N files are staged (default: `20`) |
+| `CD_REPO_ANALYSIS_WARN_THRESHOLD` | No | Confirm when more than N files in repo scan (default: `80`) |
+| `CD_MAX_TOKENS` | No | Max AI output tokens (default: `4096`) |
 
 ### 3. Remove the hook
 

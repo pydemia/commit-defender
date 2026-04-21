@@ -51,6 +51,7 @@ function getConfig() {
     }
     return {
         pythonExecutable,
+        envFile: cfg.get('envFile') ?? '',
         preCommitHook: (cfg.get('preCommitHook') ?? 'disable'),
         fileTimeoutSeconds: cfg.get('fileTimeoutSeconds') ?? 120,
         directoryTimeoutSeconds: cfg.get('directoryTimeoutSeconds') ?? 360,
@@ -62,7 +63,7 @@ function getConfig() {
         richnessLevel: (cfg.get('richnessLevel') ?? ''),
         locale: (cfg.get('locale') ?? ''),
         excludePatterns: cfg.get('excludePatterns') ?? [],
-        aiProvider: (cfg.get('aiProvider') ?? 'azure-openai'),
+        aiProvider: (cfg.get('aiProvider') ?? 'aoai'),
         model: cfg.get('model') ?? '',
         endpoint: cfg.get('endpoint') ?? '',
         apiVersion: cfg.get('apiVersion') ?? '2024-08-01-preview',

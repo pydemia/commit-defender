@@ -36,14 +36,14 @@ class PythonRunner {
                 ...process.env,
                 CD_REPO_PATH: repoRoot,
                 CD_JSON: '1',
-                // Empty string = "not set by VS Code" → Python falls back to settings.json
+                ...(this.cfg.envFile && { CD_ENV_FILE: this.cfg.envFile }),
                 ...(this.cfg.analysisMode && { CD_ANALYSIS_MODE: this.cfg.analysisMode }),
                 ...(this.cfg.severityLevel && { CD_SEVERITY_LEVEL: this.cfg.severityLevel }),
                 ...(this.cfg.richnessLevel && { CD_RICHNESS_LEVEL: this.cfg.richnessLevel }),
                 ...(this.cfg.locale && { CD_LOCALE: this.cfg.locale }),
                 // Newline-separated gitignore patterns
                 ...(this.cfg.excludePatterns.length > 0 && {
-                    CD_EXCLUDE_PATTERNS: this.cfg.excludePatterns.join('\n'),
+                    CD_EXCLUDE_PATTERNS: this.cfg.excludePatterns.join(','),
                 }),
                 CD_STAGED_FILES_WARN_THRESHOLD: String(this.cfg.stagedFilesWarnThreshold),
                 CD_REPO_ANALYSIS_WARN_THRESHOLD: String(this.cfg.repoAnalysisWarnThreshold),
