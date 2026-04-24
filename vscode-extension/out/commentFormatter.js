@@ -149,16 +149,14 @@ function normalizeReport(report) {
         report.review.summary &&
         report.staged_files.length > 0) {
         const priority = report.review.blocking ? 'P3' : 'P1';
-        for (const file of report.staged_files) {
-            blocks.push({
-                file,
-                line: 1,
-                priority,
-                category: '',
-                comment: report.review.summary,
-                source: 'ai',
-            });
-        }
+        blocks.push({
+            file: report.staged_files[0],
+            line: 1,
+            priority,
+            category: '',
+            comment: report.review.summary,
+            source: 'ai',
+        });
     }
     return blocks.sort((a, b) => {
         const ra = exports.PRIORITY_RANK[a.priority] ?? 1;

@@ -43,57 +43,41 @@ class CommentManager {
         this.threads.forEach((t) => t.dispose());
         this.threads = [];
     }
-    /** Create one thread per line; each block on that line becomes a vscode.Comment inside it. */
+    /** Create one thread per CommentBlock — one unit-comment-block per code segment. */
     apply(blocks, repoRoot, ctrl) {
         this.clearAll();
-        // Group by file + line — preserves the worst-first order from normalizeReport
-        const byLine = new Map();
         for (const b of blocks) {
             if (b.line <= 0) {
                 continue;
             }
-            const key = `${b.file}\x00${b.line}`;
-            const list = byLine.get(key) ?? [];
-            list.push(b);
-            byLine.set(key, list);
-        }
-        for (const lineBlocks of byLine.values()) {
-            this._createThread(ctrl, repoRoot, lineBlocks);
+            this._createThread(ctrl, repoRoot, b);
         }
     }
-    _createThread(ctrl, repoRoot, lineBlocks) {
-        const first = lineBlocks[0];
-        const uri = vscode.Uri.file(path.join(repoRoot, first.file));
-        const line = Math.max(0, first.line - 1);
+    /**
+     * Render a unit-comment-block per spec:
+     *   thread.label → "{emoji} {priority} {label} · {point-of-view}"
+     *   body         → just the AI-generated comment (no redundant header)
+     */
+    _createThread(ctrl, repoRoot, b) {
+        const uri = vscode.Uri.file(path.join(repoRoot, b.file));
+        const line = Math.max(0, b.line - 1);
         const range = new vscode.Range(line, 0, line, 0);
-        // One vscode.Comment per block; author = priority label, body = category + comment.
-        const comments = lineBlocks.map(b => {
-            const meta = (0, commentFormatter_js_1.metaForBlock)(b);
-            const cat = b.category ? (0, commentFormatter_js_1.formatCategory)(b.category) : '';
-            // Build body: optional category header, then comment text.
-            // Lint blocks prefix the rule code; AI blocks use the raw markdown comment.
-            const md = new vscode.MarkdownString();
-            md.isTrusted = true;
-            md.supportHtml = false;
-            if (cat && b.priority !== 'P0') {
-                md.appendMarkdown(`**${cat}**\n\n`);
-            }
-            if (b.source === 'lint' && b.rule) {
-                md.appendMarkdown(`\`${b.rule}\` — ${b.comment}`);
-            }
-            else {
-                md.appendMarkdown(b.comment);
-            }
-            return {
-                author: { name: `${meta.emoji} ${b.priority} ${meta.label}` },
-                body: md,
-                mode: vscode.CommentMode.Preview,
-            };
-        });
-        // Thread label = worst priority on this line (first block after sort)
-        const worstMeta = (0, commentFormatter_js_1.metaForBlock)(first);
-        const thread = ctrl.createCommentThread(uri, range, comments);
-        thread.label = `${worstMeta.emoji} ${first.priority} ${worstMeta.label}`;
+        const meta = (0, commentFormatter_js_1.metaForBlock)(b);
+        const pov = b.category && b.priority !== 'P0' ? ` · ${(0, commentFormatter_js_1.formatCategory)(b.category)}` : '';
+        const header = `${meta.emoji} ${b.priority} ${meta.label}${pov}`;
+        const bodyText = b.source === 'lint' && b.rule
+            ? `\`${b.rule}\` — ${b.comment}`
+            : b.comment;
+        const md = new vscode.MarkdownString(bodyText);
+        md.isTrusted = true;
+        md.supportHtml = false;
+        const comment = {
+            author: { name: 'Commit Defender AI' },
+            body: md,
+            mode: vscode.CommentMode.Preview,
+        };
+        const thread = ctrl.createCommentThread(uri, range, [comment]);
+        thread.label = header;
         thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded;
         thread.canReply = false;
         this.threads.push(thread);

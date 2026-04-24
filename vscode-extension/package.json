@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.0.7",
+  "version": "1.0.13",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -77,6 +77,11 @@
       {
         "command": "commitDefender.uninstallPreCommitHook",
         "title": "Commit Defender: Uninstall Pre-commit Hook"
+      },
+      {
+        "command": "commitDefender.generateCommitMessage",
+        "title": "Commit Defender: Generate Commit Message",
+        "icon": "$(edit)"
       }
     ],
     "configuration": {
@@ -257,11 +262,17 @@
         { "command": "commitDefender.showHistoryEntry", "when": "false" },
         { "command": "commitDefender.reanalyzeHistoryEntry", "when": "false" },
         { "command": "commitDefender.installPreCommitHook" },
-        { "command": "commitDefender.uninstallPreCommitHook" }
+        { "command": "commitDefender.uninstallPreCommitHook" },
+        { "command": "commitDefender.generateCommitMessage" }
       ],
       "scm/title": [
         {
           "command": "commitDefender.analyze",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        },
+        {
+          "command": "commitDefender.generateCommitMessage",
           "group": "navigation",
           "when": "scmProvider == git"
         },

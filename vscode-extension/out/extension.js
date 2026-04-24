@@ -44,7 +44,6 @@ const config_js_1 = require("./config.js");
 const diagnostics_js_1 = require("./diagnostics.js");
 const findingsStore_js_1 = require("./findingsStore.js");
 const gitHelper_js_1 = require("./gitHelper.js");
-const hoverProvider_js_1 = require("./hoverProvider.js");
 const installer_js_1 = require("./installer.js");
 const historyProvider_js_1 = require("./historyProvider.js");
 const outputChannel_js_1 = require("./outputChannel.js");
@@ -93,6 +92,9 @@ function activate(context) {
     }));
     // ── React to preCommitHook setting changes ────────────────────────────────
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('commitDefender')) {
+            historyProvider.updateConfig((0, config_js_1.getConfig)());
+        }
         if (e.affectsConfiguration('commitDefender.preCommitHook')) {
             const hook = (0, config_js_1.getConfig)().preCommitHook;
             if (hook === 'enable') {
@@ -113,12 +115,12 @@ function activate(context) {
     const statusBar = new statusBar_js_1.StatusBarManager();
     let currentRunner = null;
     const codeLensProvider = new codeLens_js_1.SuggestionCodeLensProvider();
-    const historyProvider = new historyProvider_js_1.HistoryProvider();
+    const historyProvider = new historyProvider_js_1.HistoryProvider(cfg);
     const historyView = vscode.window.createTreeView('commitDefender.history', {
         treeDataProvider: historyProvider,
         showCollapseAll: false,
     });
-    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider), vscode.languages.registerHoverProvider(ALL_FILES, new hoverProvider_js_1.SuggestionHoverProvider()));
+    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider));
     // ── Helper: shared analysis pipeline ──────────────────────────────────────
     // repoRoot must be the NON-resolved path (e.g. /Users/… not /private/Users/…)
     // so that VS Code URIs built from it match open editor documents.
@@ -132,8 +134,10 @@ function activate(context) {
             statusBar.setProgress(current, total, file);
         });
         currentRunner = runner;
+        historyProvider.setRunning(true);
         const result = await runner.runTargets(repoRoot, relPaths, timeoutSeconds);
         currentRunner = null;
+        historyProvider.setRunning(false);
         if (result.cancelled) {
             statusBar.setIdle('Analysis cancelled');
             vscode.window.showInformationMessage('Commit Defender: Analysis cancelled.');
@@ -155,6 +159,7 @@ function activate(context) {
         findingsStore_js_1.findingsStore.update(result.report, repoRoot);
         historyProvider.push(result.report, repoRoot);
         const blocks = findingsStore_js_1.findingsStore.lastReport().blocks;
+        historyProvider.updateFindings(blocks);
         (0, diagnostics_js_1.applyDiagnostics)(blocks, repoRoot, diagnostics);
         commentManager.apply(blocks, repoRoot, commentCtrl);
         const passed = result.report.exit_code === 0;
@@ -364,7 +369,7 @@ function activate(context) {
         diagnostics.clear();
         commentManager.clearAll();
         findingsStore_js_1.findingsStore.clear();
-        historyProvider.clear();
+        historyProvider.clear(); // also resets _blocks and _lastReport
         statusBar.setIdle();
     }));
     // ── Show line suggestion (CodeLens click) — navigate to line ─────────────
@@ -400,6 +405,53 @@ function activate(context) {
         catch (err) {
             handleError(err, statusBar);
         }
+    }));
+    // ── Generate commit message ────────────────────────────────────────────────
+    context.subscriptions.push(vscode.commands.registerCommand('commitDefender.generateCommitMessage', async () => {
+        const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!ws) {
+            vscode.window.showWarningMessage('Commit Defender: No workspace folder open.');
+            return;
+        }
+        let repoRoot;
+        try {
+            repoRoot = await (0, gitHelper_js_1.getRepoRoot)(ws);
+        }
+        catch {
+            vscode.window.showWarningMessage('Commit Defender: No git repository found.');
+            return;
+        }
+        await backendReady;
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false }, async () => {
+            const result = await new runner_js_1.PythonRunner((0, config_js_1.getConfig)()).runCommitMessage(repoRoot, 60);
+            if (result.is_error || !result.commit_message) {
+                vscode.window.showErrorMessage(`Commit Defender: ${result.error || 'Failed to generate commit message'}`);
+                return;
+            }
+            // Insert into the VS Code Git SCM input box if the git extension is active.
+            const gitExt = vscode.extensions.getExtension('vscode.git');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const gitApi = gitExt?.exports?.getAPI?.(1);
+            const repo = gitApi?.getRepository?.(vscode.Uri.file(repoRoot))
+                ?? gitApi?.repositories?.[0];
+            if (repo?.inputBox) {
+                repo.inputBox.value = result.commit_message;
+                vscode.window.showInformationMessage('Commit Defender: Commit message inserted into the Source Control input box.');
+            }
+            else {
+                // Fallback: copy to clipboard and let the user paste.
+                await vscode.env.clipboard.writeText(result.commit_message);
+                vscode.window.showInformationMessage('Commit Defender: Commit message copied to clipboard.', 'Preview').then(action => {
+                    if (action === 'Preview') {
+                        vscode.window.showInputBox({
+                            value: result.commit_message,
+                            prompt: 'Generated commit message (read-only preview)',
+                            ignoreFocusOut: true,
+                        });
+                    }
+                });
+            }
+        });
     }));
     // ── Auto-trigger on git stage ──────────────────────────────────────────────
     setupIndexWatcher(context);
@@ -507,15 +559,99 @@ function gradeColor(grade) {
         default: return '#666';
     }
 }
+/**
+ * Render per-file overall-summary sections.
+ *
+ * Reads structured `per_file_summaries` emitted by Python's
+ * review_files_separately(). Each entry carries the file's summary text and
+ * its representative priority (worst priority across that file's
+ * unit-comment-blocks).
+ *
+ * Falls back to rendering the flat `review.summary` markdown when structured
+ * data isn't available (e.g. pre-commit diff mode's single combined review).
+ */
+function _renderOverallSummary(review, blocks, repoRoot) {
+    const perFile = review.per_file_summaries ?? [];
+    // Fallback: no structured data — render the summary as a single block.
+    if (perFile.length === 0) {
+        return `<div class="per-file-summary">${mdToHtml(review.summary)}</div>`;
+    }
+    // Worst priority per file, computed from the unified blocks. Used when a
+    // PerFileSummary entry has no priority or we want to reconcile with blocks.
+    const worstByFile = new Map();
+    for (const b of blocks) {
+        const cur = worstByFile.get(b.file);
+        if (!cur || commentFormatter_js_1.PRIORITY_RANK[b.priority] > commentFormatter_js_1.PRIORITY_RANK[cur]) {
+            worstByFile.set(b.file, b.priority);
+        }
+    }
+    let html = '';
+    for (const pfs of perFile) {
+        const priority = worstByFile.get(pfs.file) ?? pfs.priority;
+        const pMeta = types_js_1.PRIORITY_META[priority];
+        const badge = pMeta
+            ? `<span class="priority-badge" style="color:${pMeta.color}">${pMeta.emoji} ${priority} ${pMeta.label}</span>`
+            : '';
+        const absFile = path.join(repoRoot, pfs.file);
+        html += `<div class="per-file-summary">
+      <div class="per-file-header">
+        <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
+        ${badge}
+      </div>
+      <div class="per-file-body">${mdToHtml(pfs.summary)}</div>
+    </div>`;
+    }
+    return html;
+}
+/** Render a list of CommentBlocks grouped by file, each block as one card. */
+function _renderFileBlocks(blocks, repoRoot) {
+    const byFile = new Map();
+    for (const b of blocks) {
+        const list = byFile.get(b.file) ?? [];
+        list.push(b);
+        byFile.set(b.file, list);
+    }
+    let html = '';
+    for (const [relFile, fileBlocks] of byFile) {
+        const absFile = path.join(repoRoot, relFile);
+        html += `<div class="file-block">
+      <div class="file-name">
+        <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(relFile)}</a>
+      </div>`;
+        for (const b of fileBlocks) {
+            const meta = (0, commentFormatter_js_1.metaForBlock)(b);
+            const cat = (0, commentFormatter_js_1.formatCategory)(b.category);
+            const catSlug = (b.category || '').toLowerCase();
+            const pBadge = `<span class="priority-badge" style="color:${meta.color}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
+            const catBadge = b.priority !== 'P0' && b.category
+                ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>`
+                : '';
+            const lineRef = b.line > 0
+                ? `<a class="line-link" data-path="${esc(absFile)}" data-line="${b.line}" href="#">line ${b.line}</a>`
+                : '<span class="line-label">file-level</span>';
+            const bodyHtml = b.source === 'lint' && b.rule
+                ? `<code>${esc(b.rule)}</code> ${esc(b.comment)}`
+                : mdToHtml(b.comment);
+            html += `<div class="suggestion priority-${esc(b.priority)}">
+        <div class="suggestion-header">${pBadge} ${catBadge} &nbsp;${lineRef}</div>
+        <div class="suggestion-body">${bodyHtml}</div>
+      </div>`;
+        }
+        html += '</div>';
+    }
+    return html;
+}
 function buildSummaryHtml(report, repoRoot, analysisMode) {
-    // ── Normalize to unified CommentBlock[] — single source of truth ─────────
+    // ── Normalize — all findings are unit-comment-blocks ─────────────────────
+    // Per spec: lint informs priority; every finding (lint-origin or AI-origin)
+    // is a unit-comment-block and appears under the unified "AI Comments" section.
     const blocks = (0, commentFormatter_js_1.normalizeReport)(report);
     const passed = report.exit_code === 0;
     const grade = report.review.grade;
     const isError = report.review.is_error || /AI review unavailable/i.test(report.review.summary);
     const isRuleBased = analysisMode === 'rule-based'
         || (!analysisMode && !grade && report.review.file_comments.length === 0 && !isError);
-    // Overall worst p-level across all blocks
+    // Representative priority across all unit-comment-blocks (worst = most urgent)
     const wp = (0, commentFormatter_js_1.worstPriority)(blocks);
     const wpMeta = wp ? types_js_1.PRIORITY_META[wp] : undefined;
     const headerBadge = isError
@@ -529,20 +665,23 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
         ? `<span class="priority-badge" style="color:${wpMeta.color}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>`
         : '';
     // ── Header ────────────────────────────────────────────────────────────────
+    const metaParts = [
+        `${report.staged_files.length} file(s) analyzed`,
+        blocks.length > 0 ? `${blocks.length} comment(s)` : '',
+        isError
+            ? '<span class="mode-tag" style="background:#c72e2e">ai error</span>'
+            : `<span class="mode-tag">${isRuleBased ? 'rule-based' : (analysisMode ?? 'hybrid')}</span>`,
+        `${report.duration_ms} ms`,
+    ].filter(Boolean);
     let body = `
     <div class="header">
       <div class="header-row">
         <h1>🛡 Commit Defender &nbsp;${headerBadge} ${gradeBadge} &nbsp;${worstBadge}</h1>
         <button class="json-btn" id="btnShowJson" title="Open raw JSON report in editor">{ } Raw JSON</button>
       </div>
-      <div class="meta">
-        ${report.staged_files.length} file(s) &nbsp;·&nbsp; ${blocks.length} finding(s) &nbsp;·&nbsp;
-        ${isError
-        ? '<span class="mode-tag" style="background:#c72e2e">ai error</span>'
-        : `<span class="mode-tag">${isRuleBased ? 'rule-based' : (analysisMode ?? 'hybrid')}</span>`} &nbsp;·&nbsp; ${report.duration_ms} ms
-      </div>
+      <div class="meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
     </div>`;
-    // ── Overall summary text ──────────────────────────────────────────────────
+    // ── Overall Summary (per-file summaries with representative priority) ─────
     if (isRuleBased) {
         const e = report.lint_findings.filter(f => f.severity === 'error').length;
         const w = report.lint_findings.filter(f => f.severity === 'warning').length;
@@ -552,61 +691,28 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
         body += `<section><h2>📋 Linter Summary</h2><div class="summary-text">${txt}</div></section>`;
     }
     else if (report.review.summary) {
-        const cls = isError ? 'summary-error' : 'summary-text';
-        const txt = isError
-            ? report.review.summary.replace(/^AI review unavailable:\s*/i, '')
-            : report.review.summary;
-        body += `<section><h2>${isError ? '⚠ AI Review Error' : '📋 Overall Summary'}</h2>
-      <div class="${cls}">${mdToHtml(txt)}</div></section>`;
+        if (isError) {
+            const txt = report.review.summary.replace(/^AI review unavailable:\s*/i, '');
+            body += `<section><h2>⚠ AI Review Error</h2>
+        <div class="summary-error">${mdToHtml(txt)}</div></section>`;
+        }
+        else {
+            body += `<section><h2>📋 Overall Summary</h2>
+        ${_renderOverallSummary(report.review, blocks, repoRoot)}</section>`;
+        }
     }
-    // ── Per-file findings (all blocks unified, sorted worst-first) ────────────
+    // ── AI Comments (all unit-comment-blocks, nested by file) ─────────────────
     if (blocks.length > 0) {
-        const byFile = new Map();
-        for (const b of blocks) {
-            const list = byFile.get(b.file) ?? [];
-            list.push(b);
-            byFile.set(b.file, list);
-        }
-        body += '<section><h2>🔍 Analysis Findings</h2>';
-        for (const [relFile, fileBlocks] of byFile) {
-            const absFile = path.join(repoRoot, relFile);
-            body += `<div class="file-block">
-        <div class="file-name">
-          <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(relFile)}</a>
-        </div>`;
-            for (const b of fileBlocks) {
-                const meta = (0, commentFormatter_js_1.metaForBlock)(b);
-                const cat = (0, commentFormatter_js_1.formatCategory)(b.category);
-                const catSlug = (b.category || '').toLowerCase();
-                const srcTag = `<span class="source-tag ${b.source}">${b.source}</span>`;
-                const pBadge = `<span class="priority-badge" style="color:${meta.color}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
-                // Show category badge for all findings that carry a viewpoint (everything except P0 Praise)
-                const catBadge = b.priority !== 'P0' && cat
-                    ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>`
-                    : '';
-                const lineRef = b.line > 0
-                    ? `<a class="line-link" data-path="${esc(absFile)}" data-line="${b.line}" href="#">line ${b.line}</a>`
-                    : '<span class="line-label">file-level</span>';
-                const bodyHtml = b.source === 'lint' && b.rule
-                    ? `<code>${esc(b.rule)}</code> ${esc(b.comment)}`
-                    : mdToHtml(b.comment);
-                body += `<div class="suggestion priority-${esc(b.priority)}">
-          <div class="suggestion-header">
-            ${pBadge} ${catBadge} ${srcTag} &nbsp;${lineRef}
-          </div>
-          <div class="suggestion-body">${bodyHtml}</div>
-        </div>`;
-            }
-            body += '</div>';
-        }
+        body += '<section><h2>💡 AI Comments</h2>';
+        body += _renderFileBlocks(blocks, repoRoot);
         body += '</section>';
     }
-    // ── Analyzed files list ───────────────────────────────────────────────────
+    // ── Analyzed File List ────────────────────────────────────────────────────
     if (report.staged_files.length > 0) {
-        body += '<section><h2>📁 Analyzed Files</h2><ul class="file-list">';
+        body += '<section><h2>📁 Analyzed File List</h2><ul class="file-list">';
         for (const f of report.staged_files) {
             const absFile = path.join(repoRoot, f);
-            body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(f)}</a></li>`;
+            body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;
         }
         body += '</ul></section>';
     }
@@ -681,6 +787,20 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
   .file-list { margin: 4px 0; padding-left: 20px; }
   .file-list li { margin: 2px 0; font-size: 0.88em; }
   .summary-text p { margin: 6px 0; }
+  .per-file-summary {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--vscode-widget-border);
+  }
+  .per-file-summary:last-child { border-bottom: none; }
+  .per-file-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px; flex-wrap: wrap;
+  }
+  .per-file-header code {
+    font-size: 0.9em;
+    background: var(--vscode-textBlockQuote-background);
+  }
+  .per-file-body p { margin: 4px 0; }
   .summary-error {
     background: var(--vscode-inputValidation-errorBackground, rgba(199,46,46,0.15));
     border-left: 3px solid var(--vscode-errorForeground);
@@ -702,9 +822,6 @@ function buildSummaryHtml(report, repoRoot, analysisMode) {
     white-space: nowrap;
   }
   .json-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); }
-  .source-tag { display:inline-block; font-size:0.7em; font-weight:700; padding:1px 5px; border-radius:3px; vertical-align:middle; text-transform:uppercase; }
-  .source-tag.lint { background:#b5540b; color:#fff; }
-  .source-tag.ai   { background:#0066b8; color:#fff; }
 </style>
 </head>
 <body>

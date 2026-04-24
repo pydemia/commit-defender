@@ -139,16 +139,14 @@ export function normalizeReport(report: AnalysisReport): CommentBlock[] {
     report.staged_files.length > 0
   ) {
     const priority: CommentPriority = report.review.blocking ? 'P3' : 'P1';
-    for (const file of report.staged_files) {
-      blocks.push({
-        file,
-        line:     1,
-        priority,
-        category: '',
-        comment:  report.review.summary,
-        source:   'ai',
-      });
-    }
+    blocks.push({
+      file:     report.staged_files[0],
+      line:     1,
+      priority,
+      category: '',
+      comment:  report.review.summary,
+      source:   'ai',
+    });
   }
 
   return blocks.sort((a, b) => {

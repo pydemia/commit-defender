@@ -46,8 +46,19 @@ class JsonRenderer:
                         "line": fc.line,
                         "comment": fc.comment,
                         "category": fc.category,
+                        "priority": fc.priority,
                     }
                     for fc in report.review.file_comments
+                ],
+                "per_file_summaries": [
+                    {
+                        "file": pfs.file,
+                        "summary": pfs.summary,
+                        "priority": pfs.priority,
+                        "blocking": pfs.blocking,
+                        "grade": pfs.grade,
+                    }
+                    for pfs in report.review.per_file_summaries
                 ],
             },
         }

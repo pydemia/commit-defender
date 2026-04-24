@@ -60,6 +60,22 @@ class FileComment:
 
 
 @dataclass
+class PerFileSummary:
+    """Per-file overall-summary emitted by review_files_separately().
+
+    One entry per analyzed file. Carries the structured data the webview
+    needs to render an overall-summary block with a representative
+    priority badge, without having to parse the concatenated `summary`
+    markdown back apart on delimiters.
+    """
+    file: str
+    summary: str
+    priority: str = "P1"   # representative priority across this file's unit-comment-blocks
+    blocking: bool = False
+    grade: str = ""
+
+
+@dataclass
 class ReviewResult:
     summary: str
     findings: list[LintFinding] = field(default_factory=list)
@@ -68,6 +84,7 @@ class ReviewResult:
     is_error: bool = False  # True when review failed (always blocks commit)
     file_comments: list[FileComment] = field(default_factory=list)
     grade: str = ""
+    per_file_summaries: list[PerFileSummary] = field(default_factory=list)
 
     @classmethod
     def skipped(cls) -> "ReviewResult":

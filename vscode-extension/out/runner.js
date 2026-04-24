@@ -28,12 +28,72 @@ class PythonRunner {
     runTargets(repoRoot, relPaths, timeoutSeconds) {
         return this._spawn(repoRoot, { CD_TARGET_FILES: relPaths.join('\n') }, timeoutSeconds);
     }
+    /**
+     * Generate a commit message for the current staged diff.
+     * Spawns Python with CD_COMMIT_MESSAGE=1 and parses the JSON result.
+     */
+    runCommitMessage(repoRoot, timeoutSeconds = 60) {
+        const channel = (0, outputChannel_js_1.getOutputChannel)();
+        const errResult = (error) => ({ commit_message: '', is_error: true, error });
+        return new Promise(resolve => {
+            const env = {
+                ...process.env,
+                PYTHONIOENCODING: 'utf-8', // prevent cp949/cp932 UnicodeEncodeError on Windows
+                CD_REPO_PATH: repoRoot,
+                CD_COMMIT_MESSAGE: '1',
+                ...(this.cfg.envFile && { CD_ENV_FILE: this.cfg.envFile }),
+                CD_AI_PROVIDER: this.cfg.aiProvider,
+                CD_MAX_TOKENS: String(this.cfg.maxTokens),
+                ...(this.cfg.model && { CD_MODEL: this.cfg.model }),
+                ...(this.cfg.endpoint && { CD_ENDPOINT: this.cfg.endpoint }),
+                ...(this.cfg.apiVersion && { CD_API_VERSION: this.cfg.apiVersion }),
+                ...(this.cfg.apiKey && { CD_API_KEY: this.cfg.apiKey }),
+            };
+            let proc;
+            try {
+                proc = (0, child_process_1.spawn)(this.cfg.pythonExecutable, ['-m', 'commit_defender.entrypoint'], {
+                    stdio: ['ignore', 'pipe', 'pipe'],
+                    cwd: repoRoot,
+                    env,
+                });
+            }
+            catch (err) {
+                return resolve(errResult(`Failed to spawn Python: ${String(err)}`));
+            }
+            let stdout = '';
+            proc.stdout?.on('data', (d) => (stdout += d.toString()));
+            proc.stderr?.on('data', (d) => channel.append(d.toString()));
+            const timer = timeoutSeconds > 0
+                ? setTimeout(() => { proc.kill('SIGKILL'); resolve(errResult('Timed out')); }, timeoutSeconds * 1000)
+                : null;
+            proc.on('close', () => {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                try {
+                    resolve(JSON.parse(stdout));
+                }
+                catch {
+                    resolve(errResult('Failed to parse response'));
+                }
+            });
+            proc.on('error', (err) => {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                resolve(errResult(err.code === 'ENOENT'
+                    ? `Python not found: '${this.cfg.pythonExecutable}'`
+                    : err.message));
+            });
+        });
+    }
     _spawn(repoRoot, extraEnv, timeoutSeconds) {
         return new Promise((resolve, reject) => {
             const channel = (0, outputChannel_js_1.getOutputChannel)();
             const args = ['-m', 'commit_defender.entrypoint'];
             const env = {
                 ...process.env,
+                PYTHONIOENCODING: 'utf-8', // prevent cp949/cp932 UnicodeEncodeError on Windows
                 CD_REPO_PATH: repoRoot,
                 CD_JSON: '1',
                 ...(this.cfg.envFile && { CD_ENV_FILE: this.cfg.envFile }),

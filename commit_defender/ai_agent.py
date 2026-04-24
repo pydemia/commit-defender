@@ -521,12 +521,18 @@ class AIReviewAgent:
         if not files:
             return ReviewResult.skipped()
 
+        from .models import PerFileSummary
+
         extractor = DiffExtractor(repo_path or Path("."))
         all_comments: list[FileComment] = []
-        summaries: list[str] = []
+        per_file: list[PerFileSummary] = []
+        summaries: list[str] = []          # flat markdown — kept for terminal renderer
         grades: list[str] = []
         blocking = False
         total = len(files)
+
+        def _meaningful(s: str) -> bool:
+            return bool(s) and s not in ("(no summary)", "AI review skipped (CD_SKIP_AI=1)")
 
         for idx, file_path in enumerate(files, start=1):
             rel = str(file_path.relative_to(repo_path)) if repo_path else str(file_path)
@@ -535,10 +541,7 @@ class AIReviewAgent:
                 file=sys.stderr, flush=True,
             )
 
-            # Full content for this single file
             content = extractor.get_file_contents([file_path])
-
-            # Lint findings scoped to this file only
             file_lint = [
                 f for f in lint_findings
                 if rel in f.file or f.file == rel or f.file.endswith(f"/{rel}")
@@ -552,30 +555,63 @@ class AIReviewAgent:
             )
 
             if result.is_error:
-                # Record error in summary but keep going for remaining files
-                summaries.append(f"**`{rel}`** — ⚠ {result.summary}")
+                err_text = f"⚠ {result.summary}"
+                summaries.append(f"**`{rel}`** — {err_text}")
+                per_file.append(PerFileSummary(
+                    file=rel, summary=err_text, priority="P3",
+                    blocking=False, grade=result.grade,
+                ))
                 continue
 
             blocking = blocking or result.blocking
             all_comments.extend(result.file_comments)
+
+            # Representative priority for this file = worst of its file_comments,
+            # falling back to a priority derived from blocking/grade when the AI
+            # returned none.
+            if result.file_comments:
+                file_priority = max(
+                    (fc.priority for fc in result.file_comments),
+                    key=lambda p: _PRIORITY_RANK.get(p, 1),
+                )
+            else:
+                file_priority = (
+                    "P3" if result.blocking
+                    else "P2" if result.grade in ("critical", "insufficient")
+                    else "P1"
+                )
+
+            # Synthesise a line-1 FileComment when the AI returned only prose, so
+            # every file has at least one unit-comment-block on the editor.
+            if not result.file_comments and _meaningful(result.summary):
+                all_comments.append(FileComment(
+                    file=rel, line=1, comment=result.summary,
+                    category="", priority=file_priority,
+                ))
+
             grades.append(result.grade)
 
-            if result.summary and result.summary not in ("(no summary)", "AI review skipped (CD_SKIP_AI=1)"):
+            if _meaningful(result.summary):
                 summaries.append(f"**`{rel}`**\n\n{result.summary}")
+                per_file.append(PerFileSummary(
+                    file=rel, summary=result.summary, priority=file_priority,
+                    blocking=result.blocking, grade=result.grade,
+                ))
 
         if not summaries and not all_comments:
             return ReviewResult.skipped()
 
-        # If every file errored (no successful reviews), propagate is_error=True
-        # so the VS Code extension shows "Error" instead of "Pass".
         if not all_comments and not grades:
-            return ReviewResult.error("\n\n---\n\n".join(summaries))
+            err = ReviewResult.error("\n\n---\n\n".join(summaries))
+            err.per_file_summaries = per_file
+            return err
 
         return ReviewResult(
             summary="\n\n---\n\n".join(summaries),
             blocking=blocking,
             file_comments=all_comments,
             grade=worst_grade(grades),
+            per_file_summaries=per_file,
         )
 
     def review(
@@ -1030,31 +1066,6 @@ Please review the above and respond with the JSON object as instructed.
             if "file" in fc and "comment" in fc
         ]
 
-        # Inject synthetic comments for lint findings not already covered by the AI.
-        # This guarantees every linter error/warning surfaces as an explicit comment
-        # with the exact rule code and message, regardless of AI output.
-        covered = {(fc.file, fc.line) for fc in file_comments}
-        covered_variants = set()
-        for (f, l) in covered:
-            for nf in _norm_paths(f):
-                covered_variants.add((nf, l))
-
-        sev_to_priority = {"error": "P3", "warning": "P2"}
-        sev_to_category = {"error": "correctness", "warning": "correctness"}
-
-        for lf in lint_findings:
-            if lf.severity not in sev_to_priority:
-                continue
-            # Check if any AI comment already covers this file+line
-            if any((nf, lf.line) in covered_variants for nf in _norm_paths(lf.file)):
-                continue
-            file_comments.append(FileComment(
-                file=lf.file,
-                line=lf.line,
-                comment=f"`{lf.rule}` {lf.message}",
-                category=sev_to_category[lf.severity],
-                priority=sev_to_priority[lf.severity],
-            ))
         raw_grade = data.get("grade", "").strip().lower()
         grade = raw_grade if raw_grade in {
             "exceptional", "proficient", "adequate", "insufficient", "critical"

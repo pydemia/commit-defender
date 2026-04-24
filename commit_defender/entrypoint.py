@@ -2,10 +2,31 @@
 
 from __future__ import annotations
 
+import io
 import os
 import sys
 import time
 from pathlib import Path
+
+
+def _force_utf8_stdio() -> None:
+    """Reconfigure stdout and stderr to UTF-8.
+
+    On Windows the default console encoding is the system ANSI code page
+    (e.g. cp949 for Korean locale).  Any Unicode character outside that page —
+    including emoji produced by the AI — raises UnicodeEncodeError when Python
+    tries to write it.  Reconfiguring here fixes both the JSON stdout stream
+    and the ANSI stderr stream before any output is produced.
+    """
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    elif hasattr(sys.stdout, "buffer"):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    elif hasattr(sys.stderr, "buffer"):
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 
 def run() -> int:
@@ -188,11 +209,18 @@ def run() -> int:
 
 def cli() -> None:
     """CLI entry point: commit-defender [install|uninstall|<run>]."""
+    _force_utf8_stdio()
+
     # Sub-commands: install / uninstall are handled by the installer module.
     if len(sys.argv) > 1 and sys.argv[1] in ("install", "uninstall"):
         from installer.install import main as _installer_main
         _installer_main(sys.argv[1:])
         return
+
+    # Commit message generation mode — triggered by CD_COMMIT_MESSAGE=1
+    if os.environ.get("CD_COMMIT_MESSAGE", "0").strip() == "1":
+        from .commit_message import run_commit_message
+        sys.exit(run_commit_message())
 
     json_mode = os.environ.get("CD_JSON", "0").strip() == "1"
     try:

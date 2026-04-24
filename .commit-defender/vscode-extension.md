@@ -53,18 +53,117 @@ let me describe an code analysis step by step.
       - setting: environment variables checker, dev-ops migration validator.
     - **comments**: ai-generated as default, considering linter-based message when `hybrid` or `ai-powered` is selected. `rule-based` option uses linter-based message only.
 
-- a user can read the summary at the following three summary viewer after an analysis has been finished:
-  - __line-hover-summary__ on editor panel, code line by line. the __line-hover-summary__ is *ALWAYS* shown even though the __overall-summary__ tells some codes have a problem. show the line comment with `vscode.CommentController` if there is a mention.
-  - __overall-summary__ on editor panel: consists of multiple __unit-comment-block__s.
-  - __summary-tab__ on bottom panel: shortcuts list of multiple __unit-comment-block__s.
 
 when analyze a file; every analysis is worked on file:
-1. linter analysis is executed at first, if hybrid or rule-based. priority-level would be fixed by linter message.
-2. ai analysis is executed then, considering linter message and its priority-level if provided. if not, ai would be assign a appropriate priority-level and comment for the code. analysis can be skipped with special code comment: `# CD:skip:<optional-reason>`. only with `# CD:skip` comment AI ignore this code block to prevent commit as blocked. if reason exists, AI consider the mention and determine to block or pass. another skip options are: `# type: ignore` and `#TODO`.
-3. the ai-generated analysis comment is an atomic __unit-comment-block__. it has its own priority-level, and the point-of-view and the comment of the code.
-4. when all files are analyzed, the __overall-summary__ gather all the __unit-comment-block__s and generate __overall-summary__. list all __unit-comment-block__s, preserving each priority-level, and show analyzed file path list. __overall-summary__ have a single tag of pass/fail, alongside a priority-level that represents all priority-level and the lowest and most dangerous priority-level is selected.
-5. now each code file have one or more comments on line. hover the unit comment block line by line. use `vscode.CommentController` and `vscode.comments.createCommentController()` to hover on the line.
-6. at the bottom panel, show commit defender's analysis result like `problems` tab does. when click a comment, focus on the file line and focus on the comment.
-7. the analysis histories are gathered on left panel.
+1. A code file is splitted to multiple __code-segment__ by repeating a small portion of the previous chunk at the start of the next. It prevents crucial information from being cut in half at boundaries, enhancing retrieval accuracy and ensuring smoother semantic continuity 
+2. linter analysis is executed at first, if hybrid or rule-based. priority-level would be fixed cosidering linter message.
+3. AI analysis is executed about __code-segment__, considering the given linter messages and its priority-level of the __code-segment__ if provided. AI can use the whole __code-segment__ as contextual information. ai will assign a appropriate priority-level and comment for the __code-segment__. analysis can be skipped if a __code-segment__ contains special code comments: `# CD:skip:<optional-reason>`, `# CD:skip`, `# type: ignore` and `#TODO` AI ignore this __code-segment__ from preventing commit as blocked.
+4.  AI generates analysis comment for a __code-segment__ and it is called __unit-comment-block__. it has its own priority-level, and the point-of-view and the comment of the code. an __unit-comment-block__ belongs to a __code-segment__. AI can emphasize the core comments. The alignment format of essential contents of __unit-comment-block__ is:
+    ```
+    {priority-level} {point-of-view}
+    
+    {ai-generated comment}
+    ```
+5. When a __unit-comment-block__ is generated, AI show the __unit-comment-block__ to __line-hover-summary__ at the source __code-segment__. a __line-hover-summary__ is poped up on the first line of a __code-segment__ which is the source of the __unit-comment-block__. 
+6. When all requisite __unit-comment-block__ is generated, In __comment-tab__ on the bottom panel of vscode, list all analyzed files and all __unit-comment-block__ is in the nested list.
+7. When all requisite __unit-comment-block__ is generated, AI gathers all the __unit-comment-block__ and generates __overall-summary__ for a file. AI can emphasize the core comments. The alignment format of essential contents of __overall-summary__ is:
+    ```
+    {relative_filepath}
+    {representative priority-level of all __unit-comment-block__}
+    {ai-generated comment to summarize all __unit-comment-block__}
+    ```
+8. when all files are analyzed, AI gather all the __overall-summary__ and __unit-comment-block__ and generates __total-summary__. AI can emphasize the core comments. The alignment format of essential contents of __total-summary__ is:
+    ```
+    {title} {single tag of pass/fail} {representative priority-level of all __overall-summary__}
+
+    Overall Summary
+    {list of all __overall-summary__ for all files}
+
+    AI Comments
+    - {relative_filepath}
+       {list of all __unit-comment-block__ of a file}
+    - {relative_filepath}
+       {list of all __unit-comment-block__ of a file}
+    ...
+
+    Analyzed File List
+    - {relative_filepath}
+    - {relative_filepath}
+    - ...
+    ```
+
+9. Each code file have one or more __unit-comment-block__. A __unit-comment-block__ is presented by hovering the __unit-comment-block__ line by line. use `vscode.CommentController` and `vscode.comments.createCommentController()` to hover on the line. An user can read the summary at the following three summary viewer after an analysis has been finished:
+  - __line-hover-summary__ on editor panel, for each __code-segment__. A __line-hover-summary__ is *ALWAYS* shown if the __overall-summary__ tells some codes have a problem. show the line comment with `vscode.CommentController` if there is a mention.
+  - __total-summary__ on editor panel: consists of all generated  __overall-summary__ and all generated __unit-comment-block__.
+  - __comment-tab__ on bottom panel: shortcuts list of multiple __unit-comment-block__ for a file, group by file, like `problems` tab does. when click a comment, focus on the file line and focus on the comment.
+10. the analysis histories are gathered on left panel.
+
+- A code file has multiple __code-segment__.
+- A __unit-comment-block__ and __code-segment__ are a one-to-one correspondence.
+- A __unit-comment-block__ MUST summarize ONLY ONE __code-segment__.
+- A __line-hover-summary__ and __unit-comment-block__ are a one-to-one correspondence.
+- A __line-hover-summary__ MUST HAVE ONLY ONE __unit-comment-block__.
+- A __overall-summary__ and a code file are a one-to-one correspondence. 
+- A __overall-summary__ and a __unit-comment-block__ are a one-to-many correspondence.
+- A __overall-summary__ summarizes __unit-comment-block__ of a code file.
+- A line of __comment-tab__ is a __unit-comment-block__.
+- The line of __comment-tab__ is nested and grouped by a code file.
+- A __total-summary__ and a code file are one-to-many correspondence.
+- A __total-summary__ summarizes __overall-summary__ of all code files.
+- A __total-summary__ and __overall-summary__ are one-to-many correspondence.
+- A __total-summary__ consists of __overall-summary__ and __unit-comment-block__.
+- A __total-summary__ can have multiple __overall-summary__.
+- A __total-summary__ can have multiple __unit-comment-block__. __unit-comment-block__ are in a nested list of a file.
+
 
 considering the above, build or refactor the code that generates and shows the summary.
+
+
+
+---
+
+I want to add a service to generate commit message for the staged-file summary command, and a user easily use this generated message when doing a commit.
+
+The convention of commit message MUST be handled with System Prompt for LLM. keep the prompt in the package.
+
+The system prompt for Commit message convention is the following:
+```
+# Git Commit Message Generation Prompt
+
+Construct a commit message consisting of a title and a body. This supports multiple languages, relies on locale setting: `en`, `ko`, etc.
+
+## Title Rules
+- Limit title to 50 characters
+- Capitalize the first letter
+- Avoid periods and special characters
+- Start with a base verb
+- Exclude past tense
+- Use format: [{type}] {title_text}
+- Select one type from the list below:
+  - Feature: Add new functionality
+  - Improve: Refine business logic or performance
+  - Fix: Resolve bugs or issues
+  - Doc: Update documentation
+  - Refactor: Restructure code without changing behavior
+  - Test: Add or update test cases
+  - Chore: Update build tasks or package managers
+
+## Body Rules
+- Limit total text to 300 characters
+- Keep each bullet point under 50 characters
+- Focus on what and why instead of how
+- Provide clear reasons for code changes
+- Write in concise bullet points
+- Capitalize the first letter of each line
+- Avoid periods and special characters
+- Exclude past tense
+- Start each line with a base verb
+
+## Output Example
+[Improve] Refine user authentication logic
+
+- Validate session tokens before database access
+- Enhance security by rotating encryption keys
+- Reduce latency in login process
+
+```

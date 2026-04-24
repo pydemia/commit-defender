@@ -54,12 +54,23 @@ export interface CommentBlock {
 
 export type Grade = 'exceptional' | 'proficient' | 'adequate' | 'insufficient' | 'critical' | '';
 
+/** Structured per-file overall-summary. One entry per analyzed file. */
+export interface PerFileSummary {
+  file: string;
+  summary: string;
+  priority: CommentPriority;
+  blocking: boolean;
+  grade: Grade;
+}
+
 export interface ReviewResult {
   summary: string;
   blocking: boolean;
   is_error: boolean;
   file_comments: FileComment[];
   grade: Grade;
+  /** Structured per-file summaries. Empty on single-file diff mode. */
+  per_file_summaries?: PerFileSummary[];
 }
 
 export interface AnalysisReport {
@@ -78,4 +89,11 @@ export interface RunResult {
   stderr: string;
   timedOut: boolean;
   cancelled: boolean;
+}
+
+/** Result from the commit message generator (CD_COMMIT_MESSAGE=1 mode). */
+export interface CommitMessageResult {
+  commit_message: string;
+  is_error: boolean;
+  error: string;
 }
