@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.0.13",
+  "version": "1.1.1",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -201,6 +201,44 @@
           "items": { "type": "string" },
           "default": [],
           "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). Env var: CD_EXCLUDE_PATTERNS (comma-separated, e.g. 'tests/**,*.generated.ts')."
+        },
+        "commitDefender.colorPalette": {
+          "type": "string",
+          "scope": "window",
+          "enum": [
+            "theme-adaptive",
+            "cobalt9",
+            "tailwind",
+            "pastel-soft",
+            "material",
+            "solarized",
+            "muted-modern",
+            "nord",
+            "dracula",
+            "gruvbox",
+            "cvd-consensus",
+            "cvd-deep",
+            "cvd-vivid",
+            "okabe-ito"
+          ],
+          "enumDescriptions": [
+            "Theme Adaptive — inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
+            "Cobalt9 — electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
+            "Tailwind — modern web palette, high saturation, familiar.",
+            "Pastel Soft — low saturation, gentle on the eyes. Best on light themes.",
+            "Material — Google Material A-tones, punchy.",
+            "Solarized — muted terminal-familiar tones, lower contrast.",
+            "Muted Modern — Tailwind × Solarized blend; works on both light and dark themes.",
+            "Nord — arctic, cool, low visual noise.",
+            "Dracula — classic purple/pink/cyan dark-theme accents.",
+            "Gruvbox — 70s retro, earthy warm tones.",
+            "CVD Consensus (colorblind-safe) — balanced across light and dark themes.",
+            "CVD Deep (colorblind-safe) — darker tones tuned for light themes.",
+            "CVD Vivid (colorblind-safe) — electric tones tuned for dark themes.",
+            "Okabe-Ito (colorblind-safe) — canonical palette from Nature methodology papers."
+          ],
+          "default": "theme-adaptive",
+          "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only — no env var."
         },
         "commitDefender.runOnStage": {
           "type": "boolean",

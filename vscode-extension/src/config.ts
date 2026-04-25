@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { PaletteId } from './palette.js';
 
 export type AnalysisMode    = 'hybrid' | 'ai-powered' | 'rule-based';
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
@@ -21,6 +22,7 @@ export interface ExtensionConfig {
   richnessLevel: RichnessLevel;
   locale: Locale;
   excludePatterns: string[];
+  colorPalette: PaletteId;
   // AI connection settings
   aiProvider: AIProvider;
   model: string;
@@ -62,6 +64,7 @@ export function getConfig(): ExtensionConfig {
     richnessLevel: (cfg.get<string>('richnessLevel') ?? '') as RichnessLevel,
     locale: (cfg.get<string>('locale') ?? '') as Locale,
     excludePatterns: cfg.get<string[]>('excludePatterns') ?? [],
+    colorPalette: (cfg.get<string>('colorPalette') ?? 'theme-adaptive') as PaletteId,
     aiProvider:  (cfg.get<string>('aiProvider') ?? 'aoai') as AIProvider,
     model:       cfg.get<string>('model')      ?? '',
     endpoint:    cfg.get<string>('endpoint')   ?? '',

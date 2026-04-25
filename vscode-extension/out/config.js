@@ -63,6 +63,7 @@ function getConfig() {
         richnessLevel: (cfg.get('richnessLevel') ?? ''),
         locale: (cfg.get('locale') ?? ''),
         excludePatterns: cfg.get('excludePatterns') ?? [],
+        colorPalette: (cfg.get('colorPalette') ?? 'theme-adaptive'),
         aiProvider: (cfg.get('aiProvider') ?? 'aoai'),
         model: cfg.get('model') ?? '',
         endpoint: cfg.get('endpoint') ?? '',

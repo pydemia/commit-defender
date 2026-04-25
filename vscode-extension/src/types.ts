@@ -20,11 +20,11 @@ export type CommentCategory =
 
 export type CommentPriority = 'P0' | 'P1' | 'P2' | 'P3';
 
-export const PRIORITY_META: Record<CommentPriority, { label: string; emoji: string; color: string }> = {
-  P0: { label: 'Praise',   emoji: '🟩', color: '#22c55e' },
-  P1: { label: 'Info',     emoji: '🟦', color: '#3b82f6' },
-  P2: { label: 'Warning',  emoji: '🟧', color: '#f97316' },
-  P3: { label: 'Critical', emoji: '🟥', color: '#ef4444' },
+export const PRIORITY_META: Record<CommentPriority, { label: string; emoji: string }> = {
+  P0: { label: 'Praise',   emoji: '🟦' },
+  P1: { label: 'Info',     emoji: '🟩' },
+  P2: { label: 'Warning',  emoji: '🟧' },
+  P3: { label: 'Critical', emoji: '🟥' },
 };
 
 export interface FileComment {

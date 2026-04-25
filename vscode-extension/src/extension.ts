@@ -14,6 +14,7 @@ import { PythonRunner } from './runner.js';
 import { StatusBarManager } from './statusBar.js';
 import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
 import { normalizeReport, worstPriority, metaForBlock, formatCategory, PRIORITY_RANK } from './commentFormatter.js';
+import { Palette, resolvePalette, gradeColor as paletteGradeColor } from './palette.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 
@@ -59,7 +60,7 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   ));
 
-  // ── React to preCommitHook setting changes ────────────────────────────────
+  // ── React to setting changes (hook, palette, etc.) ────────────────────────
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
     if (e.affectsConfiguration('commitDefender')) {
       historyProvider.updateConfig(getConfig());
@@ -70,6 +71,17 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.executeCommand('commitDefender.installPreCommitHook');
       } else {
         vscode.commands.executeCommand('commitDefender.uninstallPreCommitHook');
+      }
+    }
+    // Re-render the summary panel when the color palette changes so the
+    // new colors apply without needing to re-run the analysis.
+    if (e.affectsConfiguration('commitDefender.colorPalette')) {
+      const last = findingsStore.lastReport();
+      if (last && _summaryPanel) {
+        const palette = resolvePalette(getConfig().colorPalette);
+        _summaryPanel.webview.html = buildSummaryHtml(
+          last.report, last.repoRoot, getConfig().analysisMode, palette,
+        );
       }
     }
   }));
@@ -610,19 +622,8 @@ function showSummaryPanel(
   }
 
   _summaryPanel.title = 'Commit Defender — Summary';
-  _summaryPanel.webview.html = buildSummaryHtml(report, repoRoot, analysisMode);
-}
-
-
-function gradeColor(grade: string): string {
-  switch (grade) {
-    case 'exceptional':  return '#2d7d46';
-    case 'proficient':   return '#1a7a4a';
-    case 'adequate':     return '#b07d00';
-    case 'insufficient': return '#c05c00';
-    case 'critical':     return '#c72e2e';
-    default:             return '#666';
-  }
+  const palette = resolvePalette(getConfig().colorPalette);
+  _summaryPanel.webview.html = buildSummaryHtml(report, repoRoot, analysisMode, palette);
 }
 
 /**
@@ -640,16 +641,14 @@ function _renderOverallSummary(
   review: AnalysisReport['review'],
   blocks: CommentBlock[],
   repoRoot: string,
+  palette: Palette,
 ): string {
   const perFile = review.per_file_summaries ?? [];
 
-  // Fallback: no structured data — render the summary as a single block.
   if (perFile.length === 0) {
     return `<div class="per-file-summary">${mdToHtml(review.summary)}</div>`;
   }
 
-  // Worst priority per file, computed from the unified blocks. Used when a
-  // PerFileSummary entry has no priority or we want to reconcile with blocks.
   const worstByFile = new Map<string, CommentPriority>();
   for (const b of blocks) {
     const cur = worstByFile.get(b.file);
@@ -662,8 +661,9 @@ function _renderOverallSummary(
   for (const pfs of perFile) {
     const priority = worstByFile.get(pfs.file) ?? pfs.priority;
     const pMeta    = PRIORITY_META[priority];
+    const pColor   = palette.priority[priority];
     const badge    = pMeta
-      ? `<span class="priority-badge" style="color:${pMeta.color}">${pMeta.emoji} ${priority} ${pMeta.label}</span>`
+      ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>`
       : '';
     const absFile = path.join(repoRoot, pfs.file);
     html += `<div class="per-file-summary">
@@ -678,7 +678,7 @@ function _renderOverallSummary(
 }
 
 /** Render a list of CommentBlocks grouped by file, each block as one card. */
-function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string): string {
+function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Palette): string {
   const byFile = new Map<string, CommentBlock[]>();
   for (const b of blocks) {
     const list = byFile.get(b.file) ?? [];
@@ -696,7 +696,8 @@ function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string): string {
       const meta     = metaForBlock(b);
       const cat      = formatCategory(b.category);
       const catSlug  = (b.category || '').toLowerCase();
-      const pBadge   = `<span class="priority-badge" style="color:${meta.color}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
+      const pColor   = palette.priority[b.priority];
+      const pBadge   = `<span class="priority-badge" style="color:${pColor}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
       const catBadge = b.priority !== 'P0' && b.category
         ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>`
         : '';
@@ -716,7 +717,8 @@ function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string): string {
   return html;
 }
 
-function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode?: string): string {
+function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode?: string, palette?: Palette): string {
+  const pal = palette ?? resolvePalette('theme-adaptive');
   // ── Normalize — all findings are unit-comment-blocks ─────────────────────
   // Per spec: lint informs priority; every finding (lint-origin or AI-origin)
   // is a unit-comment-block and appears under the unified "AI Comments" section.
@@ -737,10 +739,10 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
     : passed ? '<span class="badge pass">PASS ✓</span>'
              : '<span class="badge blocked">BLOCKED ✗</span>';
   const gradeBadge = grade
-    ? `<span class="badge" style="background:${gradeColor(grade)}">${grade.toUpperCase()}</span>`
+    ? `<span class="badge" style="background:${paletteGradeColor(pal, grade)}">${grade.toUpperCase()}</span>`
     : '';
-  const worstBadge = wpMeta
-    ? `<span class="priority-badge" style="color:${wpMeta.color}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>`
+  const worstBadge = wpMeta && wp
+    ? `<span class="priority-badge" style="color:${pal.priority[wp]}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>`
     : '';
 
   // ── Header ────────────────────────────────────────────────────────────────
@@ -777,14 +779,14 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
         <div class="summary-error">${mdToHtml(txt)}</div></section>`;
     } else {
       body += `<section><h2>📋 Overall Summary</h2>
-        ${_renderOverallSummary(report.review, blocks, repoRoot)}</section>`;
+        ${_renderOverallSummary(report.review, blocks, repoRoot, pal)}</section>`;
     }
   }
 
   // ── AI Comments (all unit-comment-blocks, nested by file) ─────────────────
   if (blocks.length > 0) {
     body += '<section><h2>💡 AI Comments</h2>';
-    body += _renderFileBlocks(blocks, repoRoot);
+    body += _renderFileBlocks(blocks, repoRoot, pal);
     body += '</section>';
   }
 
@@ -804,7 +806,19 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root { --radius: 6px; }
+  :root {
+    --radius: 6px;
+    --cd-p3: ${pal.priority.P3};
+    --cd-p2: ${pal.priority.P2};
+    --cd-p1: ${pal.priority.P1};
+    --cd-p0: ${pal.priority.P0};
+    --cd-cat-security:        ${pal.category.security};
+    --cd-cat-correctness:     ${pal.category.correctness};
+    --cd-cat-maintenance:     ${pal.category.maintenance};
+    --cd-cat-optimization:    ${pal.category.optimization};
+    --cd-cat-setting:         ${pal.category.setting};
+    --cd-cat-review-history:  ${pal.category['review-history']};
+  }
   body {
     font-family: var(--vscode-font-family);
     font-size: var(--vscode-font-size);
@@ -843,10 +857,10 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
   }
   .suggestion-header { font-size: 0.85em; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .priority-badge { font-weight: 600; white-space: nowrap; }
-  .suggestion.priority-P3 { border-left: 3px solid #ef4444; padding-left: 8px; }
-  .suggestion.priority-P2 { border-left: 3px solid #f97316; padding-left: 8px; }
-  .suggestion.priority-P1 { border-left: 3px solid #3b82f6; padding-left: 8px; }
-  .suggestion.priority-P0 { border-left: 3px solid #22c55e; padding-left: 8px; }
+  .suggestion.priority-P3 { border-left: 3px solid var(--cd-p3); padding-left: 8px; }
+  .suggestion.priority-P2 { border-left: 3px solid var(--cd-p2); padding-left: 8px; }
+  .suggestion.priority-P1 { border-left: 3px solid var(--cd-p1); padding-left: 8px; }
+  .suggestion.priority-P0 { border-left: 3px solid var(--cd-p0); padding-left: 8px; }
   .suggestion-body p { margin: 4px 0; }
   .line-label { color: var(--vscode-descriptionForeground); font-size: 0.82em; }
   .cat {
@@ -855,12 +869,12 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
     vertical-align: middle; text-transform: uppercase;
     background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);
   }
-  .cat-security       { background: #c72e2e; color: #fff; }
-  .cat-correctness    { background: #b5540b; color: #fff; }
-  .cat-maintenance    { background: #0066b8; color: #fff; }
-  .cat-optimization   { background: #5a2d8a; color: #fff; }
-  .cat-setting        { background: #2d7d46; color: #fff; }
-  .cat-review-history { background: #6b6b6b; color: #fff; }
+  .cat-security       { background: var(--cd-cat-security);        color: #fff; }
+  .cat-correctness    { background: var(--cd-cat-correctness);     color: #fff; }
+  .cat-maintenance    { background: var(--cd-cat-maintenance);     color: #fff; }
+  .cat-optimization   { background: var(--cd-cat-optimization);    color: #fff; }
+  .cat-setting        { background: var(--cd-cat-setting);         color: #fff; }
+  .cat-review-history { background: var(--cd-cat-review-history);  color: #fff; }
   .lint-list { margin: 4px 0; padding-left: 20px; }
   .lint-list li { margin: 3px 0; font-size: 0.9em; }
   .sev-error   { color: var(--vscode-errorForeground);           font-weight: 700; margin: 0 4px; }
