@@ -51,7 +51,7 @@ class PythonRunner {
             };
             let proc;
             try {
-                proc = (0, child_process_1.spawn)(this.cfg.pythonExecutable, ['-m', 'commit_defender.entrypoint'], {
+                proc = (0, child_process_1.spawn)(this.cfg.pythonExecutable, ['-m', 'commit_defender.app'], {
                     stdio: ['ignore', 'pipe', 'pipe'],
                     cwd: repoRoot,
                     env,
@@ -90,7 +90,7 @@ class PythonRunner {
     _spawn(repoRoot, extraEnv, timeoutSeconds) {
         return new Promise((resolve, reject) => {
             const channel = (0, outputChannel_js_1.getOutputChannel)();
-            const args = ['-m', 'commit_defender.entrypoint'];
+            const args = ['-m', 'commit_defender.app'];
             const env = {
                 ...process.env,
                 PYTHONIOENCODING: 'utf-8', // prevent cp949/cp932 UnicodeEncodeError on Windows
@@ -258,7 +258,7 @@ function importDiagnostic(pythonExecutable, cwd) {
             'try:',
             '    import commit_defender',
             '    v = getattr(commit_defender, "__version__", "unknown")',
-            '    import commit_defender.entrypoint',
+            '    import commit_defender.app',
             '    print(f"[diag] commit_defender {v} is installed and importable")',
             '    print(f"[diag] package location: {commit_defender.__file__}")',
             'except ImportError as e:',

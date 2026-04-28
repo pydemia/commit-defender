@@ -42,24 +42,27 @@ pip install commit-defender
 ```bash
 # Azure OpenAI
 export CD_AI_PROVIDER=aoai
-export CD_API_KEY=your-key
-export CD_ENDPOINT=https://your-resource.openai.azure.com
+export CD_API_KEY=your-azure-openai-key
+export CD_ENDPOINT=https://YOUR_RESOURCE.openai.azure.com
 export CD_MODEL=your-deployment-name
 export CD_API_VERSION=2024-08-01-preview
 
-# Anthropic
+# Anthropic  (CD_ENDPOINT defaults to https://api.anthropic.com/v1)
 export CD_AI_PROVIDER=anthropic
-export CD_API_KEY=your-key
+export CD_API_KEY=sk-ant-...
+export CD_ENDPOINT=https://api.anthropic.com/v1
 export CD_MODEL=claude-sonnet-4-6
 
-# OpenAI
+# OpenAI  (CD_ENDPOINT defaults to https://api.openai.com/v1)
 export CD_AI_PROVIDER=openai
-export CD_API_KEY=your-key
+export CD_API_KEY=sk-...
+export CD_ENDPOINT=https://api.openai.com/v1
 export CD_MODEL=gpt-4o
 
-# Google Gemini
+# Google Gemini  (CD_ENDPOINT defaults to https://generativelanguage.googleapis.com/v1beta/models)
 export CD_AI_PROVIDER=gemini
-export CD_API_KEY=your-key
+export CD_API_KEY=your-gemini-api-key
+export CD_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/models
 export CD_MODEL=gemini-2.5-flash
 ```
 

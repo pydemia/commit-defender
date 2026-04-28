@@ -1,4 +1,4 @@
-"""Main entrypoint for commit-defender container."""
+"""Main application entry point for commit-defender."""
 
 from __future__ import annotations
 

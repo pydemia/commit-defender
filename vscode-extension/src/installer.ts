@@ -152,7 +152,7 @@ export async function uninstallPreCommitHook(
   }
 }
 
-/** Run `python -m commit_defender.entrypoint install <repoRoot> --force`. */
+/** Run `python -m commit_defender.app install <repoRoot> --force`. */
 function runInstall(python: string, repoRoot: string, channel: vscode.OutputChannel): Promise<boolean> {
   return runPythonHook(python, ['install', repoRoot, '--force'], channel);
 }
@@ -161,7 +161,7 @@ function runPythonHook(python: string, args: string[], channel: vscode.OutputCha
   return new Promise(resolve => {
     let proc: ReturnType<typeof spawn>;
     try {
-      proc = spawn(python, ['-m', 'commit_defender.entrypoint', ...args], {
+      proc = spawn(python, ['-m', 'commit_defender.app', ...args], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch {

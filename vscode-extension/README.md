@@ -95,14 +95,46 @@ VS Code settings take precedence over env file values when both are set.
 
 ### 3. Configure your provider
 
-Open **Settings → Extensions → Commit Defender** and set:
+Open **Settings → Extensions → Commit Defender** (or paste directly into `settings.json`) and fill in the block for your provider:
 
-| Setting | Env var | Description |
-|---|---|---|
-| `commitDefender.aiProvider` | `CD_AI_PROVIDER` | `aoai` (Azure OpenAI) / `anthropic` / `openai` / `gemini` |
-| `commitDefender.model` | `CD_MODEL` | Model or deployment name |
-| `commitDefender.endpoint` | `CD_ENDPOINT` | Required for Azure OpenAI |
-| `commitDefender.apiVersion` | `CD_API_VERSION` | Azure API version (default: `2024-08-01-preview`) |
+#### Azure OpenAI (`aoai`)
+
+```json
+"commitDefender.aiProvider": "aoai",
+"commitDefender.endpoint":   "https://YOUR_RESOURCE.openai.azure.com",
+"commitDefender.model":      "your-deployment-name",
+"commitDefender.apiVersion": "2024-08-01-preview",
+"commitDefender.apiKey":     "your-azure-openai-key"
+```
+
+#### Anthropic
+
+```json
+"commitDefender.aiProvider": "anthropic",
+"commitDefender.endpoint":   "https://api.anthropic.com/v1",
+"commitDefender.model":      "claude-sonnet-4-6",
+"commitDefender.apiKey":     "sk-ant-..."
+```
+
+#### OpenAI
+
+```json
+"commitDefender.aiProvider": "openai",
+"commitDefender.endpoint":   "https://api.openai.com/v1",
+"commitDefender.model":      "gpt-4o",
+"commitDefender.apiKey":     "sk-..."
+```
+
+#### Google Gemini
+
+```json
+"commitDefender.aiProvider": "gemini",
+"commitDefender.endpoint":   "https://generativelanguage.googleapis.com/v1beta/models",
+"commitDefender.model":      "gemini-2.5-flash",
+"commitDefender.apiKey":     "your-gemini-api-key"
+```
+
+> `endpoint` can be omitted for `anthropic`, `openai`, and `gemini` — the values above are the defaults and are used automatically when the field is left blank. It is required for `aoai`.
 
 ---
 
@@ -297,7 +329,7 @@ commit-defender uninstall .
 
 ### How it works
 
-When you run `git commit`, the hook collects staged files and calls `python -m commit_defender.entrypoint`. Findings print to the terminal. Any **P3 Critical** finding exits with code 1, blocking the commit. Use `git commit --no-verify` to bypass.
+When you run `git commit`, the hook collects staged files and calls `python -m commit_defender.app`. Findings print to the terminal. Any **P3 Critical** finding exits with code 1, blocking the commit. Use `git commit --no-verify` to bypass.
 
 ---
 

@@ -157,7 +157,7 @@ async function uninstallPreCommitHook(pythonExecutable, repoRoot) {
         } });
     }
 }
-/** Run `python -m commit_defender.entrypoint install <repoRoot> --force`. */
+/** Run `python -m commit_defender.app install <repoRoot> --force`. */
 function runInstall(python, repoRoot, channel) {
     return runPythonHook(python, ['install', repoRoot, '--force'], channel);
 }
@@ -165,7 +165,7 @@ function runPythonHook(python, args, channel) {
     return new Promise(resolve => {
         let proc;
         try {
-            proc = (0, child_process_1.spawn)(python, ['-m', 'commit_defender.entrypoint', ...args], {
+            proc = (0, child_process_1.spawn)(python, ['-m', 'commit_defender.app', ...args], {
                 stdio: ['ignore', 'pipe', 'pipe'],
             });
         }

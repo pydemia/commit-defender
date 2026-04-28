@@ -28,5 +28,5 @@ if [ -z "${CD_API_KEY}" ]; then
     export CD_SKIP_AI=1
 fi
 
-"${PYTHON}" -m commit_defender.entrypoint 1>&2
+"${PYTHON}" -m commit_defender.app 1>&2
 exit $?

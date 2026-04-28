@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "commit-defender"
-version = "1.1.1"
+version = "1.1.3"
 description = "AI-powered git pre-commit code review — catches issues before they land"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -17,7 +17,7 @@ keywords = [
     "openai", "azure-openai", "vscode",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -43,7 +43,7 @@ Repository = "https://github.com/commit-defender/commit-defender"
 Issues = "https://github.com/commit-defender/commit-defender/issues"
 
 [project.scripts]
-commit-defender = "commit_defender.entrypoint:cli"
+commit-defender = "commit_defender.app:cli"
 
 [project.optional-dependencies]
 dev = [
