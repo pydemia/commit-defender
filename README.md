@@ -99,11 +99,31 @@ commit-defender install .
 # Install into a specific repo
 commit-defender install /path/to/your-repo
 
-# Overwrite an existing hook
-commit-defender install . --force
+# Use a specific Python interpreter
+commit-defender install . --python /path/to/.venv/bin/python
 ```
 
-This writes `.git/hooks/pre-commit` in the target repository.
+The installer is **merge-safe**: if a `.git/hooks/pre-commit` already exists (e.g. from `pre-commit`, husky, or lefthook), commit-defender appends its own named block to that file rather than overwriting it. Running `install` again on a repo that already has commit-defender updates just that block — the rest of the hook is untouched.
+
+```sh
+# your existing hook content ...     ← preserved as-is
+
+# BEGIN commit-defender
+...commit-defender logic...          ← added / updated in-place
+# END commit-defender
+```
+
+To update the Python path after switching interpreters, simply re-run `install`:
+
+```bash
+commit-defender install . --python /new/path/to/.venv/bin/python
+```
+
+Or override at runtime without reinstalling:
+
+```bash
+export COMMIT_DEFENDER_PYTHON=/path/to/.venv/bin/python
+```
 
 ### 3. Commit as usual
 
@@ -118,6 +138,8 @@ git commit -m "my changes"
 ```bash
 commit-defender uninstall .
 ```
+
+Uninstall strips only the `# BEGIN commit-defender` … `# END commit-defender` block. If other hook content exists it is kept intact; if commit-defender was the only content the file is deleted entirely.
 
 ## Priority Levels
 

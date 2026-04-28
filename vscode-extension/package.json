@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -27,7 +27,7 @@
       {
         "command": "commitDefender.analyze",
         "title": "Commit Defender: Analyze Staged Files",
-        "icon": "$(shield)"
+        "icon": "$(checklist)"
       },
       {
         "command": "commitDefender.cancel",
@@ -81,7 +81,7 @@
       {
         "command": "commitDefender.generateCommitMessage",
         "title": "Commit Defender: Generate Commit Message",
-        "icon": "$(edit)"
+        "icon": "$(wand)"
       }
     ],
     "configuration": {
@@ -244,7 +244,7 @@
           "type": "boolean",
           "scope": "window",
           "default": true,
-          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the shield icon. Extension-only — no env var."
+          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon. Extension-only — no env var."
         },
         "commitDefender.preCommitHook": {
           "type": "string",
@@ -311,21 +311,6 @@
         },
         {
           "command": "commitDefender.generateCommitMessage",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        },
-        {
-          "command": "commitDefender.analyzeCurrentFile",
-          "group": "navigation",
-          "when": "scmProvider == git && editorIsOpen"
-        },
-        {
-          "command": "commitDefender.analyzeDirectory",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        },
-        {
-          "command": "commitDefender.analyzeRepository",
           "group": "navigation",
           "when": "scmProvider == git"
         }

@@ -173,7 +173,7 @@ P3 findings unconditionally block the commit regardless of any other configurati
 | `commitDefender.stagedFilesWarnThreshold` | `20` | `CD_STAGED_FILES_WARN_THRESHOLD` | Warn before analyzing more than N staged files. `0` = no prompt |
 | `commitDefender.repoAnalysisWarnThreshold` | `80` | `CD_REPO_ANALYSIS_WARN_THRESHOLD` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
 | `commitDefender.runOnStage` | `true` | — | Auto-analyze when files are staged |
-| `commitDefender.preCommitHook` | `disable` | — | `enable` = auto-install git pre-commit hook on activation · `disable` = skip |
+| `commitDefender.preCommitHook` | `disable` | — | `enable` = auto-install (merge-safe) git pre-commit hook on activation · `disable` = skip |
 | `commitDefender.fileTimeoutSeconds` | `120` | — | Timeout for single-file analysis |
 | `commitDefender.directoryTimeoutSeconds` | `360` | — | Timeout for directory / repository analysis |
 
@@ -272,16 +272,33 @@ You can run Commit Defender as a real `git commit` blocker — without VS Code �
 ### 1. Install the hook
 
 ```bash
+# Install into the current repo
 commit-defender install .
 
-# With a specific Python (e.g. a virtualenv)
-commit-defender install . --python /path/to/.venv/bin/python
+# Install into a specific repo
+commit-defender install /path/to/other-repo
 
-# Overwrite an existing hook
-commit-defender install . --force
+# Use a specific Python interpreter (e.g. a virtualenv)
+commit-defender install . --python /path/to/.venv/bin/python
 ```
 
-This writes `.git/hooks/pre-commit` in the target repository.
+The installer is **merge-safe**. If a `.git/hooks/pre-commit` already exists (e.g. from `pre-commit`, husky, or lefthook), commit-defender appends a named block to that file rather than overwriting it. Re-running `install` updates only that block — all existing hook content is preserved.
+
+```sh
+# your existing hook content ...     ← preserved as-is
+
+# BEGIN commit-defender
+...commit-defender logic...          ← added / updated in-place
+# END commit-defender
+```
+
+To update the Python path after switching interpreters, re-run `install`:
+
+```bash
+commit-defender install . --python /new/.venv/bin/python
+```
+
+Or override at runtime without reinstalling by setting `COMMIT_DEFENDER_PYTHON` in your shell profile.
 
 ### 2. Set credentials
 
@@ -294,13 +311,19 @@ export CD_API_KEY=sk-ant-...
 export CD_MODEL=claude-sonnet-4-6
 ```
 
-**Option B — env file** (pass path via `CD_ENV_FILE` or point the VS Code extension to it):
+**Option B — env file** (recommended — keeps credentials out of shell history):
 
 ```ini
 # ~/.commit-defender.env
 CD_AI_PROVIDER=anthropic
 CD_API_KEY=sk-ant-...
 CD_MODEL=claude-sonnet-4-6
+```
+
+Point commit-defender to it:
+
+```bash
+export CD_ENV_FILE=~/.commit-defender.env
 ```
 
 All supported variables:
@@ -312,6 +335,7 @@ All supported variables:
 | `CD_MODEL` | Yes | Deployment name (Azure) or model name (others) |
 | `CD_ENDPOINT` | Azure only | `https://YOUR.openai.azure.com` |
 | `CD_API_VERSION` | Azure only | e.g. `2024-08-01-preview` |
+| `CD_ENV_FILE` | No | Path to a `.env` file containing other `CD_*` variables |
 | `CD_ANALYSIS_MODE` | No | `hybrid` · `ai-powered` · `rule-based` (default: `hybrid`) |
 | `CD_SEVERITY_LEVEL` | No | `severe` · `rigorous` · `moderate` · `generous` · `lean` |
 | `CD_RICHNESS_LEVEL` | No | `colorful` · `chatty` · `moderate` · `simple` · `silent` |
@@ -320,12 +344,15 @@ All supported variables:
 | `CD_STAGED_FILES_WARN_THRESHOLD` | No | Warn when more than N files are staged (default: `20`) |
 | `CD_REPO_ANALYSIS_WARN_THRESHOLD` | No | Confirm when more than N files in repo scan (default: `80`) |
 | `CD_MAX_TOKENS` | No | Max AI output tokens (default: `4096`) |
+| `COMMIT_DEFENDER_PYTHON` | No | Override the Python interpreter at runtime without reinstalling |
 
 ### 3. Remove the hook
 
 ```bash
 commit-defender uninstall .
 ```
+
+Uninstall strips only the `# BEGIN commit-defender` … `# END commit-defender` block from the hook file. Content from other tools is preserved. If commit-defender was the only content in the file, the file is deleted entirely.
 
 ### How it works
 

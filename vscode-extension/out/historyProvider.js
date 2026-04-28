@@ -178,8 +178,8 @@ class HistoryProvider {
     // ── Commands section ──────────────────────────────────────────────────────
     _buildCommands() {
         const children = [
-            { kind: 'command', id: 'cmd-commit-msg', label: 'Generate Commit Message', desc: 'Draft a message from staged diff', icon: 'edit', command: 'commitDefender.generateCommitMessage' },
-            { kind: 'command', id: 'cmd-analyze', label: 'Analyze Staged Files', desc: 'Review git staged changes', icon: 'git-commit', command: 'commitDefender.analyze' },
+            { kind: 'command', id: 'cmd-commit-msg', label: 'Generate Commit Message', desc: 'Draft a message from staged diff', icon: 'wand', command: 'commitDefender.generateCommitMessage' },
+            { kind: 'command', id: 'cmd-analyze', label: 'Analyze Staged Files', desc: 'Review git staged changes', icon: 'checklist', command: 'commitDefender.analyze' },
             { kind: 'command', id: 'cmd-analyze-file', label: 'Analyze Current File', desc: 'Review the open file', icon: 'file-code', command: 'commitDefender.analyzeCurrentFile' },
             { kind: 'command', id: 'cmd-analyze-dir', label: 'Analyze Directory…', desc: 'Pick a folder to review', icon: 'folder', command: 'commitDefender.analyzeDirectory' },
             { kind: 'command', id: 'cmd-analyze-repo', label: 'Analyze Repository', desc: 'Full repo scan', icon: 'repo', command: 'commitDefender.analyzeRepository' },
