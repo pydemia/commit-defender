@@ -1,8 +1,8 @@
 {
   "name": "commit-defender",
   "displayName": "Commit Defender",
-  "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.1.6",
+  "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
+  "version": "2.0.0",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -16,7 +16,18 @@
   "icon": "media/icon.png",
   "categories": [
     "Linters",
+    "SCM Providers",
     "Other"
+  ],
+  "keywords": [
+    "git",
+    "pre-commit",
+    "code review",
+    "ai",
+    "openai",
+    "anthropic",
+    "azure openai",
+    "gemini"
   ],
   "activationEvents": [
     "workspaceContains:.git"
@@ -87,18 +98,6 @@
     "configuration": {
       "title": "Commit Defender",
       "properties": {
-        "commitDefender.pythonExecutable": {
-          "type": "string",
-          "scope": "machine",
-          "default": "",
-          "description": "Path to the Python executable that has commit-defender installed. Leave empty to auto-detect from the VS Code Python extension's selected interpreter, then fall back to 'python3'. You can also use ${workspaceFolder} as a prefix (e.g. ${workspaceFolder}/.venv/bin/python). Extension-only — no env var."
-        },
-        "commitDefender.envFile": {
-          "type": "string",
-          "scope": "window",
-          "default": "",
-          "markdownDescription": "Path to a `.env` file containing `CD_*` environment variables (e.g. `~/.commit-defender.env`). Use this to keep credentials and provider settings out of VS Code settings and source control. VS Code settings take precedence over env file values when both are set.\n\n**Example contents:**\n\n```\nCD_AI_PROVIDER=aoai\nCD_MODEL=your-deployment-name\nCD_ENDPOINT=https://YOUR_RESOURCE.openai.azure.com\nCD_API_VERSION=2024-08-01-preview\nCD_API_KEY=sk-…\nCD_MAX_TOKENS=4096\n```\n\n**Per-provider endpoints:**\n\n- `aoai`: `https://YOUR_RESOURCE.openai.azure.com`\n- `anthropic`: `https://api.anthropic.com/v1`\n- `openai`: `https://api.openai.com/v1`\n- `gemini`: `https://generativelanguage.googleapis.com/v1beta/models`\n\nExtension-only — the path itself is not a `CD_*` variable."
-        },
         "commitDefender.aiProvider": {
           "type": "string",
           "scope": "window",
@@ -107,34 +106,34 @@
             "aoai (Azure OpenAI): Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
             "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
             "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc.",
-            "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.). Requires GEMINI_API_KEY."
+            "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.)."
           ],
           "default": "aoai",
-          "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider. Env var: CD_AI_PROVIDER."
+          "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider."
         },
         "commitDefender.model": {
           "type": "string",
           "scope": "window",
           "default": "",
-          "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure). Env var: CD_MODEL."
+          "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure)."
         },
         "commitDefender.endpoint": {
           "type": "string",
           "scope": "window",
           "default": "",
-          "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta/models` |\n\nEnv var: `CD_ENDPOINT`."
+          "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta/models` |"
         },
         "commitDefender.apiVersion": {
           "type": "string",
           "scope": "window",
           "default": "2024-08-01-preview",
-          "description": "API version string. Used by aoai only (e.g. 2024-08-01-preview). Ignored for anthropic and openai. Env var: CD_API_VERSION."
+          "description": "API version string. Used by aoai only (e.g. 2024-08-01-preview). Ignored for anthropic, openai, and gemini."
         },
         "commitDefender.apiKey": {
           "type": "string",
           "scope": "window",
           "default": "",
-          "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control. Alternatively, set it in an Env File. Env var: CD_API_KEY."
+          "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control."
         },
         "commitDefender.maxTokens": {
           "type": "number",
@@ -142,19 +141,7 @@
           "default": 4096,
           "minimum": 512,
           "maximum": 32000,
-          "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large diffs — the response was truncated before the JSON closed, which can cause P3 findings to be missed. Env var: CD_MAX_TOKENS."
-        },
-        "commitDefender.analysisMode": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["hybrid", "ai-powered", "rule-based"],
-          "enumDescriptions": [
-            "hybrid: Run linters first, then send results + diff to AI for a combined review with P0–P3 priority grading.",
-            "ai-powered: Skip linters — send only the diff to the AI. Faster, no toolchain required. P0–P3 priority grading still applies.",
-            "rule-based: Run linters only — no AI call. Fully offline, deterministic. No priority grading (linter severity only)."
-          ],
-          "default": "hybrid",
-          "description": "Controls which analysis engines run. Hybrid and ai-powered modes produce P0–P3 priority-graded comments. P3 findings always block the commit. Env var: CD_ANALYSIS_MODE."
+          "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large diffs — the response was truncated before the JSON closed, which can cause P3 findings to be missed."
         },
         "commitDefender.severityLevel": {
           "type": "string",
@@ -168,7 +155,7 @@
             "lean: Minimal — only P3 Critical (security, syntax errors, data-loss) issues flagged."
           ],
           "default": "moderate",
-          "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit). Env var: CD_SEVERITY_LEVEL."
+          "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit)."
         },
         "commitDefender.richnessLevel": {
           "type": "string",
@@ -182,7 +169,7 @@
             "silent: One-line summaries only — no elaboration."
           ],
           "default": "moderate",
-          "description": "Controls the verbosity and detail level of each priority comment's explanation. Env var: CD_RICHNESS_LEVEL."
+          "description": "Controls the verbosity and detail level of each priority comment's explanation."
         },
         "commitDefender.locale": {
           "type": "string",
@@ -193,14 +180,14 @@
             "ko: 한국어"
           ],
           "default": "en",
-          "description": "Language for AI review output. Env var: CD_LOCALE."
+          "description": "Language for AI review output."
         },
         "commitDefender.excludePatterns": {
           "type": "array",
           "scope": "resource",
           "items": { "type": "string" },
           "default": [],
-          "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). Env var: CD_EXCLUDE_PATTERNS (comma-separated, e.g. 'tests/**,*.generated.ts')."
+          "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). Applied on top of the repo's .gitignore."
         },
         "commitDefender.colorPalette": {
           "type": "string",
@@ -244,46 +231,46 @@
           "type": "boolean",
           "scope": "window",
           "default": true,
-          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon. Extension-only — no env var."
+          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon."
         },
         "commitDefender.preCommitHook": {
           "type": "string",
           "scope": "window",
           "enum": ["enable", "disable"],
           "enumDescriptions": [
-            "enable: Automatically install the git pre-commit hook in the workspace repository on activation. The hook runs commit-defender on every git commit.",
+            "enable: Install the git pre-commit hook in the workspace repository on activation. The hook runs an AI review on every git commit, even outside VS Code.",
             "disable: Do not install or manage the git pre-commit hook. Analysis is still available manually and on git stage."
           ],
           "default": "disable",
-          "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository. Extension-only — no env var."
+          "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository."
         },
         "commitDefender.fileTimeoutSeconds": {
           "type": "number",
           "scope": "window",
           "default": 120,
           "minimum": 0,
-          "description": "Maximum seconds to wait when analyzing a single file. Set to 0 for no limit. Extension-only — no env var."
+          "description": "Maximum seconds to wait when analyzing a single file. Set to 0 for no limit."
         },
         "commitDefender.directoryTimeoutSeconds": {
           "type": "number",
           "scope": "window",
           "default": 360,
           "minimum": 0,
-          "description": "Maximum seconds to wait when analyzing a directory or the full repository. Set to 0 for no limit. Extension-only — no env var."
+          "description": "Maximum seconds to wait when analyzing a directory or the full repository. Set to 0 for no limit."
         },
         "commitDefender.stagedFilesWarnThreshold": {
           "type": "number",
           "scope": "window",
           "default": 20,
           "minimum": 0,
-          "description": "Show a warning prompt when the number of staged files exceeds this threshold before running analysis. Set to 0 to disable the prompt. Env var: CD_STAGED_FILES_WARN_THRESHOLD."
+          "description": "Show a warning prompt when the number of staged files exceeds this threshold before running analysis. Set to 0 to disable the prompt."
         },
         "commitDefender.repoAnalysisWarnThreshold": {
           "type": "number",
           "scope": "window",
           "default": 80,
           "minimum": 0,
-          "description": "Show a confirmation prompt when analyzing the full repository and the file count exceeds this threshold. Set to 0 to disable the prompt. Env var: CD_REPO_ANALYSIS_WARN_THRESHOLD."
+          "description": "Show a confirmation prompt when analyzing the full repository and the file count exceeds this threshold. Set to 0 to disable the prompt."
         }
       }
     },
@@ -376,14 +363,22 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build",
+    "build": "npm run typecheck && npm run bundle-extension && npm run bundle-hook",
+    "typecheck": "tsc -p ./ --noEmit",
     "compile": "tsc -p ./",
+    "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
+    "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
     "watch": "tsc -watch -p ./",
     "package": "vsce package"
+  },
+  "dependencies": {
+    "ignore": "^5.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.90.0",
+    "esbuild": "^0.21.0",
     "typescript": "^5.4.0"
   }
 }

@@ -1,269 +1,271 @@
-# commit-defender — Architecture Blueprint & Build Plan
+# commit-defender — Architecture Blueprint
 
-## Context
-
-The user wants to build `commit-defender`: a Python-based AI agent that runs as a git pre-commit hook, validates staged code changes (linting, syntax, conventions), calls the Claude API for an AI review, and interrupts the commit with a human-readable report so the developer can fix issues before the commit lands.
-
-The tool must work as a self-contained Docker container — no dependency on host Python, Node, or any linter being pre-installed. The only host requirements are `docker` and the Azure OpenAI environment variables (`AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`).
+A pure TypeScript VS Code extension that runs an AI code review against staged
+changes and ships its own git pre-commit hook. No external runtime
+dependencies beyond Node 18+ for the standalone hook.
 
 ---
 
-## Architecture Flow
+## Two execution paths, one review
 
 ```
-git commit
-    │
-    ▼
-.git/hooks/pre-commit  (shell script, installed once per repo)
-    │  1. collect staged files: git diff --cached --name-only --diff-filter=ACMR
-    │  2. docker run --rm \
-    │       -v "$(git rev-parse --show-toplevel):/repo:ro" \
-    │       -e AZURE_OPENAI_API_KEY \
-    │       -e AZURE_OPENAI_ENDPOINT \
-    │       -e AZURE_OPENAI_DEPLOYMENT \
-    │       -e CD_STAGED_FILES="<newline-separated paths>" \
-    │       commit-defender:latest  1>&2
-    │
-    ▼
-Docker container (commit-defender image)
-    │
-    ├─► ConfigLoader        reads /repo/commit-defender.yaml (or defaults)
-    ├─► StagedFilesReader   resolves staged paths, routes by language
-    ├─► DiffExtractor       git diff --cached per file against /repo/.git
-    ├─► LinterRunner        ruff / eslint / shellcheck / markdownlint → LintFindings
-    ├─► AIReviewAgent       Azure OpenAI API: diff + findings → ReviewResult
-    ├─► ReportRenderer      formats ANSI terminal report to stderr
-    └─► ExitCodeResolver    exit 0 (pass) or exit 1 (blocked)
-    │
-    ▼
-git: exit 1 = commit aborted, user fixes and re-commits
-     exit 0 = commit proceeds
+┌─────────────────────────────────────────────────────────────────┐
+│ Path A: in-editor (live)                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+  git add foo.ts                                  user typing
+       │                                                │
+       ▼                                                ▼
+  index watcher ─► commitDefender.analyze         analyzeCurrentFile
+                                                  analyzeDirectory
+                                                  analyzeRepository
+       │
+       ▼
+  Reviewer (src/ai/reviewer.ts)
+       │
+       ├─► getStagedDiff() / getFileContents()  (src/diff.ts)
+       ├─► loadSkills()                          (src/skills.ts)
+       ├─► buildSystemPrompt()                   (src/ai/prompt.ts)
+       ├─► callProvider()                        (src/ai/providers.ts)
+       ├─► parseReviewJson() + enforceP3()       (src/ai/json.ts)
+       └─► applyMarkers()                        (src/skipMarkers.ts)
+       │
+       ▼
+  AnalysisReport
+       │
+       ├─► Diagnostics  (Problems panel)
+       ├─► CommentController  (inline threads)
+       ├─► CodeLens
+       ├─► Summary webview
+       └─► History tree
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Path B: pre-commit hook (terminal / any git client)             │
+└─────────────────────────────────────────────────────────────────┘
+
+  git commit
+       │
+       ▼
+  .git/hooks/pre-commit  (10-line shell wrapper)
+       │
+       ▼
+  node out/hook-cli.js <repo>
+       │
+       ▼
+  Same Reviewer pipeline ──► reads .commit-defender/hook.json
+                                       │
+                                       ▼
+                              Same AnalysisReport
+                                       │
+                                       ├─► ANSI report → stderr
+                                       └─► exit 0 / 1 → git
+```
+
+The two paths share the entire `src/ai/` and `src/diff.ts` / `src/skipMarkers.ts`
+/ `src/skills.ts` modules. The hook bundle (`out/hook-cli.js`, ~47 KB) is a
+single esbuild artefact that pulls those modules in without touching anything
+under `vscode.*`.
+
+---
+
+## Source layout
+
+```
+vscode-extension/
+├── src/
+│   ├── extension.ts            ← VS Code activation, commands, webview
+│   ├── config.ts               ← ResolvedConfig + getConfig() from settings
+│   ├── types.ts                ← AnalysisReport / FileComment / CommentBlock
+│   │
+│   ├── diff.ts                 ← git diff + file content extraction
+│   ├── excludeFilter.ts        ← gitignore-style filter (uses `ignore` lib)
+│   ├── skills.ts               ← .commit-defender/*/SKILL.md loader
+│   ├── skipMarkers.ts          ← # CD:skip / # TODO / # type: ignore filter
+│   ├── exitResolver.ts         ← P3 → blocking
+│   │
+│   ├── ai/
+│   │   ├── prompt.ts           ← system prompt + severity/richness/locale
+│   │   ├── providers.ts        ← aoai / openai / anthropic / gemini fetch adapters
+│   │   ├── json.ts             ← robust JSON parser + P3 text enforcement
+│   │   └── reviewer.ts         ← orchestrator: reviewDiff / reviewFilesSeparately
+│   │
+│   ├── hook/
+│   │   ├── install.ts          ← write/remove pre-commit hook + hook.json
+│   │   └── cli.ts              ← bundled Node entry invoked by the hook
+│   │
+│   ├── gitHelper.ts            ← getRepoRoot, getStagedFiles, collectFiles
+│   ├── findingsStore.ts        ← in-memory cache of last analysis
+│   ├── commentFormatter.ts     ← AnalysisReport → CommentBlock[]
+│   ├── diagnostics.ts          ← CommentBlock[] → vscode.Diagnostic[]
+│   ├── comments.ts             ← CommentBlock[] → CommentThread[]
+│   ├── codeLens.ts             ← CodeLens provider
+│   ├── panelProvider.ts        ← bottom-panel tree view
+│   ├── historyProvider.ts      ← activity-bar history tree
+│   ├── statusBar.ts            ← status-bar item
+│   ├── outputChannel.ts        ← shared OutputChannel
+│   └── palette.ts              ← color palettes (priority + category)
+│
+├── package.json                ← settings schema, commands, build scripts
+├── tsconfig.json
+└── out/                        ← build artefacts
+    ├── extension.js            ← esbuild bundle (~137 KB)
+    └── hook-cli.js             ← esbuild bundle (~47 KB)
 ```
 
 ---
 
-## Directory Structure
+## Build pipeline
 
-```
-commit-defender/
-├── .claude/
-│   └── skills/
-│       ├── 01-project-bootstrap.md
-│       ├── 02-docker-setup.md
-│       ├── 03-static-analysis.md
-│       ├── 04-diff-extraction.md
-│       ├── 05-ai-review-agent.md
-│       ├── 06-report-renderer.md
-│       ├── 07-hook-installer.md
-│       └── 08-configuration.md
-│
-├── commit_defender/
-│   ├── __init__.py
-│   ├── entrypoint.py          # CLI entry, orchestrates full pipeline
-│   ├── config.py              # ConfigLoader: reads commit-defender.yaml
-│   ├── staged_files.py        # StagedFilesReader: resolves + routes files
-│   ├── diff_extractor.py      # DiffExtractor: git diff --cached per file
-│   ├── models.py              # LintFinding, ReviewResult, Report dataclasses
-│   ├── ai_agent.py            # AIReviewAgent: Anthropic SDK integration
-│   ├── renderer.py            # ReportRenderer: ANSI terminal output
-│   ├── exit_resolver.py       # ExitCodeResolver: decides exit code
-│   └── linters/
-│       ├── __init__.py
-│       ├── base.py            # abstract BaseLinter
-│       ├── python_linter.py   # ruff --output-format json
-│       ├── js_linter.py       # eslint --format json
-│       ├── shell_linter.py    # shellcheck --format=json
-│       └── markdown_linter.py # markdownlint-cli2 --formatter json
-│
-├── installer/
-│   ├── install.py             # installs hook into target repo
-│   └── hook_template.sh       # shell script template for pre-commit hook
-│
-├── tests/
-│   ├── fixtures/
-│   │   ├── sample_python_dirty.py
-│   │   ├── sample_js_dirty.js
-│   │   └── sample_diff.txt
-│   ├── test_config.py
-│   ├── test_linters.py
-│   ├── test_ai_agent.py
-│   └── test_renderer.py
-│
-├── Dockerfile                 # multi-stage: python + node tools + shellcheck
-├── docker-compose.yml         # for local dev/testing
-├── commit-defender.yaml       # default config (lives in target repo)
-├── pyproject.toml             # uv-managed, defines commit_defender package
-├── CLAUDE.md
-├── LICENSE
-└── .gitignore
-```
+| Script | What it does |
+|---|---|
+| `npm run typecheck` | `tsc --noEmit` — type safety, no JS output |
+| `npm run bundle-extension` | `esbuild src/extension.ts → out/extension.js` (vscode external) |
+| `npm run bundle-hook` | `esbuild src/hook/cli.ts → out/hook-cli.js` (vscode external) |
+| `npm run build` | typecheck + both bundles |
+| `npm run package` | `vsce package` — produces the .vsix |
+
+Both bundles inline the `ignore` runtime dep so the published extension
+doesn't need `node_modules` shipped in the .vsix.
 
 ---
 
-## Technology Choices
-
-| Concern | Tool | Rationale |
-|---|---|---|
-| Python linting | `ruff` | Single binary, replaces flake8/pylint/isort, JSON output, sub-second |
-| JS/TS linting | `eslint` v9 flat config | De facto standard, JSON output, embedded fallback config |
-| Shell linting | `shellcheck` | Single binary, apt-installable, JSON output |
-| Markdown | `markdownlint-cli2` | Lightweight, JSON output |
-| AI model | Azure OpenAI (`gpt-5.1`) | Enterprise-grade, configurable deployment via env vars |
-| Container base | `python:3.12-slim-bookworm` | Slim Debian, multi-stage to keep final image lean |
-| Package mgr | `uv` | Fast, lockfile-based, good Docker layer caching |
-| Config format | YAML + Pydantic | Human-readable, validated at load time |
-| Exclude patterns | `pathspec` | gitignore syntax matching |
-
----
-
-## Key Component Details
-
-### `models.py` — Shared Data Model
-
-```python
-@dataclass
-class LintFinding:
-    file: str; line: int; col: int
-    rule: str; message: str; severity: str  # "error" | "warning" | "info"
-
-@dataclass
-class ReviewResult:
-    summary: str; findings: list[LintFinding]
-    blocking: bool; raw_response: str
-
-@dataclass
-class Report:
-    staged_files: list[str]; lint_findings: list[LintFinding]
-    review: ReviewResult; duration_ms: int
-```
-
-### `ai_agent.py` — Azure OpenAI Integration
-
-- Uses `openai` Python SDK with `AzureOpenAI` client
-- System prompt: static role definition sent as `{"role": "system"}` message
-- User message: `<diff>` + `<lint_findings>` → asks for JSON via `response_format: json_object`
-- Env var `CD_SKIP_AI=1` skips AI call (offline/CI mode)
-- Deployment configurable via `AZURE_OPENAI_DEPLOYMENT` env var or `ai_review.model` in config (default: `gpt-5.1`)
-
-### `installer/hook_template.sh`
+## Pre-commit hook design
 
 ```sh
 #!/usr/bin/env sh
+# commit-defender hook v2
 set -e
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-IMAGE="${COMMIT_DEFENDER_IMAGE:-commit-defender:latest}"
-STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
-[ -z "$STAGED" ] && exit 0  # nothing staged
-docker run --rm \
-  -v "${REPO_ROOT}:/repo:ro" \
-  -e AZURE_OPENAI_API_KEY="${AZURE_OPENAI_API_KEY}" \
-  -e AZURE_OPENAI_ENDPOINT="${AZURE_OPENAI_ENDPOINT}" \
-  -e AZURE_OPENAI_DEPLOYMENT="${AZURE_OPENAI_DEPLOYMENT}" \
-  -e AZURE_OPENAI_API_VERSION="${AZURE_OPENAI_API_VERSION}" \
-  -e CD_STAGED_FILES="${STAGED}" \
-  "${IMAGE}" 1>&2
-exit $?
+if ! command -v node >/dev/null 2>&1; then
+    echo "commit-defender: node not found in PATH — skipping pre-commit review." >&2
+    exit 0
+fi
+exec node '<extension-install-path>/out/hook-cli.js' "$REPO_ROOT"
 ```
 
-Key: `1>&2` so output always appears (git captures stdout for commit messages).
+The hook is a thin shell wrapper. All review logic lives in
+`out/hook-cli.js`, which is the same Reviewer pipeline as the extension uses.
 
-### Dockerfile (multi-stage)
+### Config materialisation
 
-```
-Stage 1 (builder):   python:3.12-slim → install uv, install package + deps
-Stage 2 (node):      node:20-slim → npm install -g eslint markdownlint-cli2
-Stage 3 (final):     python:3.12-slim → copy python env + node binaries,
-                     apt-get install git shellcheck,
-                     ENTRYPOINT ["python", "-m", "commit_defender.entrypoint"]
-```
+VS Code settings are mirrored into `<repo>/.commit-defender/hook.json`
+whenever any `commitDefender.*` setting changes. The hook reads that file at
+commit time — it cannot query VS Code, since the editor may not be running.
 
----
-
-## Skills Files
-
-Eight skill files in `.claude/skills/`, each self-contained and buildable independently:
-
-| File | Scope |
-|---|---|
-| `01-project-bootstrap.md` | `pyproject.toml`, package skeleton, `models.py`, SDK setup |
-| `02-docker-setup.md` | Multi-stage `Dockerfile`, `docker-compose.yml`, build/run commands |
-| `03-static-analysis.md` | `linters/` module: `BaseLinter`, ruff/eslint/shellcheck/markdownlint wrappers |
-| `04-diff-extraction.md` | `diff_extractor.py`: subprocess git diff, edge cases, token truncation |
-| `05-ai-review-agent.md` | `ai_agent.py`: Anthropic SDK, prompt caching, structured JSON output |
-| `06-report-renderer.md` | `renderer.py`: ANSI colors, layout, pass/blocked banner, bypass hint |
-| `07-hook-installer.md` | `installer/`: hook template, `install.py` CLI, uninstall, CI usage |
-| `08-configuration.md` | `config.py`: Pydantic model, YAML loading, defaults, pathspec excludes |
-
----
-
-## Environment Variables
-
-| Variable | Source | Purpose |
-|---|---|---|
-| `AZURE_OPENAI_API_KEY` | host env | Azure OpenAI API key |
-| `AZURE_OPENAI_ENDPOINT` | host env | `https://<resource>.openai.azure.com/` |
-| `AZURE_OPENAI_DEPLOYMENT` | host env | Deployment name (e.g. `gpt-5.1`) — overrides `ai_review.model` |
-| `AZURE_OPENAI_API_VERSION` | optional | API version (default: `2024-08-01-preview`) |
-| `CD_STAGED_FILES` | hook | newline-separated staged file paths |
-| `CD_REPO_PATH` | hook | always `/repo` inside container |
-| `CD_SKIP_AI` | optional | skip AI call (offline/CI) |
-| `CD_DRY_RUN` | optional | always exit 0 (analysis only) |
-| `COMMIT_DEFENDER_IMAGE` | optional | override Docker image tag |
-
----
-
-## `commit-defender.yaml` Default Schema
-
-```yaml
-version: 1
-blocking_severity: error   # error | warning | info
-
-linters:
-  python:    { enabled: true,  tool: ruff,           args: ["--select", "E,W,F,I"] }
-  javascript: { enabled: true,  tool: eslint }
-  typescript: { enabled: true,  tool: eslint }
-  shell:     { enabled: true,  tool: shellcheck }
-  markdown:  { enabled: false, tool: markdownlint }
-
-ai_review:
-  enabled: true
-  model: gpt-5.1              # Azure deployment name (overridden by AZURE_OPENAI_DEPLOYMENT)
-  max_tokens: 1024
-  blocking: false            # AI findings are advisory by default
-  system_prompt_suffix: ""   # project-specific context injection
-
-exclude:
-  - "*.lock"
-  - "dist/**"
-  - "node_modules/**"
-  - "*.min.js"
+```jsonc
+// <repo>/.commit-defender/hook.json   (auto-generated, gitignored)
+{
+  "aiProvider": "anthropic",
+  "model": "claude-sonnet-4-6",
+  "endpoint": "",
+  "apiVersion": "2024-08-01-preview",
+  "apiKey": "sk-ant-...",
+  "maxTokens": 4096,
+  "severityLevel": "moderate",
+  "richnessLevel": "moderate",
+  "locale": "en",
+  "excludePatterns": []
+}
 ```
 
----
+The file is added to `.gitignore` automatically on hook install (alongside a
+`# commit-defender (contains API key)` comment).
 
-## Critical Files
+### Replacing existing hooks
 
-| File | Role |
-|---|---|
-| `pyproject.toml` | Package definition, dependencies |
-| `commit_defender/models.py` | Shared data model — all modules depend on it |
-| `commit_defender/entrypoint.py` | Pipeline orchestrator |
-| `commit_defender/linters/base.py` | Abstract linter interface |
-| `commit_defender/ai_agent.py` | Claude API integration with prompt caching |
-| `commit_defender/renderer.py` | Terminal report |
-| `Dockerfile` | Multi-stage container build |
-| `installer/hook_template.sh` | The actual pre-commit shell script |
-| `installer/install.py` | Hook install/uninstall CLI |
-| `commit-defender.yaml` | Default config |
+If `.git/hooks/pre-commit` already contains content from another tool (husky,
+lefthook, …) the install command prompts before replacing it and writes a
+backup at `pre-commit.backup-<timestamp>` so the prior content is recoverable.
 
 ---
 
-## Verification Steps
+## AnalysisReport JSON shape
 
-1. `docker build -t commit-defender:latest .` — image builds cleanly
-2. `python -m installer.install install <path-to-test-repo>` — hook written and executable
-3. Stage a Python file with lint errors in the test repo, run `git commit` — hook fires, report printed, commit aborted
-4. Stage clean files — commit proceeds (exit 0)
-5. `CD_SKIP_AI=1 docker run ...` — works offline, linter-only mode
-6. `CD_DRY_RUN=1 docker run ...` — analysis runs but exit 0 always
-7. `pytest tests/` — unit tests pass for all modules
+The shared contract between Reviewer, summary webview, and hook stderr
+renderer:
+
+```ts
+interface AnalysisReport {
+  schema_version: 1;
+  staged_files: string[];
+  duration_ms: number;
+  exit_code: 0 | 1;
+  lint_findings: never[];        // reserved; always empty in v2
+  review: {
+    summary: string;             // markdown
+    blocking: boolean;
+    is_error: boolean;
+    file_comments: FileComment[];
+    grade: 'exceptional' | 'proficient' | 'adequate' | 'insufficient' | 'critical' | '';
+    per_file_summaries?: PerFileSummary[];
+  };
+}
+
+interface FileComment {
+  file: string;                  // repo-relative path
+  line: number;                  // 1-based; 0 = file-level
+  comment: string;               // markdown
+  category: 'correctness' | 'security' | 'maintenance' | 'optimization' | 'review-history' | 'setting' | '';
+  priority: 'P0' | 'P1' | 'P2' | 'P3';
+}
+```
+
+`lint_findings` is reserved as an always-empty field for forward
+compatibility — the AI is the sole reviewer in v2.
+
+---
+
+## Provider abstraction
+
+Each provider in `src/ai/providers.ts` exports the same `callProvider(req) →
+{raw, error?}` signature. The `raw` string is expected to be a JSON object
+matching the schema in the system prompt.
+
+| Provider | Endpoint | Auth | Body shape |
+|---|---|---|---|
+| `aoai` | `${endpoint}/openai/deployments/{model}/chat/completions?api-version=…` | `api-key:` header | OpenAI chat with `response_format: json_object` (retried without if rejected) |
+| `openai` | `${endpoint or default}/chat/completions` | `Authorization: Bearer …` | Same as aoai |
+| `anthropic` | `${endpoint or default}/messages` | `x-api-key:` + `anthropic-version: 2023-06-01` | `system` + `messages[]` |
+| `gemini` | `${endpoint or default}/models/{model}:generateContent?key=…` | API key in URL | `systemInstruction` + `contents[]` + `responseMimeType: application/json` |
+
+All four share the same retry-on-`response_format-unsupported` logic for the
+OpenAI-compatible endpoints, and a unified error-context line that names the
+provider, model, and endpoint in failure messages.
+
+---
+
+## Priority enforcement layers
+
+A comment can become P3 (Critical, blocking) at three layers:
+
+1. **AI assignment** — the model returns `priority: "P3"` directly.
+2. **Text-pattern enforcement** — `enforceP3()` upgrades to P3 when the comment
+   text matches inherently-critical patterns (syntax error, import error,
+   security vulnerability, data-loss risk, etc.). Localised for English and
+   Korean.
+3. **Severity floor** — `SEVERITY_MIN_RANK` filters out anything below the
+   user's configured floor. `severityLevel: lean` keeps only P3.
+
+The `moderate` severity additionally caps P1 (Info) at 2 per file so optional
+nits don't drown out P2/P3 signal.
+
+---
+
+## Settings reference
+
+See [vscode-extension/README.md](vscode-extension/README.md#extension-settings).
+
+---
+
+## Verification checklist
+
+1. `npm run build` — both bundles produced cleanly.
+2. Open the .vsix in VS Code, set provider + key, stage a file with a known
+   bug, observe inline finding + Problems entry.
+3. Set `commitDefender.preCommitHook: enable`, close VS Code, run
+   `git commit` from a terminal — review prints to stderr, P3 blocks the
+   commit.
+4. Edit `commitDefender.severityLevel`, run `git commit` again — new severity
+   takes effect (settings flowed through `hook.json`).
+5. Drop `<repo>/.commit-defender/security/SKILL.md` with a project-specific
+   rule, observe it influencing reviews.

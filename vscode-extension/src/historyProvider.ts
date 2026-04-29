@@ -263,11 +263,6 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
         icon: 'symbol-method', command: openSettings, tooltip: `Model: ${cfg.model || 'not configured'}\nClick to open settings`,
       },
       {
-        kind: 'status', id: 'cfg-mode',
-        label: 'Mode', value: cfg.analysisMode || 'hybrid',
-        icon: 'settings-gear', command: openSettings, tooltip: `Analysis mode: ${cfg.analysisMode}\nClick to open settings`,
-      },
-      {
         kind: 'status', id: 'cfg-severity',
         label: 'Severity', value: cfg.severityLevel || 'moderate',
         icon: 'pulse', command: openSettings, tooltip: `Severity level: ${cfg.severityLevel}\nClick to open settings`,

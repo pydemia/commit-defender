@@ -1,4 +1,9 @@
 "use strict";
+/**
+ * Load SKILL.md files from <repo>/.commit-defender/<name>/SKILL.md and format
+ * them as a section to inject into the system prompt. Mirrors the Python
+ * `_load_skills` helper.
+ */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -33,28 +38,39 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getConfig = getConfig;
-const vscode = __importStar(require("vscode"));
-function getConfig() {
-    const cfg = vscode.workspace.getConfiguration('commitDefender');
-    return {
-        aiProvider: (cfg.get('aiProvider') ?? 'aoai'),
-        model: cfg.get('model') ?? '',
-        endpoint: cfg.get('endpoint') ?? '',
-        apiVersion: cfg.get('apiVersion') ?? '2024-08-01-preview',
-        apiKey: cfg.get('apiKey') ?? '',
-        maxTokens: cfg.get('maxTokens') ?? 4096,
-        severityLevel: (cfg.get('severityLevel') ?? 'moderate'),
-        richnessLevel: (cfg.get('richnessLevel') ?? 'moderate'),
-        locale: (cfg.get('locale') ?? 'en'),
-        excludePatterns: cfg.get('excludePatterns') ?? [],
-        colorPalette: (cfg.get('colorPalette') ?? 'theme-adaptive'),
-        preCommitHook: (cfg.get('preCommitHook') ?? 'disable'),
-        fileTimeoutSeconds: cfg.get('fileTimeoutSeconds') ?? 120,
-        directoryTimeoutSeconds: cfg.get('directoryTimeoutSeconds') ?? 360,
-        stagedFilesWarnThreshold: cfg.get('stagedFilesWarnThreshold') ?? 20,
-        repoAnalysisWarnThreshold: cfg.get('repoAnalysisWarnThreshold') ?? 80,
-        runOnStage: cfg.get('runOnStage') ?? true,
-    };
+exports.loadSkills = loadSkills;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+function loadSkills(repoRoot) {
+    const skillDir = path.join(repoRoot, '.commit-defender');
+    let entries;
+    try {
+        entries = fs.readdirSync(skillDir, { withFileTypes: true });
+    }
+    catch {
+        return '';
+    }
+    const sections = [];
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+        if (!entry.isDirectory()) {
+            continue;
+        }
+        const skillFile = path.join(skillDir, entry.name, 'SKILL.md');
+        let content;
+        try {
+            content = fs.readFileSync(skillFile, 'utf8').trim();
+        }
+        catch {
+            continue;
+        }
+        if (!content) {
+            continue;
+        }
+        sections.push(`### [${entry.name}]\n\n${content}`);
+    }
+    if (sections.length === 0) {
+        return '';
+    }
+    return '## Active Review Skills\n\n' + sections.join('\n\n---\n\n');
 }
-//# sourceMappingURL=config.js.map
+//# sourceMappingURL=skills.js.map

@@ -2,7 +2,9 @@
 
 **AI-powered pre-commit code review with priority-graded findings, inline in VS Code.**
 
-Commit Defender intercepts your staged changes before they land, runs static analysis and an AI review, then surfaces findings directly in the editor — each tagged with a priority level so you know exactly what must be fixed now versus what can wait. P3 Critical findings block the commit automatically.
+Commit Defender intercepts your staged changes before they land, asks an AI to review them, and surfaces findings directly in the editor — each tagged with a priority level so you know exactly what must be fixed now versus what can wait. P3 Critical findings block the commit automatically.
+
+The extension talks to your AI provider directly and ships its own git pre-commit hook that works even when VS Code is closed.
 
 ---
 
@@ -21,81 +23,61 @@ Every AI finding is assigned one of four acceptance levels:
 
 Findings appear as inline comment threads in the editor (one thread per line, one comment per finding), in the Problems panel, and as CodeLens badges above each affected line.
 
+### Multi-provider AI support
+
+| Provider | Example models | Default endpoint |
+|---|---|---|
+| **Azure OpenAI** | Your deployment name | *(required — your Azure resource URL)* |
+| **Anthropic** | `claude-sonnet-4-6`, `claude-opus-4-6` | `https://api.anthropic.com/v1` |
+| **OpenAI** | `gpt-4o`, `o3` | `https://api.openai.com/v1` |
+| **Google Gemini** | `gemini-2.5-pro`, `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+
 ### Automatic analysis on `git add`
+
 Stage a file and Commit Defender silently runs in the background. Findings appear as diagnostics in the Problems panel and inline editor comments — no manual trigger needed.
 
-### AI code review
-The staged diff is sent to your chosen AI provider (Azure OpenAI, Anthropic Claude, OpenAI, or Google Gemini). The model returns structured findings: priority level, category, line reference, and an actionable suggestion.
+### Standalone pre-commit hook
 
-### Static linting (hybrid mode)
-In `hybrid` mode, Commit Defender runs language-specific linters first — `ruff` for Python, `eslint` for JS/TS, `shellcheck` for shell scripts — then feeds those results to the AI for a combined review. Or run linters only (`rule-based`) or AI only (`ai-powered`).
+Enable `commitDefender.preCommitHook: enable` and the extension installs a tiny shell hook into `.git/hooks/pre-commit`. The hook calls a bundled Node script that runs the **exact same review** at `git commit` time, even when VS Code isn't running. Settings flow through automatically (see [Pre-commit Hook](#pre-commit-hook) below).
 
 ### Summary panel
+
 Open a rich summary webview from the activity bar or command palette. See a pass/blocked verdict, a quality grade, all findings grouped by file with priority color-coding, and the raw JSON report for debugging.
 
 ### Analysis scope
+
 Run analysis on:
 - Staged files only (default, triggered by `git add`)
 - The currently open file
 - Any directory
 - The entire repository
 
-### Multi-provider AI support
-| Provider | Example models |
-|---|---|
-| **Azure OpenAI** | Your deployment name |
-| **Anthropic** | `claude-sonnet-4-6`, `claude-opus-4-6` |
-| **OpenAI** | `gpt-4o`, `o3` |
-| **Google Gemini** | `gemini-2.5-pro`, `gemini-2.5-flash` |
+### Commit message generator
+
+Generate a structured commit message from the current staged diff. Click the wand icon in the Source Control title bar — the message lands in the SCM input box ready to send.
+
+### Per-repo skills
+
+Drop a `SKILL.md` file under `<repo>/.commit-defender/<topic>/SKILL.md` and it is injected into the AI's system prompt for every review in that repo. Use it for project-specific conventions, security policies, naming rules, etc.
 
 ---
 
 ## Requirements
 
-- Python 3.10+ with `commit-defender` installed (`pip install commit-defender`)
+- VS Code 1.90+
+- Node.js 18+ (for the standalone pre-commit hook only — VS Code itself bundles Node so the in-editor experience needs nothing)
 - A Git repository open in VS Code
 - An API key for your chosen AI provider
-
-> **Tip:** Leave `commitDefender.pythonExecutable` empty and Commit Defender will auto-detect the interpreter selected in the VS Code Python extension.
 
 ---
 
 ## Setup
 
-### 1. Install the Python backend
+### 1. Configure your provider
 
-```bash
-pip install commit-defender
-```
+Open **Settings → Extensions → Commit Defender** (or paste directly into `settings.json`) and fill in the block for your provider.
 
-### 2. Set your API credentials
-
-**Option A — VS Code Settings (User Settings only, never Workspace):**
-
-Open **Settings → Extensions → Commit Defender** and set `commitDefender.apiKey`, `commitDefender.aiProvider`, `commitDefender.model`, and (for Azure) `commitDefender.endpoint`.
-
-**Option B — Env File (recommended for keeping credentials out of VS Code):**
-
-Create a `.env` file anywhere on your machine (e.g. `~/.commit-defender.env`):
-
-```ini
-# ~/.commit-defender.env
-CD_AI_PROVIDER=anthropic
-CD_API_KEY=sk-ant-...
-CD_MODEL=claude-sonnet-4-6
-```
-
-Then point the extension to it in **Settings → Extensions → Commit Defender → Env File**:
-
-```
-~/.commit-defender.env
-```
-
-VS Code settings take precedence over env file values when both are set.
-
-### 3. Configure your provider
-
-Open **Settings → Extensions → Commit Defender** (or paste directly into `settings.json`) and fill in the block for your provider:
+> Store `commitDefender.apiKey` in **User Settings**, not Workspace Settings — Workspace settings live in `.vscode/settings.json` and are typically committed to the repo.
 
 #### Azure OpenAI (`aoai`)
 
@@ -111,7 +93,6 @@ Open **Settings → Extensions → Commit Defender** (or paste directly into `se
 
 ```json
 "commitDefender.aiProvider": "anthropic",
-"commitDefender.endpoint":   "https://api.anthropic.com/v1",
 "commitDefender.model":      "claude-sonnet-4-6",
 "commitDefender.apiKey":     "sk-ant-..."
 ```
@@ -120,7 +101,6 @@ Open **Settings → Extensions → Commit Defender** (or paste directly into `se
 
 ```json
 "commitDefender.aiProvider": "openai",
-"commitDefender.endpoint":   "https://api.openai.com/v1",
 "commitDefender.model":      "gpt-4o",
 "commitDefender.apiKey":     "sk-..."
 ```
@@ -129,53 +109,62 @@ Open **Settings → Extensions → Commit Defender** (or paste directly into `se
 
 ```json
 "commitDefender.aiProvider": "gemini",
-"commitDefender.endpoint":   "https://generativelanguage.googleapis.com/v1beta/models",
 "commitDefender.model":      "gemini-2.5-flash",
 "commitDefender.apiKey":     "your-gemini-api-key"
 ```
 
-> `endpoint` can be omitted for `anthropic`, `openai`, and `gemini` — the values above are the defaults and are used automatically when the field is left blank. It is required for `aoai`.
+`endpoint` can be omitted for `anthropic`, `openai`, and `gemini` — the defaults are used. It is required for `aoai`.
+
+### 2. (Optional) Install the pre-commit hook
+
+```jsonc
+"commitDefender.preCommitHook": "enable"
+```
+
+The extension installs `.git/hooks/pre-commit` and writes a `<repo>/.commit-defender/hook.json` config file (auto-`.gitignore`d) so the hook can run without VS Code. See [Pre-commit Hook](#pre-commit-hook) below for details.
+
+### 3. Commit
+
+Stage some files. Findings appear in the Problems panel and inline. Run `git commit` from any terminal — if the hook is installed, it runs automatically.
 
 ---
 
 ## Priority Levels
 
-Commit Defender uses a four-level priority system to classify every review comment by urgency. This replaces vague "warning/error" labels with a human-readable acceptance signal.
+Commit Defender uses a four-level priority system to classify every review comment by urgency.
 
-| Level | Name | When to use |
+| Level | Name | When |
 |---|---|---|
 | 🟩 **P0 Praise** | Positive feedback | Code is clean and exemplary — nothing to flag |
 | 🟦 **P1 Info** | Optional improvement | Code works correctly as-is. Better naming, cleaner structure, readability — zero functional impact if skipped |
 | 🟧 **P2 Warning** | Highly recommended fix | Code runs now but carries real risk: potential runtime errors, deprecated APIs, poor error handling, or performance problems |
 | 🟥 **P3 Critical** | Commit blocked | Broken or dangerous right now — syntax errors, import failures, security vulnerabilities, data-loss risk — **must be fixed before committing** |
 
-P3 findings unconditionally block the commit regardless of any other configuration. P0 is only emitted when there is genuinely nothing negative to say about a file.
+P3 findings unconditionally block the commit. P0 is only emitted when the file has nothing negative.
 
 ---
 
 ## Extension Settings
 
-| Setting | Default | Env var | Description |
-|---|---|---|---|
-| `commitDefender.pythonExecutable` | *(auto)* | — | Python interpreter path. Auto-detects from VS Code Python extension when empty. |
-| `commitDefender.envFile` | *(none)* | — | Path to a `.env` file with `CD_*` variables (e.g. `~/.commit-defender.env`). Keeps credentials out of VS Code settings. |
-| `commitDefender.aiProvider` | `aoai` | `CD_AI_PROVIDER` | `aoai` (Azure OpenAI) · `anthropic` · `openai` · `gemini` |
-| `commitDefender.model` | *(empty)* | `CD_MODEL` | Model or deployment name |
-| `commitDefender.endpoint` | *(empty)* | `CD_ENDPOINT` | API endpoint URL (required for Azure OpenAI) |
-| `commitDefender.apiVersion` | `2024-08-01-preview` | `CD_API_VERSION` | Azure API version (ignored for other providers) |
-| `commitDefender.apiKey` | *(empty)* | `CD_API_KEY` | API key — set in User Settings or Env File, never Workspace |
-| `commitDefender.maxTokens` | `4096` | `CD_MAX_TOKENS` | Max output tokens for the AI response |
-| `commitDefender.analysisMode` | `hybrid` | `CD_ANALYSIS_MODE` | `hybrid` · `ai-powered` · `rule-based` |
-| `commitDefender.severityLevel` | `moderate` | `CD_SEVERITY_LEVEL` | How strict the AI reviewer is: `severe` → `lean` |
-| `commitDefender.richnessLevel` | `moderate` | `CD_RICHNESS_LEVEL` | How detailed the feedback is: `colorful` → `silent` |
-| `commitDefender.locale` | `en` | `CD_LOCALE` | Review language: `en` or `ko` (한국어) |
-| `commitDefender.excludePatterns` | `[]` | `CD_EXCLUDE_PATTERNS` | Gitignore-style patterns to skip (comma-separated in env var, e.g. `tests/**,*.generated.ts`) |
-| `commitDefender.stagedFilesWarnThreshold` | `20` | `CD_STAGED_FILES_WARN_THRESHOLD` | Warn before analyzing more than N staged files. `0` = no prompt |
-| `commitDefender.repoAnalysisWarnThreshold` | `80` | `CD_REPO_ANALYSIS_WARN_THRESHOLD` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
-| `commitDefender.runOnStage` | `true` | — | Auto-analyze when files are staged |
-| `commitDefender.preCommitHook` | `disable` | — | `enable` = auto-install (merge-safe) git pre-commit hook on activation · `disable` = skip |
-| `commitDefender.fileTimeoutSeconds` | `120` | — | Timeout for single-file analysis |
-| `commitDefender.directoryTimeoutSeconds` | `360` | — | Timeout for directory / repository analysis |
+| Setting | Default | Description |
+|---|---|---|
+| `commitDefender.aiProvider` | `aoai` | `aoai` (Azure OpenAI) · `anthropic` · `openai` · `gemini` |
+| `commitDefender.model` | *(empty)* | Model or deployment name |
+| `commitDefender.endpoint` | *(empty)* | API endpoint URL (required for Azure OpenAI; defaults used for others) |
+| `commitDefender.apiVersion` | `2024-08-01-preview` | Azure API version (ignored for other providers) |
+| `commitDefender.apiKey` | *(empty)* | API key — **set in User Settings, never Workspace** |
+| `commitDefender.maxTokens` | `4096` | Max output tokens for the AI response |
+| `commitDefender.severityLevel` | `moderate` | How strict the AI reviewer is: `severe` → `lean` |
+| `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is: `colorful` → `silent` |
+| `commitDefender.locale` | `en` | Review language: `en` or `ko` (한국어) |
+| `commitDefender.excludePatterns` | `[]` | Gitignore-style patterns to skip in addition to the repo's `.gitignore` |
+| `commitDefender.colorPalette` | `theme-adaptive` | Color palette for priority badges (14 options including colorblind-safe sets) |
+| `commitDefender.runOnStage` | `true` | Auto-analyze when files are staged |
+| `commitDefender.preCommitHook` | `disable` | `enable` → install the standalone git pre-commit hook on activation |
+| `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis. `0` = no limit |
+| `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis. `0` = no limit |
+| `commitDefender.stagedFilesWarnThreshold` | `20` | Warn before analyzing more than N staged files. `0` = no prompt |
+| `commitDefender.repoAnalysisWarnThreshold` | `80` | Confirm before analyzing more than N files repo-wide. `0` = no prompt |
 
 ---
 
@@ -192,26 +181,18 @@ All commands are available in the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P
 | `Commit Defender: Cancel Analysis` | Stop the running analysis |
 | `Commit Defender: Show Summary Panel` | Open the summary webview |
 | `Commit Defender: Clear Findings` | Remove all diagnostics and decorations |
+| `Commit Defender: Generate Commit Message` | Draft a structured commit message from the staged diff |
+| `Commit Defender: Install Pre-commit Hook` | Install `.git/hooks/pre-commit` and materialise the hook config |
+| `Commit Defender: Uninstall Pre-commit Hook` | Remove the Commit Defender pre-commit hook |
 
-Shortcut buttons also appear in the **Source Control** panel title bar and the **editor title bar**.
-
----
-
-## Analysis Modes
-
-| Mode | What runs | Use when |
-|---|---|---|
-| `hybrid` | Linters + AI with priority grading | Default — best signal-to-noise ratio |
-| `ai-powered` | AI only with priority grading | No linter toolchain; fast feedback |
-| `rule-based` | Linters only, no AI | Offline / CI, fully deterministic |
-
-In `rule-based` mode the summary panel shows a linter-only report. Priority grading is applied only when the AI review runs.
+Shortcut buttons appear in the **Source Control** panel title bar (analyze + commit-message wand) and the **editor title bar** (analyze current file).
 
 ---
 
 ## Severity & Richness Levels
 
 **Severity** controls how strictly the AI assigns priority levels. Higher strictness pushes more findings toward P2/P3:
+
 - `severe` — zero tolerance; nearly everything becomes P2 (Warning) or P3 (Critical)
 - `rigorous` — strict; style issues escalate to P2, most things flagged
 - `moderate` — balanced; P1/P2/P3 assigned by genuine impact *(default)*
@@ -219,6 +200,7 @@ In `rule-based` mode the summary panel shows a linter-only report. Priority grad
 - `lean` — minimal; only P3-worthy issues flagged
 
 **Richness** controls how much explanation accompanies each finding:
+
 - `colorful` — elaborate: examples, alternatives, trade-off discussion
 - `chatty` — detailed with helpful context
 - `moderate` — clear and concise *(default)*
@@ -227,136 +209,99 @@ In `rule-based` mode the summary panel shows a linter-only report. Priority grad
 
 ---
 
-## Pass / Fail Logic
+## Pre-commit Hook
 
-A commit is **blocked** (exit code 1) when any of the following is true:
+When `commitDefender.preCommitHook` is `enable`, the extension installs a small shell script at `.git/hooks/pre-commit`:
 
-1. Any **P3 Critical** AI comment is present
-2. Any lint finding at or above the configured `blocking_severity` threshold (`error` by default)
-3. The AI review itself returns `blocking: true` and the config `ai_review.blocking` gate is enabled
+```sh
+#!/usr/bin/env sh
+# commit-defender hook v2
+exec node "<extension-path>/out/hook-cli.js" "$REPO_ROOT"
+```
 
-P0, P1, and P2 findings are **never blocking** — they appear in the summary and Problems panel as advisory information only.
+That bundled CLI does the exact same review as the in-editor command and exits non-zero on P3 findings — blocking the commit. It works from any context that runs git: terminal, Tower, GitKraken, lazygit, GitHub Desktop, CI runners.
+
+### How settings reach the hook
+
+The hook can't query VS Code at commit time, so the extension materialises your settings into `<repo>/.commit-defender/hook.json` whenever they change. The file is automatically added to `.gitignore` so the API key doesn't leak.
+
+```jsonc
+// <repo>/.commit-defender/hook.json (auto-generated, do NOT edit by hand)
+{
+  "aiProvider": "anthropic",
+  "model": "claude-sonnet-4-6",
+  "endpoint": "",
+  "apiKey": "sk-ant-...",
+  "maxTokens": 4096,
+  "severityLevel": "moderate",
+  "richnessLevel": "moderate",
+  "locale": "en",
+  "excludePatterns": []
+}
+```
+
+### If a hook already exists
+
+If `.git/hooks/pre-commit` already contains content from another tool (husky, pre-commit, lefthook, …), the install command **prompts** before replacing it and writes a backup at `pre-commit.backup-<timestamp>`. Restore manually if needed.
+
+### Bypassing the hook
+
+Use `git commit --no-verify` (or `-n`) to skip the hook for one commit. The extension never blocks a commit silently.
+
+### Disabling
+
+Set `commitDefender.preCommitHook: disable` or run `Commit Defender: Uninstall Pre-commit Hook`. The hook script is removed; the `hook.json` config file is left in place (uninstall is reversible).
+
+### Hook + Node availability
+
+The bundled CLI requires `node` ≥ 18 in the PATH at commit time. If `node` isn't found, the hook prints a warning and exits 0 (does not block). Use [nvm](https://github.com/nvm-sh/nvm), [asdf](https://asdf-vm.com/), [Volta](https://volta.sh/), or your system package manager to install Node.
 
 ---
 
 ## Inline Skip Directives
 
-Add these comments directly in your code to fully suppress all findings on that line. The line is excluded from both the AI review and linter output — no finding is generated regardless of priority level.
+Add these comments directly in your code to fully suppress all findings on that line:
 
 | Directive | When to use |
 |---|---|
 | `# CD:skip` | Explicitly suppress review for this line |
 | `# CD:skip:<reason>` | Same suppression — the `<reason>` is a human-readable note for teammates |
-| `# type: ignore` | Existing type-checker suppression; also suppresses commit-defender |
+| `# type: ignore` | Honoured as an existing type-checker suppression marker |
 | `# TODO` | Known unfinished work; suppress until it is addressed |
 
-```python
-risky_call()  # CD:skip
-
-password = TEST_PASSWORD  # CD:skip:test fixture, never used in production
-
-result = cast(int, value)  # type: ignore
-
-def stub():  # TODO: implement proper validation
-    pass
+```
+risky_call()                    # CD:skip
+password = TEST_PASSWORD        # CD:skip:test fixture, never used in production
+result = cast(int, value)       # type: ignore
+def stub():                     # TODO: implement proper validation
 ```
 
 Suppression is enforced at two layers: the AI is instructed to omit marked lines from its output, and a post-processing step removes any findings that slipped through.
 
 ---
 
-## Git Pre-commit Hook (CLI mode)
+## Per-repo Skills
 
-You can run Commit Defender as a real `git commit` blocker — without VS Code — using the built-in hook installer.
+Drop SKILL.md files under `.commit-defender/` to inject project-specific guidance into the AI's system prompt:
 
-### 1. Install the hook
-
-```bash
-# Install into the current repo
-commit-defender install .
-
-# Install into a specific repo
-commit-defender install /path/to/other-repo
-
-# Use a specific Python interpreter (e.g. a virtualenv)
-commit-defender install . --python /path/to/.venv/bin/python
+```
+your-repo/
+  .commit-defender/
+    security/
+      SKILL.md          ← "Block any new use of subprocess.shell=True…"
+    naming/
+      SKILL.md          ← "Class names must be PascalCase, …"
 ```
 
-The installer is **merge-safe**. If a `.git/hooks/pre-commit` already exists (e.g. from `pre-commit`, husky, or lefthook), commit-defender appends a named block to that file rather than overwriting it. Re-running `install` updates only that block — all existing hook content is preserved.
+Each `SKILL.md` is concatenated into a single section labelled `Active Review Skills` and prepended to every review for that repo. The directory name (`security`, `naming`) becomes the section heading. Used by both the in-editor commands and the standalone pre-commit hook.
 
-```sh
-# your existing hook content ...     ← preserved as-is
+---
 
-# BEGIN commit-defender
-...commit-defender logic...          ← added / updated in-place
-# END commit-defender
-```
+## Privacy
 
-To update the Python path after switching interpreters, re-run `install`:
+Commit Defender sends your **staged diff** (or full file contents in on-demand mode) to the AI provider you configure. Repository metadata, file paths, and the system prompt go along with that. The API key is sent only to the configured provider.
 
-```bash
-commit-defender install . --python /new/.venv/bin/python
-```
-
-Or override at runtime without reinstalling by setting `COMMIT_DEFENDER_PYTHON` in your shell profile.
-
-### 2. Set credentials
-
-**Option A — shell profile** (credentials available at every commit):
-
-```bash
-# ~/.zshrc or ~/.bashrc
-export CD_AI_PROVIDER=anthropic
-export CD_API_KEY=sk-ant-...
-export CD_MODEL=claude-sonnet-4-6
-```
-
-**Option B — env file** (recommended — keeps credentials out of shell history):
-
-```ini
-# ~/.commit-defender.env
-CD_AI_PROVIDER=anthropic
-CD_API_KEY=sk-ant-...
-CD_MODEL=claude-sonnet-4-6
-```
-
-Point commit-defender to it:
-
-```bash
-export CD_ENV_FILE=~/.commit-defender.env
-```
-
-All supported variables:
-
-| Variable | Required | Description |
-|---|---|---|
-| `CD_AI_PROVIDER` | Yes | `aoai` · `anthropic` · `openai` · `gemini` |
-| `CD_API_KEY` | Yes | API key for the chosen provider |
-| `CD_MODEL` | Yes | Deployment name (Azure) or model name (others) |
-| `CD_ENDPOINT` | Azure only | `https://YOUR.openai.azure.com` |
-| `CD_API_VERSION` | Azure only | e.g. `2024-08-01-preview` |
-| `CD_ENV_FILE` | No | Path to a `.env` file containing other `CD_*` variables |
-| `CD_ANALYSIS_MODE` | No | `hybrid` · `ai-powered` · `rule-based` (default: `hybrid`) |
-| `CD_SEVERITY_LEVEL` | No | `severe` · `rigorous` · `moderate` · `generous` · `lean` |
-| `CD_RICHNESS_LEVEL` | No | `colorful` · `chatty` · `moderate` · `simple` · `silent` |
-| `CD_LOCALE` | No | `en` · `ko` |
-| `CD_EXCLUDE_PATTERNS` | No | Comma-separated gitignore-style patterns to skip (e.g. `tests/**,*.generated.ts`) |
-| `CD_STAGED_FILES_WARN_THRESHOLD` | No | Warn when more than N files are staged (default: `20`) |
-| `CD_REPO_ANALYSIS_WARN_THRESHOLD` | No | Confirm when more than N files in repo scan (default: `80`) |
-| `CD_MAX_TOKENS` | No | Max AI output tokens (default: `4096`) |
-| `COMMIT_DEFENDER_PYTHON` | No | Override the Python interpreter at runtime without reinstalling |
-
-### 3. Remove the hook
-
-```bash
-commit-defender uninstall .
-```
-
-Uninstall strips only the `# BEGIN commit-defender` … `# END commit-defender` block from the hook file. Content from other tools is preserved. If commit-defender was the only content in the file, the file is deleted entirely.
-
-### How it works
-
-When you run `git commit`, the hook collects staged files and calls `python -m commit_defender.app`. Findings print to the terminal. Any **P3 Critical** finding exits with code 1, blocking the commit. Use `git commit --no-verify` to bypass.
+Review your provider's data-retention policy before enabling AI review on sensitive codebases. The extension does not phone home — there is no analytics or telemetry.
 
 ---
 
@@ -365,20 +310,17 @@ When you run `git commit`, the hook collects staged files and calls `python -m c
 **"Could not parse AI response as JSON"**
 Increase `commitDefender.maxTokens`. The response was truncated mid-JSON, usually on large diffs.
 
-**"python3: command not found" / "No module named commit_defender"**
-Set `commitDefender.pythonExecutable` to the full path of the interpreter where you installed `commit-defender` (e.g. `/home/user/.venv/bin/python`).
+**"AI review unavailable: Missing … API key"**
+Set `commitDefender.apiKey` in User Settings.
 
-**Encoding errors on Windows (cp949 / Korean locale)**
-Commit Defender handles non-UTF-8 output safely with `errors="replace"`. If you see a raw encoding error, update to the latest version.
+**Hook says `node not found in PATH`**
+Install Node 18+ and ensure `command -v node` resolves in the shell that runs `git commit`.
 
 **Analysis never triggers automatically**
 Check that `commitDefender.runOnStage` is `true` and that the workspace has a `.git` folder (the extension activates only in git repositories).
 
----
-
-## Privacy
-
-Commit Defender sends **only your staged diff and lint findings** to the AI provider you configure. No file paths, no repository metadata, no credentials are transmitted. Review your provider's data policy before enabling AI review on sensitive codebases.
+**Hook isn't using my latest setting**
+The hook config is updated only on `onDidChangeConfiguration` events from a running VS Code window with the extension active. Make a one-character edit to settings.json (or run `Commit Defender: Install Pre-commit Hook` again) to force a re-write.
 
 ---
 

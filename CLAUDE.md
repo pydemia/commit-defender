@@ -1,7 +1,15 @@
-I want to build an applicable agent for git pre-commit code validator, including check linting, syntax rule, code convention through a repository.
-I want to call this application `commit-defender`.
-My primal programming language is python.
-it is launched at `pre-commit`, when a user try to commit  changes to local branch and comment a review to user, interrupting commit so that user can review potential warning and fix the code.
-It should work in a nutshell as container, so work smooth regardless pre-requisite or dependencies.
-how can i design an architecture and which technical instruments do I need?
-draw a blueprint to me.
+commit-defender is an AI-powered git pre-commit code review tool for VS Code.
+
+It is a pure TypeScript VS Code extension that talks to AI providers (Azure
+OpenAI, Anthropic, OpenAI, Google Gemini) directly over HTTPS and ships its
+own self-contained git pre-commit hook. The hook works at `git commit` time
+even when VS Code is not running.
+
+The extension surfaces priority-graded findings (P0 Praise / P1 Info / P2
+Warning / P3 Critical) inline in the editor — comment threads, Problems
+panel diagnostics, CodeLens, and a summary webview. P3 findings block the
+commit.
+
+Source layout, architecture, and the pre-commit hook design are documented
+in [blueprint.md](blueprint.md). User-facing setup and settings reference
+are in [vscode-extension/README.md](vscode-extension/README.md).
