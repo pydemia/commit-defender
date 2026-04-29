@@ -46,6 +46,7 @@ const findingsStore_js_1 = require("./findingsStore.js");
 const gitHelper_js_1 = require("./gitHelper.js");
 const installer_js_1 = require("./installer.js");
 const historyProvider_js_1 = require("./historyProvider.js");
+const panelProvider_js_1 = require("./panelProvider.js");
 const outputChannel_js_1 = require("./outputChannel.js");
 const runner_js_1 = require("./runner.js");
 const statusBar_js_1 = require("./statusBar.js");
@@ -121,20 +122,21 @@ function activate(context) {
     }
     const diagnostics = vscode.languages.createDiagnosticCollection('commit-defender');
     const commentCtrl = vscode.comments.createCommentController('commit-defender', 'Commit Defender');
-    const commentManager = new comments_js_1.CommentManager(context.extensionUri);
+    const commentManager = new comments_js_1.CommentManager();
     const statusBar = new statusBar_js_1.StatusBarManager();
     let currentRunner = null;
     const codeLensProvider = new codeLens_js_1.SuggestionCodeLensProvider();
     const historyProvider = new historyProvider_js_1.HistoryProvider(cfg);
+    const panelProvider = new panelProvider_js_1.PanelProvider();
     const historyView = vscode.window.createTreeView('commitDefender.history', {
         treeDataProvider: historyProvider,
         showCollapseAll: false,
     });
     const panelView = vscode.window.createTreeView('commitDefender.panelView', {
-        treeDataProvider: historyProvider,
-        showCollapseAll: false,
+        treeDataProvider: panelProvider,
+        showCollapseAll: true,
     });
-    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, panelView, vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider));
+    context.subscriptions.push(diagnostics, commentCtrl, statusBar.item, historyView, panelView, vscode.window.registerFileDecorationProvider(panelProvider.decorationProvider), vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider));
     // ── Helper: shared analysis pipeline ──────────────────────────────────────
     // repoRoot must be the NON-resolved path (e.g. /Users/… not /private/Users/…)
     // so that VS Code URIs built from it match open editor documents.
@@ -149,9 +151,11 @@ function activate(context) {
         });
         currentRunner = runner;
         historyProvider.setRunning(true);
+        panelProvider.setRunning(true);
         const result = await runner.runTargets(repoRoot, relPaths, timeoutSeconds);
         currentRunner = null;
         historyProvider.setRunning(false);
+        panelProvider.setRunning(false);
         if (result.cancelled) {
             statusBar.setIdle('Analysis cancelled');
             vscode.window.showInformationMessage('Commit Defender: Analysis cancelled.');
@@ -174,6 +178,7 @@ function activate(context) {
         historyProvider.push(result.report, repoRoot, scope, scopeTarget);
         const blocks = findingsStore_js_1.findingsStore.lastReport().blocks;
         historyProvider.updateFindings(blocks);
+        panelProvider.updateFindings(blocks, repoRoot);
         (0, diagnostics_js_1.applyDiagnostics)(blocks, repoRoot, diagnostics);
         commentManager.apply(blocks, repoRoot, commentCtrl);
         const passed = result.report.exit_code === 0;
@@ -198,9 +203,10 @@ function activate(context) {
         }
         // Open the summary webview beside the active editor (preserves focus on source file).
         showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode);
-        // Open the Problems panel so the user sees diagnostics at the bottom.
-        await vscode.commands.executeCommand('workbench.panel.markers.view.focus');
-        // After the Problems panel steals focus, bring the source file back as the active
+        // Focus the Commit Defender panel tab at the bottom so the user lands on
+        // our findings view rather than the built-in Problems panel.
+        await vscode.commands.executeCommand('commitDefender.panelView.focus');
+        // After the panel steals focus, bring the source file back as the active
         // editor so inline comment threads (CommentController) are immediately visible.
         // For single-file analysis this is unambiguous; for multi-file we pick the first.
         const srcFile = result.report.staged_files[0] ?? relPaths[0];
@@ -384,6 +390,7 @@ function activate(context) {
         commentManager.clearAll();
         findingsStore_js_1.findingsStore.clear();
         historyProvider.clear(); // also resets _blocks and _lastReport
+        panelProvider.clear();
         statusBar.setIdle();
     }));
     // ── Show line suggestion (CodeLens click) — navigate to line ─────────────

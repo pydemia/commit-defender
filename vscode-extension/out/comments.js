@@ -38,11 +38,7 @@ const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const commentFormatter_js_1 = require("./commentFormatter.js");
 class CommentManager {
-    _extensionUri;
     threads = [];
-    constructor(_extensionUri) {
-        this._extensionUri = _extensionUri;
-    }
     clearAll() {
         this.threads.forEach((t) => t.dispose());
         this.threads = [];
@@ -60,6 +56,8 @@ class CommentManager {
     /**
      * Render a unit-comment-block per spec:
      *   thread.label → "{emoji} {priority} {label} · {point-of-view}"
+     *   author.name  → "Commit Defender" — keeps POV from duplicating in the
+     *                  comment header VS Code renders above the body
      *   body         → just the AI-generated comment (no redundant header)
      */
     _createThread(ctrl, repoRoot, b) {
@@ -76,10 +74,7 @@ class CommentManager {
         md.isTrusted = true;
         md.supportHtml = false;
         const comment = {
-            author: {
-                name: (0, commentFormatter_js_1.formatCategory)(b.category),
-                iconPath: vscode.Uri.joinPath(this._extensionUri, 'media', `priority-${b.priority.toLowerCase()}.svg`),
-            },
+            author: { name: 'Commit Defender' },
             body: md,
             mode: vscode.CommentMode.Preview,
         };

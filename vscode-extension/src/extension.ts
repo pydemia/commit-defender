@@ -9,6 +9,7 @@ import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles, filterForAnalysis } from './gitHelper.js';
 import { ensurePackageInstalled, ensurePreCommitHook, uninstallPreCommitHook } from './installer.js';
 import { HistoryProvider, AnalysisScope } from './historyProvider.js';
+import { PanelProvider } from './panelProvider.js';
 import { getOutputChannel, disposeOutputChannel } from './outputChannel.js';
 import { PythonRunner } from './runner.js';
 import { StatusBarManager } from './statusBar.js';
@@ -95,18 +96,19 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const diagnostics   = vscode.languages.createDiagnosticCollection('commit-defender');
   const commentCtrl   = vscode.comments.createCommentController('commit-defender', 'Commit Defender');
-  const commentManager = new CommentManager(context.extensionUri);
+  const commentManager = new CommentManager();
   const statusBar     = new StatusBarManager();
   let currentRunner: PythonRunner | null = null;
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider  = new HistoryProvider(cfg);
+  const panelProvider    = new PanelProvider();
   const historyView = vscode.window.createTreeView('commitDefender.history', {
     treeDataProvider: historyProvider,
     showCollapseAll: false,
   });
   const panelView = vscode.window.createTreeView('commitDefender.panelView', {
-    treeDataProvider: historyProvider,
-    showCollapseAll: false,
+    treeDataProvider: panelProvider,
+    showCollapseAll: true,
   });
 
   context.subscriptions.push(
@@ -115,6 +117,7 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar.item,
     historyView,
     panelView,
+    vscode.window.registerFileDecorationProvider(panelProvider.decorationProvider),
     vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider),
   );
 
@@ -133,9 +136,11 @@ export function activate(context: vscode.ExtensionContext): void {
     });
     currentRunner = runner;
     historyProvider.setRunning(true);
+    panelProvider.setRunning(true);
     const result = await runner.runTargets(repoRoot, relPaths, timeoutSeconds);
     currentRunner = null;
     historyProvider.setRunning(false);
+    panelProvider.setRunning(false);
 
     if (result.cancelled) {
       statusBar.setIdle('Analysis cancelled');
@@ -162,6 +167,7 @@ export function activate(context: vscode.ExtensionContext): void {
     historyProvider.push(result.report, repoRoot, scope, scopeTarget);
     const blocks = findingsStore.lastReport()!.blocks;
     historyProvider.updateFindings(blocks);
+    panelProvider.updateFindings(blocks, repoRoot);
     applyDiagnostics(blocks, repoRoot, diagnostics);
     commentManager.apply(blocks, repoRoot, commentCtrl);
 
@@ -184,10 +190,11 @@ export function activate(context: vscode.ExtensionContext): void {
     // Open the summary webview beside the active editor (preserves focus on source file).
     showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode);
 
-    // Open the Problems panel so the user sees diagnostics at the bottom.
-    await vscode.commands.executeCommand('workbench.panel.markers.view.focus');
+    // Focus the Commit Defender panel tab at the bottom so the user lands on
+    // our findings view rather than the built-in Problems panel.
+    await vscode.commands.executeCommand('commitDefender.panelView.focus');
 
-    // After the Problems panel steals focus, bring the source file back as the active
+    // After the panel steals focus, bring the source file back as the active
     // editor so inline comment threads (CommentController) are immediately visible.
     // For single-file analysis this is unambiguous; for multi-file we pick the first.
     const srcFile = result.report.staged_files[0] ?? relPaths[0];
@@ -404,6 +411,7 @@ export function activate(context: vscode.ExtensionContext): void {
     commentManager.clearAll();
     findingsStore.clear();
     historyProvider.clear();   // also resets _blocks and _lastReport
+    panelProvider.clear();
     statusBar.setIdle();
   }));
 

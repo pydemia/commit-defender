@@ -6,8 +6,6 @@ import { metaForBlock, formatCategory } from './commentFormatter.js';
 export class CommentManager {
   private threads: vscode.CommentThread[] = [];
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
-
   clearAll(): void {
     this.threads.forEach((t) => t.dispose());
     this.threads = [];
@@ -25,6 +23,8 @@ export class CommentManager {
   /**
    * Render a unit-comment-block per spec:
    *   thread.label → "{emoji} {priority} {label} · {point-of-view}"
+   *   author.name  → "Commit Defender" — keeps POV from duplicating in the
+   *                  comment header VS Code renders above the body
    *   body         → just the AI-generated comment (no redundant header)
    */
   private _createThread(
@@ -48,10 +48,7 @@ export class CommentManager {
     md.supportHtml = false;
 
     const comment: vscode.Comment = {
-      author: {
-        name: formatCategory(b.category),
-        iconPath: vscode.Uri.joinPath(this._extensionUri, 'media', `priority-${b.priority.toLowerCase()}.svg`),
-      },
+      author: { name: 'Commit Defender' },
       body:   md,
       mode:   vscode.CommentMode.Preview,
     };
