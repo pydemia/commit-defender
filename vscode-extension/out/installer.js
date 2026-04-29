@@ -189,20 +189,38 @@ function isImportable(python) {
     });
 }
 /**
- * Run `python -m pip install commit-defender==<version>`.
- * Falls back to `pip install commit-defender` (latest) if the exact version
- * is not yet on PyPI.
+ * Run `python -m pip install --upgrade commit-defender`.
+ * If pip itself is missing, bootstraps it with `ensurepip` before retrying.
  * Returns true on success, false on failure.
  */
-async function pipInstall(python, version, channel) {
-    // First try the pinned version.
-    const pinned = await runPip(python, [`${PYPI_PACKAGE}==${version}`], channel);
-    if (pinned) {
+async function pipInstall(python, _version, channel) {
+    const ok = await runPip(python, ['--upgrade', PYPI_PACKAGE], channel);
+    if (ok) {
         return true;
     }
-    // Pinned version may not be on PyPI yet — fall back to latest.
-    channel.appendLine(`[Commit Defender] Pinned version not found; installing latest ${PYPI_PACKAGE}…`);
-    return runPip(python, [PYPI_PACKAGE], channel);
+    // pip may be absent — bootstrap it and retry.
+    channel.appendLine(`[Commit Defender] pip install failed; running ensurepip to bootstrap pip…`);
+    await runEnsurepip(python, channel);
+    return runPip(python, ['--upgrade', PYPI_PACKAGE], channel);
+}
+/** Runs `python -m ensurepip --upgrade` to bootstrap pip when it is missing. */
+function runEnsurepip(python, channel) {
+    return new Promise(resolve => {
+        let proc;
+        try {
+            proc = (0, child_process_1.spawn)(python, ['-m', 'ensurepip', '--upgrade'], {
+                stdio: ['ignore', 'pipe', 'pipe'],
+            });
+        }
+        catch {
+            resolve();
+            return;
+        }
+        proc.stdout?.on('data', (d) => channel.append(d.toString()));
+        proc.stderr?.on('data', (d) => channel.append(d.toString()));
+        proc.on('close', () => resolve());
+        proc.on('error', () => resolve());
+    });
 }
 /** Runs `python -m pip install <packages>` and streams output to the channel. */
 function runPip(python, packages, channel) {

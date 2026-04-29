@@ -44,7 +44,7 @@ class StatusBarManager {
         this.item.show();
     }
     setIdle(tooltip = 'Click to analyze staged files') {
-        this.item.text = '$(checklist) Commit Defender';
+        this.item.text = '$(shield) Commit Defender';
         this.item.tooltip = tooltip;
         this.item.command = 'commitDefender.analyze';
         this.item.backgroundColor = undefined;

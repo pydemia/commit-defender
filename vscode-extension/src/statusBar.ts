@@ -11,7 +11,7 @@ export class StatusBarManager {
   }
 
   setIdle(tooltip = 'Click to analyze staged files'): void {
-    this.item.text = '$(checklist) Commit Defender';
+    this.item.text = '$(shield) Commit Defender';
     this.item.tooltip = tooltip;
     this.item.command = 'commitDefender.analyze';
     this.item.backgroundColor = undefined;

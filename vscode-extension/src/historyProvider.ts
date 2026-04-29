@@ -4,12 +4,16 @@ import { ExtensionConfig } from './config.js';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
+export type AnalysisScope = 'staged' | 'file' | 'directory' | 'repository';
+
 export interface HistoryEntry {
   id: string;
   timestamp: Date;
   report: AnalysisReport;
   repoRoot: string;
   label: string;
+  scope: AnalysisScope;
+  scopeTarget?: string;   // abs dir path for 'directory' scope
 }
 
 // ── Internal tree node types ───────────────────────────────────────────────────
@@ -39,7 +43,7 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
 
   // ── State updaters ────────────────────────────────────────────────────────
 
-  push(report: AnalysisReport, repoRoot: string): void {
+  push(report: AnalysisReport, repoRoot: string, scope: AnalysisScope, scopeTarget?: string): void {
     const grade = report.review.grade || 'ungraded';
     const count = report.staged_files.length;
     const entry: HistoryEntry = {
@@ -47,6 +51,8 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
       timestamp: new Date(),
       report, repoRoot,
       label: `${count} file${count !== 1 ? 's' : ''} · ${grade}`,
+      scope,
+      scopeTarget,
     };
     this._history.unshift(entry);
     if (this._history.length > 20) { this._history.pop(); }
@@ -133,9 +139,9 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
       case 'entry': {
         const e    = node.entry;
         const item = new vscode.TreeItem(e.label, vscode.TreeItemCollapsibleState.None);
-        item.description = formatTime(e.timestamp);
-        item.iconPath    = new vscode.ThemeIcon(gradeIcon(e.report.review.grade));
-        item.tooltip     = `${e.timestamp.toLocaleString()}\n${e.report.review.summary.slice(0, 200)}`;
+        item.description = `${scopeTag(e.scope)} · ${formatTime(e.timestamp)}`;
+        item.iconPath    = new vscode.ThemeIcon(scopeIcon(e.scope));
+        item.tooltip     = `${e.timestamp.toLocaleString()}\n[${scopeTag(e.scope)}] ${e.report.review.summary.slice(0, 200)}`;
         item.contextValue = 'historyEntry';
         item.command = {
           command: 'commitDefender.showHistoryEntry',
@@ -304,6 +310,24 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+function scopeIcon(scope: AnalysisScope): string {
+  switch (scope) {
+    case 'staged':     return 'git-commit';
+    case 'file':       return 'file-code';
+    case 'directory':  return 'folder';
+    case 'repository': return 'repo';
+  }
+}
+
+function scopeTag(scope: AnalysisScope): string {
+  switch (scope) {
+    case 'staged':     return 'staged';
+    case 'file':       return 'file';
+    case 'directory':  return 'dir';
+    case 'repository': return 'repo';
+  }
+}
 
 function gradeIcon(grade: string): string {
   switch (grade) {

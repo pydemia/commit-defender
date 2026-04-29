@@ -8,7 +8,7 @@ import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles, filterForAnalysis } from './gitHelper.js';
 import { ensurePackageInstalled, ensurePreCommitHook, uninstallPreCommitHook } from './installer.js';
-import { HistoryProvider } from './historyProvider.js';
+import { HistoryProvider, AnalysisScope } from './historyProvider.js';
 import { getOutputChannel, disposeOutputChannel } from './outputChannel.js';
 import { PythonRunner } from './runner.js';
 import { StatusBarManager } from './statusBar.js';
@@ -95,12 +95,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const diagnostics   = vscode.languages.createDiagnosticCollection('commit-defender');
   const commentCtrl   = vscode.comments.createCommentController('commit-defender', 'Commit Defender');
-  const commentManager = new CommentManager();
+  const commentManager = new CommentManager(context.extensionUri);
   const statusBar     = new StatusBarManager();
   let currentRunner: PythonRunner | null = null;
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider  = new HistoryProvider(cfg);
   const historyView = vscode.window.createTreeView('commitDefender.history', {
+    treeDataProvider: historyProvider,
+    showCollapseAll: false,
+  });
+  const panelView = vscode.window.createTreeView('commitDefender.panelView', {
     treeDataProvider: historyProvider,
     showCollapseAll: false,
   });
@@ -110,13 +114,14 @@ export function activate(context: vscode.ExtensionContext): void {
     commentCtrl,
     statusBar.item,
     historyView,
+    panelView,
     vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider),
   );
 
   // ── Helper: shared analysis pipeline ──────────────────────────────────────
   // repoRoot must be the NON-resolved path (e.g. /Users/… not /private/Users/…)
   // so that VS Code URIs built from it match open editor documents.
-  async function analyze(relPaths: string[], repoRoot: string): Promise<void> {
+  async function analyze(relPaths: string[], repoRoot: string, scope: AnalysisScope = 'staged', scopeTarget?: string): Promise<void> {
     await backendReady;   // no-op if already resolved; waits on first-install/upgrade
     const cfg = getConfig();
     const timeoutSeconds = relPaths.length === 1
@@ -154,7 +159,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
 
     findingsStore.update(result.report, repoRoot);
-    historyProvider.push(result.report, repoRoot);
+    historyProvider.push(result.report, repoRoot, scope, scopeTarget);
     const blocks = findingsStore.lastReport()!.blocks;
     historyProvider.updateFindings(blocks);
     applyDiagnostics(blocks, repoRoot, diagnostics);
@@ -244,7 +249,7 @@ export function activate(context: vscode.ExtensionContext): void {
           return;
         }
 
-        await analyze([relPath], rawRoot);
+        await analyze([relPath], rawRoot, 'file');
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -284,7 +289,7 @@ export function activate(context: vscode.ExtensionContext): void {
         channel.appendLine(`\n[Commit Defender] Analyze Directory: ${path.relative(rawRoot, dirPath) || '.'}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
 
-        await analyze(relPaths, rawRoot);
+        await analyze(relPaths, rawRoot, 'directory', dirPath);
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -336,7 +341,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const channel = getOutputChannel();
         channel.appendLine(`\n[Commit Defender] Analyze Staged Files: ${staged.length} file(s)`);
 
-        await analyze(staged, rawRoot);
+        await analyze(staged, rawRoot, 'staged');
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -377,7 +382,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const channel = getOutputChannel();
         channel.appendLine(`\n[Commit Defender] Analyze Repository: ${allFiles.length} file(s)`);
 
-        await analyze(allFiles, rawRoot);
+        await analyze(allFiles, rawRoot, 'repository');
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -437,14 +442,79 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── Re-analyze history entry ───────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.reanalyzeHistoryEntry',
-    async (entry: import('./historyProvider.js').HistoryEntry) => {
-      if (!entry?.report.staged_files.length) {
-        vscode.window.showWarningMessage('Commit Defender: No files recorded for this history entry.');
+    async (arg: unknown) => {
+      type HEntry = import('./historyProvider.js').HistoryEntry;
+      // Context menu commands receive the raw TreeNode element ({ kind:'entry', entry:HEntry }).
+      // Primary-click commands pass HEntry directly via explicit arguments[].
+      const histEntry: HEntry | undefined =
+        (arg as any)?.kind === 'entry' ? (arg as any).entry as HEntry :
+        (arg as any)?.report           ? arg as HEntry               : undefined;
+
+      if (!histEntry) {
+        vscode.window.showWarningMessage('Commit Defender: Could not read history entry.');
         return;
       }
+
+      const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (!ws) { return; }
+
       statusBar.setRunning();
       try {
-        await analyze(entry.report.staged_files, entry.repoRoot);
+        const rawRoot = await getRepoRoot(ws);
+        const channel = getOutputChannel();
+
+        switch (histEntry.scope) {
+          case 'staged': {
+            const staged = await getStagedFiles(rawRoot);
+            if (staged.length === 0) {
+              statusBar.setIdle('No staged files');
+              vscode.window.showInformationMessage('Commit Defender: No staged files to analyze.');
+              return;
+            }
+            channel.appendLine(`\n[Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
+            await analyze(staged, rawRoot, 'staged');
+            break;
+          }
+          case 'file': {
+            const files = histEntry.report.staged_files;
+            if (!files.length) {
+              vscode.window.showWarningMessage('Commit Defender: No file recorded in this history entry.');
+              statusBar.setIdle();
+              return;
+            }
+            channel.appendLine(`\n[Commit Defender] Re-analyze (file): ${files[0]}`);
+            await analyze(files, histEntry.repoRoot, 'file');
+            break;
+          }
+          case 'directory': {
+            const dirPath = histEntry.scopeTarget;
+            if (!dirPath) {
+              vscode.window.showWarningMessage('Commit Defender: No directory recorded in this history entry.');
+              statusBar.setIdle();
+              return;
+            }
+            const relPaths = collectFiles(dirPath, rawRoot);
+            if (relPaths.length === 0) {
+              statusBar.setIdle('No supported files found');
+              vscode.window.showInformationMessage('Commit Defender: No analyzable files found in that directory.');
+              return;
+            }
+            channel.appendLine(`\n[Commit Defender] Re-analyze (directory): ${path.relative(rawRoot, dirPath) || '.'}, ${relPaths.length} file(s)`);
+            await analyze(relPaths, rawRoot, 'directory', dirPath);
+            break;
+          }
+          case 'repository': {
+            const allFiles = collectFiles(rawRoot, rawRoot);
+            if (allFiles.length === 0) {
+              statusBar.setIdle('No files found');
+              vscode.window.showInformationMessage('Commit Defender: No analyzable files found in the repository.');
+              return;
+            }
+            channel.appendLine(`\n[Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
+            await analyze(allFiles, rawRoot, 'repository');
+            break;
+          }
+        }
       } catch (err) {
         handleError(err, statusBar);
       }

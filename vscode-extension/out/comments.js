@@ -38,7 +38,11 @@ const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const commentFormatter_js_1 = require("./commentFormatter.js");
 class CommentManager {
+    _extensionUri;
     threads = [];
+    constructor(_extensionUri) {
+        this._extensionUri = _extensionUri;
+    }
     clearAll() {
         this.threads.forEach((t) => t.dispose());
         this.threads = [];
@@ -72,7 +76,10 @@ class CommentManager {
         md.isTrusted = true;
         md.supportHtml = false;
         const comment = {
-            author: { name: 'Commit Defender AI' },
+            author: {
+                name: (0, commentFormatter_js_1.formatCategory)(b.category),
+                iconPath: vscode.Uri.joinPath(this._extensionUri, 'media', `priority-${b.priority.toLowerCase()}.svg`),
+            },
             body: md,
             mode: vscode.CommentMode.Preview,
         };

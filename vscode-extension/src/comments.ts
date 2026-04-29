@@ -6,6 +6,8 @@ import { metaForBlock, formatCategory } from './commentFormatter.js';
 export class CommentManager {
   private threads: vscode.CommentThread[] = [];
 
+  constructor(private readonly _extensionUri: vscode.Uri) {}
+
   clearAll(): void {
     this.threads.forEach((t) => t.dispose());
     this.threads = [];
@@ -46,7 +48,10 @@ export class CommentManager {
     md.supportHtml = false;
 
     const comment: vscode.Comment = {
-      author: { name: 'Commit Defender AI' },
+      author: {
+        name: formatCategory(b.category),
+        iconPath: vscode.Uri.joinPath(this._extensionUri, 'media', `priority-${b.priority.toLowerCase()}.svg`),
+      },
       body:   md,
       mode:   vscode.CommentMode.Preview,
     };

@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review that surfaces priority-graded findings inline in VS Code and blocks commits on critical issues.",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
@@ -339,6 +339,11 @@
           "command": "commitDefender.reanalyzeHistoryEntry",
           "when": "view == commitDefender.history && viewItem == historyEntry",
           "group": "inline"
+        },
+        {
+          "command": "commitDefender.reanalyzeHistoryEntry",
+          "when": "view == commitDefender.panelView && viewItem == historyEntry",
+          "group": "inline"
         }
       ]
     },
@@ -349,6 +354,13 @@
           "title": "Commit Defender",
           "icon": "media/shield.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "commitDefenderPanel",
+          "title": "COMMIT DEFENDER",
+          "icon": "media/shield.svg"
+        }
       ]
     },
     "views": {
@@ -357,6 +369,13 @@
           "id": "commitDefender.history",
           "name": "Commit Defender",
           "icon": "media/shield.svg"
+        }
+      ],
+      "commitDefenderPanel": [
+        {
+          "id": "commitDefender.panelView",
+          "name": "point-of-view",
+          "icon": "$(priority-level)"
         }
       ]
     }

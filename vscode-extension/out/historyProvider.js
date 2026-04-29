@@ -49,7 +49,7 @@ class HistoryProvider {
         this._cfg = cfg;
     }
     // ── State updaters ────────────────────────────────────────────────────────
-    push(report, repoRoot) {
+    push(report, repoRoot, scope, scopeTarget) {
         const grade = report.review.grade || 'ungraded';
         const count = report.staged_files.length;
         const entry = {
@@ -57,6 +57,8 @@ class HistoryProvider {
             timestamp: new Date(),
             report, repoRoot,
             label: `${count} file${count !== 1 ? 's' : ''} · ${grade}`,
+            scope,
+            scopeTarget,
         };
         this._history.unshift(entry);
         if (this._history.length > 20) {
@@ -137,9 +139,9 @@ class HistoryProvider {
             case 'entry': {
                 const e = node.entry;
                 const item = new vscode.TreeItem(e.label, vscode.TreeItemCollapsibleState.None);
-                item.description = formatTime(e.timestamp);
-                item.iconPath = new vscode.ThemeIcon(gradeIcon(e.report.review.grade));
-                item.tooltip = `${e.timestamp.toLocaleString()}\n${e.report.review.summary.slice(0, 200)}`;
+                item.description = `${scopeTag(e.scope)} · ${formatTime(e.timestamp)}`;
+                item.iconPath = new vscode.ThemeIcon(scopeIcon(e.scope));
+                item.tooltip = `${e.timestamp.toLocaleString()}\n[${scopeTag(e.scope)}] ${e.report.review.summary.slice(0, 200)}`;
                 item.contextValue = 'historyEntry';
                 item.command = {
                     command: 'commitDefender.showHistoryEntry',
@@ -286,6 +288,22 @@ class HistoryProvider {
 }
 exports.HistoryProvider = HistoryProvider;
 // ── Helpers ────────────────────────────────────────────────────────────────────
+function scopeIcon(scope) {
+    switch (scope) {
+        case 'staged': return 'git-commit';
+        case 'file': return 'file-code';
+        case 'directory': return 'folder';
+        case 'repository': return 'repo';
+    }
+}
+function scopeTag(scope) {
+    switch (scope) {
+        case 'staged': return 'staged';
+        case 'file': return 'file';
+        case 'directory': return 'dir';
+        case 'repository': return 'repo';
+    }
+}
 function gradeIcon(grade) {
     switch (grade) {
         case 'exceptional': return 'pass';
