@@ -26,7 +26,16 @@ class Settings(BaseSettings):
     # AI connection — set by VS Code extension (User Settings, application scope)
     cd_ai_provider: str = ""   # aoai | anthropic | openai | gemini
     cd_model: str = ""         # model or deployment name
-    cd_endpoint: str = ""      # API endpoint URL (required for aoai)
+
+    # API endpoint URL. Required for aoai. For other providers, leave empty
+    # to use the default public endpoint shown below.
+    #
+    #   aoai      → https://YOUR_RESOURCE.openai.azure.com
+    #   anthropic → https://api.anthropic.com/v1
+    #   openai    → https://api.openai.com/v1
+    #   gemini    → https://generativelanguage.googleapis.com/v1beta/models
+    cd_endpoint: str = ""
+
     cd_api_version: str = "2024-08-01-preview"
     cd_api_key: str = ""       # API key
     cd_max_tokens: str = ""
