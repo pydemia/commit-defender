@@ -42,6 +42,7 @@ exports.getStagedFiles = getStagedFiles;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
+const excludeFilter_js_1 = require("./excludeFilter.js");
 /**
  * Binary file extensions that cannot be meaningfully reviewed.
  * Every other file — any text format — is accepted for analysis.
@@ -100,9 +101,10 @@ function filterForAnalysis(files) {
 }
 /**
  * Recursively collect all analyzable files under `dirPath`,
- * returning repo-relative paths. Skips noise directories and binary files.
+ * returning repo-relative paths. Skips noise directories, binary files,
+ * and any paths matched by `excludePatterns` (gitignore-style).
  */
-function collectFiles(dirPath, repoRoot) {
+function collectFiles(dirPath, repoRoot, excludePatterns = []) {
     const results = [];
     function walk(dir) {
         let entries;
@@ -135,20 +137,20 @@ function collectFiles(dirPath, repoRoot) {
         }
     }
     walk(dirPath);
-    return results;
+    return (0, excludeFilter_js_1.applyExcludes)(results, excludePatterns);
 }
 /** Returns the canonical repo root for the given directory. */
 function getRepoRoot(cwd) {
     return execGit(['rev-parse', '--show-toplevel'], cwd);
 }
 /**
- * Returns repo-relative paths of currently staged (ACMR) files,
- * filtered to non-binary types.
+ * Returns repo-relative paths of currently staged (ACMR) files, filtered to
+ * non-binary types and to anything matched by the user's excludePatterns.
  */
-async function getStagedFiles(repoRoot) {
+async function getStagedFiles(repoRoot, excludePatterns = []) {
     const output = await execGit(['diff', '--cached', '--name-only', '--diff-filter=ACMR'], repoRoot);
     const all = output.split('\n').filter(Boolean);
-    return filterForAnalysis(all);
+    return (0, excludeFilter_js_1.applyExcludes)(filterForAnalysis(all), excludePatterns);
 }
 function execGit(args, cwd) {
     return new Promise((resolve, reject) => {

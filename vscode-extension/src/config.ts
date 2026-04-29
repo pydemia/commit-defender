@@ -1,75 +1,62 @@
 import * as vscode from 'vscode';
 import { PaletteId } from './palette.js';
 
-export type AnalysisMode    = 'hybrid' | 'ai-powered' | 'rule-based';
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
 export type RichnessLevel   = 'colorful' | 'chatty' | 'moderate' | 'simple' | 'silent';
 export type Locale          = 'en' | 'ko';
 export type AIProvider      = 'aoai' | 'anthropic' | 'openai' | 'gemini';
 export type PreCommitHook   = 'enable' | 'disable';
 
-export interface ExtensionConfig {
-  pythonExecutable: string;
-  envFile: string;
-  preCommitHook: PreCommitHook;
-  fileTimeoutSeconds: number;
-  directoryTimeoutSeconds: number;
-  stagedFilesWarnThreshold: number;
-  repoAnalysisWarnThreshold: number;
-  runOnStage: boolean;
-  analysisMode: AnalysisMode;
-  severityLevel: SeverityLevel;
-  richnessLevel: RichnessLevel;
-  locale: Locale;
-  excludePatterns: string[];
-  colorPalette: PaletteId;
-  // AI connection settings
+/**
+ * Snapshot of the user's commitDefender.* settings. The Reviewer and the hook
+ * CLI both consume this shape — extension reads it from VS Code, hook reads
+ * it from the materialised .commit-defender/hook.json.
+ */
+export interface ResolvedConfig {
+  // AI connection
   aiProvider: AIProvider;
   model: string;
   endpoint: string;
   apiVersion: string;
   apiKey: string;
   maxTokens: number;
+  // Review behavior
+  severityLevel: SeverityLevel;
+  richnessLevel: RichnessLevel;
+  locale: Locale;
+  excludePatterns: string[];
+  // UX (extension only — hook ignores these)
+  colorPalette: PaletteId;
+  preCommitHook: PreCommitHook;
+  fileTimeoutSeconds: number;
+  directoryTimeoutSeconds: number;
+  stagedFilesWarnThreshold: number;
+  repoAnalysisWarnThreshold: number;
+  runOnStage: boolean;
 }
 
-export function getConfig(): ExtensionConfig {
+/** Backwards-compatible alias kept for code that hasn't been renamed yet. */
+export type ExtensionConfig = ResolvedConfig;
+
+export function getConfig(): ResolvedConfig {
   const cfg = vscode.workspace.getConfiguration('commitDefender');
-  const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  let pythonExecutable = cfg.get<string>('pythonExecutable') ?? '';
-
-  if (!pythonExecutable) {
-    // Auto-detect: prefer the VS Code Python extension's active interpreter,
-    // then fall back to 'python3'.
-    const pyExtInterpreter =
-      vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath') ?? '';
-    pythonExecutable = pyExtInterpreter || 'python3';
-  }
-
-  // Resolve ${workspaceFolder} placeholder if the user typed it manually.
-  if (ws && pythonExecutable.includes('${workspaceFolder}')) {
-    pythonExecutable = pythonExecutable.replace(/\$\{workspaceFolder\}/g, ws);
-  }
-
   return {
-    pythonExecutable,
-    envFile: cfg.get<string>('envFile') ?? '',
-    preCommitHook: (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
+    aiProvider:                (cfg.get<string>('aiProvider')    ?? 'aoai') as AIProvider,
+    model:                     cfg.get<string>('model')          ?? '',
+    endpoint:                  cfg.get<string>('endpoint')       ?? '',
+    apiVersion:                cfg.get<string>('apiVersion')     ?? '2024-08-01-preview',
+    apiKey:                    cfg.get<string>('apiKey')         ?? '',
+    maxTokens:                 cfg.get<number>('maxTokens')      ?? 4096,
+    severityLevel:             (cfg.get<string>('severityLevel') ?? 'moderate') as SeverityLevel,
+    richnessLevel:             (cfg.get<string>('richnessLevel') ?? 'moderate') as RichnessLevel,
+    locale:                    (cfg.get<string>('locale')        ?? 'en') as Locale,
+    excludePatterns:           cfg.get<string[]>('excludePatterns') ?? [],
+    colorPalette:              (cfg.get<string>('colorPalette')  ?? 'theme-adaptive') as PaletteId,
+    preCommitHook:             (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
     fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 120,
     directoryTimeoutSeconds:   cfg.get<number>('directoryTimeoutSeconds')   ?? 360,
     stagedFilesWarnThreshold:  cfg.get<number>('stagedFilesWarnThreshold')  ?? 20,
     repoAnalysisWarnThreshold: cfg.get<number>('repoAnalysisWarnThreshold') ?? 80,
-    runOnStage: cfg.get<boolean>('runOnStage') ?? true,
-    analysisMode: (cfg.get<string>('analysisMode') ?? 'hybrid') as AnalysisMode,
-    severityLevel: (cfg.get<string>('severityLevel') ?? '') as SeverityLevel,
-    richnessLevel: (cfg.get<string>('richnessLevel') ?? '') as RichnessLevel,
-    locale: (cfg.get<string>('locale') ?? '') as Locale,
-    excludePatterns: cfg.get<string[]>('excludePatterns') ?? [],
-    colorPalette: (cfg.get<string>('colorPalette') ?? 'theme-adaptive') as PaletteId,
-    aiProvider:  (cfg.get<string>('aiProvider') ?? 'aoai') as AIProvider,
-    model:       cfg.get<string>('model')      ?? '',
-    endpoint:    cfg.get<string>('endpoint')   ?? '',
-    apiVersion:  cfg.get<string>('apiVersion') ?? '2024-08-01-preview',
-    apiKey:      cfg.get<string>('apiKey')     ?? '',
-    maxTokens:   cfg.get<number>('maxTokens')  ?? 4096,
+    runOnStage:                cfg.get<boolean>('runOnStage') ?? true,
   };
 }

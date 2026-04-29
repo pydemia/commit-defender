@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
+import { applyExcludes } from './excludeFilter.js';
 
 /**
  * Binary file extensions that cannot be meaningfully reviewed.
@@ -62,9 +63,10 @@ export function filterForAnalysis(files: string[]): string[] {
 
 /**
  * Recursively collect all analyzable files under `dirPath`,
- * returning repo-relative paths. Skips noise directories and binary files.
+ * returning repo-relative paths. Skips noise directories, binary files,
+ * and any paths matched by `excludePatterns` (gitignore-style).
  */
-export function collectFiles(dirPath: string, repoRoot: string): string[] {
+export function collectFiles(dirPath: string, repoRoot: string, excludePatterns: string[] = []): string[] {
   const results: string[] = [];
 
   function walk(dir: string): void {
@@ -94,7 +96,7 @@ export function collectFiles(dirPath: string, repoRoot: string): string[] {
   }
 
   walk(dirPath);
-  return results;
+  return applyExcludes(results, excludePatterns);
 }
 
 /** Returns the canonical repo root for the given directory. */
@@ -103,16 +105,16 @@ export function getRepoRoot(cwd: string): Promise<string> {
 }
 
 /**
- * Returns repo-relative paths of currently staged (ACMR) files,
- * filtered to non-binary types.
+ * Returns repo-relative paths of currently staged (ACMR) files, filtered to
+ * non-binary types and to anything matched by the user's excludePatterns.
  */
-export async function getStagedFiles(repoRoot: string): Promise<string[]> {
+export async function getStagedFiles(repoRoot: string, excludePatterns: string[] = []): Promise<string[]> {
   const output = await execGit(
     ['diff', '--cached', '--name-only', '--diff-filter=ACMR'],
     repoRoot
   );
   const all = output.split('\n').filter(Boolean);
-  return filterForAnalysis(all);
+  return applyExcludes(filterForAnalysis(all), excludePatterns);
 }
 
 function execGit(args: string[], cwd: string): Promise<string> {

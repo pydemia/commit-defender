@@ -1,19 +1,19 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { Reviewer } from './ai/reviewer.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
 import { ExtensionConfig, getConfig } from './config.js';
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
-import { collectFiles, getRepoRoot, getStagedFiles, filterForAnalysis } from './gitHelper.js';
-import { ensurePackageInstalled, ensurePreCommitHook, uninstallPreCommitHook } from './installer.js';
+import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
 import { HistoryProvider, AnalysisScope } from './historyProvider.js';
+import { hookIsInstalled, installHook, uninstallHook, writeHookConfig } from './hook/install.js';
 import { PanelProvider } from './panelProvider.js';
 import { getOutputChannel, disposeOutputChannel } from './outputChannel.js';
-import { PythonRunner } from './runner.js';
 import { StatusBarManager } from './statusBar.js';
-import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
+import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META, RunResult } from './types.js';
 import { normalizeReport, worstPriority, metaForBlock, formatCategory, PRIORITY_RANK } from './commentFormatter.js';
 import { Palette, resolvePalette, gradeColor as paletteGradeColor } from './palette.js';
 
@@ -21,20 +21,14 @@ const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 
 
 export function activate(context: vscode.ExtensionContext): void {
-  const extensionVersion: string = context.extension.packageJSON?.version ?? '0.1.0';
-  const cfg = getConfig();
-  // Keep the promise so analysis commands can await it — instant if already resolved.
-  const backendReady = ensurePackageInstalled(cfg.pythonExecutable, extensionVersion, context)
-    .catch(() => { /* failure already reported inside ensurePackageInstalled */ });
-
-  // ── Helper: resolve repo root for hook commands ───────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────────
   async function resolveRepoRoot(): Promise<string | undefined> {
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) { return undefined; }
     try { return await getRepoRoot(ws); } catch { return undefined; }
   }
 
-  // ── Install Pre-commit Hook command ───────────────────────────────────────
+  // ── Pre-commit hook commands ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.installPreCommitHook',
     async () => {
@@ -43,12 +37,10 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showWarningMessage('Commit Defender: No git repository found in workspace.');
         return;
       }
-      await backendReady;
-      await ensurePreCommitHook(getConfig().pythonExecutable, repoRoot);
+      await installHook(repoRoot, context.extensionPath, getConfig());
     },
   ));
 
-  // ── Uninstall Pre-commit Hook command ─────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.uninstallPreCommitHook',
     async () => {
@@ -57,14 +49,24 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showWarningMessage('Commit Defender: No git repository found in workspace.');
         return;
       }
-      await uninstallPreCommitHook(getConfig().pythonExecutable, repoRoot);
+      await uninstallHook(repoRoot);
     },
   ));
 
-  // ── React to setting changes (hook, palette, etc.) ────────────────────────
-  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+  // ── React to setting changes ───────────────────────────────────────────
+  context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async e => {
     if (e.affectsConfiguration('commitDefender')) {
       historyProvider.updateConfig(getConfig());
+
+      // Mirror settings into the hook config file so the hook picks them up
+      // on the next commit, even when VS Code isn't running.
+      const repoRoot = await resolveRepoRoot();
+      if (repoRoot && hookIsInstalled(repoRoot)) {
+        try { writeHookConfig(repoRoot, getConfig()); }
+        catch (err) {
+          getOutputChannel().appendLine(`[Commit Defender] Could not update hook config: ${(err as Error).message}`);
+        }
+      }
     }
     if (e.affectsConfiguration('commitDefender.preCommitHook')) {
       const hook = getConfig().preCommitHook;
@@ -74,31 +76,29 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.executeCommand('commitDefender.uninstallPreCommitHook');
       }
     }
-    // Re-render the summary panel when the color palette changes so the
-    // new colors apply without needing to re-run the analysis.
+    // Re-render the summary panel when the color palette changes.
     if (e.affectsConfiguration('commitDefender.colorPalette')) {
       const last = findingsStore.lastReport();
       if (last && _summaryPanel) {
         const palette = resolvePalette(getConfig().colorPalette);
-        _summaryPanel.webview.html = buildSummaryHtml(
-          last.report, last.repoRoot, getConfig().analysisMode, palette,
-        );
+        _summaryPanel.webview.html = buildSummaryHtml(last.report, last.repoRoot, palette);
       }
     }
   }));
 
-  // ── On activation: install hook if already enabled ────────────────────────
+  // ── On activation: install hook if already enabled ─────────────────────
+  const cfg = getConfig();
   if (cfg.preCommitHook === 'enable') {
-    backendReady.then(() =>
-      vscode.commands.executeCommand('commitDefender.installPreCommitHook')
-    );
+    resolveRepoRoot().then(repoRoot => {
+      if (repoRoot) { installHook(repoRoot, context.extensionPath, getConfig()); }
+    });
   }
 
-  const diagnostics   = vscode.languages.createDiagnosticCollection('commit-defender');
-  const commentCtrl   = vscode.comments.createCommentController('commit-defender', 'Commit Defender');
+  const diagnostics    = vscode.languages.createDiagnosticCollection('commit-defender');
+  const commentCtrl    = vscode.comments.createCommentController('commit-defender', 'Commit Defender');
   const commentManager = new CommentManager();
-  const statusBar     = new StatusBarManager();
-  let currentRunner: PythonRunner | null = null;
+  const statusBar      = new StatusBarManager();
+  let currentAbort: AbortController | null = null;
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider  = new HistoryProvider(cfg);
   const panelProvider    = new PanelProvider();
@@ -121,36 +121,51 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider),
   );
 
-  // ── Helper: shared analysis pipeline ──────────────────────────────────────
+  // ── Shared analysis pipeline ────────────────────────────────────────────
   // repoRoot must be the NON-resolved path (e.g. /Users/… not /private/Users/…)
-  // so that VS Code URIs built from it match open editor documents.
-  async function analyze(relPaths: string[], repoRoot: string, scope: AnalysisScope = 'staged', scopeTarget?: string): Promise<void> {
-    await backendReady;   // no-op if already resolved; waits on first-install/upgrade
+  // so VS Code URIs built from it match open editor documents.
+  async function analyze(
+    relPaths: string[],
+    repoRoot: string,
+    scope: AnalysisScope = 'staged',
+    scopeTarget?: string,
+  ): Promise<void> {
     const cfg = getConfig();
     const timeoutSeconds = relPaths.length === 1
       ? cfg.fileTimeoutSeconds
       : cfg.directoryTimeoutSeconds;
 
-    const runner = new PythonRunner(cfg, (current, total, file) => {
-      statusBar.setProgress(current, total, file);
-    });
-    currentRunner = runner;
+    const reviewer = new Reviewer(cfg);
+    const abort = new AbortController();
+    currentAbort = abort;
+    const timeoutHandle = timeoutSeconds > 0
+      ? setTimeout(() => abort.abort('timeout'), timeoutSeconds * 1000)
+      : null;
+
     historyProvider.setRunning(true);
     panelProvider.setRunning(true);
-    const result = await runner.runTargets(repoRoot, relPaths, timeoutSeconds);
-    currentRunner = null;
-    historyProvider.setRunning(false);
-    panelProvider.setRunning(false);
 
-    if (result.cancelled) {
-      statusBar.setIdle('Analysis cancelled');
-      vscode.window.showInformationMessage('Commit Defender: Analysis cancelled.');
-      return;
+    let result: RunResult;
+    try {
+      if (scope === 'staged') {
+        result = await reviewer.reviewDiff(repoRoot, relPaths, abort.signal);
+      } else {
+        result = await reviewer.reviewFilesSeparately(
+          repoRoot, relPaths, abort.signal,
+          (current, total, file) => statusBar.setProgress(current, total, file),
+        );
+      }
+    } finally {
+      if (timeoutHandle) { clearTimeout(timeoutHandle); }
+      currentAbort = null;
+      historyProvider.setRunning(false);
+      panelProvider.setRunning(false);
     }
 
-    if (result.timedOut) {
-      statusBar.setIdle('Analysis timed out');
-      vscode.window.showWarningMessage(`Commit Defender: Analysis timed out after ${timeoutSeconds}s.`);
+    if (result.cancelled) {
+      const reason = abort.signal.reason === 'timeout' ? 'timed out' : 'cancelled';
+      statusBar.setIdle(`Analysis ${reason}`);
+      vscode.window.showInformationMessage(`Commit Defender: Analysis ${reason}.`);
       return;
     }
 
@@ -159,7 +174,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const summary = result.report.review?.summary ?? 'No files matched for analysis.';
       const channel = getOutputChannel();
       channel.show(true);
-      vscode.window.showInformationMessage(`Commit Defender: ${summary} Check the output panel for details.`);
+      vscode.window.showInformationMessage(`Commit Defender: ${summary}`);
       return;
     }
 
@@ -172,48 +187,38 @@ export function activate(context: vscode.ExtensionContext): void {
     commentManager.apply(blocks, repoRoot, commentCtrl);
 
     const passed = result.report.exit_code === 0;
-    // is_error covers single-call failures; the summary fallback catches the wrapped
-    // per-file error text produced by review_files_separately() (e.g. "**file** — ⚠ AI review unavailable:…")
     const isAiError = result.report.review.is_error
       || /AI review unavailable/i.test(result.report.review.summary);
     if (isAiError) {
       const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
       statusBar.setError(msg);
       vscode.window.showErrorMessage(`Commit Defender: AI review failed — ${msg}`, 'Show Summary', 'Show Output').then(action => {
-        if (action === 'Show Summary') { showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode); }
+        if (action === 'Show Summary') { showSummaryPanel(result.report, repoRoot, context); }
         else if (action === 'Show Output') { getOutputChannel().show(); }
       });
     } else {
       statusBar.setResult(passed, result.report.review.grade);
     }
 
-    // Open the summary webview beside the active editor (preserves focus on source file).
-    showSummaryPanel(result.report, repoRoot, context, cfg.analysisMode);
-
-    // Focus the Commit Defender panel tab at the bottom so the user lands on
-    // our findings view rather than the built-in Problems panel.
+    showSummaryPanel(result.report, repoRoot, context);
     await vscode.commands.executeCommand('commitDefender.panelView.focus');
 
-    // After the panel steals focus, bring the source file back as the active
-    // editor so inline comment threads (CommentController) are immediately visible.
-    // For single-file analysis this is unambiguous; for multi-file we pick the first.
+    // Bring the source file back to the front so inline comment threads render.
     const srcFile = result.report.staged_files[0] ?? relPaths[0];
     if (srcFile) {
       const absPath = path.join(repoRoot, srcFile);
       await vscode.window.showTextDocument(vscode.Uri.file(absPath), {
-        preserveFocus: false,   // give the editor focus so threads render expanded
+        preserveFocus: false,
         preview: false,
         viewColumn: vscode.ViewColumn.One,
       });
     }
   }
 
-  // ── 1. Analyze Current File ────────────────────────────────────────────────
+  // ── 1. Analyze Current File ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.analyzeCurrentFile',
     async (uri?: vscode.Uri) => {
-      // When invoked from Explorer context menu, uri is the right-clicked file.
-      // When invoked from command palette or editor title, fall back to active editor.
       let filePath: string;
       if (uri?.scheme === 'file') {
         filePath = uri.fsPath;
@@ -233,15 +238,14 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const rawRoot = await getRepoRoot(ws);
 
-        // Resolve both paths only for computing path.relative() — this handles
-        // the macOS /Users → /private/Users symlink mismatch. Then pass rawRoot
-        // (unresolved) to analyze() so VS Code URIs match open editor documents.
+        // Resolve symlinks for path.relative() only — pass rawRoot to analyze
+        // so VS Code URIs match open editors on macOS (/Users vs /private/Users).
         let resolvedRoot = rawRoot;
         let resolvedFile = filePath;
         try {
           resolvedRoot = fs.realpathSync(rawRoot);
           resolvedFile = fs.realpathSync(filePath);
-        } catch { /* fall back to originals */ }
+        } catch { /* fall back */ }
 
         const relPath = path.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
@@ -263,7 +267,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── 2. Analyze Directory ───────────────────────────────────────────────────
+  // ── 2. Analyze Directory ───────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.analyzeDirectory',
     async (uri?: vscode.Uri) => {
@@ -278,14 +282,13 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      // When invoked from Explorer context menu, uri is the right-clicked folder.
-      // When invoked from command palette, show the directory picker.
       const dirPath = (uri?.scheme === 'file') ? uri.fsPath : await pickDirectory(rawRoot);
       if (!dirPath) { return; }
 
       statusBar.setRunning();
       try {
-        const relPaths = collectFiles(dirPath, rawRoot);
+        const cfg = getConfig();
+        const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns);
         if (relPaths.length === 0) {
           statusBar.setIdle('No supported files found');
           vscode.window.showInformationMessage('Commit Defender: No analyzable files found in that directory.');
@@ -303,7 +306,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── 3. Analyze Staged Files ────────────────────────────────────────────────
+  // ── 3. Analyze Staged Files ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.analyze',
     async () => {
@@ -316,8 +319,9 @@ export function activate(context: vscode.ExtensionContext): void {
       statusBar.setRunning();
       try {
         const rawRoot = await getRepoRoot(ws);
+        const cfg = getConfig();
 
-        const staged = await getStagedFiles(rawRoot);
+        const staged = await getStagedFiles(rawRoot, cfg.excludePatterns);
         if (staged.length === 0) {
           statusBar.setIdle('No staged files');
           vscode.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
@@ -342,7 +346,6 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.window.showWarningMessage('Commit Defender: Commit aborted. Fix or unstage files before committing.');
             return;
           }
-          // 'Proceed to Analyze' → fall through
         }
 
         const channel = getOutputChannel();
@@ -355,7 +358,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── 4. Analyze Repository ──────────────────────────────────────────────────
+  // ── 4. Analyze Repository ──────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.analyzeRepository',
     async () => {
@@ -366,14 +369,13 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const cfg = getConfig();
         const rawRoot = await getRepoRoot(ws);
-        const allFiles = collectFiles(rawRoot, rawRoot);
+        const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns);
         if (allFiles.length === 0) {
           statusBar.setIdle('No files found');
           vscode.window.showInformationMessage('Commit Defender: No analyzable files found in the repository.');
           return;
         }
 
-        // Warn and confirm if the repo is large
         if (cfg.repoAnalysisWarnThreshold > 0 && allFiles.length > cfg.repoAnalysisWarnThreshold) {
           const answer = await vscode.window.showWarningMessage(
             `Commit Defender: Found ${allFiles.length} files. Analyzing the full repository may take a while and only the first ~80K characters of content will be reviewed. Continue?`,
@@ -396,26 +398,26 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Cancel running analysis ────────────────────────────────────────────────
+  // ── Cancel running analysis ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand('commitDefender.cancel', () => {
-    if (currentRunner) {
-      currentRunner.cancel();
-      currentRunner = null;
+    if (currentAbort) {
+      currentAbort.abort('user');
+      currentAbort = null;
       statusBar.setIdle('Analysis cancelled');
     }
   }));
 
-  // ── Clear findings ─────────────────────────────────────────────────────────
+  // ── Clear findings ─────────────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand('commitDefender.clearFindings', () => {
     diagnostics.clear();
     commentManager.clearAll();
     findingsStore.clear();
-    historyProvider.clear();   // also resets _blocks and _lastReport
+    historyProvider.clear();
     panelProvider.clear();
     statusBar.setIdle();
   }));
 
-  // ── Show line suggestion (CodeLens click) — navigate to line ─────────────
+  // ── Show line suggestion (CodeLens click) ──────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.showLineSuggestion',
     async (uri: vscode.Uri, line0: number) => {
@@ -426,7 +428,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Show summary panel (manual re-open) ───────────────────────────────────
+  // ── Show summary panel (manual re-open) ────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.showSummary',
     () => {
@@ -439,7 +441,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Show history entry ─────────────────────────────────────────────────────
+  // ── Show history entry ─────────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.showHistoryEntry',
     (entry: import('./historyProvider.js').HistoryEntry) => {
@@ -447,13 +449,11 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Re-analyze history entry ───────────────────────────────────────────────
+  // ── Re-analyze history entry ───────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.reanalyzeHistoryEntry',
     async (arg: unknown) => {
       type HEntry = import('./historyProvider.js').HistoryEntry;
-      // Context menu commands receive the raw TreeNode element ({ kind:'entry', entry:HEntry }).
-      // Primary-click commands pass HEntry directly via explicit arguments[].
       const histEntry: HEntry | undefined =
         (arg as any)?.kind === 'entry' ? (arg as any).entry as HEntry :
         (arg as any)?.report           ? arg as HEntry               : undefined;
@@ -468,12 +468,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
       statusBar.setRunning();
       try {
+        const cfg = getConfig();
         const rawRoot = await getRepoRoot(ws);
         const channel = getOutputChannel();
 
         switch (histEntry.scope) {
           case 'staged': {
-            const staged = await getStagedFiles(rawRoot);
+            const staged = await getStagedFiles(rawRoot, cfg.excludePatterns);
             if (staged.length === 0) {
               statusBar.setIdle('No staged files');
               vscode.window.showInformationMessage('Commit Defender: No staged files to analyze.');
@@ -501,7 +502,7 @@ export function activate(context: vscode.ExtensionContext): void {
               statusBar.setIdle();
               return;
             }
-            const relPaths = collectFiles(dirPath, rawRoot);
+            const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns);
             if (relPaths.length === 0) {
               statusBar.setIdle('No supported files found');
               vscode.window.showInformationMessage('Commit Defender: No analyzable files found in that directory.');
@@ -512,7 +513,7 @@ export function activate(context: vscode.ExtensionContext): void {
             break;
           }
           case 'repository': {
-            const allFiles = collectFiles(rawRoot, rawRoot);
+            const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns);
             if (allFiles.length === 0) {
               statusBar.setIdle('No files found');
               vscode.window.showInformationMessage('Commit Defender: No analyzable files found in the repository.');
@@ -529,7 +530,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Generate commit message ────────────────────────────────────────────────
+  // ── Generate commit message ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.generateCommitMessage',
     async () => {
@@ -542,12 +543,10 @@ export function activate(context: vscode.ExtensionContext): void {
       try { repoRoot = await getRepoRoot(ws); }
       catch { vscode.window.showWarningMessage('Commit Defender: No git repository found.'); return; }
 
-      await backendReady;
-
       await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
         async () => {
-          const result = await new PythonRunner(getConfig()).runCommitMessage(repoRoot, 60);
+          const result = await new Reviewer(getConfig()).generateCommitMessage(repoRoot);
 
           if (result.is_error || !result.commit_message) {
             vscode.window.showErrorMessage(
@@ -556,7 +555,6 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
 
-          // Insert into the VS Code Git SCM input box if the git extension is active.
           const gitExt = vscode.extensions.getExtension('vscode.git');
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const gitApi = (gitExt?.exports as any)?.getAPI?.(1);
@@ -569,7 +567,6 @@ export function activate(context: vscode.ExtensionContext): void {
               'Commit Defender: Commit message inserted into the Source Control input box.'
             );
           } else {
-            // Fallback: copy to clipboard and let the user paste.
             await vscode.env.clipboard.writeText(result.commit_message);
             vscode.window.showInformationMessage(
               'Commit Defender: Commit message copied to clipboard.',
@@ -589,7 +586,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Auto-trigger on git stage ──────────────────────────────────────────────
+  // ── Auto-trigger on git stage ──────────────────────────────────────────
   setupIndexWatcher(context);
 }
 
@@ -664,9 +661,7 @@ function showSummaryPanel(
   report: AnalysisReport,
   repoRoot: string,
   context: vscode.ExtensionContext,
-  analysisMode?: string,
 ): void {
-  // Create or reuse panel — always beside the active editor, non-stealing focus
   if (_summaryPanel) {
     _summaryPanel.reveal(vscode.ViewColumn.Beside, true);
   } else {
@@ -678,7 +673,6 @@ function showSummaryPanel(
     );
     _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; }, null, context.subscriptions);
 
-    // Handle file-open messages from clickable links in the webview
     _summaryPanel.webview.onDidReceiveMessage(
       async (msg: { command: string; path: string; line: number }) => {
         if (msg.command === 'open') {
@@ -701,20 +695,9 @@ function showSummaryPanel(
 
   _summaryPanel.title = 'Commit Defender — Summary';
   const palette = resolvePalette(getConfig().colorPalette);
-  _summaryPanel.webview.html = buildSummaryHtml(report, repoRoot, analysisMode, palette);
+  _summaryPanel.webview.html = buildSummaryHtml(report, repoRoot, palette);
 }
 
-/**
- * Render per-file overall-summary sections.
- *
- * Reads structured `per_file_summaries` emitted by Python's
- * review_files_separately(). Each entry carries the file's summary text and
- * its representative priority (worst priority across that file's
- * unit-comment-blocks).
- *
- * Falls back to rendering the flat `review.summary` markdown when structured
- * data isn't available (e.g. pre-commit diff mode's single combined review).
- */
 function _renderOverallSummary(
   review: AnalysisReport['review'],
   blocks: CommentBlock[],
@@ -755,7 +738,6 @@ function _renderOverallSummary(
   return html;
 }
 
-/** Render a list of CommentBlocks grouped by file, each block as one card. */
 function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Palette): string {
   const byFile = new Map<string, CommentBlock[]>();
   for (const b of blocks) {
@@ -782,9 +764,7 @@ function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Pa
       const lineRef  = b.line > 0
         ? `<a class="line-link" data-path="${esc(absFile)}" data-line="${b.line}" href="#">line ${b.line}</a>`
         : '<span class="line-label">file-level</span>';
-      const bodyHtml = b.source === 'lint' && b.rule
-        ? `<code>${esc(b.rule)}</code> ${esc(b.comment)}`
-        : mdToHtml(b.comment);
+      const bodyHtml = mdToHtml(b.comment);
       html += `<div class="suggestion priority-${esc(b.priority)}">
         <div class="suggestion-header">${pBadge} ${catBadge} &nbsp;${lineRef}</div>
         <div class="suggestion-body">${bodyHtml}</div>
@@ -795,20 +775,14 @@ function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Pa
   return html;
 }
 
-function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode?: string, palette?: Palette): string {
+function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Palette): string {
   const pal = palette ?? resolvePalette('theme-adaptive');
-  // ── Normalize — all findings are unit-comment-blocks ─────────────────────
-  // Per spec: lint informs priority; every finding (lint-origin or AI-origin)
-  // is a unit-comment-block and appears under the unified "AI Comments" section.
   const blocks = normalizeReport(report);
 
   const passed  = report.exit_code === 0;
   const grade   = report.review.grade;
   const isError = report.review.is_error || /AI review unavailable/i.test(report.review.summary);
-  const isRuleBased = analysisMode === 'rule-based'
-    || (!analysisMode && !grade && report.review.file_comments.length === 0 && !isError);
 
-  // Representative priority across all unit-comment-blocks (worst = most urgent)
   const wp     = worstPriority(blocks);
   const wpMeta = wp ? PRIORITY_META[wp] : undefined;
 
@@ -823,13 +797,12 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
     ? `<span class="priority-badge" style="color:${pal.priority[wp]}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>`
     : '';
 
-  // ── Header ────────────────────────────────────────────────────────────────
   const metaParts: string[] = [
     `${report.staged_files.length} file(s) analyzed`,
     blocks.length > 0 ? `${blocks.length} comment(s)` : '',
     isError
       ? '<span class="mode-tag" style="background:#c72e2e">ai error</span>'
-      : `<span class="mode-tag">${isRuleBased ? 'rule-based' : (analysisMode ?? 'hybrid')}</span>`,
+      : '<span class="mode-tag">ai-powered</span>',
     `${report.duration_ms} ms`,
   ].filter(Boolean);
 
@@ -842,15 +815,7 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
       <div class="meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
     </div>`;
 
-  // ── Overall Summary (per-file summaries with representative priority) ─────
-  if (isRuleBased) {
-    const e = report.lint_findings.filter(f => f.severity === 'error').length;
-    const w = report.lint_findings.filter(f => f.severity === 'warning').length;
-    const txt = blocks.length === 0
-      ? '✅ No lint issues found.'
-      : `Linter found ${[e > 0 && `${e} error${e > 1 ? 's' : ''}`, w > 0 && `${w} warning${w > 1 ? 's' : ''}`].filter(Boolean).join(', ')}.`;
-    body += `<section><h2>📋 Linter Summary</h2><div class="summary-text">${txt}</div></section>`;
-  } else if (report.review.summary) {
+  if (report.review.summary) {
     if (isError) {
       const txt = report.review.summary.replace(/^AI review unavailable:\s*/i, '');
       body += `<section><h2>⚠ AI Review Error</h2>
@@ -861,14 +826,12 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
     }
   }
 
-  // ── AI Comments (all unit-comment-blocks, nested by file) ─────────────────
   if (blocks.length > 0) {
     body += '<section><h2>💡 AI Comments</h2>';
     body += _renderFileBlocks(blocks, repoRoot, pal);
     body += '</section>';
   }
 
-  // ── Analyzed File List ────────────────────────────────────────────────────
   if (report.staged_files.length > 0) {
     body += '<section><h2>📁 Analyzed File List</h2><ul class="file-list">';
     for (const f of report.staged_files) {
@@ -953,11 +916,6 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, analysisMode
   .cat-optimization   { background: var(--cd-cat-optimization);    color: #fff; }
   .cat-setting        { background: var(--cd-cat-setting);         color: #fff; }
   .cat-review-history { background: var(--cd-cat-review-history);  color: #fff; }
-  .lint-list { margin: 4px 0; padding-left: 20px; }
-  .lint-list li { margin: 3px 0; font-size: 0.9em; }
-  .sev-error   { color: var(--vscode-errorForeground);           font-weight: 700; margin: 0 4px; }
-  .sev-warning { color: var(--vscode-editorWarning-foreground);  font-weight: 600; margin: 0 4px; }
-  .sev-info    { color: var(--vscode-editorInfo-foreground);     margin: 0 4px; }
   .file-list { margin: 4px 0; padding-left: 20px; }
   .file-list li { margin: 2px 0; font-size: 0.88em; }
   .summary-text p { margin: 6px 0; }
@@ -1022,75 +980,33 @@ ${body}
 </html>`;
 }
 
-function createWebviewPanel(title: string, context: vscode.ExtensionContext): vscode.WebviewPanel {
-  if (_summaryPanel) {
-    _summaryPanel.title = title;
-    _summaryPanel.reveal(vscode.ViewColumn.Beside, true);
-    return _summaryPanel;
-  }
-  _summaryPanel = vscode.window.createWebviewPanel(
-    'commitDefenderSummary', title,
-    { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-    { enableScripts: true, retainContextWhenHidden: true },
-  );
-  _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; }, null, context.subscriptions);
-  return _summaryPanel;
-}
-
-function wrapHtml(body: string): string {
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<style>
-  body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size);
-         color: var(--vscode-foreground); background: var(--vscode-editor-background);
-         padding: 20px 28px; line-height: 1.65; max-width: 900px; }
-  h2   { font-size: 1.05em; margin: 1.8em 0 0.6em;
-         border-bottom: 1px solid var(--vscode-widget-border); padding-bottom: 4px; }
-  code { font-family: var(--vscode-editor-font-family);
-         background: var(--vscode-textBlockQuote-background);
-         padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
-  .suggestion { background: var(--vscode-textBlockQuote-background);
-                border-left: 3px solid var(--vscode-textLink-foreground);
-                border-radius: 0 6px 6px 0; padding: 8px 14px; margin: 6px 0; }
-  .lint-list { margin: 4px 0; padding-left: 18px; }
-  .lint-list li { margin: 3px 0; }
-  .sev-error   { color: var(--vscode-errorForeground); font-weight: 600; margin: 0 4px; }
-  .sev-warning { color: var(--vscode-editorWarning-foreground); font-weight: 600; margin: 0 4px; }
-  .sev-info    { color: var(--vscode-editorInfo-foreground); margin: 0 4px; }
-</style></head><body>${body}</body></html>`;
-}
-
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function mdToHtml(md: string): string {
-  // Escape HTML first, then apply inline formatting
   const inline = (s: string) => s
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,     '<em>$1</em>')
     .replace(/`([^`]+)`/g,     '<code>$1</code>');
 
-  // Split on blank lines → one block per paragraph
   const blocks = md.split(/\n{2,}/);
   return blocks.map(block => {
     const trimmed = block.trim();
     if (!trimmed) { return ''; }
 
-    // Headings
     if (trimmed.startsWith('### ')) { return `<h4>${inline(trimmed.slice(4))}</h4>`; }
     if (trimmed.startsWith('## '))  { return `<h3>${inline(trimmed.slice(3))}</h3>`; }
     if (trimmed.startsWith('# '))   { return `<h2>${inline(trimmed.slice(2))}</h2>`; }
     if (trimmed === '---')           { return '<hr>'; }
 
-    // Bullet list: every line starts with "- "
     const lines = trimmed.split('\n');
     if (lines.every(l => l.trimStart().startsWith('- '))) {
       const items = lines.map(l => `<li>${inline(l.trimStart().slice(2))}</li>`).join('');
       return `<ul>${items}</ul>`;
     }
 
-    // Regular paragraph: single newlines become <br>
     return `<p>${lines.map(inline).join('<br>')}</p>`;
   }).filter(Boolean).join('');
 }
