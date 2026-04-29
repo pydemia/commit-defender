@@ -38,9 +38,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/commit-defender/commit-defender"
-Repository = "https://github.com/commit-defender/commit-defender"
-Issues = "https://github.com/commit-defender/commit-defender/issues"
+Homepage = "https://github.com/pydemia/commit-defender"
+Repository = "https://github.com/pydemia/commit-defender"
+Issues = "https://github.com/pydemia/commit-defender/issues"
 
 [project.scripts]
 commit-defender = "commit_defender.app:cli"

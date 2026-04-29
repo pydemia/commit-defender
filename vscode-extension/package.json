@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/commit-defender/commit-defender.git"
+    "url": "https://github.com/pydemia/commit-defender.git"
   },
   "icon": "media/icon.png",
   "categories": [
