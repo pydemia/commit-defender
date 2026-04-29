@@ -2,7 +2,7 @@
   "name": "commit-defender",
   "displayName": "Commit Defender",
   "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "pydemia",
   "license": "MIT",
   "engines": {
