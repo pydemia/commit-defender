@@ -1,406 +1,461 @@
 {
-  "name": "commit-defender",
-  "displayName": "Commit Defender",
-  "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-  "version": "2.0.2",
-  "publisher": "pydemia",
-  "license": "MIT",
-  "engines": {
-    "vscode": "^1.90.0",
-    "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/pydemia/commit-defender.git"
-  },
-  "icon": "media/icon.png",
-  "categories": [
-    "Linters",
-    "SCM Providers",
-    "Other"
-  ],
-  "keywords": [
-    "git",
-    "git hook",
-    "pre-commit",
-    "pre-commit hook",
-    "commit message",
-    "code review",
-    "ai code review",
-    "ai code reviewer",
-    "automated code review",
-    "code inspection",
-    "ai inspection",
-    "code audit",
-    "ai linter",
-    "diff review",
-    "pr review",
-    "inline review",
-    "refactoring",
-    "ai",
-    "llm",
-    "claude",
-    "openai",
-    "anthropic",
-    "azure openai",
-    "gemini",
-    "chatgpt",
-    "linter",
-    "static analysis",
-    "code quality",
-    "security review",
-    "bug detection"
-  ],
-  "activationEvents": [
-    "workspaceContains:.git"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "commitDefender.analyze",
-        "title": "Commit Defender: Analyze Staged Files",
-        "icon": "$(checklist)"
-      },
-      {
-        "command": "commitDefender.cancel",
-        "title": "Commit Defender: Cancel Analysis"
-      },
-      {
-        "command": "commitDefender.clearFindings",
-        "title": "Commit Defender: Clear Findings"
-      },
-      {
-        "command": "commitDefender.showLineSuggestion",
-        "title": "Commit Defender: Show Line Suggestion"
-      },
-      {
-        "command": "commitDefender.analyzeCurrentFile",
-        "title": "Commit Defender: Analyze Current File",
-        "icon": "$(file-code)"
-      },
-      {
-        "command": "commitDefender.analyzeDirectory",
-        "title": "Commit Defender: Analyze Directory...",
-        "icon": "$(folder)"
-      },
-      {
-        "command": "commitDefender.analyzeRepository",
-        "title": "Commit Defender: Analyze Repository",
-        "icon": "$(repo)"
-      },
-      {
-        "command": "commitDefender.showSummary",
-        "title": "Commit Defender: Show Summary Panel",
-        "icon": "$(preview)"
-      },
-      {
-        "command": "commitDefender.showHistoryEntry",
-        "title": "Commit Defender: Show History Entry"
-      },
-      {
-        "command": "commitDefender.reanalyzeHistoryEntry",
-        "title": "Commit Defender: Re-analyze",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "commitDefender.installPreCommitHook",
-        "title": "Commit Defender: Install Pre-commit Hook"
-      },
-      {
-        "command": "commitDefender.uninstallPreCommitHook",
-        "title": "Commit Defender: Uninstall Pre-commit Hook"
-      },
-      {
-        "command": "commitDefender.generateCommitMessage",
-        "title": "Commit Defender: Generate Commit Message",
-        "icon": "$(wand)"
-      }
+    "name": "commit-defender",
+    "displayName": "Commit Defender",
+    "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
+    "version": "2.0.3",
+    "publisher": "pydemia",
+    "license": "Apache-2.0",
+    "engines": {
+        "vscode": "^1.90.0",
+        "node": ">=18.0.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/pydemia/commit-defender.git"
+    },
+    "icon": "media/icon.png",
+    "categories": [
+        "Linters",
+        "SCM Providers",
+        "Other"
     ],
-    "configuration": {
-      "title": "Commit Defender",
-      "properties": {
-        "commitDefender.aiProvider": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["aoai", "anthropic", "openai", "gemini"],
-          "enumDescriptions": [
-            "aoai (Azure OpenAI): Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
-            "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
-            "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc.",
-            "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.)."
-          ],
-          "default": "aoai",
-          "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider."
+    "keywords": [
+        "git",
+        "git hook",
+        "pre-commit",
+        "pre-commit hook",
+        "commit message",
+        "code review",
+        "ai code review",
+        "ai code reviewer",
+        "automated code review",
+        "code inspection",
+        "ai inspection",
+        "code audit",
+        "ai linter",
+        "diff review",
+        "pr review",
+        "inline review",
+        "refactoring",
+        "ai",
+        "llm",
+        "claude",
+        "openai",
+        "anthropic",
+        "azure openai",
+        "gemini",
+        "chatgpt",
+        "linter",
+        "static analysis",
+        "code quality",
+        "security review",
+        "bug detection"
+    ],
+    "activationEvents": [
+        "workspaceContains:.git"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "commitDefender.analyze",
+                "title": "Commit Defender: Analyze Staged Files",
+                "icon": "$(checklist)"
+            },
+            {
+                "command": "commitDefender.cancel",
+                "title": "Commit Defender: Cancel Analysis"
+            },
+            {
+                "command": "commitDefender.clearFindings",
+                "title": "Commit Defender: Clear Findings"
+            },
+            {
+                "command": "commitDefender.showLineSuggestion",
+                "title": "Commit Defender: Show Line Suggestion"
+            },
+            {
+                "command": "commitDefender.analyzeCurrentFile",
+                "title": "Commit Defender: Analyze Current File",
+                "icon": "$(file-code)"
+            },
+            {
+                "command": "commitDefender.analyzeDirectory",
+                "title": "Commit Defender: Analyze Directory...",
+                "icon": "$(folder)"
+            },
+            {
+                "command": "commitDefender.analyzeRepository",
+                "title": "Commit Defender: Analyze Repository",
+                "icon": "$(repo)"
+            },
+            {
+                "command": "commitDefender.showSummary",
+                "title": "Commit Defender: Show Summary Panel",
+                "icon": "$(preview)"
+            },
+            {
+                "command": "commitDefender.showHistoryEntry",
+                "title": "Commit Defender: Show History Entry"
+            },
+            {
+                "command": "commitDefender.reanalyzeHistoryEntry",
+                "title": "Commit Defender: Re-analyze",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "commitDefender.installPreCommitHook",
+                "title": "Commit Defender: Install Pre-commit Hook"
+            },
+            {
+                "command": "commitDefender.uninstallPreCommitHook",
+                "title": "Commit Defender: Uninstall Pre-commit Hook"
+            },
+            {
+                "command": "commitDefender.generateCommitMessage",
+                "title": "Commit Defender: Generate Commit Message",
+                "icon": "$(wand)"
+            }
+        ],
+        "configuration": {
+            "title": "Commit Defender",
+            "properties": {
+                "commitDefender.aiProvider": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "aoai",
+                        "anthropic",
+                        "openai",
+                        "gemini"
+                    ],
+                    "enumDescriptions": [
+                        "aoai (Azure OpenAI): Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
+                        "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
+                        "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc.",
+                        "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.)."
+                    ],
+                    "default": "aoai",
+                    "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider."
+                },
+                "commitDefender.model": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "",
+                    "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure)."
+                },
+                "commitDefender.endpoint": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "",
+                    "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta/models` |"
+                },
+                "commitDefender.apiVersion": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "2024-08-01-preview",
+                    "description": "API version string. Used by aoai only (e.g. 2024-08-01-preview). Ignored for anthropic, openai, and gemini."
+                },
+                "commitDefender.apiKey": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "",
+                    "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control."
+                },
+                "commitDefender.maxTokens": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 4096,
+                    "minimum": 512,
+                    "maximum": 32000,
+                    "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large diffs — the response was truncated before the JSON closed, which can cause P3 findings to be missed."
+                },
+                "commitDefender.severityLevel": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "severe",
+                        "rigorous",
+                        "moderate",
+                        "generous",
+                        "lean"
+                    ],
+                    "enumDescriptions": [
+                        "severe: Zero tolerance — nearly all findings become P2 (Warning) or P3 (Critical).",
+                        "rigorous: Strict — style issues escalate to P2 (Warning), most things flagged.",
+                        "moderate: Balanced — P1/P2/P3 assigned by genuine impact. (default)",
+                        "generous: Lenient — minor things become P1 (Info); only real risks reach P2/P3.",
+                        "lean: Minimal — only P3 Critical (security, syntax errors, data-loss) issues flagged."
+                    ],
+                    "default": "moderate",
+                    "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit)."
+                },
+                "commitDefender.richnessLevel": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "colorful",
+                        "chatty",
+                        "moderate",
+                        "simple",
+                        "silent"
+                    ],
+                    "enumDescriptions": [
+                        "colorful: Elaborate feedback with examples, alternatives, and detailed explanations.",
+                        "chatty: Detailed feedback with helpful context for each finding.",
+                        "moderate: Standard amount of detail — clear but concise. (default)",
+                        "simple: Brief, to-the-point findings with minimal explanation.",
+                        "silent: One-line summaries only — no elaboration."
+                    ],
+                    "default": "moderate",
+                    "description": "Controls the verbosity and detail level of each priority comment's explanation."
+                },
+                "commitDefender.locale": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "en",
+                        "ko"
+                    ],
+                    "enumDescriptions": [
+                        "en: English",
+                        "ko: 한국어"
+                    ],
+                    "default": "en",
+                    "description": "Language for AI review output."
+                },
+                "commitDefender.excludePatterns": {
+                    "type": "array",
+                    "scope": "resource",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). Applied on top of the repo's .gitignore."
+                },
+                "commitDefender.colorPalette": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "theme-adaptive",
+                        "cobalt9",
+                        "tailwind",
+                        "pastel-soft",
+                        "material",
+                        "solarized",
+                        "muted-modern",
+                        "nord",
+                        "dracula",
+                        "gruvbox",
+                        "cvd-consensus",
+                        "cvd-deep",
+                        "cvd-vivid",
+                        "okabe-ito"
+                    ],
+                    "enumDescriptions": [
+                        "Theme Adaptive — inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
+                        "Cobalt9 — electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
+                        "Tailwind — modern web palette, high saturation, familiar.",
+                        "Pastel Soft — low saturation, gentle on the eyes. Best on light themes.",
+                        "Material — Google Material A-tones, punchy.",
+                        "Solarized — muted terminal-familiar tones, lower contrast.",
+                        "Muted Modern — Tailwind × Solarized blend; works on both light and dark themes.",
+                        "Nord — arctic, cool, low visual noise.",
+                        "Dracula — classic purple/pink/cyan dark-theme accents.",
+                        "Gruvbox — 70s retro, earthy warm tones.",
+                        "CVD Consensus (colorblind-safe) — balanced across light and dark themes.",
+                        "CVD Deep (colorblind-safe) — darker tones tuned for light themes.",
+                        "CVD Vivid (colorblind-safe) — electric tones tuned for dark themes.",
+                        "Okabe-Ito (colorblind-safe) — canonical palette from Nature methodology papers."
+                    ],
+                    "default": "theme-adaptive",
+                    "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only — no env var."
+                },
+                "commitDefender.runOnStage": {
+                    "type": "boolean",
+                    "scope": "window",
+                    "default": true,
+                    "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon."
+                },
+                "commitDefender.preCommitHook": {
+                    "type": "string",
+                    "scope": "window",
+                    "enum": [
+                        "enable",
+                        "disable"
+                    ],
+                    "enumDescriptions": [
+                        "enable: Install the git pre-commit hook in the workspace repository on activation. The hook runs an AI review on every git commit, even outside VS Code.",
+                        "disable: Do not install or manage the git pre-commit hook. Analysis is still available manually and on git stage."
+                    ],
+                    "default": "disable",
+                    "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository."
+                },
+                "commitDefender.fileTimeoutSeconds": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 120,
+                    "minimum": 0,
+                    "description": "Maximum seconds to wait when analyzing a single file. Set to 0 for no limit."
+                },
+                "commitDefender.directoryTimeoutSeconds": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 360,
+                    "minimum": 0,
+                    "description": "Maximum seconds to wait when analyzing a directory or the full repository. Set to 0 for no limit."
+                },
+                "commitDefender.stagedFilesWarnThreshold": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 20,
+                    "minimum": 0,
+                    "description": "Show a warning prompt when the number of staged files exceeds this threshold before running analysis. Set to 0 to disable the prompt."
+                },
+                "commitDefender.repoAnalysisWarnThreshold": {
+                    "type": "number",
+                    "scope": "window",
+                    "default": 80,
+                    "minimum": 0,
+                    "description": "Show a confirmation prompt when analyzing the full repository and the file count exceeds this threshold. Set to 0 to disable the prompt."
+                }
+            }
         },
-        "commitDefender.model": {
-          "type": "string",
-          "scope": "window",
-          "default": "",
-          "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure)."
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "commitDefender.analyze"
+                },
+                {
+                    "command": "commitDefender.cancel"
+                },
+                {
+                    "command": "commitDefender.analyzeCurrentFile",
+                    "when": "editorIsOpen"
+                },
+                {
+                    "command": "commitDefender.analyzeDirectory"
+                },
+                {
+                    "command": "commitDefender.analyzeRepository"
+                },
+                {
+                    "command": "commitDefender.showSummary"
+                },
+                {
+                    "command": "commitDefender.clearFindings"
+                },
+                {
+                    "command": "commitDefender.showLineSuggestion",
+                    "when": "false"
+                },
+                {
+                    "command": "commitDefender.showHistoryEntry",
+                    "when": "false"
+                },
+                {
+                    "command": "commitDefender.reanalyzeHistoryEntry",
+                    "when": "false"
+                },
+                {
+                    "command": "commitDefender.installPreCommitHook"
+                },
+                {
+                    "command": "commitDefender.uninstallPreCommitHook"
+                },
+                {
+                    "command": "commitDefender.generateCommitMessage"
+                }
+            ],
+            "scm/title": [
+                {
+                    "command": "commitDefender.analyze",
+                    "group": "navigation",
+                    "when": "scmProvider == git"
+                },
+                {
+                    "command": "commitDefender.generateCommitMessage",
+                    "group": "navigation",
+                    "when": "scmProvider == git"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "commitDefender.analyzeCurrentFile",
+                    "group": "navigation",
+                    "when": "resourceScheme == file"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "commitDefender.analyzeCurrentFile",
+                    "when": "!explorerResourceIsFolder",
+                    "group": "commitDefender@1"
+                },
+                {
+                    "command": "commitDefender.analyzeDirectory",
+                    "when": "explorerResourceIsFolder",
+                    "group": "commitDefender@1"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "commitDefender.reanalyzeHistoryEntry",
+                    "when": "view == commitDefender.history && viewItem == historyEntry",
+                    "group": "inline"
+                }
+            ]
         },
-        "commitDefender.endpoint": {
-          "type": "string",
-          "scope": "window",
-          "default": "",
-          "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta/models` |"
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "commitDefender",
+                    "title": "Commit Defender",
+                    "icon": "media/shield.svg"
+                }
+            ],
+            "panel": [
+                {
+                    "id": "commitDefenderPanel",
+                    "title": "COMMIT DEFENDER",
+                    "icon": "media/shield.svg"
+                }
+            ]
         },
-        "commitDefender.apiVersion": {
-          "type": "string",
-          "scope": "window",
-          "default": "2024-08-01-preview",
-          "description": "API version string. Used by aoai only (e.g. 2024-08-01-preview). Ignored for anthropic, openai, and gemini."
-        },
-        "commitDefender.apiKey": {
-          "type": "string",
-          "scope": "window",
-          "default": "",
-          "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control."
-        },
-        "commitDefender.maxTokens": {
-          "type": "number",
-          "scope": "window",
-          "default": 4096,
-          "minimum": 512,
-          "maximum": 32000,
-          "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large diffs — the response was truncated before the JSON closed, which can cause P3 findings to be missed."
-        },
-        "commitDefender.severityLevel": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["severe", "rigorous", "moderate", "generous", "lean"],
-          "enumDescriptions": [
-            "severe: Zero tolerance — nearly all findings become P2 (Warning) or P3 (Critical).",
-            "rigorous: Strict — style issues escalate to P2 (Warning), most things flagged.",
-            "moderate: Balanced — P1/P2/P3 assigned by genuine impact. (default)",
-            "generous: Lenient — minor things become P1 (Info); only real risks reach P2/P3.",
-            "lean: Minimal — only P3 Critical (security, syntax errors, data-loss) issues flagged."
-          ],
-          "default": "moderate",
-          "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit)."
-        },
-        "commitDefender.richnessLevel": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["colorful", "chatty", "moderate", "simple", "silent"],
-          "enumDescriptions": [
-            "colorful: Elaborate feedback with examples, alternatives, and detailed explanations.",
-            "chatty: Detailed feedback with helpful context for each finding.",
-            "moderate: Standard amount of detail — clear but concise. (default)",
-            "simple: Brief, to-the-point findings with minimal explanation.",
-            "silent: One-line summaries only — no elaboration."
-          ],
-          "default": "moderate",
-          "description": "Controls the verbosity and detail level of each priority comment's explanation."
-        },
-        "commitDefender.locale": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["en", "ko"],
-          "enumDescriptions": [
-            "en: English",
-            "ko: 한국어"
-          ],
-          "default": "en",
-          "description": "Language for AI review output."
-        },
-        "commitDefender.excludePatterns": {
-          "type": "array",
-          "scope": "resource",
-          "items": { "type": "string" },
-          "default": [],
-          "description": "Additional gitignore-style patterns to exclude from analysis (e.g. 'tests/**', '*.generated.ts'). Applied on top of the repo's .gitignore."
-        },
-        "commitDefender.colorPalette": {
-          "type": "string",
-          "scope": "window",
-          "enum": [
-            "theme-adaptive",
-            "cobalt9",
-            "tailwind",
-            "pastel-soft",
-            "material",
-            "solarized",
-            "muted-modern",
-            "nord",
-            "dracula",
-            "gruvbox",
-            "cvd-consensus",
-            "cvd-deep",
-            "cvd-vivid",
-            "okabe-ito"
-          ],
-          "enumDescriptions": [
-            "Theme Adaptive — inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
-            "Cobalt9 — electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
-            "Tailwind — modern web palette, high saturation, familiar.",
-            "Pastel Soft — low saturation, gentle on the eyes. Best on light themes.",
-            "Material — Google Material A-tones, punchy.",
-            "Solarized — muted terminal-familiar tones, lower contrast.",
-            "Muted Modern — Tailwind × Solarized blend; works on both light and dark themes.",
-            "Nord — arctic, cool, low visual noise.",
-            "Dracula — classic purple/pink/cyan dark-theme accents.",
-            "Gruvbox — 70s retro, earthy warm tones.",
-            "CVD Consensus (colorblind-safe) — balanced across light and dark themes.",
-            "CVD Deep (colorblind-safe) — darker tones tuned for light themes.",
-            "CVD Vivid (colorblind-safe) — electric tones tuned for dark themes.",
-            "Okabe-Ito (colorblind-safe) — canonical palette from Nature methodology papers."
-          ],
-          "default": "theme-adaptive",
-          "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only — no env var."
-        },
-        "commitDefender.runOnStage": {
-          "type": "boolean",
-          "scope": "window",
-          "default": true,
-          "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon."
-        },
-        "commitDefender.preCommitHook": {
-          "type": "string",
-          "scope": "window",
-          "enum": ["enable", "disable"],
-          "enumDescriptions": [
-            "enable: Install the git pre-commit hook in the workspace repository on activation. The hook runs an AI review on every git commit, even outside VS Code.",
-            "disable: Do not install or manage the git pre-commit hook. Analysis is still available manually and on git stage."
-          ],
-          "default": "disable",
-          "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository."
-        },
-        "commitDefender.fileTimeoutSeconds": {
-          "type": "number",
-          "scope": "window",
-          "default": 120,
-          "minimum": 0,
-          "description": "Maximum seconds to wait when analyzing a single file. Set to 0 for no limit."
-        },
-        "commitDefender.directoryTimeoutSeconds": {
-          "type": "number",
-          "scope": "window",
-          "default": 360,
-          "minimum": 0,
-          "description": "Maximum seconds to wait when analyzing a directory or the full repository. Set to 0 for no limit."
-        },
-        "commitDefender.stagedFilesWarnThreshold": {
-          "type": "number",
-          "scope": "window",
-          "default": 20,
-          "minimum": 0,
-          "description": "Show a warning prompt when the number of staged files exceeds this threshold before running analysis. Set to 0 to disable the prompt."
-        },
-        "commitDefender.repoAnalysisWarnThreshold": {
-          "type": "number",
-          "scope": "window",
-          "default": 80,
-          "minimum": 0,
-          "description": "Show a confirmation prompt when analyzing the full repository and the file count exceeds this threshold. Set to 0 to disable the prompt."
+        "views": {
+            "commitDefender": [
+                {
+                    "id": "commitDefender.history",
+                    "name": "Commit Defender",
+                    "icon": "media/shield.svg"
+                }
+            ],
+            "commitDefenderPanel": [
+                {
+                    "id": "commitDefender.panelView",
+                    "name": "Findings",
+                    "icon": "$(shield)"
+                }
+            ]
         }
-      }
     },
-    "menus": {
-      "commandPalette": [
-        { "command": "commitDefender.analyze" },
-        { "command": "commitDefender.cancel" },
-        { "command": "commitDefender.analyzeCurrentFile", "when": "editorIsOpen" },
-        { "command": "commitDefender.analyzeDirectory" },
-        { "command": "commitDefender.analyzeRepository" },
-        { "command": "commitDefender.showSummary" },
-        { "command": "commitDefender.clearFindings" },
-        { "command": "commitDefender.showLineSuggestion", "when": "false" },
-        { "command": "commitDefender.showHistoryEntry", "when": "false" },
-        { "command": "commitDefender.reanalyzeHistoryEntry", "when": "false" },
-        { "command": "commitDefender.installPreCommitHook" },
-        { "command": "commitDefender.uninstallPreCommitHook" },
-        { "command": "commitDefender.generateCommitMessage" }
-      ],
-      "scm/title": [
-        {
-          "command": "commitDefender.analyze",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        },
-        {
-          "command": "commitDefender.generateCommitMessage",
-          "group": "navigation",
-          "when": "scmProvider == git"
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "commitDefender.analyzeCurrentFile",
-          "group": "navigation",
-          "when": "resourceScheme == file"
-        }
-      ],
-      "explorer/context": [
-        {
-          "command": "commitDefender.analyzeCurrentFile",
-          "when": "!explorerResourceIsFolder",
-          "group": "commitDefender@1"
-        },
-        {
-          "command": "commitDefender.analyzeDirectory",
-          "when": "explorerResourceIsFolder",
-          "group": "commitDefender@1"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "commitDefender.reanalyzeHistoryEntry",
-          "when": "view == commitDefender.history && viewItem == historyEntry",
-          "group": "inline"
-        }
-      ]
+    "scripts": {
+        "vscode:prepublish": "npm run build",
+        "build": "npm run typecheck && npm run bundle-extension && npm run bundle-hook",
+        "typecheck": "tsc -p ./ --noEmit",
+        "compile": "tsc -p ./",
+        "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
+        "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package"
     },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "commitDefender",
-          "title": "Commit Defender",
-          "icon": "media/shield.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "commitDefenderPanel",
-          "title": "COMMIT DEFENDER",
-          "icon": "media/shield.svg"
-        }
-      ]
+    "dependencies": {
+        "ignore": "^5.3.1"
     },
-    "views": {
-      "commitDefender": [
-        {
-          "id": "commitDefender.history",
-          "name": "Commit Defender",
-          "icon": "media/shield.svg"
-        }
-      ],
-      "commitDefenderPanel": [
-        {
-          "id": "commitDefender.panelView",
-          "name": "Findings",
-          "icon": "$(shield)"
-        }
-      ]
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.90.0",
+        "esbuild": "^0.21.0",
+        "typescript": "^5.4.0"
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run build",
-    "build": "npm run typecheck && npm run bundle-extension && npm run bundle-hook",
-    "typecheck": "tsc -p ./ --noEmit",
-    "compile": "tsc -p ./",
-    "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
-    "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
-    "watch": "tsc -watch -p ./",
-    "package": "vsce package"
-  },
-  "dependencies": {
-    "ignore": "^5.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/vscode": "^1.90.0",
-    "esbuild": "^0.21.0",
-    "typescript": "^5.4.0"
-  }
 }
