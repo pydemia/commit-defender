@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Reviewer } from './ai/reviewer.js';
+import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
 import { ExtensionConfig, getConfig } from './config.js';
@@ -21,12 +22,204 @@ const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 
 
 export function activate(context: vscode.ExtensionContext): void {
+  let lastConfiguredProvider = getConfig().aiProvider;
+  let providerUpdateFromWizard: AccountProvider | undefined;
+
   // ── Helpers ─────────────────────────────────────────────────────────────
   async function resolveRepoRoot(): Promise<string | undefined> {
     const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) { return undefined; }
     try { return await getRepoRoot(ws); } catch { return undefined; }
   }
+
+  async function chooseAccountModel(
+    provider: AccountProvider,
+    includeDefault = true,
+  ): Promise<string | undefined> {
+    type ModelChoice = vscode.QuickPickItem & { model?: string; custom?: boolean };
+    const current = getConfig();
+    const choices: ModelChoice[] = [];
+    if (includeDefault) {
+      choices.push({
+        label: '$(sparkle) CLI default model',
+        description: 'Recommended',
+        detail: 'Let the authenticated CLI select its current default model.',
+        model: '',
+      });
+    }
+    if (provider === 'claudecode') {
+      choices.push(
+        { label: '$(symbol-variable) sonnet', description: 'Claude Code alias', model: 'sonnet' },
+        { label: '$(symbol-variable) opus', description: 'Claude Code alias', model: 'opus' },
+      );
+    } else if (provider === 'geminicli') {
+      choices.push(
+        { label: '$(symbol-variable) auto', description: 'Gemini CLI alias', model: 'auto' },
+        { label: '$(symbol-variable) pro', description: 'Gemini CLI alias', model: 'pro' },
+        { label: '$(symbol-variable) flash', description: 'Gemini CLI alias', model: 'flash' },
+        { label: '$(symbol-variable) flash-lite', description: 'Gemini CLI alias', model: 'flash-lite' },
+      );
+    }
+    if (current.aiProvider === provider && current.model.trim()
+        && !choices.some(choice => choice.model === current.model.trim())) {
+      choices.splice(includeDefault ? 1 : 0, 0, {
+        label: `$(history) ${current.model.trim()}`,
+        description: 'Current model',
+        model: current.model.trim(),
+      });
+    }
+    choices.push({
+      label: '$(edit) Enter a model ID…',
+      detail: 'Use any model name accepted by the selected local CLI and account.',
+      custom: true,
+    });
+
+    const picked = await vscode.window.showQuickPick(choices, {
+      title: `Commit Defender: Select ${accountProviderName(provider)} model`,
+      placeHolder: includeDefault
+        ? 'Choose the CLI default, an alias, or enter an exact model ID'
+        : 'Choose an alias or enter an exact model ID',
+      ignoreFocusOut: true,
+    });
+    if (!picked) { return undefined; }
+    if (!picked.custom) { return picked.model ?? ''; }
+    return vscode.window.showInputBox({
+      title: `Commit Defender: ${accountProviderName(provider)} model ID`,
+      prompt: 'Enter an exact model ID supported by the local CLI and authenticated account.',
+      value: current.aiProvider === provider ? current.model : '',
+      ignoreFocusOut: true,
+      validateInput: value => value.trim() ? undefined : 'Enter a model ID, or go back and choose CLI default.',
+    }).then(value => value?.trim());
+  }
+
+  async function applyAccountProvider(provider: AccountProvider, model: string): Promise<void> {
+    const settings = vscode.workspace.getConfiguration('commitDefender');
+    const target = vscode.workspace.workspaceFolders?.length
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global;
+    providerUpdateFromWizard = provider;
+    // Clear an API-provider model before switching provider so no analysis can
+    // observe the new CLI provider with the previous provider's model ID.
+    await settings.update('model', model, target);
+    await settings.update('aiProvider', provider, target);
+    setTimeout(() => {
+      if (providerUpdateFromWizard === provider) { providerUpdateFromWizard = undefined; }
+    }, 1000);
+    const modelLabel = model || 'CLI default';
+    vscode.window.showInformationMessage(
+      `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`,
+    );
+  }
+
+  async function promptModelAtProviderSetup(provider: AccountProvider): Promise<boolean> {
+    const name = accountProviderName(provider);
+    const action = await vscode.window.showInformationMessage(
+      `Commit Defender: Use the ${name} CLI default model for this workspace?`,
+      'Use CLI Default',
+      'Choose Model…',
+    );
+    if (action === 'Use CLI Default') {
+      await applyAccountProvider(provider, '');
+      return true;
+    }
+    if (action === 'Choose Model…') {
+      const model = await chooseAccountModel(provider, false);
+      if (model !== undefined) {
+        await applyAccountProvider(provider, model);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async function promptProviderChangeAfterSignIn(provider: AccountProvider): Promise<void> {
+    const name = accountProviderName(provider);
+    const action = await vscode.window.showInformationMessage(
+      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} for this workspace and change its model?`,
+      'Use CLI Default',
+      'Choose Model…',
+      'Keep Current Provider',
+    );
+    if (action === 'Use CLI Default') {
+      await applyAccountProvider(provider, '');
+    } else if (action === 'Choose Model…') {
+      const model = await chooseAccountModel(provider, false);
+      if (model !== undefined) { await applyAccountProvider(provider, model); }
+    }
+  }
+
+  async function selectAccountProviderAndModel(): Promise<void> {
+    type ProviderChoice = vscode.QuickPickItem & { provider: AccountProvider };
+    const choices: ProviderChoice[] = [
+      { label: 'Codex', description: 'ChatGPT/Codex account', provider: 'codex' },
+      { label: 'Claude Code', description: 'Claude subscription account', provider: 'claudecode' },
+      { label: 'Gemini CLI', description: 'Google account authentication', provider: 'geminicli' },
+      { label: 'Antigravity', description: 'Antigravity account via agy', provider: 'antigravity' },
+    ];
+    const picked = await vscode.window.showQuickPick(choices, {
+      title: 'Commit Defender: Select account provider',
+      placeHolder: 'Choose the authenticated CLI backbone',
+      ignoreFocusOut: true,
+    });
+    if (!picked) { return; }
+    await promptModelAtProviderSetup(picked.provider);
+  }
+
+  async function signIn(provider: AccountProvider): Promise<boolean> {
+    const config = getConfig();
+    const isCodex = provider === 'codex';
+    const isClaude = provider === 'claudecode';
+    const isGeminiCli = provider === 'geminicli';
+    const name = accountProviderName(provider);
+    const executable = isCodex
+      ? config.codexPath
+      : isClaude
+        ? config.claudeCodePath
+        : isGeminiCli
+          ? config.geminiCliPath
+          : config.antigravityPath;
+    const cwd = await resolveRepoRoot()
+      ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+      ?? process.cwd();
+
+    if (path.isAbsolute(executable) && !fs.existsSync(executable)) {
+      vscode.window.showErrorMessage(
+        `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`,
+      );
+      return false;
+    }
+
+    const shellArgs = isCodex ? ['login'] : isClaude ? ['auth', 'login', '--claudeai'] : [];
+    const env: Record<string, string | null> = {};
+    if (isClaude) {
+      env.ANTHROPIC_API_KEY = null;
+      env.ANTHROPIC_AUTH_TOKEN = null;
+    } else if (provider === 'geminicli') {
+      env.GEMINI_API_KEY = null;
+      env.GOOGLE_API_KEY = null;
+      env.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env.GOOGLE_GENAI_USE_GCA = 'true';
+    }
+    const terminal = vscode.window.createTerminal({
+      name: `Commit Defender: ${name} Sign in`,
+      shellPath: executable,
+      shellArgs,
+      cwd,
+      env,
+    });
+    terminal.show(false);
+    getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
+    await promptProviderChangeAfterSignIn(provider);
+    return true;
+  }
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('commitDefender.signInCodex', () => signIn('codex')),
+    vscode.commands.registerCommand('commitDefender.signInClaudeCode', () => signIn('claudecode')),
+    vscode.commands.registerCommand('commitDefender.signInGeminiCli', () => signIn('geminicli')),
+    vscode.commands.registerCommand('commitDefender.signInAntigravity', () => signIn('antigravity')),
+    vscode.commands.registerCommand('commitDefender.selectAccountProviderAndModel', selectAccountProviderAndModel),
+  );
 
   // ── Pre-commit hook commands ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
@@ -56,7 +249,20 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── React to setting changes ───────────────────────────────────────────
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async e => {
     if (e.affectsConfiguration('commitDefender')) {
-      historyProvider.updateConfig(getConfig());
+      const nextConfig = getConfig();
+      const previousProvider = lastConfiguredProvider;
+      lastConfiguredProvider = nextConfig.aiProvider;
+      historyProvider.updateConfig(nextConfig);
+
+      if (e.affectsConfiguration('commitDefender.aiProvider')
+          && nextConfig.aiProvider !== previousProvider) {
+        const account = accountProvider(nextConfig.aiProvider);
+        if (account && providerUpdateFromWizard === account) {
+          providerUpdateFromWizard = undefined;
+        } else if (account) {
+          await promptModelAtProviderSetup(account);
+        }
+      }
 
       // Mirror settings into the hook config file so the hook picks them up
       // on the next commit, even when VS Code isn't running.
@@ -192,10 +398,20 @@ export function activate(context: vscode.ExtensionContext): void {
     if (isAiError) {
       const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
       statusBar.setError(msg);
-      vscode.window.showErrorMessage(`Commit Defender: AI review failed — ${msg}`, 'Show Summary', 'Show Output').then(action => {
-        if (action === 'Show Summary') { showSummaryPanel(result.report, repoRoot, context); }
-        else if (action === 'Show Output') { getOutputChannel().show(); }
-      });
+      const provider = accountProvider(cfg.aiProvider);
+      const signIn = provider ? signInLabel(provider) : undefined;
+      const actions = signIn ? [signIn, 'Show Summary', 'Show Output'] : ['Show Summary', 'Show Output'];
+      const action = await vscode.window.showErrorMessage(
+        `Commit Defender: AI review failed — ${msg}`,
+        ...actions,
+      );
+      if (action === signIn && provider) {
+        await vscode.commands.executeCommand(signInCommand(provider));
+      } else if (action === 'Show Summary') {
+        showSummaryPanel(result.report, repoRoot, context);
+      } else if (action === 'Show Output') {
+        getOutputChannel().show();
+      }
     } else {
       statusBar.setResult(passed, result.report.review.grade);
     }
@@ -543,46 +759,50 @@ export function activate(context: vscode.ExtensionContext): void {
       try { repoRoot = await getRepoRoot(ws); }
       catch { vscode.window.showWarningMessage('Commit Defender: No git repository found.'); return; }
 
-      await vscode.window.withProgress(
+      const result = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
-        async () => {
-          const result = await new Reviewer(getConfig()).generateCommitMessage(repoRoot);
+        () => new Reviewer(getConfig()).generateCommitMessage(repoRoot),
+      );
 
-          if (result.is_error || !result.commit_message) {
-            vscode.window.showErrorMessage(
-              `Commit Defender: ${result.error || 'Failed to generate commit message'}`
-            );
-            return;
-          }
+      if (result.is_error || !result.commit_message) {
+        const provider = accountProvider(getConfig().aiProvider);
+        const signIn = provider ? signInLabel(provider) : undefined;
+        const action = await vscode.window.showErrorMessage(
+          `Commit Defender: ${result.error || 'Failed to generate commit message'}`,
+          ...(signIn ? [signIn] : []),
+        );
+        if (action === signIn && provider) {
+          await vscode.commands.executeCommand(signInCommand(provider));
+        }
+        return;
+      }
 
-          const gitExt = vscode.extensions.getExtension('vscode.git');
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const gitApi = (gitExt?.exports as any)?.getAPI?.(1);
-          const repo   = gitApi?.getRepository?.(vscode.Uri.file(repoRoot))
-                      ?? gitApi?.repositories?.[0];
+      const gitExt = vscode.extensions.getExtension('vscode.git');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gitApi = (gitExt?.exports as any)?.getAPI?.(1);
+      const repo   = gitApi?.getRepository?.(vscode.Uri.file(repoRoot))
+                  ?? gitApi?.repositories?.[0];
 
-          if (repo?.inputBox) {
-            repo.inputBox.value = result.commit_message;
-            vscode.window.showInformationMessage(
-              'Commit Defender: Commit message inserted into the Source Control input box.'
-            );
-          } else {
-            await vscode.env.clipboard.writeText(result.commit_message);
-            vscode.window.showInformationMessage(
-              'Commit Defender: Commit message copied to clipboard.',
-              'Preview'
-            ).then(action => {
-              if (action === 'Preview') {
-                vscode.window.showInputBox({
-                  value: result.commit_message,
-                  prompt: 'Generated commit message (read-only preview)',
-                  ignoreFocusOut: true,
-                });
-              }
+      if (repo?.inputBox) {
+        repo.inputBox.value = result.commit_message;
+        vscode.window.showInformationMessage(
+          'Commit Defender: Commit message inserted into the Source Control input box.'
+        );
+      } else {
+        await vscode.env.clipboard.writeText(result.commit_message);
+        vscode.window.showInformationMessage(
+          'Commit Defender: Commit message copied to clipboard.',
+          'Preview'
+        ).then(action => {
+          if (action === 'Preview') {
+            vscode.window.showInputBox({
+              value: result.commit_message,
+              prompt: 'Generated commit message (read-only preview)',
+              ignoreFocusOut: true,
             });
           }
-        }
-      );
+        });
+      }
     }
   ));
 
@@ -593,6 +813,42 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   findingsStore.clear();
   disposeOutputChannel();
+}
+
+function accountProvider(provider: ExtensionConfig['aiProvider']): AccountProvider | undefined {
+  return provider === 'codex' || provider === 'claudecode' || provider === 'geminicli' || provider === 'antigravity'
+    ? provider
+    : undefined;
+}
+
+function accountProviderName(provider: AccountProvider): string {
+  return provider === 'codex'
+    ? 'Codex'
+    : provider === 'claudecode'
+      ? 'Claude Code'
+      : provider === 'geminicli'
+        ? 'Gemini CLI'
+        : 'Antigravity';
+}
+
+function signInLabel(provider: AccountProvider): string {
+  return provider === 'codex'
+    ? 'Sign in with Codex'
+    : provider === 'claudecode'
+      ? 'Sign in with Claude Code'
+      : provider === 'geminicli'
+        ? 'Sign in with Gemini'
+        : 'Sign in with Antigravity';
+}
+
+function signInCommand(provider: AccountProvider): string {
+  return provider === 'codex'
+    ? 'commitDefender.signInCodex'
+    : provider === 'claudecode'
+      ? 'commitDefender.signInClaudeCode'
+      : provider === 'geminicli'
+        ? 'commitDefender.signInGeminiCli'
+        : 'commitDefender.signInAntigravity';
 }
 
 // ── Directory quick-pick browser ──────────────────────────────────────────────

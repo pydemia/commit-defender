@@ -23,6 +23,7 @@ import { AnalysisReport, FileComment } from '../types.js';
 import { ParsedReview, enforceP3, parseReviewJson } from '../ai/json.js';
 import { SEVERITY_MIN_RANK, buildSystemPrompt, buildUserMessage } from '../ai/prompt.js';
 import { callProvider } from '../ai/providers.js';
+import { REVIEW_OUTPUT_SCHEMA } from '../ai/schemas.js';
 
 const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 
@@ -68,6 +69,17 @@ async function main(): Promise<void> {
     maxTokens: cfg.maxTokens,
     systemPrompt,
     userMessage,
+    workingDirectory: repoRoot,
+    executablePath: cfg.aiProvider === 'codex'
+      ? cfg.codexPath
+      : cfg.aiProvider === 'claudecode'
+        ? cfg.claudeCodePath
+        : cfg.aiProvider === 'geminicli'
+          ? cfg.geminiCliPath
+          : cfg.aiProvider === 'antigravity'
+            ? cfg.antigravityPath
+            : '',
+    responseSchema: REVIEW_OUTPUT_SCHEMA,
     timeoutMs: 120_000,
   });
 
@@ -121,6 +133,10 @@ function readConfig(repoRoot: string): ResolvedConfig | null {
     endpoint:        raw.endpoint ?? '',
     apiVersion:      raw.apiVersion ?? '2024-08-01-preview',
     apiKey:          raw.apiKey ?? '',
+    codexPath:       raw.codexPath ?? 'codex',
+    claudeCodePath:  raw.claudeCodePath ?? 'claude',
+    geminiCliPath:   raw.geminiCliPath ?? 'gemini',
+    antigravityPath: raw.antigravityPath ?? 'agy',
     maxTokens:       Number.isFinite(+raw.maxTokens) ? +raw.maxTokens : 4096,
     severityLevel:   raw.severityLevel ?? 'moderate',
     richnessLevel:   raw.richnessLevel ?? 'moderate',

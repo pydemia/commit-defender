@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.0.3",
+    "version": "2.3.0",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -115,6 +115,26 @@
                 "command": "commitDefender.generateCommitMessage",
                 "title": "Commit Defender: Generate Commit Message",
                 "icon": "$(wand)"
+            },
+            {
+                "command": "commitDefender.signInCodex",
+                "title": "Commit Defender: Sign in with Codex"
+            },
+            {
+                "command": "commitDefender.signInClaudeCode",
+                "title": "Commit Defender: Sign in with Claude Code"
+            },
+            {
+                "command": "commitDefender.signInGeminiCli",
+                "title": "Commit Defender: Sign in with Gemini"
+            },
+            {
+                "command": "commitDefender.signInAntigravity",
+                "title": "Commit Defender: Sign in with Antigravity"
+            },
+            {
+                "command": "commitDefender.selectAccountProviderAndModel",
+                "title": "Commit Defender: Select Account Provider and Model"
             }
         ],
         "configuration": {
@@ -127,13 +147,31 @@
                         "aoai",
                         "anthropic",
                         "openai",
-                        "gemini"
+                        "gemini",
+                        "codex",
+                        "claudecode",
+                        "geminicli",
+                        "antigravity"
+                    ],
+                    "enumItemLabels": [
+                        "Azure OpenAI (API key)",
+                        "Anthropic (API key)",
+                        "OpenAI (API key)",
+                        "Google Gemini (API key)",
+                        "Codex CLI (account)",
+                        "Claude Code CLI (account)",
+                        "Gemini CLI (Google account)",
+                        "Antigravity CLI (account)"
                     ],
                     "enumDescriptions": [
                         "aoai (Azure OpenAI): Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
                         "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
                         "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc.",
-                        "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.)."
+                        "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.).",
+                        "codex: Use the locally installed Codex CLI and its saved ChatGPT/Codex login. No API key required.",
+                        "claudecode: Use the locally installed Claude Code CLI and its saved subscription login. No API key required.",
+                        "geminicli: Use the locally installed Gemini CLI and its saved Google-account login. No API key required.",
+                        "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
                     "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider."
@@ -142,7 +180,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure)."
+                    "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure). Leave empty for a local Codex, Claude Code, Gemini CLI, or Antigravity default."
                 },
                 "commitDefender.endpoint": {
                     "type": "string",
@@ -160,7 +198,31 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "API key for the selected provider. Store this in User Settings (not Workspace) to keep it out of source control."
+                    "description": "API key for an API provider. Ignored by codex, claudecode, geminicli, and antigravity, which use their local saved login. Store keys in User Settings (not Workspace)."
+                },
+                "commitDefender.codexPath": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "codex",
+                    "description": "Codex CLI executable name or absolute path. Used only by the codex account provider. Set an absolute path when git hooks or GUI git clients have a different PATH."
+                },
+                "commitDefender.claudeCodePath": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "claude",
+                    "description": "Claude Code CLI executable name or absolute path. Used only by the claudecode account provider. Set an absolute path when git hooks or GUI git clients have a different PATH."
+                },
+                "commitDefender.geminiCliPath": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "gemini",
+                    "description": "Gemini CLI executable name or absolute path. Used only by the geminicli account provider. Set an absolute path when git hooks or GUI git clients have a different PATH."
+                },
+                "commitDefender.antigravityPath": {
+                    "type": "string",
+                    "scope": "window",
+                    "default": "agy",
+                    "description": "Antigravity agy CLI executable name or absolute path. Used only by the antigravity account provider."
                 },
                 "commitDefender.maxTokens": {
                     "type": "number",
@@ -365,6 +427,21 @@
                 },
                 {
                     "command": "commitDefender.generateCommitMessage"
+                },
+                {
+                    "command": "commitDefender.signInCodex"
+                },
+                {
+                    "command": "commitDefender.signInClaudeCode"
+                },
+                {
+                    "command": "commitDefender.signInGeminiCli"
+                },
+                {
+                    "command": "commitDefender.signInAntigravity"
+                },
+                {
+                    "command": "commitDefender.selectAccountProviderAndModel"
                 }
             ],
             "scm/title": [
@@ -447,6 +524,8 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
+        "test": "npm run test:providers",
+        "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package"
     },
     "dependencies": {

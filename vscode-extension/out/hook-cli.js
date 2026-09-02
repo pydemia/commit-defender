@@ -255,17 +255,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path4, originalPath, doThrow) => {
-      if (!isString(path4)) {
+    var checkPath = (path5, originalPath, doThrow) => {
+      if (!isString(path5)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path4) {
+      if (!path5) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path4)) {
+      if (checkPath.isNotRelative(path5)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -274,7 +274,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path4) => REGEX_TEST_INVALID_PATH.test(path4);
+    var isNotRelative = (path5) => REGEX_TEST_INVALID_PATH.test(path5);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -333,7 +333,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path4, checkUnignored) {
+      _testOne(path5, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -341,7 +341,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path4);
+          const matched = rule.regex.test(path5);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -354,24 +354,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path4 = originalPath && checkPath.convert(originalPath);
+        const path5 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path4,
+          path5,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path4, cache, checkUnignored, slices);
+        return this._t(path5, cache, checkUnignored, slices);
       }
-      _t(path4, cache, checkUnignored, slices) {
-        if (path4 in cache) {
-          return cache[path4];
+      _t(path5, cache, checkUnignored, slices) {
+        if (path5 in cache) {
+          return cache[path5];
         }
         if (!slices) {
-          slices = path4.split(SLASH);
+          slices = path5.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path4] = this._testOne(path4, checkUnignored);
+          return cache[path5] = this._testOne(path5, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -379,24 +379,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path4] = parent.ignored ? parent : this._testOne(path4, checkUnignored);
+        return cache[path5] = parent.ignored ? parent : this._testOne(path5, checkUnignored);
       }
-      ignores(path4) {
-        return this._test(path4, this._ignoreCache, false).ignored;
+      ignores(path5) {
+        return this._test(path5, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path4) => !this.ignores(path4);
+        return (path5) => !this.ignores(path5);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path4) {
-        return this._test(path4, this._testCache, true);
+      test(path5) {
+        return this._test(path5, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path4) => checkPath(path4 && checkPath.convert(path4), path4, RETURN_FALSE);
+    var isPathValid = (path5) => checkPath(path5 && checkPath.convert(path5), path5, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -407,15 +407,15 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path4) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path4) || isNotRelative(path4);
+      checkPath.isNotRelative = (path5) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path5) || isNotRelative(path5);
     }
   }
 });
 
 // src/hook/cli.ts
-var import_child_process2 = require("child_process");
+var import_child_process3 = require("child_process");
 var fs3 = __toESM(require("fs"));
-var path3 = __toESM(require("path"));
+var path4 = __toESM(require("path"));
 
 // src/diff.ts
 var import_child_process = require("child_process");
@@ -868,6 +868,10 @@ Please review the above and respond with the JSON object as instructed.
 }
 
 // src/ai/providers.ts
+var import_child_process2 = require("child_process");
+var import_promises = require("fs/promises");
+var import_os = require("os");
+var path3 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
@@ -881,6 +885,14 @@ async function callProvider(req) {
       return callAnthropic(req);
     case "gemini":
       return callGemini(req);
+    case "codex":
+      return callCodexCli(req);
+    case "claudecode":
+      return callClaudeCodeCli(req);
+    case "geminicli":
+      return callGeminiCli(req);
+    case "antigravity":
+      return callAntigravityCli(req);
     default:
       return { raw: "", error: `Unknown provider: ${req.provider}` };
   }
@@ -895,6 +907,9 @@ function ctxLine(req) {
   }
   if (req.apiVersion && req.provider === "aoai") {
     parts.push(`api_version=${req.apiVersion}`);
+  }
+  if (req.executablePath && (req.provider === "codex" || req.provider === "claudecode" || req.provider === "geminicli" || req.provider === "antigravity")) {
+    parts.push(`executable=${req.executablePath}`);
   }
   return "  Config: " + parts.join(", ");
 }
@@ -916,6 +931,367 @@ async function withTimeout(req, fn) {
   } finally {
     clearTimeout(timer);
   }
+}
+var MAX_CLI_OUTPUT_BYTES = 16 * 1024 * 1024;
+var CliProcessError = class extends Error {
+  constructor(kind, message) {
+    super(message);
+    this.kind = kind;
+  }
+};
+async function callCodexCli(req) {
+  const command = req.executablePath?.trim() || "codex";
+  const args = [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--color",
+    "never"
+  ];
+  if (req.model.trim()) {
+    args.push("--model", req.model.trim());
+  }
+  const prompt = `${req.systemPrompt}
+
+${req.userMessage}`;
+  try {
+    return await withSchemaFile(req.responseSchema, async (schemaFile) => {
+      if (schemaFile) {
+        args.push("--output-schema", schemaFile);
+      }
+      args.push("-");
+      const result = await runCli(command, args, prompt, req, process.env);
+      if (result.code !== 0) {
+        return err(req, cliExitMessage("Codex", result, "Run `codex login`, then retry."));
+      }
+      const raw = result.stdout.trim();
+      if (!raw) {
+        return err(req, `Codex CLI returned no final response.${stderrSuffix(result.stderr)}`);
+      }
+      return { raw };
+    });
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Codex", command, e, "`codex login`"));
+  }
+}
+async function callClaudeCodeCli(req) {
+  const command = req.executablePath?.trim() || "claude";
+  const schema = req.responseSchema ?? { type: "object" };
+  const args = [
+    "-p",
+    "--output-format",
+    "json",
+    "--json-schema",
+    JSON.stringify(schema),
+    "--tools",
+    "",
+    "--permission-mode",
+    "dontAsk",
+    "--no-session-persistence",
+    "--disable-slash-commands",
+    "--no-chrome",
+    "--system-prompt",
+    req.systemPrompt
+  ];
+  if (req.model.trim()) {
+    args.push("--model", req.model.trim());
+  }
+  const env = { ...process.env };
+  delete env.ANTHROPIC_API_KEY;
+  delete env.ANTHROPIC_AUTH_TOKEN;
+  env.CLAUDE_AGENT_SDK_CLIENT_APP = env.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  try {
+    const result = await runCli(command, args, req.userMessage, req, env);
+    if (result.code !== 0) {
+      return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
+    }
+    let envelope;
+    try {
+      envelope = JSON.parse(result.stdout);
+    } catch (e) {
+      return err(req, `Claude Code returned invalid JSON: ${e.message}${stderrSuffix(result.stderr)}`);
+    }
+    if (envelope?.structured_output !== void 0) {
+      return {
+        raw: typeof envelope.structured_output === "string" ? envelope.structured_output.trim() : JSON.stringify(envelope.structured_output)
+      };
+    }
+    if (typeof envelope?.result === "string" && envelope.result.trim()) {
+      return { raw: envelope.result.trim() };
+    }
+    return err(req, `Claude Code response did not contain structured_output or result.${stderrSuffix(result.stderr)}`);
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Claude Code", command, e, "`claude auth login`"));
+  }
+}
+async function callGeminiCli(req) {
+  const command = req.executablePath?.trim() || "gemini";
+  const args = [
+    "--output-format",
+    "json",
+    "--approval-mode",
+    "plan",
+    "--skip-trust",
+    "-p",
+    req.systemPrompt
+  ];
+  if (req.model.trim()) {
+    args.unshift("--model", req.model.trim());
+  }
+  const env = { ...process.env };
+  delete env.GEMINI_API_KEY;
+  delete env.GOOGLE_API_KEY;
+  delete env.GOOGLE_GENAI_USE_VERTEXAI;
+  env.GOOGLE_GENAI_USE_GCA = "true";
+  try {
+    const result = await runCli(command, args, req.userMessage, req, env);
+    if (result.code !== 0) {
+      return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
+    }
+    let envelope;
+    try {
+      envelope = JSON.parse(result.stdout);
+    } catch (e) {
+      return err(req, `Gemini CLI returned invalid JSON: ${e.message}${stderrSuffix(result.stderr)}`);
+    }
+    const raw = typeof envelope?.response === "string" ? envelope.response.trim() : "";
+    if (!raw) {
+      return err(req, `Gemini CLI response did not contain a response string.${stderrSuffix(result.stderr)}`);
+    }
+    return { raw };
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Gemini", command, e, "`gemini` and select Sign in with Google"));
+  }
+}
+async function callAntigravityCli(req) {
+  const command = req.executablePath?.trim() || "agy";
+  try {
+    return await withAntigravityFiles(req, async (promptFile, schemaFile, tempDir) => {
+      const args = [
+        "--output-format",
+        "json",
+        "--mode",
+        "plan",
+        "--disable-slash-commands",
+        "--sandbox",
+        "--add-dir",
+        tempDir,
+        "--json-schema",
+        schemaFile
+      ];
+      if (req.model.trim()) {
+        args.push("--model", req.model.trim());
+      }
+      args.push(
+        "-p",
+        `Read ${promptFile}. Treat its contents as the complete review request and return only the JSON required by the supplied schema.`
+      );
+      const result = await runCli(command, args, "", req, process.env);
+      if (result.code !== 0) {
+        return err(req, cliExitMessage("Antigravity", result, "Run the Commit Defender Antigravity sign-in command, then retry."));
+      }
+      const raw = extractStructuredCliOutput(result.stdout);
+      if (!raw) {
+        return err(req, `Antigravity CLI returned no structured final response.${stderrSuffix(result.stderr)}`);
+      }
+      return { raw };
+    });
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Antigravity", command, e, "`agy` and complete sign-in"));
+  }
+}
+async function withAntigravityFiles(req, fn) {
+  const dir = await (0, import_promises.mkdtemp)(path3.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path3.join(dir, "review-request.md");
+  const schemaFile = path3.join(dir, "output-schema.json");
+  try {
+    await Promise.all([
+      (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
+
+${req.userMessage}`, { encoding: "utf8", mode: 384 }),
+      (0, import_promises.writeFile)(schemaFile, JSON.stringify(req.responseSchema ?? { type: "object" }), { encoding: "utf8", mode: 384 })
+    ]);
+    return await fn(promptFile, schemaFile, dir);
+  } finally {
+    await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function extractStructuredCliOutput(stdout) {
+  const trimmed = stdout.trim();
+  if (!trimmed) {
+    return "";
+  }
+  let envelope;
+  try {
+    envelope = JSON.parse(trimmed);
+  } catch {
+    return trimmed;
+  }
+  for (const candidate of [
+    envelope?.structured_output,
+    envelope?.structuredOutput,
+    envelope?.result,
+    envelope?.response,
+    envelope?.output
+  ]) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+    if (candidate && typeof candidate === "object") {
+      return JSON.stringify(candidate);
+    }
+  }
+  if (envelope && typeof envelope === "object") {
+    return JSON.stringify(envelope);
+  }
+  return "";
+}
+async function withSchemaFile(schema, fn) {
+  if (!schema) {
+    return fn(void 0);
+  }
+  const dir = await (0, import_promises.mkdtemp)(path3.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path3.join(dir, "output-schema.json");
+  try {
+    await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
+    return await fn(file);
+  } finally {
+    await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function runCli(command, args, stdin, req, env) {
+  return new Promise((resolve, reject) => {
+    if (req.signal?.aborted) {
+      reject(abortError());
+      return;
+    }
+    const child = (0, import_child_process2.spawn)(command, args, {
+      cwd: req.workingDirectory || process.cwd(),
+      env,
+      shell: false,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    let externallyAborted = false;
+    let processError;
+    const finishReject = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+    const terminate = () => {
+      child.stdin.destroy();
+      if (!child.killed) {
+        child.kill("SIGTERM");
+      }
+    };
+    const onAbort = () => {
+      externallyAborted = true;
+      terminate();
+    };
+    const timer = req.timeoutMs && req.timeoutMs > 0 ? setTimeout(() => {
+      processError = new CliProcessError("timeout", `timed out after ${req.timeoutMs} ms`);
+      terminate();
+    }, req.timeoutMs) : void 0;
+    const cleanup = () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      req.signal?.removeEventListener("abort", onAbort);
+    };
+    req.signal?.addEventListener("abort", onAbort, { once: true });
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      if (Buffer.byteLength(stdout) > MAX_CLI_OUTPUT_BYTES && !processError) {
+        processError = new CliProcessError("output", "stdout exceeded the 16 MiB safety limit");
+        terminate();
+      }
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+      if (Buffer.byteLength(stderr) > MAX_CLI_OUTPUT_BYTES && !processError) {
+        processError = new CliProcessError("output", "stderr exceeded the 16 MiB safety limit");
+        terminate();
+      }
+    });
+    child.on("error", (error) => {
+      processError = error.code === "ENOENT" ? new CliProcessError("missing", `executable not found: ${command}`) : error;
+    });
+    child.on("close", (code) => {
+      if (settled) {
+        return;
+      }
+      if (externallyAborted) {
+        finishReject(abortError());
+        return;
+      }
+      if (processError) {
+        finishReject(processError);
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+    child.stdin.on("error", (error) => {
+      if (error.code !== "EPIPE" && !processError) {
+        processError = error;
+      }
+    });
+    child.stdin.end(stdin);
+  });
+}
+function abortError() {
+  const error = new Error("Cancelled");
+  error.name = "AbortError";
+  return error;
+}
+function cliExitMessage(name, result, remediation) {
+  const detail = tail(result.stderr || result.stdout);
+  return `${name} CLI exited with code ${result.code}${detail ? `: ${detail}` : ""}
+${remediation}`;
+}
+function cliStartMessage(name, command, error, loginCommand) {
+  const e = error;
+  if (error instanceof CliProcessError && error.kind === "missing") {
+    return `${name} CLI executable was not found at "${command}". Install it or set the corresponding Commit Defender path setting.`;
+  }
+  if (error instanceof CliProcessError && error.kind === "timeout") {
+    return `${name} CLI ${error.message}.`;
+  }
+  return `${name} CLI failed to start: ${e.message}. Verify the executable and run ${loginCommand}.`;
+}
+function stderrSuffix(stderr) {
+  const detail = tail(stderr);
+  return detail ? `
+CLI stderr: ${detail}` : "";
+}
+function tail(value, max = 2e3) {
+  const trimmed = value.trim();
+  return trimmed.length <= max ? trimmed : trimmed.slice(trimmed.length - max);
 }
 async function callAzureOpenAI(req) {
   const missing = [];
@@ -1158,6 +1534,40 @@ async function callGemini(req) {
   });
 }
 
+// src/ai/schemas.ts
+var REVIEW_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    blocking: { type: "boolean" },
+    grade: {
+      type: "string",
+      enum: ["exceptional", "proficient", "adequate", "insufficient", "critical"]
+    },
+    file_comments: {
+      type: "array",
+      maxItems: 20,
+      items: {
+        type: "object",
+        properties: {
+          file: { type: "string" },
+          line: { type: "integer", minimum: 0 },
+          category: {
+            type: "string",
+            enum: ["correctness", "security", "maintenance", "optimization", "review-history", "setting"]
+          },
+          priority: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
+          comment: { type: "string" }
+        },
+        required: ["file", "line", "category", "priority", "comment"],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ["summary", "blocking", "grade", "file_comments"],
+  additionalProperties: false
+};
+
 // src/hook/cli.ts
 var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2, P3: 3 };
 async function main() {
@@ -1200,6 +1610,9 @@ async function main() {
     maxTokens: cfg.maxTokens,
     systemPrompt,
     userMessage,
+    workingDirectory: repoRoot,
+    executablePath: cfg.aiProvider === "codex" ? cfg.codexPath : cfg.aiProvider === "claudecode" ? cfg.claudeCodePath : cfg.aiProvider === "geminicli" ? cfg.geminiCliPath : cfg.aiProvider === "antigravity" ? cfg.antigravityPath : "",
+    responseSchema: REVIEW_OUTPUT_SCHEMA,
     timeoutMs: 12e4
   });
   if (resp.error) {
@@ -1239,7 +1652,7 @@ async function main() {
   process.exit(exitCode);
 }
 function readConfig(repoRoot) {
-  const file = path3.join(repoRoot, ".commit-defender", "hook.json");
+  const file = path4.join(repoRoot, ".commit-defender", "hook.json");
   let text;
   try {
     text = fs3.readFileSync(file, "utf8");
@@ -1258,6 +1671,10 @@ function readConfig(repoRoot) {
     endpoint: raw.endpoint ?? "",
     apiVersion: raw.apiVersion ?? "2024-08-01-preview",
     apiKey: raw.apiKey ?? "",
+    codexPath: raw.codexPath ?? "codex",
+    claudeCodePath: raw.claudeCodePath ?? "claude",
+    geminiCliPath: raw.geminiCliPath ?? "gemini",
+    antigravityPath: raw.antigravityPath ?? "agy",
     maxTokens: Number.isFinite(+raw.maxTokens) ? +raw.maxTokens : 4096,
     severityLevel: raw.severityLevel ?? "moderate",
     richnessLevel: raw.richnessLevel ?? "moderate",
@@ -1275,7 +1692,7 @@ function readConfig(repoRoot) {
 }
 function listStagedFiles(repoRoot) {
   try {
-    const out = (0, import_child_process2.execFileSync)("git", ["-C", repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
+    const out = (0, import_child_process3.execFileSync)("git", ["-C", repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
       encoding: "utf8"
     });
     return out.split("\n").filter(Boolean);
@@ -1361,7 +1778,7 @@ var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
   ".lock"
 ]);
 function isBinary(p) {
-  const ext = path3.extname(p).toLowerCase();
+  const ext = path4.extname(p).toLowerCase();
   return ext.length > 0 && BINARY_EXTENSIONS.has(ext);
 }
 var PRIORITY_LABEL = {

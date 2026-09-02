@@ -85,7 +85,7 @@ vscode-extension/
 │   │
 │   ├── ai/
 │   │   ├── prompt.ts           ← system prompt + severity/richness/locale
-│   │   ├── providers.ts        ← aoai / openai / anthropic / gemini fetch adapters
+│   │   ├── providers.ts        ← API and account-authenticated CLI adapters
 │   │   ├── json.ts             ← robust JSON parser + P3 text enforcement
 │   │   └── reviewer.ts         ← orchestrator: reviewDiff / reviewFilesSeparately
 │   │
@@ -227,10 +227,15 @@ matching the schema in the system prompt.
 | `openai` | `${endpoint or default}/chat/completions` | `Authorization: Bearer …` | Same as aoai |
 | `anthropic` | `${endpoint or default}/messages` | `x-api-key:` + `anthropic-version: 2023-06-01` | `system` + `messages[]` |
 | `gemini` | `${endpoint or default}/models/{model}:generateContent?key=…` | API key in URL | `systemInstruction` + `contents[]` + `responseMimeType: application/json` |
+| `codex` | local `codex exec` | Saved ChatGPT/Codex CLI login | Read-only, ephemeral execution with `--output-schema` |
+| `claudecode` | local `claude -p` | Saved Claude subscription login | Tool-free print mode with `--json-schema` |
+| `geminicli` | local `gemini -p` | Saved Google account login | Headless JSON output with plan approval mode |
+| `antigravity` | local `agy -p` | Saved Antigravity login | Structured JSON output with plan/sandbox mode |
 
-All four share the same retry-on-`response_format-unsupported` logic for the
-OpenAI-compatible endpoints, and a unified error-context line that names the
-provider, model, and endpoint in failure messages.
+The API providers retain their existing HTTP behavior. The local providers
+run without a shell, accept the review input over stdin, enforce bounded output,
+and terminate on cancellation or timeout. Their OAuth credentials remain owned
+by the first-party CLI and are never materialised into hook configuration.
 
 ---
 

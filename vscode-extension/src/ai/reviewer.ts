@@ -19,6 +19,7 @@ import { AnalysisReport, CommitMessageResult, FileComment, PerFileSummary, Revie
 import { ParsedReview, enforceP3, parseReviewJson } from './json.js';
 import { COMMIT_MESSAGE_SYSTEM_PROMPT, SEVERITY_MIN_RANK, ReviewMode, buildSystemPrompt, buildUserMessage } from './prompt.js';
 import { ProviderRequest, callProvider } from './providers.js';
+import { COMMIT_MESSAGE_OUTPUT_SCHEMA, REVIEW_OUTPUT_SCHEMA } from './schemas.js';
 
 const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 const GRADE_RANK: Record<string, number> = {
@@ -149,10 +150,12 @@ export class Reviewer {
     }
 
     const req: ProviderRequest = this.buildProviderRequest(
+      repoRoot,
       COMMIT_MESSAGE_SYSTEM_PROMPT,
       `Generate a commit message for the following staged diff:\n\n\`\`\`diff\n${diff}\n\`\`\``,
       Math.min(this.cfg.maxTokens, 512),
       signal,
+      COMMIT_MESSAGE_OUTPUT_SCHEMA,
     );
 
     const resp = await callProvider(req);
@@ -193,7 +196,14 @@ export class Reviewer {
     });
     const userMessage = buildUserMessage(opts.mode, opts.body);
 
-    const req = this.buildProviderRequest(systemPrompt, userMessage, this.cfg.maxTokens, opts.signal);
+    const req = this.buildProviderRequest(
+      opts.repoRoot,
+      systemPrompt,
+      userMessage,
+      this.cfg.maxTokens,
+      opts.signal,
+      REVIEW_OUTPUT_SCHEMA,
+    );
     const resp = await callProvider(req);
     if (resp.error) { return this.errorResult(resp.error); }
 
@@ -243,11 +253,22 @@ export class Reviewer {
   }
 
   private buildProviderRequest(
+    repoRoot: string,
     systemPrompt: string,
     userMessage: string,
     maxTokens: number,
     signal?: AbortSignal,
+    responseSchema = REVIEW_OUTPUT_SCHEMA,
   ): ProviderRequest {
+    const executablePath = this.cfg.aiProvider === 'codex'
+      ? this.cfg.codexPath
+      : this.cfg.aiProvider === 'claudecode'
+        ? this.cfg.claudeCodePath
+        : this.cfg.aiProvider === 'geminicli'
+          ? this.cfg.geminiCliPath
+          : this.cfg.aiProvider === 'antigravity'
+            ? this.cfg.antigravityPath
+            : '';
     return {
       provider:    this.cfg.aiProvider,
       apiKey:      this.cfg.apiKey,
@@ -257,6 +278,9 @@ export class Reviewer {
       maxTokens,
       systemPrompt,
       userMessage,
+      workingDirectory: repoRoot,
+      executablePath,
+      responseSchema,
       signal,
     };
   }

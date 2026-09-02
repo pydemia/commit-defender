@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path11, originalPath, doThrow) => {
-      if (!isString(path11)) {
+    var checkPath = (path13, originalPath, doThrow) => {
+      if (!isString(path13)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path11) {
+      if (!path13) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path11)) {
+      if (checkPath.isNotRelative(path13)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path11) => REGEX_TEST_INVALID_PATH.test(path11);
+    var isNotRelative = (path13) => REGEX_TEST_INVALID_PATH.test(path13);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path11, checkUnignored) {
+      _testOne(path13, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path11);
+          const matched = rule.regex.test(path13);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path11 = originalPath && checkPath.convert(originalPath);
+        const path13 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path11,
+          path13,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path11, cache, checkUnignored, slices);
+        return this._t(path13, cache, checkUnignored, slices);
       }
-      _t(path11, cache, checkUnignored, slices) {
-        if (path11 in cache) {
-          return cache[path11];
+      _t(path13, cache, checkUnignored, slices) {
+        if (path13 in cache) {
+          return cache[path13];
         }
         if (!slices) {
-          slices = path11.split(SLASH);
+          slices = path13.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path11] = this._testOne(path11, checkUnignored);
+          return cache[path13] = this._testOne(path13, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path11] = parent.ignored ? parent : this._testOne(path11, checkUnignored);
+        return cache[path13] = parent.ignored ? parent : this._testOne(path13, checkUnignored);
       }
-      ignores(path11) {
-        return this._test(path11, this._ignoreCache, false).ignored;
+      ignores(path13) {
+        return this._test(path13, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path11) => !this.ignores(path11);
+        return (path13) => !this.ignores(path13);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path11) {
-        return this._test(path11, this._testCache, true);
+      test(path13) {
+        return this._test(path13, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path11) => checkPath(path11 && checkPath.convert(path11), path11, RETURN_FALSE);
+    var isPathValid = (path13) => checkPath(path13 && checkPath.convert(path13), path13, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path11) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path11) || isNotRelative(path11);
+      checkPath.isNotRelative = (path13) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path13) || isNotRelative(path13);
     }
   }
 });
@@ -424,8 +424,8 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var fs6 = __toESM(require("fs"));
-var path10 = __toESM(require("path"));
+var fs7 = __toESM(require("fs"));
+var path12 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 
 // src/diff.ts
@@ -916,6 +916,10 @@ Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
 `;
 
 // src/ai/providers.ts
+var import_child_process2 = require("child_process");
+var import_promises = require("fs/promises");
+var import_os = require("os");
+var path4 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
@@ -929,6 +933,14 @@ async function callProvider(req) {
       return callAnthropic(req);
     case "gemini":
       return callGemini(req);
+    case "codex":
+      return callCodexCli(req);
+    case "claudecode":
+      return callClaudeCodeCli(req);
+    case "geminicli":
+      return callGeminiCli(req);
+    case "antigravity":
+      return callAntigravityCli(req);
     default:
       return { raw: "", error: `Unknown provider: ${req.provider}` };
   }
@@ -943,6 +955,9 @@ function ctxLine(req) {
   }
   if (req.apiVersion && req.provider === "aoai") {
     parts.push(`api_version=${req.apiVersion}`);
+  }
+  if (req.executablePath && (req.provider === "codex" || req.provider === "claudecode" || req.provider === "geminicli" || req.provider === "antigravity")) {
+    parts.push(`executable=${req.executablePath}`);
   }
   return "  Config: " + parts.join(", ");
 }
@@ -964,6 +979,367 @@ async function withTimeout(req, fn) {
   } finally {
     clearTimeout(timer);
   }
+}
+var MAX_CLI_OUTPUT_BYTES = 16 * 1024 * 1024;
+var CliProcessError = class extends Error {
+  constructor(kind, message) {
+    super(message);
+    this.kind = kind;
+  }
+};
+async function callCodexCli(req) {
+  const command = req.executablePath?.trim() || "codex";
+  const args = [
+    "exec",
+    "--ephemeral",
+    "--sandbox",
+    "read-only",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--color",
+    "never"
+  ];
+  if (req.model.trim()) {
+    args.push("--model", req.model.trim());
+  }
+  const prompt = `${req.systemPrompt}
+
+${req.userMessage}`;
+  try {
+    return await withSchemaFile(req.responseSchema, async (schemaFile) => {
+      if (schemaFile) {
+        args.push("--output-schema", schemaFile);
+      }
+      args.push("-");
+      const result = await runCli(command, args, prompt, req, process.env);
+      if (result.code !== 0) {
+        return err(req, cliExitMessage("Codex", result, "Run `codex login`, then retry."));
+      }
+      const raw = result.stdout.trim();
+      if (!raw) {
+        return err(req, `Codex CLI returned no final response.${stderrSuffix(result.stderr)}`);
+      }
+      return { raw };
+    });
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Codex", command, e, "`codex login`"));
+  }
+}
+async function callClaudeCodeCli(req) {
+  const command = req.executablePath?.trim() || "claude";
+  const schema = req.responseSchema ?? { type: "object" };
+  const args = [
+    "-p",
+    "--output-format",
+    "json",
+    "--json-schema",
+    JSON.stringify(schema),
+    "--tools",
+    "",
+    "--permission-mode",
+    "dontAsk",
+    "--no-session-persistence",
+    "--disable-slash-commands",
+    "--no-chrome",
+    "--system-prompt",
+    req.systemPrompt
+  ];
+  if (req.model.trim()) {
+    args.push("--model", req.model.trim());
+  }
+  const env2 = { ...process.env };
+  delete env2.ANTHROPIC_API_KEY;
+  delete env2.ANTHROPIC_AUTH_TOKEN;
+  env2.CLAUDE_AGENT_SDK_CLIENT_APP = env2.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  try {
+    const result = await runCli(command, args, req.userMessage, req, env2);
+    if (result.code !== 0) {
+      return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
+    }
+    let envelope;
+    try {
+      envelope = JSON.parse(result.stdout);
+    } catch (e) {
+      return err(req, `Claude Code returned invalid JSON: ${e.message}${stderrSuffix(result.stderr)}`);
+    }
+    if (envelope?.structured_output !== void 0) {
+      return {
+        raw: typeof envelope.structured_output === "string" ? envelope.structured_output.trim() : JSON.stringify(envelope.structured_output)
+      };
+    }
+    if (typeof envelope?.result === "string" && envelope.result.trim()) {
+      return { raw: envelope.result.trim() };
+    }
+    return err(req, `Claude Code response did not contain structured_output or result.${stderrSuffix(result.stderr)}`);
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Claude Code", command, e, "`claude auth login`"));
+  }
+}
+async function callGeminiCli(req) {
+  const command = req.executablePath?.trim() || "gemini";
+  const args = [
+    "--output-format",
+    "json",
+    "--approval-mode",
+    "plan",
+    "--skip-trust",
+    "-p",
+    req.systemPrompt
+  ];
+  if (req.model.trim()) {
+    args.unshift("--model", req.model.trim());
+  }
+  const env2 = { ...process.env };
+  delete env2.GEMINI_API_KEY;
+  delete env2.GOOGLE_API_KEY;
+  delete env2.GOOGLE_GENAI_USE_VERTEXAI;
+  env2.GOOGLE_GENAI_USE_GCA = "true";
+  try {
+    const result = await runCli(command, args, req.userMessage, req, env2);
+    if (result.code !== 0) {
+      return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
+    }
+    let envelope;
+    try {
+      envelope = JSON.parse(result.stdout);
+    } catch (e) {
+      return err(req, `Gemini CLI returned invalid JSON: ${e.message}${stderrSuffix(result.stderr)}`);
+    }
+    const raw = typeof envelope?.response === "string" ? envelope.response.trim() : "";
+    if (!raw) {
+      return err(req, `Gemini CLI response did not contain a response string.${stderrSuffix(result.stderr)}`);
+    }
+    return { raw };
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Gemini", command, e, "`gemini` and select Sign in with Google"));
+  }
+}
+async function callAntigravityCli(req) {
+  const command = req.executablePath?.trim() || "agy";
+  try {
+    return await withAntigravityFiles(req, async (promptFile, schemaFile, tempDir) => {
+      const args = [
+        "--output-format",
+        "json",
+        "--mode",
+        "plan",
+        "--disable-slash-commands",
+        "--sandbox",
+        "--add-dir",
+        tempDir,
+        "--json-schema",
+        schemaFile
+      ];
+      if (req.model.trim()) {
+        args.push("--model", req.model.trim());
+      }
+      args.push(
+        "-p",
+        `Read ${promptFile}. Treat its contents as the complete review request and return only the JSON required by the supplied schema.`
+      );
+      const result = await runCli(command, args, "", req, process.env);
+      if (result.code !== 0) {
+        return err(req, cliExitMessage("Antigravity", result, "Run the Commit Defender Antigravity sign-in command, then retry."));
+      }
+      const raw = extractStructuredCliOutput(result.stdout);
+      if (!raw) {
+        return err(req, `Antigravity CLI returned no structured final response.${stderrSuffix(result.stderr)}`);
+      }
+      return { raw };
+    });
+  } catch (e) {
+    if (e.name === "AbortError") {
+      throw e;
+    }
+    return err(req, cliStartMessage("Antigravity", command, e, "`agy` and complete sign-in"));
+  }
+}
+async function withAntigravityFiles(req, fn) {
+  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path4.join(dir, "review-request.md");
+  const schemaFile = path4.join(dir, "output-schema.json");
+  try {
+    await Promise.all([
+      (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
+
+${req.userMessage}`, { encoding: "utf8", mode: 384 }),
+      (0, import_promises.writeFile)(schemaFile, JSON.stringify(req.responseSchema ?? { type: "object" }), { encoding: "utf8", mode: 384 })
+    ]);
+    return await fn(promptFile, schemaFile, dir);
+  } finally {
+    await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function extractStructuredCliOutput(stdout) {
+  const trimmed = stdout.trim();
+  if (!trimmed) {
+    return "";
+  }
+  let envelope;
+  try {
+    envelope = JSON.parse(trimmed);
+  } catch {
+    return trimmed;
+  }
+  for (const candidate of [
+    envelope?.structured_output,
+    envelope?.structuredOutput,
+    envelope?.result,
+    envelope?.response,
+    envelope?.output
+  ]) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+    if (candidate && typeof candidate === "object") {
+      return JSON.stringify(candidate);
+    }
+  }
+  if (envelope && typeof envelope === "object") {
+    return JSON.stringify(envelope);
+  }
+  return "";
+}
+async function withSchemaFile(schema, fn) {
+  if (!schema) {
+    return fn(void 0);
+  }
+  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path4.join(dir, "output-schema.json");
+  try {
+    await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
+    return await fn(file);
+  } finally {
+    await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
+  }
+}
+function runCli(command, args, stdin, req, env2) {
+  return new Promise((resolve, reject) => {
+    if (req.signal?.aborted) {
+      reject(abortError());
+      return;
+    }
+    const child = (0, import_child_process2.spawn)(command, args, {
+      cwd: req.workingDirectory || process.cwd(),
+      env: env2,
+      shell: false,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    let externallyAborted = false;
+    let processError;
+    const finishReject = (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+    const terminate = () => {
+      child.stdin.destroy();
+      if (!child.killed) {
+        child.kill("SIGTERM");
+      }
+    };
+    const onAbort = () => {
+      externallyAborted = true;
+      terminate();
+    };
+    const timer = req.timeoutMs && req.timeoutMs > 0 ? setTimeout(() => {
+      processError = new CliProcessError("timeout", `timed out after ${req.timeoutMs} ms`);
+      terminate();
+    }, req.timeoutMs) : void 0;
+    const cleanup = () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      req.signal?.removeEventListener("abort", onAbort);
+    };
+    req.signal?.addEventListener("abort", onAbort, { once: true });
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      if (Buffer.byteLength(stdout) > MAX_CLI_OUTPUT_BYTES && !processError) {
+        processError = new CliProcessError("output", "stdout exceeded the 16 MiB safety limit");
+        terminate();
+      }
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+      if (Buffer.byteLength(stderr) > MAX_CLI_OUTPUT_BYTES && !processError) {
+        processError = new CliProcessError("output", "stderr exceeded the 16 MiB safety limit");
+        terminate();
+      }
+    });
+    child.on("error", (error) => {
+      processError = error.code === "ENOENT" ? new CliProcessError("missing", `executable not found: ${command}`) : error;
+    });
+    child.on("close", (code) => {
+      if (settled) {
+        return;
+      }
+      if (externallyAborted) {
+        finishReject(abortError());
+        return;
+      }
+      if (processError) {
+        finishReject(processError);
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+    child.stdin.on("error", (error) => {
+      if (error.code !== "EPIPE" && !processError) {
+        processError = error;
+      }
+    });
+    child.stdin.end(stdin);
+  });
+}
+function abortError() {
+  const error = new Error("Cancelled");
+  error.name = "AbortError";
+  return error;
+}
+function cliExitMessage(name, result, remediation) {
+  const detail = tail(result.stderr || result.stdout);
+  return `${name} CLI exited with code ${result.code}${detail ? `: ${detail}` : ""}
+${remediation}`;
+}
+function cliStartMessage(name, command, error, loginCommand) {
+  const e = error;
+  if (error instanceof CliProcessError && error.kind === "missing") {
+    return `${name} CLI executable was not found at "${command}". Install it or set the corresponding Commit Defender path setting.`;
+  }
+  if (error instanceof CliProcessError && error.kind === "timeout") {
+    return `${name} CLI ${error.message}.`;
+  }
+  return `${name} CLI failed to start: ${e.message}. Verify the executable and run ${loginCommand}.`;
+}
+function stderrSuffix(stderr) {
+  const detail = tail(stderr);
+  return detail ? `
+CLI stderr: ${detail}` : "";
+}
+function tail(value, max = 2e3) {
+  const trimmed = value.trim();
+  return trimmed.length <= max ? trimmed : trimmed.slice(trimmed.length - max);
 }
 async function callAzureOpenAI(req) {
   const missing = [];
@@ -1206,6 +1582,48 @@ async function callGemini(req) {
   });
 }
 
+// src/ai/schemas.ts
+var REVIEW_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    blocking: { type: "boolean" },
+    grade: {
+      type: "string",
+      enum: ["exceptional", "proficient", "adequate", "insufficient", "critical"]
+    },
+    file_comments: {
+      type: "array",
+      maxItems: 20,
+      items: {
+        type: "object",
+        properties: {
+          file: { type: "string" },
+          line: { type: "integer", minimum: 0 },
+          category: {
+            type: "string",
+            enum: ["correctness", "security", "maintenance", "optimization", "review-history", "setting"]
+          },
+          priority: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
+          comment: { type: "string" }
+        },
+        required: ["file", "line", "category", "priority", "comment"],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ["summary", "blocking", "grade", "file_comments"],
+  additionalProperties: false
+};
+var COMMIT_MESSAGE_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    commit_message: { type: "string" }
+  },
+  required: ["commit_message"],
+  additionalProperties: false
+};
+
 // src/ai/reviewer.ts
 var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2, P3: 3 };
 var GRADE_RANK = {
@@ -1323,6 +1741,7 @@ ${result.summary}`);
       return { commit_message: "", is_error: true, error: "No staged changes found." };
     }
     const req = this.buildProviderRequest(
+      repoRoot,
       COMMIT_MESSAGE_SYSTEM_PROMPT,
       `Generate a commit message for the following staged diff:
 
@@ -1330,7 +1749,8 @@ ${result.summary}`);
 ${diff}
 \`\`\``,
       Math.min(this.cfg.maxTokens, 512),
-      signal
+      signal,
+      COMMIT_MESSAGE_OUTPUT_SCHEMA
     );
     const resp = await callProvider(req);
     if (resp.error) {
@@ -1360,7 +1780,14 @@ ${diff}
       skillsText
     });
     const userMessage = buildUserMessage(opts.mode, opts.body);
-    const req = this.buildProviderRequest(systemPrompt, userMessage, this.cfg.maxTokens, opts.signal);
+    const req = this.buildProviderRequest(
+      opts.repoRoot,
+      systemPrompt,
+      userMessage,
+      this.cfg.maxTokens,
+      opts.signal,
+      REVIEW_OUTPUT_SCHEMA
+    );
     const resp = await callProvider(req);
     if (resp.error) {
       return this.errorResult(resp.error);
@@ -1403,7 +1830,8 @@ ${summary}`;
       grade: parsed.grade
     };
   }
-  buildProviderRequest(systemPrompt, userMessage, maxTokens, signal) {
+  buildProviderRequest(repoRoot, systemPrompt, userMessage, maxTokens, signal, responseSchema = REVIEW_OUTPUT_SCHEMA) {
+    const executablePath = this.cfg.aiProvider === "codex" ? this.cfg.codexPath : this.cfg.aiProvider === "claudecode" ? this.cfg.claudeCodePath : this.cfg.aiProvider === "geminicli" ? this.cfg.geminiCliPath : this.cfg.aiProvider === "antigravity" ? this.cfg.antigravityPath : "";
     return {
       provider: this.cfg.aiProvider,
       apiKey: this.cfg.apiKey,
@@ -1413,6 +1841,9 @@ ${summary}`;
       maxTokens,
       systemPrompt,
       userMessage,
+      workingDirectory: repoRoot,
+      executablePath,
+      responseSchema,
       signal
     };
   }
@@ -1492,7 +1923,7 @@ function worstGrade(grades) {
 var vscode2 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path4 = __toESM(require("path"));
+var path5 = __toESM(require("path"));
 var vscode = __toESM(require("vscode"));
 
 // src/types.ts
@@ -1625,7 +2056,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path4.join(repoRoot, b.file);
+      const absPath = path5.join(repoRoot, b.file);
       const uriKey = vscode.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -1700,7 +2131,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path5 = __toESM(require("path"));
+var path6 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -1726,7 +2157,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b) {
-    const uri = vscode3.Uri.file(path5.join(repoRoot, b.file));
+    const uri = vscode3.Uri.file(path6.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode3.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -1750,6 +2181,8 @@ var CommentManager = class {
 };
 
 // src/config.ts
+var fs4 = __toESM(require("fs"));
+var path7 = __toESM(require("path"));
 var vscode4 = __toESM(require("vscode"));
 function getConfig() {
   const cfg = vscode4.workspace.getConfiguration("commitDefender");
@@ -1759,6 +2192,10 @@ function getConfig() {
     endpoint: cfg.get("endpoint") ?? "",
     apiVersion: cfg.get("apiVersion") ?? "2024-08-01-preview",
     apiKey: cfg.get("apiKey") ?? "",
+    codexPath: resolveCodexPath(cfg.get("codexPath") ?? "codex"),
+    claudeCodePath: resolveExternalCliPath(cfg.get("claudeCodePath") ?? "claude", "claude"),
+    geminiCliPath: resolveExternalCliPath(cfg.get("geminiCliPath") ?? "gemini", "gemini"),
+    antigravityPath: resolveExternalCliPath(cfg.get("antigravityPath") ?? "agy", "agy"),
     maxTokens: cfg.get("maxTokens") ?? 4096,
     severityLevel: cfg.get("severityLevel") ?? "moderate",
     richnessLevel: cfg.get("richnessLevel") ?? "moderate",
@@ -1773,9 +2210,70 @@ function getConfig() {
     runOnStage: cfg.get("runOnStage") ?? true
   };
 }
+function resolveCodexPath(configured) {
+  if (configured.trim() !== "codex") {
+    return configured;
+  }
+  const discovered = resolveExternalCliPath(configured, "codex");
+  if (discovered !== configured) {
+    return discovered;
+  }
+  const extensionPath = vscode4.extensions.getExtension("openai.chatgpt")?.extensionPath;
+  if (!extensionPath) {
+    return configured;
+  }
+  const platform = process.platform;
+  const arches = process.arch === "arm64" ? ["aarch64", "arm64"] : [process.arch];
+  const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
+  for (const arch of arches) {
+    for (const name of names) {
+      const candidate = path7.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      if (fs4.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+  return configured;
+}
+function resolveExternalCliPath(configured, name) {
+  if (configured.trim() !== name) {
+    return configured;
+  }
+  const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
+  const candidates = [];
+  for (const dir of (process.env.PATH ?? "").split(path7.delimiter).filter(Boolean)) {
+    for (const executable of executableNames) {
+      candidates.push(path7.join(dir, executable));
+    }
+  }
+  const userHome = process.env.HOME || process.env.USERPROFILE;
+  if (userHome) {
+    for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
+      for (const executable of executableNames) {
+        candidates.push(path7.join(userHome, dir, executable));
+      }
+    }
+    const nvmVersions = path7.join(userHome, ".nvm", "versions", "node");
+    try {
+      const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
+      for (const version of versions) {
+        for (const executable of executableNames) {
+          candidates.push(path7.join(nvmVersions, version, "bin", executable));
+        }
+      }
+    } catch {
+    }
+  }
+  for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
+    for (const executable of executableNames) {
+      candidates.push(path7.join(dir, executable));
+    }
+  }
+  return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured;
+}
 
 // src/diagnostics.ts
-var path6 = __toESM(require("path"));
+var path8 = __toESM(require("path"));
 var vscode5 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode5.DiagnosticSeverity.Error,
@@ -1795,7 +2293,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode5.Uri.file(path6.join(repoRoot, relFile));
+    const uri = vscode5.Uri.file(path8.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -1817,9 +2315,9 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 }
 
 // src/gitHelper.ts
-var fs4 = __toESM(require("fs"));
-var path7 = __toESM(require("path"));
-var import_child_process2 = require("child_process");
+var fs5 = __toESM(require("fs"));
+var path9 = __toESM(require("path"));
+var import_child_process3 = require("child_process");
 
 // src/excludeFilter.ts
 var import_ignore = __toESM(require_ignore());
@@ -1945,7 +2443,7 @@ var SKIP_DIRS = /* @__PURE__ */ new Set([
   ".tox"
 ]);
 function isBinary(filePath) {
-  const ext = path7.extname(filePath).toLowerCase();
+  const ext = path9.extname(filePath).toLowerCase();
   if (!ext) {
     return false;
   }
@@ -1959,7 +2457,7 @@ function collectFiles(dirPath, repoRoot, excludePatterns = []) {
   function walk(dir) {
     let entries;
     try {
-      entries = fs4.readdirSync(dir, { withFileTypes: true });
+      entries = fs5.readdirSync(dir, { withFileTypes: true });
     } catch {
       return;
     }
@@ -1971,10 +2469,10 @@ function collectFiles(dirPath, repoRoot, excludePatterns = []) {
         if (SKIP_DIRS.has(entry.name)) {
           continue;
         }
-        walk(path7.join(dir, entry.name));
+        walk(path9.join(dir, entry.name));
       } else if (entry.isFile()) {
-        const fullPath = path7.join(dir, entry.name);
-        const rel = path7.relative(repoRoot, fullPath);
+        const fullPath = path9.join(dir, entry.name);
+        const rel = path9.relative(repoRoot, fullPath);
         if (!rel.startsWith("..") && !isBinary(rel)) {
           results.push(rel);
         }
@@ -1997,7 +2495,7 @@ async function getStagedFiles(repoRoot, excludePatterns = []) {
 }
 function execGit(args, cwd) {
   return new Promise((resolve, reject) => {
-    const proc = (0, import_child_process2.spawn)("git", ["-C", cwd, ...args], { stdio: ["ignore", "pipe", "pipe"] });
+    const proc = (0, import_child_process3.spawn)("git", ["-C", cwd, ...args], { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
     proc.stdout.on("data", (d) => stdout += d.toString());
@@ -2318,8 +2816,8 @@ function formatTime(d) {
 }
 
 // src/hook/install.ts
-var fs5 = __toESM(require("fs"));
-var path8 = __toESM(require("path"));
+var fs6 = __toESM(require("fs"));
+var path10 = __toESM(require("path"));
 var vscode8 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -2348,6 +2846,10 @@ function configToHookJson(cfg) {
     endpoint: cfg.endpoint,
     apiVersion: cfg.apiVersion,
     apiKey: cfg.apiKey,
+    codexPath: cfg.codexPath,
+    claudeCodePath: cfg.claudeCodePath,
+    geminiCliPath: cfg.geminiCliPath,
+    antigravityPath: cfg.antigravityPath,
     maxTokens: cfg.maxTokens,
     severityLevel: cfg.severityLevel,
     richnessLevel: cfg.richnessLevel,
@@ -2356,29 +2858,29 @@ function configToHookJson(cfg) {
   };
 }
 function writeHookConfig(repoRoot, cfg) {
-  const dir = path8.join(repoRoot, CONFIG_DIR);
-  fs5.mkdirSync(dir, { recursive: true });
-  const file = path8.join(dir, CONFIG_FILE);
-  fs5.writeFileSync(file, JSON.stringify(configToHookJson(cfg), null, 2) + "\n", { mode: 384 });
+  const dir = path10.join(repoRoot, CONFIG_DIR);
+  fs6.mkdirSync(dir, { recursive: true });
+  const file = path10.join(dir, CONFIG_FILE);
+  fs6.writeFileSync(file, JSON.stringify(configToHookJson(cfg), null, 2) + "\n", { mode: 384 });
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path8.join(repoRoot, ".gitignore");
+  const gi = path10.join(repoRoot, ".gitignore");
   let text = "";
   try {
-    text = fs5.readFileSync(gi, "utf8");
+    text = fs6.readFileSync(gi, "utf8");
   } catch {
   }
   if (text.split(/\r?\n/).some((line) => line.trim() === GITIGNORE_LINE)) {
     return;
   }
   const sep = text.length === 0 || text.endsWith("\n") ? "" : "\n";
-  fs5.writeFileSync(gi, `${text}${sep}# commit-defender (contains API key)
+  fs6.writeFileSync(gi, `${text}${sep}# commit-defender (contains API key)
 ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path8.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path10.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -2403,17 +2905,17 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path8.join(repoRoot, ".git", "hooks");
-  const hookPath = path8.join(hookDir, "pre-commit");
+  const hookDir = path10.join(repoRoot, ".git", "hooks");
+  const hookPath = path10.join(hookDir, "pre-commit");
   try {
-    fs5.mkdirSync(hookDir, { recursive: true });
+    fs6.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
     vscode8.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
     return;
   }
   let existing = "";
   try {
-    existing = fs5.readFileSync(hookPath, "utf8");
+    existing = fs6.readFileSync(hookPath, "utf8");
   } catch {
   }
   if (existing && !existing.includes(HOOK_SIGNATURE)) {
@@ -2429,15 +2931,15 @@ async function installHook(repoRoot, extensionPath, cfg) {
     }
     const backup = `${hookPath}.backup-${Date.now()}`;
     try {
-      fs5.writeFileSync(backup, existing);
+      fs6.writeFileSync(backup, existing);
       channel.appendLine(`[Commit Defender] Backed up existing hook to ${backup}`);
     } catch (e) {
       channel.appendLine(`[Commit Defender] Could not back up existing hook: ${e.message}`);
     }
   }
-  fs5.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 493 });
+  fs6.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 493 });
   try {
-    fs5.chmodSync(hookPath, 493);
+    fs6.chmodSync(hookPath, 493);
   } catch {
   }
   writeHookConfig(repoRoot, cfg);
@@ -2448,10 +2950,10 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path8.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path10.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
-    existing = fs5.readFileSync(hookPath, "utf8");
+    existing = fs6.readFileSync(hookPath, "utf8");
   } catch {
     vscode8.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
     return;
@@ -2463,7 +2965,7 @@ async function uninstallHook(repoRoot) {
     return;
   }
   try {
-    fs5.unlinkSync(hookPath);
+    fs6.unlinkSync(hookPath);
     channel.appendLine(`[Commit Defender] Removed pre-commit hook at ${hookPath}`);
   } catch (e) {
     vscode8.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
@@ -2473,14 +2975,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs5.readFileSync(path8.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs6.readFileSync(path10.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path9 = __toESM(require("path"));
+var path11 = __toESM(require("path"));
 var vscode9 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -2548,11 +3050,11 @@ var PanelProvider = class {
     switch (node.kind) {
       case "file": {
         const item = new vscode9.TreeItem(
-          path9.basename(node.file),
+          path11.basename(node.file),
           vscode9.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node.uri;
-        const dir = path9.dirname(node.file);
+        const dir = path11.dirname(node.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node.blocks.length} finding${node.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node.blocks);
         const counts = countByPriority(node.blocks);
@@ -2666,7 +3168,7 @@ ${b.comment}`
         kind: "file",
         id,
         file,
-        absPath: path9.join(this._repoRoot, file),
+        absPath: path11.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id, blocks)
       };
@@ -3112,6 +3614,8 @@ function gradeColor(palette, grade) {
 // src/extension.ts
 var ALL_FILES = { scheme: "file" };
 function activate(context) {
+  let lastConfiguredProvider = getConfig().aiProvider;
+  let providerUpdateFromWizard;
   async function resolveRepoRoot() {
     const ws = vscode11.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) {
@@ -3123,6 +3627,175 @@ function activate(context) {
       return void 0;
     }
   }
+  async function chooseAccountModel(provider, includeDefault = true) {
+    const current = getConfig();
+    const choices = [];
+    if (includeDefault) {
+      choices.push({
+        label: "$(sparkle) CLI default model",
+        description: "Recommended",
+        detail: "Let the authenticated CLI select its current default model.",
+        model: ""
+      });
+    }
+    if (provider === "claudecode") {
+      choices.push(
+        { label: "$(symbol-variable) sonnet", description: "Claude Code alias", model: "sonnet" },
+        { label: "$(symbol-variable) opus", description: "Claude Code alias", model: "opus" }
+      );
+    } else if (provider === "geminicli") {
+      choices.push(
+        { label: "$(symbol-variable) auto", description: "Gemini CLI alias", model: "auto" },
+        { label: "$(symbol-variable) pro", description: "Gemini CLI alias", model: "pro" },
+        { label: "$(symbol-variable) flash", description: "Gemini CLI alias", model: "flash" },
+        { label: "$(symbol-variable) flash-lite", description: "Gemini CLI alias", model: "flash-lite" }
+      );
+    }
+    if (current.aiProvider === provider && current.model.trim() && !choices.some((choice) => choice.model === current.model.trim())) {
+      choices.splice(includeDefault ? 1 : 0, 0, {
+        label: `$(history) ${current.model.trim()}`,
+        description: "Current model",
+        model: current.model.trim()
+      });
+    }
+    choices.push({
+      label: "$(edit) Enter a model ID\u2026",
+      detail: "Use any model name accepted by the selected local CLI and account.",
+      custom: true
+    });
+    const picked = await vscode11.window.showQuickPick(choices, {
+      title: `Commit Defender: Select ${accountProviderName(provider)} model`,
+      placeHolder: includeDefault ? "Choose the CLI default, an alias, or enter an exact model ID" : "Choose an alias or enter an exact model ID",
+      ignoreFocusOut: true
+    });
+    if (!picked) {
+      return void 0;
+    }
+    if (!picked.custom) {
+      return picked.model ?? "";
+    }
+    return vscode11.window.showInputBox({
+      title: `Commit Defender: ${accountProviderName(provider)} model ID`,
+      prompt: "Enter an exact model ID supported by the local CLI and authenticated account.",
+      value: current.aiProvider === provider ? current.model : "",
+      ignoreFocusOut: true,
+      validateInput: (value) => value.trim() ? void 0 : "Enter a model ID, or go back and choose CLI default."
+    }).then((value) => value?.trim());
+  }
+  async function applyAccountProvider(provider, model) {
+    const settings = vscode11.workspace.getConfiguration("commitDefender");
+    const target = vscode11.workspace.workspaceFolders?.length ? vscode11.ConfigurationTarget.Workspace : vscode11.ConfigurationTarget.Global;
+    providerUpdateFromWizard = provider;
+    await settings.update("model", model, target);
+    await settings.update("aiProvider", provider, target);
+    setTimeout(() => {
+      if (providerUpdateFromWizard === provider) {
+        providerUpdateFromWizard = void 0;
+      }
+    }, 1e3);
+    const modelLabel = model || "CLI default";
+    vscode11.window.showInformationMessage(
+      `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`
+    );
+  }
+  async function promptModelAtProviderSetup(provider) {
+    const name = accountProviderName(provider);
+    const action = await vscode11.window.showInformationMessage(
+      `Commit Defender: Use the ${name} CLI default model for this workspace?`,
+      "Use CLI Default",
+      "Choose Model\u2026"
+    );
+    if (action === "Use CLI Default") {
+      await applyAccountProvider(provider, "");
+      return true;
+    }
+    if (action === "Choose Model\u2026") {
+      const model = await chooseAccountModel(provider, false);
+      if (model !== void 0) {
+        await applyAccountProvider(provider, model);
+        return true;
+      }
+    }
+    return false;
+  }
+  async function promptProviderChangeAfterSignIn(provider) {
+    const name = accountProviderName(provider);
+    const action = await vscode11.window.showInformationMessage(
+      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} for this workspace and change its model?`,
+      "Use CLI Default",
+      "Choose Model\u2026",
+      "Keep Current Provider"
+    );
+    if (action === "Use CLI Default") {
+      await applyAccountProvider(provider, "");
+    } else if (action === "Choose Model\u2026") {
+      const model = await chooseAccountModel(provider, false);
+      if (model !== void 0) {
+        await applyAccountProvider(provider, model);
+      }
+    }
+  }
+  async function selectAccountProviderAndModel() {
+    const choices = [
+      { label: "Codex", description: "ChatGPT/Codex account", provider: "codex" },
+      { label: "Claude Code", description: "Claude subscription account", provider: "claudecode" },
+      { label: "Gemini CLI", description: "Google account authentication", provider: "geminicli" },
+      { label: "Antigravity", description: "Antigravity account via agy", provider: "antigravity" }
+    ];
+    const picked = await vscode11.window.showQuickPick(choices, {
+      title: "Commit Defender: Select account provider",
+      placeHolder: "Choose the authenticated CLI backbone",
+      ignoreFocusOut: true
+    });
+    if (!picked) {
+      return;
+    }
+    await promptModelAtProviderSetup(picked.provider);
+  }
+  async function signIn(provider) {
+    const config = getConfig();
+    const isCodex = provider === "codex";
+    const isClaude = provider === "claudecode";
+    const isGeminiCli = provider === "geminicli";
+    const name = accountProviderName(provider);
+    const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
+    const cwd = await resolveRepoRoot() ?? vscode11.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    if (path12.isAbsolute(executable) && !fs7.existsSync(executable)) {
+      vscode11.window.showErrorMessage(
+        `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
+      );
+      return false;
+    }
+    const shellArgs = isCodex ? ["login"] : isClaude ? ["auth", "login", "--claudeai"] : [];
+    const env2 = {};
+    if (isClaude) {
+      env2.ANTHROPIC_API_KEY = null;
+      env2.ANTHROPIC_AUTH_TOKEN = null;
+    } else if (provider === "geminicli") {
+      env2.GEMINI_API_KEY = null;
+      env2.GOOGLE_API_KEY = null;
+      env2.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env2.GOOGLE_GENAI_USE_GCA = "true";
+    }
+    const terminal = vscode11.window.createTerminal({
+      name: `Commit Defender: ${name} Sign in`,
+      shellPath: executable,
+      shellArgs,
+      cwd,
+      env: env2
+    });
+    terminal.show(false);
+    getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
+    await promptProviderChangeAfterSignIn(provider);
+    return true;
+  }
+  context.subscriptions.push(
+    vscode11.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
+    vscode11.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
+    vscode11.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
+    vscode11.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
+    vscode11.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
+  );
   context.subscriptions.push(vscode11.commands.registerCommand(
     "commitDefender.installPreCommitHook",
     async () => {
@@ -3147,7 +3820,18 @@ function activate(context) {
   ));
   context.subscriptions.push(vscode11.workspace.onDidChangeConfiguration(async (e) => {
     if (e.affectsConfiguration("commitDefender")) {
-      historyProvider.updateConfig(getConfig());
+      const nextConfig = getConfig();
+      const previousProvider = lastConfiguredProvider;
+      lastConfiguredProvider = nextConfig.aiProvider;
+      historyProvider.updateConfig(nextConfig);
+      if (e.affectsConfiguration("commitDefender.aiProvider") && nextConfig.aiProvider !== previousProvider) {
+        const account = accountProvider(nextConfig.aiProvider);
+        if (account && providerUpdateFromWizard === account) {
+          providerUpdateFromWizard = void 0;
+        } else if (account) {
+          await promptModelAtProviderSetup(account);
+        }
+      }
       const repoRoot = await resolveRepoRoot();
       if (repoRoot && hookIsInstalled(repoRoot)) {
         try {
@@ -3261,13 +3945,20 @@ function activate(context) {
     if (isAiError) {
       const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
       statusBar.setError(msg);
-      vscode11.window.showErrorMessage(`Commit Defender: AI review failed \u2014 ${msg}`, "Show Summary", "Show Output").then((action) => {
-        if (action === "Show Summary") {
-          showSummaryPanel(result.report, repoRoot, context);
-        } else if (action === "Show Output") {
-          getOutputChannel().show();
-        }
-      });
+      const provider = accountProvider(cfg2.aiProvider);
+      const signIn2 = provider ? signInLabel(provider) : void 0;
+      const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
+      const action = await vscode11.window.showErrorMessage(
+        `Commit Defender: AI review failed \u2014 ${msg}`,
+        ...actions
+      );
+      if (action === signIn2 && provider) {
+        await vscode11.commands.executeCommand(signInCommand(provider));
+      } else if (action === "Show Summary") {
+        showSummaryPanel(result.report, repoRoot, context);
+      } else if (action === "Show Output") {
+        getOutputChannel().show();
+      }
     } else {
       statusBar.setResult(passed, result.report.review.grade);
     }
@@ -3275,7 +3966,7 @@ function activate(context) {
     await vscode11.commands.executeCommand("commitDefender.panelView.focus");
     const srcFile = result.report.staged_files[0] ?? relPaths[0];
     if (srcFile) {
-      const absPath = path10.join(repoRoot, srcFile);
+      const absPath = path12.join(repoRoot, srcFile);
       await vscode11.window.showTextDocument(vscode11.Uri.file(absPath), {
         preserveFocus: false,
         preview: false,
@@ -3307,11 +3998,11 @@ function activate(context) {
         let resolvedRoot = rawRoot;
         let resolvedFile = filePath;
         try {
-          resolvedRoot = fs6.realpathSync(rawRoot);
-          resolvedFile = fs6.realpathSync(filePath);
+          resolvedRoot = fs7.realpathSync(rawRoot);
+          resolvedFile = fs7.realpathSync(filePath);
         } catch {
         }
-        const relPath = path10.relative(resolvedRoot, resolvedFile);
+        const relPath = path12.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -3358,7 +4049,7 @@ function activate(context) {
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path10.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path12.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         await analyze(relPaths, rawRoot, "directory", dirPath);
       } catch (err2) {
@@ -3546,7 +4237,7 @@ function activate(context) {
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path10.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path12.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             await analyze(relPaths, rawRoot, "directory", dirPath);
             break;
           }
@@ -3583,41 +4274,45 @@ function activate(context) {
         vscode11.window.showWarningMessage("Commit Defender: No git repository found.");
         return;
       }
-      await vscode11.window.withProgress(
+      const result = await vscode11.window.withProgress(
         { location: vscode11.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
-        async () => {
-          const result = await new Reviewer(getConfig()).generateCommitMessage(repoRoot);
-          if (result.is_error || !result.commit_message) {
-            vscode11.window.showErrorMessage(
-              `Commit Defender: ${result.error || "Failed to generate commit message"}`
-            );
-            return;
-          }
-          const gitExt = vscode11.extensions.getExtension("vscode.git");
-          const gitApi = gitExt?.exports?.getAPI?.(1);
-          const repo = gitApi?.getRepository?.(vscode11.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
-          if (repo?.inputBox) {
-            repo.inputBox.value = result.commit_message;
-            vscode11.window.showInformationMessage(
-              "Commit Defender: Commit message inserted into the Source Control input box."
-            );
-          } else {
-            await vscode11.env.clipboard.writeText(result.commit_message);
-            vscode11.window.showInformationMessage(
-              "Commit Defender: Commit message copied to clipboard.",
-              "Preview"
-            ).then((action) => {
-              if (action === "Preview") {
-                vscode11.window.showInputBox({
-                  value: result.commit_message,
-                  prompt: "Generated commit message (read-only preview)",
-                  ignoreFocusOut: true
-                });
-              }
+        () => new Reviewer(getConfig()).generateCommitMessage(repoRoot)
+      );
+      if (result.is_error || !result.commit_message) {
+        const provider = accountProvider(getConfig().aiProvider);
+        const signIn2 = provider ? signInLabel(provider) : void 0;
+        const action = await vscode11.window.showErrorMessage(
+          `Commit Defender: ${result.error || "Failed to generate commit message"}`,
+          ...signIn2 ? [signIn2] : []
+        );
+        if (action === signIn2 && provider) {
+          await vscode11.commands.executeCommand(signInCommand(provider));
+        }
+        return;
+      }
+      const gitExt = vscode11.extensions.getExtension("vscode.git");
+      const gitApi = gitExt?.exports?.getAPI?.(1);
+      const repo = gitApi?.getRepository?.(vscode11.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
+      if (repo?.inputBox) {
+        repo.inputBox.value = result.commit_message;
+        vscode11.window.showInformationMessage(
+          "Commit Defender: Commit message inserted into the Source Control input box."
+        );
+      } else {
+        await vscode11.env.clipboard.writeText(result.commit_message);
+        vscode11.window.showInformationMessage(
+          "Commit Defender: Commit message copied to clipboard.",
+          "Preview"
+        ).then((action) => {
+          if (action === "Preview") {
+            vscode11.window.showInputBox({
+              value: result.commit_message,
+              prompt: "Generated commit message (read-only preview)",
+              ignoreFocusOut: true
             });
           }
-        }
-      );
+        });
+      }
     }
   ));
   setupIndexWatcher(context);
@@ -3626,10 +4321,22 @@ function deactivate() {
   findingsStore.clear();
   disposeOutputChannel();
 }
+function accountProvider(provider) {
+  return provider === "codex" || provider === "claudecode" || provider === "geminicli" || provider === "antigravity" ? provider : void 0;
+}
+function accountProviderName(provider) {
+  return provider === "codex" ? "Codex" : provider === "claudecode" ? "Claude Code" : provider === "geminicli" ? "Gemini CLI" : "Antigravity";
+}
+function signInLabel(provider) {
+  return provider === "codex" ? "Sign in with Codex" : provider === "claudecode" ? "Sign in with Claude Code" : provider === "geminicli" ? "Sign in with Gemini" : "Sign in with Antigravity";
+}
+function signInCommand(provider) {
+  return provider === "codex" ? "commitDefender.signInCodex" : provider === "claudecode" ? "commitDefender.signInClaudeCode" : provider === "geminicli" ? "commitDefender.signInGeminiCli" : "commitDefender.signInAntigravity";
+}
 async function pickDirectory(root) {
   let current = root;
   while (true) {
-    const rel = path10.relative(root, current) || ".";
+    const rel = path12.relative(root, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -3642,11 +4349,11 @@ async function pickDirectory(root) {
     }
     let subdirs = [];
     try {
-      subdirs = fs6.readdirSync(current, { withFileTypes: true }).filter((e) => e.isDirectory() && !e.name.startsWith(".") && !["node_modules", "__pycache__", ".venv", "venv", "dist", "build", "out"].includes(e.name)).map((e) => e.name).sort();
+      subdirs = fs7.readdirSync(current, { withFileTypes: true }).filter((e) => e.isDirectory() && !e.name.startsWith(".") && !["node_modules", "__pycache__", ".venv", "venv", "dist", "build", "out"].includes(e.name)).map((e) => e.name).sort();
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path10.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path12.join(rel, name) });
     }
     const picked = await vscode11.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -3659,9 +4366,9 @@ async function pickDirectory(root) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path10.dirname(current);
+      current = path12.dirname(current);
     } else {
-      current = path10.join(current, picked.label.replace("$(folder) ", ""));
+      current = path12.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }
@@ -3734,7 +4441,7 @@ function _renderOverallSummary(review, blocks, repoRoot, palette) {
     const pMeta = PRIORITY_META[priority];
     const pColor = palette.priority[priority];
     const badge = pMeta ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>` : "";
-    const absFile = path10.join(repoRoot, pfs.file);
+    const absFile = path12.join(repoRoot, pfs.file);
     html += `<div class="per-file-summary">
       <div class="per-file-header">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
@@ -3754,7 +4461,7 @@ function _renderFileBlocks(blocks, repoRoot, palette) {
   }
   let html = "";
   for (const [relFile, fileBlocks] of byFile) {
-    const absFile = path10.join(repoRoot, relFile);
+    const absFile = path12.join(repoRoot, relFile);
     html += `<div class="file-block">
       <div class="file-name">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(relFile)}</a>
@@ -3820,7 +4527,7 @@ function buildSummaryHtml(report, repoRoot, palette) {
   if (report.staged_files.length > 0) {
     body += '<section><h2>\u{1F4C1} Analyzed File List</h2><ul class="file-list">';
     for (const f of report.staged_files) {
-      const absFile = path10.join(repoRoot, f);
+      const absFile = path12.join(repoRoot, f);
       body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;
     }
     body += "</ul></section>";
@@ -4004,7 +4711,7 @@ function setupIndexWatcher(context) {
     return;
   }
   const indexPattern = new vscode11.RelativePattern(
-    vscode11.Uri.file(path10.join(ws.fsPath, ".git")),
+    vscode11.Uri.file(path12.join(ws.fsPath, ".git")),
     "index"
   );
   const watcher = vscode11.workspace.createFileSystemWatcher(indexPattern, false, false, true);

@@ -31,6 +31,10 @@ Findings appear as inline comment threads in the editor (one thread per line, on
 | **Anthropic** | `claude-sonnet-4-6`, `claude-opus-4-6` | `https://api.anthropic.com/v1` |
 | **OpenAI** | `gpt-4o`, `o3` | `https://api.openai.com/v1` |
 | **Google Gemini** | `gemini-2.5-pro`, `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+| **Codex account** | Current models available to your Codex account | Local `codex` CLI |
+| **Claude Code account** | Current models available to your Claude subscription | Local `claude` CLI |
+| **Gemini CLI account** | Current models available to your Google account | Local `gemini` CLI |
+| **Antigravity account** | Current models available to your Antigravity account | Local `agy` CLI |
 
 ### Automatic analysis on `git add`
 
@@ -67,7 +71,7 @@ Drop a `SKILL.md` file under `<repo>/.commit-defender/<topic>/SKILL.md` and it i
 - VS Code 1.90+
 - Node.js 18+ (for the standalone pre-commit hook only — VS Code itself bundles Node so the in-editor experience needs nothing)
 - A Git repository open in VS Code
-- An API key for your chosen AI provider
+- An API key for an API provider, or an authenticated local Codex / Claude Code / Gemini CLI / Antigravity CLI
 
 ---
 
@@ -113,6 +117,88 @@ Open **Settings → Extensions → Commit Defender** (or paste directly into `se
 "commitDefender.apiKey":     "your-gemini-api-key"
 ```
 
+#### Codex account (`codex`)
+
+Install the Codex CLI, configure the provider, then run **Commit Defender: Sign
+in with Codex** from the Command Palette. The Codex CLI opens the browser and
+handles the localhost redirect:
+
+```json
+"commitDefender.aiProvider": "codex",
+"commitDefender.model":      "",
+"commitDefender.codexPath":  "codex"
+```
+
+No API key is required. Leave `model` empty to use the Codex CLI default. For
+GUI git clients or pre-commit hooks with a restricted `PATH`, set
+`codexPath` to an absolute executable path.
+
+After any account-provider sign-in starts, Commit Defender asks whether to
+switch the current workspace to that provider. Choose **Use CLI Default** or
+**Choose Model…**. This updates `commitDefender.aiProvider` and
+`commitDefender.model` together, preventing a successful CLI login from
+silently leaving the previous API provider active.
+Changing `commitDefender.aiProvider` directly in VS Code Settings triggers the
+same default-model question for account-backed providers.
+
+#### Claude Code account (`claudecode`)
+
+Install Claude Code, configure the provider, then run **Commit Defender: Sign
+in with Claude Code** from the Command Palette. Claude Code opens its account
+login in the browser:
+
+```json
+"commitDefender.aiProvider":    "claudecode",
+"commitDefender.model":         "",
+"commitDefender.claudeCodePath": "claude"
+```
+
+No API key is required. Commit Defender disables Claude Code tools for review
+and removes `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` from this child process
+so those variables cannot override the selected subscription login.
+
+#### Gemini CLI account (`geminicli`)
+
+Install the official Gemini CLI, configure the provider, then run **Commit
+Defender: Sign in with Gemini** from the Command Palette. Commit Defender
+selects Gemini account authentication and Gemini CLI opens the browser, then
+caches the resulting credentials:
+
+```json
+"commitDefender.aiProvider":  "geminicli",
+"commitDefender.model":       "",
+"commitDefender.geminiCliPath": "gemini"
+```
+
+No API key is required. This is distinct from the `gemini` provider, which
+calls the public Gemini API with `commitDefender.apiKey`. Account mode removes
+Gemini API-key and Vertex override variables from the child process.
+
+#### Antigravity account (`antigravity`)
+
+Install the Antigravity CLI, then run **Commit Defender: Sign in with
+Antigravity**. Commit Defender starts `agy` without arguments in an integrated
+terminal; on first use the CLI opens its browser sign-in flow:
+
+```json
+"commitDefender.aiProvider":     "antigravity",
+"commitDefender.model":          "",
+"commitDefender.antigravityPath": "agy"
+```
+
+No API key is required. Analysis runs `agy` non-interactively in plan and
+sandbox modes. Leave `model` empty for the account's current default, or enter
+an exact model ID accepted by the installed CLI. Antigravity is a separate
+provider from `geminicli`: current installations may expose both `agy` and
+`gemini`, so existing Gemini CLI setups remain supported.
+
+You can change this selection later with **Commit Defender: Select Account
+Provider and Model**. Codex offers its CLI default or an exact model ID; Claude
+Code additionally offers `sonnet` and `opus`; Gemini CLI offers `auto`, `pro`,
+`flash`, and `flash-lite`. Antigravity accepts its CLI default or an exact
+model ID. Exact IDs are always accepted because availability depends on the
+authenticated account and installed CLI version.
+
 `endpoint` can be omitted for `anthropic`, `openai`, and `gemini` — the defaults are used. It is required for `aoai`.
 
 ### 2. (Optional) Install the pre-commit hook
@@ -148,11 +234,15 @@ P3 findings unconditionally block the commit. P0 is only emitted when the file h
 
 | Setting | Default | Description |
 |---|---|---|
-| `commitDefender.aiProvider` | `aoai` | `aoai` (Azure OpenAI) · `anthropic` · `openai` · `gemini` |
+| `commitDefender.aiProvider` | `aoai` | `aoai` · `anthropic` · `openai` · `gemini` · `codex` · `claudecode` · `geminicli` · `antigravity` |
 | `commitDefender.model` | *(empty)* | Model or deployment name |
 | `commitDefender.endpoint` | *(empty)* | API endpoint URL (required for Azure OpenAI; defaults used for others) |
 | `commitDefender.apiVersion` | `2024-08-01-preview` | Azure API version (ignored for other providers) |
 | `commitDefender.apiKey` | *(empty)* | API key — **set in User Settings, never Workspace** |
+| `commitDefender.codexPath` | `codex` | Codex executable name or absolute path |
+| `commitDefender.claudeCodePath` | `claude` | Claude Code executable name or absolute path |
+| `commitDefender.geminiCliPath` | `gemini` | Gemini CLI executable name or absolute path |
+| `commitDefender.antigravityPath` | `agy` | Antigravity CLI executable name or absolute path |
 | `commitDefender.maxTokens` | `4096` | Max output tokens for the AI response |
 | `commitDefender.severityLevel` | `moderate` | How strict the AI reviewer is: `severe` → `lean` |
 | `commitDefender.richnessLevel` | `moderate` | How detailed the feedback is: `colorful` → `silent` |
@@ -182,6 +272,8 @@ All commands are available in the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P
 | `Commit Defender: Show Summary Panel` | Open the summary webview |
 | `Commit Defender: Clear Findings` | Remove all diagnostics and decorations |
 | `Commit Defender: Generate Commit Message` | Draft a structured commit message from the staged diff |
+| `Commit Defender: Sign in with Codex / Claude Code / Gemini / Antigravity` | Start the selected CLI's browser sign-in flow |
+| `Commit Defender: Select Account Provider and Model` | Select a local CLI provider and its default or exact model ID |
 | `Commit Defender: Install Pre-commit Hook` | Install `.git/hooks/pre-commit` and materialise the hook config |
 | `Commit Defender: Uninstall Pre-commit Hook` | Remove the Commit Defender pre-commit hook |
 
@@ -232,6 +324,10 @@ The hook can't query VS Code at commit time, so the extension materialises your 
   "model": "claude-sonnet-4-6",
   "endpoint": "",
   "apiKey": "sk-ant-...",
+  "codexPath": "codex",
+  "claudeCodePath": "claude",
+  "geminiCliPath": "gemini",
+  "antigravityPath": "agy",
   "maxTokens": 4096,
   "severityLevel": "moderate",
   "richnessLevel": "moderate",
@@ -254,7 +350,7 @@ Set `commitDefender.preCommitHook: disable` or run `Commit Defender: Uninstall P
 
 ### Hook + Node availability
 
-The bundled CLI requires `node` ≥ 18 in the PATH at commit time. If `node` isn't found, the hook prints a warning and exits 0 (does not block). Use [nvm](https://github.com/nvm-sh/nvm), [asdf](https://asdf-vm.com/), [Volta](https://volta.sh/), or your system package manager to install Node.
+The bundled CLI requires `node` ≥ 18 in the PATH at commit time. If `node` isn't found, the hook prints a warning and exits 0 (does not block). Account providers additionally require their configured CLI executable to be visible to the hook. Use an absolute `codexPath`, `claudeCodePath`, `geminiCliPath`, or `antigravityPath` when necessary.
 
 ---
 
@@ -299,7 +395,7 @@ Each `SKILL.md` is concatenated into a single section labelled `Active Review Sk
 
 ## Privacy
 
-Commit Defender sends your **staged diff** (or full file contents in on-demand mode) to the AI provider you configure. Repository metadata, file paths, and the system prompt go along with that. The API key is sent only to the configured provider.
+Commit Defender sends your **staged diff** (or full file contents in on-demand mode) to the AI provider you configure. Repository metadata, file paths, and the system prompt go along with that. API keys are sent only to the configured API provider. Account-provider credentials remain in the Codex, Claude Code, Gemini CLI, or Antigravity CLI credential store and are not read by Commit Defender.
 
 Review your provider's data-retention policy before enabling AI review on sensitive codebases. The extension does not phone home — there is no analytics or telemetry.
 
@@ -312,6 +408,27 @@ Increase `commitDefender.maxTokens`. The response was truncated mid-JSON, usuall
 
 **"AI review unavailable: Missing … API key"**
 Set `commitDefender.apiKey` in User Settings.
+
+**Codex, Claude Code, Gemini CLI, or Antigravity executable was not found**
+Install the corresponding CLI and ensure it is in `PATH`, or set an absolute
+`commitDefender.codexPath`, `commitDefender.claudeCodePath`, or
+`commitDefender.geminiCliPath`, or `commitDefender.antigravityPath`. When `codexPath` remains at its default, Commit
+Defender also discovers the Codex binary bundled with the official OpenAI VS
+Code extension.
+
+**Account-provider login failed**
+Choose the provider-specific **Sign in with …** action in the AI error
+notification, or run the corresponding Commit Defender command from the
+Command Palette. Commit Defender opens an integrated login terminal, and the
+official CLI opens the browser. If automatic opening is unavailable, click the
+URL shown in that terminal. Claude Code account mode intentionally ignores
+`ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN`.
+
+**I signed in to Codex/Claude/Gemini/Antigravity but analysis still uses another provider**
+Run **Commit Defender: Select Account Provider and Model**, or sign in again
+and accept the provider/model change popup. The API-backed `gemini` provider
+and account-backed `geminicli` provider are intentionally separate. Antigravity
+is also separate because `agy` and `gemini` can coexist.
 
 **Hook says `node not found in PATH`**
 Install Node 18+ and ensure `command -v node` resolves in the shell that runs `git commit`.

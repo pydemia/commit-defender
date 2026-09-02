@@ -2,7 +2,7 @@
 
 **AI-powered git pre-commit code review for VS Code.** Catches bugs, security issues, and style violations before they land — inline in the editor and at `git commit` time.
 
-Commit Defender is a pure TypeScript VS Code extension. It talks to your AI provider (Azure OpenAI · Anthropic · OpenAI · Google Gemini) directly over HTTPS and ships its own self-contained git pre-commit hook that works even when VS Code is closed.
+Commit Defender is a pure TypeScript VS Code extension. It supports API providers (Azure OpenAI · Anthropic · OpenAI · Google Gemini) and account-authenticated local agents (Codex · Claude Code · Gemini CLI · Antigravity), and ships its own git pre-commit hook that works even when VS Code is closed.
 
 ---
 
@@ -39,11 +39,19 @@ Both paths run the **same review** with the **same settings**. The hook reads a 
 
 1. Install **Commit Defender** from the VS Code Marketplace.
 2. Open **Settings → Extensions → Commit Defender** and set:
-   - `commitDefender.aiProvider` (one of `aoai` / `anthropic` / `openai` / `gemini`)
+   - `commitDefender.aiProvider` (one of `aoai` / `anthropic` / `openai` / `gemini` / `codex` / `claudecode` / `geminicli` / `antigravity`)
    - `commitDefender.model` (e.g. `claude-sonnet-4-6`, `gpt-4o`)
-   - `commitDefender.apiKey` (in **User Settings**, not Workspace)
+   - `commitDefender.apiKey` for an API provider (in **User Settings**, not Workspace), or run the corresponding **Commit Defender: Sign in with …** command for an account provider
    - `commitDefender.endpoint` (required for Azure OpenAI only)
 3. (Optional) Set `commitDefender.preCommitHook: enable` to install the standalone git pre-commit hook.
+
+For account providers, the Sign in command launches the official CLI's browser
+flow; that CLI owns the localhost redirect and credential storage. The
+non-interactive pre-commit hook never launches a browser.
+
+After sign-in starts, choose whether to switch the workspace to that provider
+and use its CLI default or a selected model. The same picker is available as
+**Commit Defender: Select Account Provider and Model**.
 
 That's it. Stage a file and findings appear in the editor.
 
@@ -98,7 +106,7 @@ Higher severity pushes more findings toward P2/P3. Higher richness gives longer 
 
 ## Privacy
 
-Commit Defender sends your **staged diff** (or full file contents in on-demand mode) plus the system prompt to the AI provider you configure. The API key is sent only to that provider. No analytics, no telemetry, no third-party servers.
+Commit Defender sends your **staged diff** (or full file contents in on-demand mode) plus the system prompt to the AI provider you configure. API keys are sent only to the selected API provider. For Codex, Claude Code, Gemini CLI, and Antigravity account providers, credentials stay in the CLI credential store and are never read by Commit Defender. No analytics or telemetry.
 
 Review your provider's data-retention policy before enabling AI review on sensitive codebases.
 

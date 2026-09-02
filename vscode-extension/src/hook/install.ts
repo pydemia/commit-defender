@@ -26,6 +26,10 @@ export interface HookConfigJson {
   endpoint: string;
   apiVersion: string;
   apiKey: string;
+  codexPath: string;
+  claudeCodePath: string;
+  geminiCliPath: string;
+  antigravityPath: string;
   maxTokens: number;
   // Review behavior
   severityLevel: ResolvedConfig['severityLevel'];
@@ -41,6 +45,10 @@ export function configToHookJson(cfg: ResolvedConfig): HookConfigJson {
     endpoint:        cfg.endpoint,
     apiVersion:      cfg.apiVersion,
     apiKey:          cfg.apiKey,
+    codexPath:       cfg.codexPath,
+    claudeCodePath:  cfg.claudeCodePath,
+    geminiCliPath:   cfg.geminiCliPath,
+    antigravityPath: cfg.antigravityPath,
     maxTokens:       cfg.maxTokens,
     severityLevel:   cfg.severityLevel,
     richnessLevel:   cfg.richnessLevel,
