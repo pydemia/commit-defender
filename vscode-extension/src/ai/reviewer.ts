@@ -11,7 +11,9 @@
 
 import * as path from 'path';
 import { ResolvedConfig } from '../config.js';
-import { getFileContents, getStagedDiff, git } from '../diff.js';
+import { getFileContents, getStagedDiff } from '../diff.js';
+import { getStagedSelection } from '../gitHelper.js';
+import { selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
 import { loadSkills } from '../skills.js';
@@ -35,12 +37,21 @@ export class Reviewer {
   async reviewDiff(repoRoot: string, stagedFiles: string[], signal?: AbortSignal): Promise<RunResult> {
     const start = Date.now();
     try {
-      const diff = await getStagedDiff(repoRoot, stagedFiles);
+      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      stagedFiles = stagedFiles.filter(file => selection.files.includes(file));
+      if (!stagedFiles.length) {
+        const report = this.errorReport('No permitted staged source files. Review was not run.');
+        report.source_exclusions = selection.excluded;
+        return { report, stderr: '', timedOut: false, cancelled: false };
+      }
+      const diff = await getStagedDiff(repoRoot, stagedFiles, this.cfg.excludePatterns);
+      if (!diff.trim()) throw new Error('No permitted staged source content. Review was not run.');
       const review = await this.singleCall({
         repoRoot, mode: 'diff', body: diff, signal,
       });
       review.file_comments = applyMarkers(review.file_comments, stagedFiles, repoRoot);
       const report = this.assembleReport(stagedFiles, review, Date.now() - start);
+      report.source_exclusions = selection.excluded;
       return { report, stderr: '', timedOut: false, cancelled: false };
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
@@ -58,6 +69,14 @@ export class Reviewer {
     onProgress?: ProgressCb,
   ): Promise<RunResult> {
     const start = Date.now();
+    const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
+    relPaths = selection.files;
+    const exclusions: SourceExclusion[] = [...selection.excluded];
+    if (!relPaths.length) {
+      const report = this.errorReport('No permitted source files. Review was not run.');
+      report.source_exclusions = exclusions;
+      return { report, stderr: '', timedOut: false, cancelled: false };
+    }
     const allComments: FileComment[] = [];
     const perFile: PerFileSummary[] = [];
     const summaries: string[] = [];
@@ -74,9 +93,10 @@ export class Reviewer {
       const rel = relPaths[i];
       onProgress?.(i + 1, relPaths.length, rel);
 
-      const content = getFileContents(repoRoot, [rel]);
       let result: ReviewResult;
       try {
+        const content = getFileContents(repoRoot, [rel], this.cfg.excludePatterns, entry => exclusions.push(entry));
+        if (!content.trim()) throw new Error('No permitted source content. Review was not run.');
         result = await this.singleCall({ repoRoot, mode: 'file', body: content, signal });
       } catch (e) {
         if ((e as Error).name === 'AbortError') {
@@ -134,6 +154,7 @@ export class Reviewer {
         };
 
     const report = this.assembleReport(relPaths, review, Date.now() - start);
+    report.source_exclusions = exclusions;
     return { report, stderr: '', timedOut: false, cancelled: false };
   }
 
@@ -141,7 +162,12 @@ export class Reviewer {
   async generateCommitMessage(repoRoot: string, signal?: AbortSignal): Promise<CommitMessageResult> {
     let diff: string;
     try {
-      diff = (await git(repoRoot, ['diff', '--cached'])).trim();
+      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      if (selection.excluded.length) {
+        return { commit_message: '', is_error: true,
+          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.` };
+      }
+      diff = (await getStagedDiff(repoRoot, selection.files, this.cfg.excludePatterns)).trim();
     } catch (e) {
       return { commit_message: '', is_error: true, error: `git diff failed: ${(e as Error).message}` };
     }
@@ -186,7 +212,7 @@ export class Reviewer {
     body: string;
     signal?: AbortSignal;
   }): Promise<ReviewResult> {
-    const skillsText = loadSkills(opts.repoRoot);
+    const skillsText = loadSkills(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,

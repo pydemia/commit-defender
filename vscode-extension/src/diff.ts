@@ -4,8 +4,9 @@
  */
 
 import { execFile } from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
+import { getStagedSelection } from './gitHelper.js';
+import { readReviewFile, selectReviewInputs, type ExclusionObserver } from './sourcePolicy.js';
 
 /** Cap diff/file content size to keep token usage bounded (~25K tokens). */
 export const MAX_CONTENT_CHARS = 80_000;
@@ -16,7 +17,7 @@ const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 /** Promise wrapper around `git -C <repoRoot> <args...>`. */
 export function git(repoRoot: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile('git', ['-C', repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' }, (err, stdout, stderr) => {
+    execFile('git', ['--literal-pathspecs', '-C', repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' }, (err, stdout, stderr) => {
       if (err) {
         const e = new Error(`git ${args.join(' ')} failed: ${stderr.trim() || err.message}`);
         (e as NodeJS.ErrnoException).code = (err as NodeJS.ErrnoException).code;
@@ -31,13 +32,16 @@ export function git(repoRoot: string, args: string[]): Promise<string> {
  * Combined unified diff for the listed staged files. Falls back to diffing
  * against the empty tree when there is no HEAD yet (initial commit).
  */
-export async function getStagedDiff(repoRoot: string, relPaths: string[]): Promise<string> {
+export async function getStagedDiff(repoRoot: string, relPaths: string[], patterns: string[] = []): Promise<string> {
+  if (relPaths.length === 0) { return ''; }
+  const selection = getStagedSelection(repoRoot, patterns);
+  relPaths = relPaths.filter(file => selection.files.includes(file));
   if (relPaths.length === 0) { return ''; }
   let out: string;
   try {
-    out = await git(repoRoot, ['diff', '--cached', '--diff-filter=d', '--', ...relPaths]);
+    out = await git(repoRoot, ['diff', '--cached', '--no-ext-diff', '--no-textconv', '--diff-filter=d', '--', ...relPaths]);
   } catch {
-    out = await git(repoRoot, ['diff', '--cached', '--diff-filter=d', EMPTY_TREE, '--', ...relPaths]);
+    out = await git(repoRoot, ['diff', '--cached', '--no-ext-diff', '--no-textconv', '--diff-filter=d', EMPTY_TREE, '--', ...relPaths]);
   }
   return truncate(out);
 }
@@ -47,17 +51,13 @@ export async function getStagedDiff(repoRoot: string, relPaths: string[]): Promi
  * Used by on-demand (file/directory/repository) analysis where the AI gets the
  * whole file rather than the staged hunk.
  */
-export function getFileContents(repoRoot: string, relPaths: string[]): string {
+export function getFileContents(repoRoot: string, relPaths: string[], patterns: string[] = [], onExcluded?: ExclusionObserver): string {
   if (relPaths.length === 0) { return ''; }
+  const selection = selectReviewInputs(repoRoot, relPaths, patterns);
+  selection.excluded.forEach(entry => onExcluded?.(entry));
   const parts: string[] = [];
-  for (const rel of relPaths) {
-    const abs = path.join(repoRoot, rel);
-    let content: string;
-    try {
-      content = fs.readFileSync(abs, 'utf8');
-    } catch {
-      continue;
-    }
+  for (const rel of selection.files) {
+    const content = readReviewFile(repoRoot, rel, patterns);
     const ext = path.extname(rel).replace(/^\./, '');
     parts.push(`### ${rel}\n\n\`\`\`${ext}\n${content}\n\`\`\``);
   }

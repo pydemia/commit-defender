@@ -10,12 +10,11 @@
  * as external; calling into it here would explode at runtime.
  */
 
-import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ResolvedConfig } from '../config.js';
 import { getStagedDiff } from '../diff.js';
-import { applyExcludes } from '../excludeFilter.js';
+import { getStagedSelection } from '../gitHelper.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
 import { loadSkills } from '../skills.js';
@@ -36,21 +35,19 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const stagedAll = listStagedFiles(repoRoot);
-  if (stagedAll.length === 0) {
-    process.exit(0);
-  }
-  const staged = applyExcludes(stagedAll.filter(p => !isBinary(p)), cfg.excludePatterns);
+  const selection = getStagedSelection(repoRoot, cfg.excludePatterns);
+  const staged = selection.files;
+  for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
   if (staged.length === 0) {
     process.exit(0);
   }
 
-  const diff = await getStagedDiff(repoRoot, staged);
+  const diff = await getStagedDiff(repoRoot, staged, cfg.excludePatterns);
   if (!diff.trim()) { process.exit(0); }
 
   eprintln(`\n🛡  commit-defender — reviewing ${staged.length} staged file(s)…`);
 
-  const skillsText = loadSkills(repoRoot);
+  const skillsText = loadSkills(repoRoot, cfg.excludePatterns);
   const systemPrompt = buildSystemPrompt({
     mode: 'diff',
     severity: cfg.severityLevel,
@@ -108,6 +105,7 @@ async function main(): Promise<void> {
     duration_ms: 0,
     exit_code: 0,
     lint_findings: [],
+    source_exclusions: selection.excluded,
     review: {
       summary: parsed.summary,
       blocking: parsed.blocking,
@@ -151,39 +149,6 @@ function readConfig(repoRoot: string): ResolvedConfig | null {
     repoAnalysisWarnThreshold: 0,
     runOnStage: false,
   };
-}
-
-function listStagedFiles(repoRoot: string): string[] {
-  try {
-    const out = execFileSync('git', ['-C', repoRoot, 'diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
-      encoding: 'utf8',
-    });
-    return out.split('\n').filter(Boolean);
-  } catch (e) {
-    eprintln(`commit-defender: git diff failed — ${(e as Error).message}`);
-    return [];
-  }
-}
-
-const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp',
-  '.tiff', '.tif', '.heic', '.heif', '.avif',
-  '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv',
-  '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a',
-  '.zip', '.tar', '.gz', '.bz2', '.xz', '.7z', '.rar',
-  '.jar', '.war', '.ear', '.vsix', '.whl', '.egg',
-  '.pyc', '.pyo', '.pyd', '.class',
-  '.so', '.dll', '.dylib', '.exe', '.bin', '.o', '.a', '.wasm',
-  '.ttf', '.otf', '.woff', '.woff2', '.eot',
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  '.db', '.sqlite', '.sqlite3',
-  '.parquet', '.arrow', '.avro', '.pkl', '.pickle', '.npy', '.npz',
-  '.lock',
-]);
-
-function isBinary(p: string): boolean {
-  const ext = path.extname(p).toLowerCase();
-  return ext.length > 0 && BINARY_EXTENSIONS.has(ext);
 }
 
 // ── Plain-text report (no ANSI deps; emoji is enough) ───────────────────────

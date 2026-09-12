@@ -1,8 +1,7 @@
 /**
  * Apply commitDefender.excludePatterns (gitignore-style) on top of an already
- * git-filtered file list. The repo's own .gitignore is honoured automatically
- * by `git diff --cached`; this filter exists to drop additional paths the user
- * has flagged via VS Code settings.
+ * validated repo-relative file list. Git ignore rules, including rules for
+ * force-added tracked paths, are evaluated separately by sourcePolicy.ts.
  */
 
 import ignore, { Ignore } from 'ignore';

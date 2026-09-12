@@ -1,4 +1,5 @@
 /** TypeScript interfaces matching the Python JSON output schema (schema_version: 1). */
+import type { SourceExclusion } from './sourcePolicy.js';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -80,6 +81,8 @@ export interface AnalysisReport {
   exit_code: 0 | 1;
   lint_findings: LintFinding[];
   review: ReviewResult;
+  /** Excluded source paths. Explicitly allowed SKILL.md review material is handled separately. */
+  source_exclusions?: SourceExclusion[];
 }
 
 /** Internal result from DockerRunner */

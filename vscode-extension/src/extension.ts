@@ -9,6 +9,7 @@ import { ExtensionConfig, getConfig } from './config.js';
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
+import type { SourceExclusion } from './sourcePolicy.js';
 import { HistoryProvider, AnalysisScope } from './historyProvider.js';
 import { hookIsInstalled, installHook, uninstallHook, writeHookConfig } from './hook/install.js';
 import { PanelProvider } from './panelProvider.js';
@@ -335,6 +336,7 @@ export function activate(context: vscode.ExtensionContext): void {
     repoRoot: string,
     scope: AnalysisScope = 'staged',
     scopeTarget?: string,
+    sourceExclusions: SourceExclusion[] = [],
   ): Promise<void> {
     const cfg = getConfig();
     const timeoutSeconds = relPaths.length === 1
@@ -367,6 +369,11 @@ export function activate(context: vscode.ExtensionContext): void {
       historyProvider.setRunning(false);
       panelProvider.setRunning(false);
     }
+
+    result.report.source_exclusions = [...new Map(
+      [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
+    ).values()];
+    logSourceExclusions(result.report.source_exclusions);
 
     if (result.cancelled) {
       const reason = abort.signal.reason === 'timeout' ? 'timed out' : 'cancelled';
@@ -504,8 +511,10 @@ export function activate(context: vscode.ExtensionContext): void {
       statusBar.setRunning();
       try {
         const cfg = getConfig();
-        const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns);
+        const sourceExclusions: SourceExclusion[] = [];
+        const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
         if (relPaths.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle('No supported files found');
           vscode.window.showInformationMessage('Commit Defender: No analyzable files found in that directory.');
           return;
@@ -515,7 +524,7 @@ export function activate(context: vscode.ExtensionContext): void {
         channel.appendLine(`\n[Commit Defender] Analyze Directory: ${path.relative(rawRoot, dirPath) || '.'}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
 
-        await analyze(relPaths, rawRoot, 'directory', dirPath);
+        await analyze(relPaths, rawRoot, 'directory', dirPath, sourceExclusions);
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -537,8 +546,11 @@ export function activate(context: vscode.ExtensionContext): void {
         const rawRoot = await getRepoRoot(ws);
         const cfg = getConfig();
 
-        const staged = await getStagedFiles(rawRoot, cfg.excludePatterns);
+        const sourceExclusions: SourceExclusion[] = [];
+
+        const staged = await getStagedFiles(rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
         if (staged.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle('No staged files');
           vscode.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
@@ -567,7 +579,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const channel = getOutputChannel();
         channel.appendLine(`\n[Commit Defender] Analyze Staged Files: ${staged.length} file(s)`);
 
-        await analyze(staged, rawRoot, 'staged');
+        await analyze(staged, rawRoot, 'staged', undefined, sourceExclusions);
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -585,8 +597,10 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         const cfg = getConfig();
         const rawRoot = await getRepoRoot(ws);
-        const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns);
+        const sourceExclusions: SourceExclusion[] = [];
+        const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
         if (allFiles.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle('No files found');
           vscode.window.showInformationMessage('Commit Defender: No analyzable files found in the repository.');
           return;
@@ -607,7 +621,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const channel = getOutputChannel();
         channel.appendLine(`\n[Commit Defender] Analyze Repository: ${allFiles.length} file(s)`);
 
-        await analyze(allFiles, rawRoot, 'repository');
+        await analyze(allFiles, rawRoot, 'repository', undefined, sourceExclusions);
       } catch (err) {
         handleError(err, statusBar);
       }
@@ -690,14 +704,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
         switch (histEntry.scope) {
           case 'staged': {
-            const staged = await getStagedFiles(rawRoot, cfg.excludePatterns);
+            const sourceExclusions: SourceExclusion[] = [];
+            const staged = await getStagedFiles(rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
             if (staged.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle('No staged files');
               vscode.window.showInformationMessage('Commit Defender: No staged files to analyze.');
               return;
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
-            await analyze(staged, rawRoot, 'staged');
+            await analyze(staged, rawRoot, 'staged', undefined, sourceExclusions);
             break;
           }
           case 'file': {
@@ -718,25 +734,29 @@ export function activate(context: vscode.ExtensionContext): void {
               statusBar.setIdle();
               return;
             }
-            const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns);
+            const sourceExclusions: SourceExclusion[] = [];
+            const relPaths = collectFiles(dirPath, rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
             if (relPaths.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle('No supported files found');
               vscode.window.showInformationMessage('Commit Defender: No analyzable files found in that directory.');
               return;
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (directory): ${path.relative(rawRoot, dirPath) || '.'}, ${relPaths.length} file(s)`);
-            await analyze(relPaths, rawRoot, 'directory', dirPath);
+            await analyze(relPaths, rawRoot, 'directory', dirPath, sourceExclusions);
             break;
           }
           case 'repository': {
-            const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns);
+            const sourceExclusions: SourceExclusion[] = [];
+            const allFiles = collectFiles(rawRoot, rawRoot, cfg.excludePatterns, entry => sourceExclusions.push(entry));
             if (allFiles.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle('No files found');
               vscode.window.showInformationMessage('Commit Defender: No analyzable files found in the repository.');
               return;
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
-            await analyze(allFiles, rawRoot, 'repository');
+            await analyze(allFiles, rawRoot, 'repository', undefined, sourceExclusions);
             break;
           }
         }
@@ -1031,6 +1051,13 @@ function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Pa
   return html;
 }
 
+function logSourceExclusions(excluded: SourceExclusion[], show = false): void {
+  if (!excluded.length) return;
+  const channel = getOutputChannel();
+  for (const entry of excluded) channel.appendLine(`Source excluded: ${JSON.stringify(entry.path)} (${entry.reason})`);
+  if (show) channel.show(true);
+}
+
 function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Palette): string {
   const pal = palette ?? resolvePalette('theme-adaptive');
   const blocks = normalizeReport(report);
@@ -1070,6 +1097,14 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Pa
       </div>
       <div class="meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
     </div>`;
+
+  if (report.source_exclusions?.length) {
+    body += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
+    for (const entry of report.source_exclusions) {
+      body += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
+    }
+    body += '</ul></section>';
+  }
 
   if (report.review.summary) {
     if (isError) {

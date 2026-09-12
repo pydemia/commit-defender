@@ -255,17 +255,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path5, originalPath, doThrow) => {
-      if (!isString(path5)) {
+    var checkPath = (path6, originalPath, doThrow) => {
+      if (!isString(path6)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path5) {
+      if (!path6) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path5)) {
+      if (checkPath.isNotRelative(path6)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -274,7 +274,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path5) => REGEX_TEST_INVALID_PATH.test(path5);
+    var isNotRelative = (path6) => REGEX_TEST_INVALID_PATH.test(path6);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -333,7 +333,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path5, checkUnignored) {
+      _testOne(path6, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -341,7 +341,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path5);
+          const matched = rule.regex.test(path6);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -354,24 +354,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path5 = originalPath && checkPath.convert(originalPath);
+        const path6 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path5,
+          path6,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path5, cache, checkUnignored, slices);
+        return this._t(path6, cache, checkUnignored, slices);
       }
-      _t(path5, cache, checkUnignored, slices) {
-        if (path5 in cache) {
-          return cache[path5];
+      _t(path6, cache, checkUnignored, slices) {
+        if (path6 in cache) {
+          return cache[path6];
         }
         if (!slices) {
-          slices = path5.split(SLASH);
+          slices = path6.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path5] = this._testOne(path5, checkUnignored);
+          return cache[path6] = this._testOne(path6, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -379,24 +379,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path5] = parent.ignored ? parent : this._testOne(path5, checkUnignored);
+        return cache[path6] = parent.ignored ? parent : this._testOne(path6, checkUnignored);
       }
-      ignores(path5) {
-        return this._test(path5, this._ignoreCache, false).ignored;
+      ignores(path6) {
+        return this._test(path6, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path5) => !this.ignores(path5);
+        return (path6) => !this.ignores(path6);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path5) {
-        return this._test(path5, this._testCache, true);
+      test(path6) {
+        return this._test(path6, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path5) => checkPath(path5 && checkPath.convert(path5), path5, RETURN_FALSE);
+    var isPathValid = (path6) => checkPath(path6 && checkPath.convert(path6), path6, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -407,50 +407,25 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path5) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path5) || isNotRelative(path5);
+      checkPath.isNotRelative = (path6) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path6) || isNotRelative(path6);
     }
   }
 });
 
 // src/hook/cli.ts
-var import_child_process3 = require("child_process");
-var fs3 = __toESM(require("fs"));
-var path4 = __toESM(require("path"));
+var fs4 = __toESM(require("fs"));
+var path5 = __toESM(require("path"));
 
 // src/diff.ts
+var import_child_process3 = require("child_process");
+
+// src/gitHelper.ts
+var import_child_process2 = require("child_process");
+
+// src/sourcePolicy.ts
 var import_child_process = require("child_process");
-var MAX_CONTENT_CHARS = 8e4;
-var EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
-function git(repoRoot, args) {
-  return new Promise((resolve, reject) => {
-    (0, import_child_process.execFile)("git", ["-C", repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err2, stdout, stderr) => {
-      if (err2) {
-        const e = new Error(`git ${args.join(" ")} failed: ${stderr.trim() || err2.message}`);
-        e.code = err2.code;
-        return reject(e);
-      }
-      resolve(stdout);
-    });
-  });
-}
-async function getStagedDiff(repoRoot, relPaths) {
-  if (relPaths.length === 0) {
-    return "";
-  }
-  let out;
-  try {
-    out = await git(repoRoot, ["diff", "--cached", "--diff-filter=d", "--", ...relPaths]);
-  } catch {
-    out = await git(repoRoot, ["diff", "--cached", "--diff-filter=d", EMPTY_TREE, "--", ...relPaths]);
-  }
-  return truncate(out);
-}
-function truncate(s) {
-  if (s.length <= MAX_CONTENT_CHARS) {
-    return s;
-  }
-  return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
-}
+var fs = __toESM(require("fs"));
+var path = __toESM(require("path"));
 
 // src/excludeFilter.ts
 var import_ignore = __toESM(require_ignore());
@@ -461,12 +436,310 @@ function buildIgnore(patterns) {
   }
   return ig;
 }
-function applyExcludes(relPaths, patterns) {
-  if (patterns.length === 0) {
-    return relPaths;
+
+// src/sourcePolicy.ts
+var SKIP_DIRS = /* @__PURE__ */ new Set([
+  "node_modules",
+  "__pycache__",
+  ".venv",
+  "venv",
+  "env",
+  "dist",
+  "build",
+  "out",
+  "target",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  "coverage",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".ruff_cache",
+  "vendor",
+  ".tox",
+  "artifacts",
+  "test-results",
+  "playwright-report",
+  ".vscode-test",
+  ".impeccable"
+]);
+var PRIVATE_DIRS = /* @__PURE__ */ new Set([
+  ".git",
+  ".gcr",
+  ".commit-defender",
+  ".ssh",
+  ".aws",
+  ".azure",
+  ".kube",
+  ".claude",
+  ".gemini",
+  ".vscode"
+]);
+var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".bmp",
+  ".ico",
+  ".svg",
+  ".webp",
+  ".tiff",
+  ".tif",
+  ".heic",
+  ".heif",
+  ".avif",
+  ".mp4",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".webm",
+  ".flv",
+  ".wmv",
+  ".mp3",
+  ".wav",
+  ".aac",
+  ".flac",
+  ".ogg",
+  ".m4a",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".bz2",
+  ".xz",
+  ".7z",
+  ".rar",
+  ".jar",
+  ".war",
+  ".ear",
+  ".vsix",
+  ".whl",
+  ".egg",
+  ".tgz",
+  ".pyc",
+  ".pyo",
+  ".pyd",
+  ".class",
+  ".so",
+  ".dll",
+  ".dylib",
+  ".exe",
+  ".bin",
+  ".o",
+  ".a",
+  ".wasm",
+  ".ttf",
+  ".otf",
+  ".woff",
+  ".woff2",
+  ".eot",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".db",
+  ".sqlite",
+  ".sqlite3",
+  ".parquet",
+  ".arrow",
+  ".avro",
+  ".pkl",
+  ".pickle",
+  ".npy",
+  ".npz",
+  ".lock"
+]);
+function isBinary(file) {
+  return BINARY_EXTENSIONS.has(path.posix.extname(file).toLowerCase());
+}
+function normalizedSourcePath(value) {
+  const normalized = path.sep === "\\" ? value.replaceAll("\\", "/") : value;
+  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path.posix.isAbsolute(normalized) || path.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
+  return normalized;
+}
+function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}) {
+  const root = fs.realpathSync(repoRoot);
+  const excludes = buildIgnore(excludePatterns);
+  const files = [];
+  const excluded = [];
+  for (const raw of new Set(inputs)) {
+    const file = normalizedSourcePath(raw);
+    const deny = (reason) => excluded.push({ path: file ?? raw, reason });
+    if (!file) {
+      deny("invalid-path");
+      continue;
+    }
+    const parts = file.split("/");
+    const name = parts[parts.length - 1].toLowerCase();
+    const skill = options.purpose === "skill" && /^\.commit-defender\/[^/]+\/SKILL\.md$/.test(file);
+    if (parts.some((part) => PRIVATE_DIRS.has(part.toLowerCase()) && !(skill && part === ".commit-defender") || part.toLowerCase().startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name)) {
+      deny("private-data");
+      continue;
+    }
+    if (parts.some((part) => SKIP_DIRS.has(part.toLowerCase()))) {
+      deny("generated");
+      continue;
+    }
+    if (isBinary(file)) {
+      deny("binary");
+      continue;
+    }
+    if (excludes.ignores(file)) {
+      deny("user-excluded");
+      continue;
+    }
+    let denied = false;
+    for (let index = 0; index < parts.length; index++) {
+      try {
+        const stat = fs.lstatSync(path.join(root, ...parts.slice(0, index + 1)));
+        if (stat.isSymbolicLink()) {
+          deny("symlink");
+          denied = true;
+          break;
+        }
+        if (index < parts.length - 1 ? !stat.isDirectory() : !(stat.isFile() || options.allowDirectories && stat.isDirectory())) {
+          deny("not-file");
+          denied = true;
+          break;
+        }
+      } catch (error) {
+        if (options.allowMissing && error.code === "ENOENT") break;
+        deny("unreadable");
+        denied = true;
+        break;
+      }
+    }
+    if (!denied) files.push(file);
   }
-  const ig = buildIgnore(patterns);
-  return relPaths.filter((p) => !ig.ignores(p));
+  if (files.length === 0) return { files, excluded };
+  let output = "";
+  try {
+    output = (0, import_child_process.execFileSync)("git", ["-C", repoRoot, "check-ignore", "--no-index", "-z", "--stdin"], {
+      input: files.map((file) => `./${file}`).join("\0") + "\0",
+      encoding: "utf8",
+      env: { ...process.env, GIT_LITERAL_PATHSPECS: "0", GIT_GLOB_PATHSPECS: "0", GIT_NOGLOB_PATHSPECS: "0", GIT_ICASE_PATHSPECS: "0" },
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  } catch (error) {
+    if (error.status !== 1) throw new Error("Unable to evaluate repository ignore policy");
+  }
+  const ignored = new Set(output.split("\0").filter(Boolean).map((file) => file.replace(/^\.\//, "")));
+  return {
+    files: files.filter((file) => {
+      if (!ignored.has(file)) return true;
+      excluded.push({ path: file, reason: "git-ignored" });
+      return false;
+    }),
+    excluded
+  };
+}
+function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
+  const selection = selectReviewInputs(repoRoot, [file], patterns, { purpose });
+  if (selection.files.length !== 1) throw new Error(`Source excluded: ${file} (${selection.excluded[0]?.reason ?? "unreadable"})`);
+  const absolute = path.join(fs.realpathSync(repoRoot), selection.files[0]);
+  const fd = fs.openSync(absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = fs.fstatSync(fd);
+    const current = fs.statSync(absolute);
+    if (!opened.isFile() || fs.realpathSync(absolute) !== absolute || current.dev !== opened.dev || current.ino !== opened.ino) {
+      throw new Error(`Source path changed while opening: ${file}`);
+    }
+    return fs.readFileSync(fd, "utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+// src/gitHelper.ts
+function getStagedSelection(repoRoot, excludePatterns = []) {
+  const run = (args) => (0, import_child_process2.execFileSync)("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const records = run(["diff", "--cached", "--name-status", "-z", "-M", "--diff-filter=ACMR"]).split("\0");
+  const changes = [];
+  for (let index = 0; index < records.length && records[index]; ) {
+    const status = records[index++];
+    const first = records[index++];
+    if (!first) throw new Error("Invalid staged change record");
+    const paths = [first];
+    if (/^[RC]/.test(status)) {
+      const second = records[index++];
+      if (!second) throw new Error("Invalid staged rename record");
+      paths.push(second);
+    }
+    changes.push(paths);
+  }
+  const selection = selectReviewInputs(repoRoot, changes.flat(), excludePatterns, { allowMissing: true });
+  const modes = /* @__PURE__ */ new Map();
+  for (const entry of run(["ls-files", "--stage", "-z"]).split("\0").filter(Boolean)) {
+    const tab = entry.indexOf("	");
+    modes.set(entry.slice(tab + 1), entry.slice(0, 6));
+  }
+  const files = [];
+  const excluded = [...selection.excluded];
+  for (const paths of changes) {
+    const target = paths[paths.length - 1];
+    const rejected = paths.find((file) => !selection.files.includes(file));
+    if (rejected) {
+      if (rejected !== target) excluded.push({ path: target, reason: selection.excluded.find((entry) => entry.path === rejected)?.reason ?? "invalid-path" });
+      continue;
+    }
+    if (modes.get(target) === "120000") {
+      excluded.push({ path: target, reason: "symlink" });
+      continue;
+    }
+    if (modes.get(target) === "160000") {
+      excluded.push({ path: target, reason: "not-file" });
+      continue;
+    }
+    files.push(target);
+  }
+  return { files: [...new Set(files)], excluded };
+}
+
+// src/diff.ts
+var MAX_CONTENT_CHARS = 8e4;
+var EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+function git(repoRoot, args) {
+  return new Promise((resolve, reject) => {
+    (0, import_child_process3.execFile)("git", ["--literal-pathspecs", "-C", repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err2, stdout, stderr) => {
+      if (err2) {
+        const e = new Error(`git ${args.join(" ")} failed: ${stderr.trim() || err2.message}`);
+        e.code = err2.code;
+        return reject(e);
+      }
+      resolve(stdout);
+    });
+  });
+}
+async function getStagedDiff(repoRoot, relPaths, patterns = []) {
+  if (relPaths.length === 0) {
+    return "";
+  }
+  const selection = getStagedSelection(repoRoot, patterns);
+  relPaths = relPaths.filter((file) => selection.files.includes(file));
+  if (relPaths.length === 0) {
+    return "";
+  }
+  let out;
+  try {
+    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", "--", ...relPaths]);
+  } catch {
+    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", EMPTY_TREE, "--", ...relPaths]);
+  }
+  return truncate(out);
+}
+function truncate(s) {
+  if (s.length <= MAX_CONTENT_CHARS) {
+    return s;
+  }
+  return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
 }
 
 // src/exitResolver.ts
@@ -484,8 +757,8 @@ function resolveExitCode(report) {
 }
 
 // src/skipMarkers.ts
-var fs = __toESM(require("fs"));
-var path = __toESM(require("path"));
+var fs2 = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
 var PATTERNS = [
   /#\s*CD\s*:\s*skip/i,
   /#\s*type\s*:\s*ignore/,
@@ -498,7 +771,7 @@ function scanFile(absPath) {
   const marked = /* @__PURE__ */ new Set();
   let text;
   try {
-    text = fs.readFileSync(absPath, "utf8");
+    text = fs2.readFileSync(absPath, "utf8");
   } catch {
     return marked;
   }
@@ -513,7 +786,7 @@ function scanFile(absPath) {
 function applyMarkers(comments, staged, repoRoot) {
   const skipMap = /* @__PURE__ */ new Map();
   for (const rel of staged) {
-    const lines = scanFile(path.join(repoRoot, rel));
+    const lines = scanFile(path2.join(repoRoot, rel));
     if (lines.size > 0) {
       skipMap.set(rel, lines);
     }
@@ -525,13 +798,14 @@ function applyMarkers(comments, staged, repoRoot) {
 }
 
 // src/skills.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
-function loadSkills(repoRoot) {
-  const skillDir = path2.join(repoRoot, ".commit-defender");
+var fs3 = __toESM(require("fs"));
+var path3 = __toESM(require("path"));
+function loadSkills(repoRoot, excludePatterns = []) {
+  const skillDir = path3.join(repoRoot, ".commit-defender");
   let entries;
   try {
-    entries = fs2.readdirSync(skillDir, { withFileTypes: true });
+    if (fs3.lstatSync(skillDir).isSymbolicLink()) return "";
+    entries = fs3.readdirSync(skillDir, { withFileTypes: true });
   } catch {
     return "";
   }
@@ -540,10 +814,11 @@ function loadSkills(repoRoot) {
     if (!entry.isDirectory()) {
       continue;
     }
-    const skillFile = path2.join(skillDir, entry.name, "SKILL.md");
+    const skillFile = `.commit-defender/${entry.name}/SKILL.md`;
+    if (!selectReviewInputs(repoRoot, [skillFile], excludePatterns, { purpose: "skill" }).files.length) continue;
     let content;
     try {
-      content = fs2.readFileSync(skillFile, "utf8").trim();
+      content = readReviewFile(repoRoot, skillFile, excludePatterns, "skill").trim();
     } catch {
       continue;
     }
@@ -868,10 +1143,10 @@ Please review the above and respond with the JSON object as instructed.
 }
 
 // src/ai/providers.ts
-var import_child_process2 = require("child_process");
+var import_child_process4 = require("child_process");
 var import_promises = require("fs/promises");
 var import_os = require("os");
-var path3 = __toESM(require("path"));
+var path4 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
@@ -1116,9 +1391,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises.mkdtemp)(path3.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path3.join(dir, "review-request.md");
-  const schemaFile = path3.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path4.join(dir, "review-request.md");
+  const schemaFile = path4.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
@@ -1165,8 +1440,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises.mkdtemp)(path3.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path3.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path4.join(dir, "output-schema.json");
   try {
     await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -1180,7 +1455,7 @@ function runCli(command, args, stdin, req, env) {
       reject(abortError());
       return;
     }
-    const child = (0, import_child_process2.spawn)(command, args, {
+    const child = (0, import_child_process4.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
       env,
       shell: false,
@@ -1578,21 +1853,19 @@ async function main() {
     eprintln('  Re-install the hook from VS Code: command "Commit Defender: Install Pre-commit Hook".');
     process.exit(0);
   }
-  const stagedAll = listStagedFiles(repoRoot);
-  if (stagedAll.length === 0) {
-    process.exit(0);
-  }
-  const staged = applyExcludes(stagedAll.filter((p) => !isBinary(p)), cfg.excludePatterns);
+  const selection = getStagedSelection(repoRoot, cfg.excludePatterns);
+  const staged = selection.files;
+  for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
   if (staged.length === 0) {
     process.exit(0);
   }
-  const diff = await getStagedDiff(repoRoot, staged);
+  const diff = await getStagedDiff(repoRoot, staged, cfg.excludePatterns);
   if (!diff.trim()) {
     process.exit(0);
   }
   eprintln(`
 \u{1F6E1}  commit-defender \u2014 reviewing ${staged.length} staged file(s)\u2026`);
-  const skillsText = loadSkills(repoRoot);
+  const skillsText = loadSkills(repoRoot, cfg.excludePatterns);
   const systemPrompt = buildSystemPrompt({
     mode: "diff",
     severity: cfg.severityLevel,
@@ -1639,6 +1912,7 @@ async function main() {
     duration_ms: 0,
     exit_code: 0,
     lint_findings: [],
+    source_exclusions: selection.excluded,
     review: {
       summary: parsed.summary,
       blocking: parsed.blocking,
@@ -1652,10 +1926,10 @@ async function main() {
   process.exit(exitCode);
 }
 function readConfig(repoRoot) {
-  const file = path4.join(repoRoot, ".commit-defender", "hook.json");
+  const file = path5.join(repoRoot, ".commit-defender", "hook.json");
   let text;
   try {
-    text = fs3.readFileSync(file, "utf8");
+    text = fs4.readFileSync(file, "utf8");
   } catch {
     return null;
   }
@@ -1689,97 +1963,6 @@ function readConfig(repoRoot) {
     repoAnalysisWarnThreshold: 0,
     runOnStage: false
   };
-}
-function listStagedFiles(repoRoot) {
-  try {
-    const out = (0, import_child_process3.execFileSync)("git", ["-C", repoRoot, "diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
-      encoding: "utf8"
-    });
-    return out.split("\n").filter(Boolean);
-  } catch (e) {
-    eprintln(`commit-defender: git diff failed \u2014 ${e.message}`);
-    return [];
-  }
-}
-var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".bmp",
-  ".ico",
-  ".svg",
-  ".webp",
-  ".tiff",
-  ".tif",
-  ".heic",
-  ".heif",
-  ".avif",
-  ".mp4",
-  ".mov",
-  ".avi",
-  ".mkv",
-  ".webm",
-  ".flv",
-  ".wmv",
-  ".mp3",
-  ".wav",
-  ".aac",
-  ".flac",
-  ".ogg",
-  ".m4a",
-  ".zip",
-  ".tar",
-  ".gz",
-  ".bz2",
-  ".xz",
-  ".7z",
-  ".rar",
-  ".jar",
-  ".war",
-  ".ear",
-  ".vsix",
-  ".whl",
-  ".egg",
-  ".pyc",
-  ".pyo",
-  ".pyd",
-  ".class",
-  ".so",
-  ".dll",
-  ".dylib",
-  ".exe",
-  ".bin",
-  ".o",
-  ".a",
-  ".wasm",
-  ".ttf",
-  ".otf",
-  ".woff",
-  ".woff2",
-  ".eot",
-  ".pdf",
-  ".doc",
-  ".docx",
-  ".xls",
-  ".xlsx",
-  ".ppt",
-  ".pptx",
-  ".db",
-  ".sqlite",
-  ".sqlite3",
-  ".parquet",
-  ".arrow",
-  ".avro",
-  ".pkl",
-  ".pickle",
-  ".npy",
-  ".npz",
-  ".lock"
-]);
-function isBinary(p) {
-  const ext = path4.extname(p).toLowerCase();
-  return ext.length > 0 && BINARY_EXTENSIONS.has(ext);
 }
 var PRIORITY_LABEL = {
   P0: "\u{1F7E9} P0 Praise",

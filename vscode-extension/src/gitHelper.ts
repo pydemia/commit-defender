@@ -1,136 +1,93 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
-import { applyExcludes } from './excludeFilter.js';
+import { execFileSync } from 'child_process';
+import { isBinary, selectReviewInputs, type ExclusionObserver, type SourceSelection } from './sourcePolicy.js';
 
-/**
- * Binary file extensions that cannot be meaningfully reviewed.
- * Every other file — any text format — is accepted for analysis.
- */
-const BINARY_EXTENSIONS = new Set([
-  // Images
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp',
-  '.tiff', '.tif', '.heic', '.heif', '.avif',
-  // Video / audio
-  '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv',
-  '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a',
-  // Archives / packages
-  '.zip', '.tar', '.gz', '.bz2', '.xz', '.7z', '.rar',
-  '.jar', '.war', '.ear', '.vsix', '.whl', '.egg',
-  // Compiled / native binaries
-  '.pyc', '.pyo', '.pyd', '.class',
-  '.so', '.dll', '.dylib', '.exe', '.bin', '.o', '.a', '.wasm',
-  // Fonts
-  '.ttf', '.otf', '.woff', '.woff2', '.eot',
-  // Office / documents
-  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
-  // Database / data blobs
-  '.db', '.sqlite', '.sqlite3',
-  '.parquet', '.arrow', '.avro', '.pkl', '.pickle', '.npy', '.npz',
-  // Lock files (auto-generated, not useful to review)
-  '.lock',
-]);
+export { isBinary, SKIP_DIRS } from './sourcePolicy.js';
 
-/**
- * Directories that are always skipped during filesystem walks.
- */
-export const SKIP_DIRS = new Set([
-  '.git', 'node_modules', '__pycache__',
-  '.venv', 'venv', 'env',
-  'dist', 'build', 'out', 'target',
-  '.next', '.nuxt', '.svelte-kit',
-  'coverage', '.pytest_cache', '.mypy_cache', '.ruff_cache',
-  'vendor', '.tox',
-]);
-
-/**
- * Returns true when a file is binary and should be excluded from analysis.
- * Files with no extension (Dockerfile, Makefile, .bashrc, etc.) are accepted.
- */
-export function isBinary(filePath: string): boolean {
-  const ext = path.extname(filePath).toLowerCase();
-  if (!ext) { return false; }   // no-extension files are text
-  return BINARY_EXTENSIONS.has(ext);
-}
-
-/**
- * Filter a list of repo-relative paths to only those worth analyzing.
- * Rejects known binary extensions; accepts everything else.
- */
+/** Extension-only filtering is not a source authorization check. */
 export function filterForAnalysis(files: string[]): string[] {
-  return files.filter(f => !isBinary(f));
+  return files.filter(file => !isBinary(file));
 }
 
-/**
- * Recursively collect all analyzable files under `dirPath`,
- * returning repo-relative paths. Skips noise directories, binary files,
- * and any paths matched by `excludePatterns` (gitignore-style).
- */
-export function collectFiles(dirPath: string, repoRoot: string, excludePatterns: string[] = []): string[] {
+/** Enumerate metadata and prune excluded directories before reading their contents. */
+export function collectFiles(
+  dirPath: string, repoRoot: string, excludePatterns: string[] = [], onExcluded?: ExclusionObserver,
+): string[] {
   const results: string[] = [];
-
+  const relative = (file: string) => path.relative(path.resolve(repoRoot), path.resolve(file)).split(path.sep).join('/');
   function walk(dir: string): void {
+    const rel = relative(dir);
+    if (rel) {
+      const selection = selectReviewInputs(repoRoot, [rel], excludePatterns, { allowDirectories: true });
+      selection.excluded.forEach(entry => onExcluded?.(entry));
+      if (!selection.files.length) return;
+    }
     let entries: fs.Dirent[];
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch { return; }
-
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); }
+    catch { onExcluded?.({ path: rel || '.', reason: 'unreadable' }); return; }
+    const selection = selectReviewInputs(repoRoot, entries.map(entry => relative(path.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    selection.excluded.forEach(entry => onExcluded?.(entry));
+    const allowed = new Set(selection.files);
     for (const entry of entries) {
-      if (entry.isDirectory()) {
-        // Skip hidden dirs except a small allow-list
-        if (entry.name.startsWith('.') &&
-            entry.name !== '.github' &&
-            entry.name !== '.commit-defender') {
-          continue;
-        }
-        if (SKIP_DIRS.has(entry.name)) { continue; }
-        walk(path.join(dir, entry.name));
-      } else if (entry.isFile()) {
-        const fullPath = path.join(dir, entry.name);
-        const rel = path.relative(repoRoot, fullPath);
-        if (!rel.startsWith('..') && !isBinary(rel)) {
-          results.push(rel);
-        }
-      }
+      const absolute = path.join(dir, entry.name);
+      const file = relative(absolute);
+      if (!allowed.has(file)) continue;
+      if (entry.isDirectory()) walk(absolute);
+      else if (entry.isFile()) results.push(file);
     }
   }
-
-  walk(dirPath);
-  return applyExcludes(results, excludePatterns);
+  walk(path.resolve(dirPath));
+  return results.sort();
 }
 
-/** Returns the canonical repo root for the given directory. */
-export function getRepoRoot(cwd: string): Promise<string> {
-  return execGit(['rev-parse', '--show-toplevel'], cwd);
+export async function getRepoRoot(cwd: string): Promise<string> {
+  return execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
-/**
- * Returns repo-relative paths of currently staged (ACMR) files, filtered to
- * non-binary types and to anything matched by the user's excludePatterns.
- */
-export async function getStagedFiles(repoRoot: string, excludePatterns: string[] = []): Promise<string[]> {
-  const output = await execGit(
-    ['diff', '--cached', '--name-only', '--diff-filter=ACMR'],
-    repoRoot
-  );
-  const all = output.split('\n').filter(Boolean);
-  return applyExcludes(filterForAnalysis(all), excludePatterns);
-}
-
-function execGit(args: string[], cwd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn('git', ['-C', cwd, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    proc.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
-    proc.stderr.on('data', (d: Buffer) => (stderr += d.toString()));
-    proc.on('close', (code) => {
-      if (code === 0) {
-        resolve(stdout.trim());
-      } else {
-        reject(new Error(`git ${args.join(' ')} failed (exit ${code}): ${stderr.trim()}`));
-      }
-    });
-    proc.on('error', reject);
+/** Apply the same policy to both sides of rename/copy and to index symlink modes. */
+export function getStagedSelection(repoRoot: string, excludePatterns: string[] = []): SourceSelection {
+  const run = (args: string[]) => execFileSync('git', ['-C', repoRoot, ...args], {
+    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const records = run(['diff', '--cached', '--name-status', '-z', '-M', '--diff-filter=ACMR']).split('\0');
+  const changes: string[][] = [];
+  for (let index = 0; index < records.length && records[index];) {
+    const status = records[index++];
+    const first = records[index++];
+    if (!first) throw new Error('Invalid staged change record');
+    const paths = [first];
+    if (/^[RC]/.test(status)) {
+      const second = records[index++];
+      if (!second) throw new Error('Invalid staged rename record');
+      paths.push(second);
+    }
+    changes.push(paths);
+  }
+  const selection = selectReviewInputs(repoRoot, changes.flat(), excludePatterns, { allowMissing: true });
+  const modes = new Map<string, string>();
+  for (const entry of run(['ls-files', '--stage', '-z']).split('\0').filter(Boolean)) {
+    const tab = entry.indexOf('\t');
+    modes.set(entry.slice(tab + 1), entry.slice(0, 6));
+  }
+  const files: string[] = [];
+  const excluded = [...selection.excluded];
+  for (const paths of changes) {
+    const target = paths[paths.length - 1];
+    const rejected = paths.find(file => !selection.files.includes(file));
+    if (rejected) {
+      if (rejected !== target) excluded.push({ path: target, reason: selection.excluded.find(entry => entry.path === rejected)?.reason ?? 'invalid-path' });
+      continue;
+    }
+    if (modes.get(target) === '120000') { excluded.push({ path: target, reason: 'symlink' }); continue; }
+    if (modes.get(target) === '160000') { excluded.push({ path: target, reason: 'not-file' }); continue; }
+    files.push(target);
+  }
+  return { files: [...new Set(files)], excluded };
+}
+
+export async function getStagedFiles(repoRoot: string, excludePatterns: string[] = [], onExcluded?: ExclusionObserver): Promise<string[]> {
+  const selection = getStagedSelection(repoRoot, excludePatterns);
+  selection.excluded.forEach(entry => onExcluded?.(entry));
+  return selection.files;
 }

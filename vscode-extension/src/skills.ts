@@ -6,11 +6,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { readReviewFile, selectReviewInputs } from './sourcePolicy.js';
 
-export function loadSkills(repoRoot: string): string {
+export function loadSkills(repoRoot: string, excludePatterns: string[] = []): string {
   const skillDir = path.join(repoRoot, '.commit-defender');
   let entries: fs.Dirent[];
   try {
+    if (fs.lstatSync(skillDir).isSymbolicLink()) return '';
     entries = fs.readdirSync(skillDir, { withFileTypes: true });
   } catch {
     return '';
@@ -19,10 +21,11 @@ export function loadSkills(repoRoot: string): string {
   const sections: string[] = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) { continue; }
-    const skillFile = path.join(skillDir, entry.name, 'SKILL.md');
+    const skillFile = `.commit-defender/${entry.name}/SKILL.md`;
+    if (!selectReviewInputs(repoRoot, [skillFile], excludePatterns, { purpose: 'skill' }).files.length) continue;
     let content: string;
     try {
-      content = fs.readFileSync(skillFile, 'utf8').trim();
+      content = readReviewFile(repoRoot, skillFile, excludePatterns, 'skill').trim();
     } catch { continue; }
     if (!content) { continue; }
     sections.push(`### [${entry.name}]\n\n${content}`);

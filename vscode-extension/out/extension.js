@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path13, originalPath, doThrow) => {
-      if (!isString(path13)) {
+    var checkPath = (path14, originalPath, doThrow) => {
+      if (!isString(path14)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path13) {
+      if (!path14) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path13)) {
+      if (checkPath.isNotRelative(path14)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path13) => REGEX_TEST_INVALID_PATH.test(path13);
+    var isNotRelative = (path14) => REGEX_TEST_INVALID_PATH.test(path14);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path13, checkUnignored) {
+      _testOne(path14, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path13);
+          const matched = rule.regex.test(path14);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path13 = originalPath && checkPath.convert(originalPath);
+        const path14 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path13,
+          path14,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path13, cache, checkUnignored, slices);
+        return this._t(path14, cache, checkUnignored, slices);
       }
-      _t(path13, cache, checkUnignored, slices) {
-        if (path13 in cache) {
-          return cache[path13];
+      _t(path14, cache, checkUnignored, slices) {
+        if (path14 in cache) {
+          return cache[path14];
         }
         if (!slices) {
-          slices = path13.split(SLASH);
+          slices = path14.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path13] = this._testOne(path13, checkUnignored);
+          return cache[path14] = this._testOne(path14, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path13] = parent.ignored ? parent : this._testOne(path13, checkUnignored);
+        return cache[path14] = parent.ignored ? parent : this._testOne(path14, checkUnignored);
       }
-      ignores(path13) {
-        return this._test(path13, this._ignoreCache, false).ignored;
+      ignores(path14) {
+        return this._test(path14, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path13) => !this.ignores(path13);
+        return (path14) => !this.ignores(path14);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path13) {
-        return this._test(path13, this._testCache, true);
+      test(path14) {
+        return this._test(path14, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path13) => checkPath(path13 && checkPath.convert(path13), path13, RETURN_FALSE);
+    var isPathValid = (path14) => checkPath(path14 && checkPath.convert(path14), path14, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path13) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path13) || isNotRelative(path13);
+      checkPath.isNotRelative = (path14) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path14) || isNotRelative(path14);
     }
   }
 });
@@ -425,53 +425,380 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var fs7 = __toESM(require("fs"));
-var path12 = __toESM(require("path"));
+var path13 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 
 // src/diff.ts
+var import_child_process3 = require("child_process");
+var path3 = __toESM(require("path"));
+
+// src/gitHelper.ts
+var fs2 = __toESM(require("fs"));
+var path2 = __toESM(require("path"));
+var import_child_process2 = require("child_process");
+
+// src/sourcePolicy.ts
 var import_child_process = require("child_process");
 var fs = __toESM(require("fs"));
 var path = __toESM(require("path"));
+
+// src/excludeFilter.ts
+var import_ignore = __toESM(require_ignore());
+function buildIgnore(patterns) {
+  const ig = (0, import_ignore.default)();
+  if (patterns.length > 0) {
+    ig.add(patterns);
+  }
+  return ig;
+}
+
+// src/sourcePolicy.ts
+var SKIP_DIRS = /* @__PURE__ */ new Set([
+  "node_modules",
+  "__pycache__",
+  ".venv",
+  "venv",
+  "env",
+  "dist",
+  "build",
+  "out",
+  "target",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  "coverage",
+  ".pytest_cache",
+  ".mypy_cache",
+  ".ruff_cache",
+  "vendor",
+  ".tox",
+  "artifacts",
+  "test-results",
+  "playwright-report",
+  ".vscode-test",
+  ".impeccable"
+]);
+var PRIVATE_DIRS = /* @__PURE__ */ new Set([
+  ".git",
+  ".gcr",
+  ".commit-defender",
+  ".ssh",
+  ".aws",
+  ".azure",
+  ".kube",
+  ".claude",
+  ".gemini",
+  ".vscode"
+]);
+var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".bmp",
+  ".ico",
+  ".svg",
+  ".webp",
+  ".tiff",
+  ".tif",
+  ".heic",
+  ".heif",
+  ".avif",
+  ".mp4",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".webm",
+  ".flv",
+  ".wmv",
+  ".mp3",
+  ".wav",
+  ".aac",
+  ".flac",
+  ".ogg",
+  ".m4a",
+  ".zip",
+  ".tar",
+  ".gz",
+  ".bz2",
+  ".xz",
+  ".7z",
+  ".rar",
+  ".jar",
+  ".war",
+  ".ear",
+  ".vsix",
+  ".whl",
+  ".egg",
+  ".tgz",
+  ".pyc",
+  ".pyo",
+  ".pyd",
+  ".class",
+  ".so",
+  ".dll",
+  ".dylib",
+  ".exe",
+  ".bin",
+  ".o",
+  ".a",
+  ".wasm",
+  ".ttf",
+  ".otf",
+  ".woff",
+  ".woff2",
+  ".eot",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".db",
+  ".sqlite",
+  ".sqlite3",
+  ".parquet",
+  ".arrow",
+  ".avro",
+  ".pkl",
+  ".pickle",
+  ".npy",
+  ".npz",
+  ".lock"
+]);
+function isBinary(file) {
+  return BINARY_EXTENSIONS.has(path.posix.extname(file).toLowerCase());
+}
+function normalizedSourcePath(value) {
+  const normalized = path.sep === "\\" ? value.replaceAll("\\", "/") : value;
+  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path.posix.isAbsolute(normalized) || path.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
+  return normalized;
+}
+function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}) {
+  const root = fs.realpathSync(repoRoot);
+  const excludes = buildIgnore(excludePatterns);
+  const files = [];
+  const excluded = [];
+  for (const raw of new Set(inputs)) {
+    const file = normalizedSourcePath(raw);
+    const deny = (reason) => excluded.push({ path: file ?? raw, reason });
+    if (!file) {
+      deny("invalid-path");
+      continue;
+    }
+    const parts = file.split("/");
+    const name = parts[parts.length - 1].toLowerCase();
+    const skill = options.purpose === "skill" && /^\.commit-defender\/[^/]+\/SKILL\.md$/.test(file);
+    if (parts.some((part) => PRIVATE_DIRS.has(part.toLowerCase()) && !(skill && part === ".commit-defender") || part.toLowerCase().startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name)) {
+      deny("private-data");
+      continue;
+    }
+    if (parts.some((part) => SKIP_DIRS.has(part.toLowerCase()))) {
+      deny("generated");
+      continue;
+    }
+    if (isBinary(file)) {
+      deny("binary");
+      continue;
+    }
+    if (excludes.ignores(file)) {
+      deny("user-excluded");
+      continue;
+    }
+    let denied = false;
+    for (let index = 0; index < parts.length; index++) {
+      try {
+        const stat = fs.lstatSync(path.join(root, ...parts.slice(0, index + 1)));
+        if (stat.isSymbolicLink()) {
+          deny("symlink");
+          denied = true;
+          break;
+        }
+        if (index < parts.length - 1 ? !stat.isDirectory() : !(stat.isFile() || options.allowDirectories && stat.isDirectory())) {
+          deny("not-file");
+          denied = true;
+          break;
+        }
+      } catch (error) {
+        if (options.allowMissing && error.code === "ENOENT") break;
+        deny("unreadable");
+        denied = true;
+        break;
+      }
+    }
+    if (!denied) files.push(file);
+  }
+  if (files.length === 0) return { files, excluded };
+  let output = "";
+  try {
+    output = (0, import_child_process.execFileSync)("git", ["-C", repoRoot, "check-ignore", "--no-index", "-z", "--stdin"], {
+      input: files.map((file) => `./${file}`).join("\0") + "\0",
+      encoding: "utf8",
+      env: { ...process.env, GIT_LITERAL_PATHSPECS: "0", GIT_GLOB_PATHSPECS: "0", GIT_NOGLOB_PATHSPECS: "0", GIT_ICASE_PATHSPECS: "0" },
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  } catch (error) {
+    if (error.status !== 1) throw new Error("Unable to evaluate repository ignore policy");
+  }
+  const ignored = new Set(output.split("\0").filter(Boolean).map((file) => file.replace(/^\.\//, "")));
+  return {
+    files: files.filter((file) => {
+      if (!ignored.has(file)) return true;
+      excluded.push({ path: file, reason: "git-ignored" });
+      return false;
+    }),
+    excluded
+  };
+}
+function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
+  const selection = selectReviewInputs(repoRoot, [file], patterns, { purpose });
+  if (selection.files.length !== 1) throw new Error(`Source excluded: ${file} (${selection.excluded[0]?.reason ?? "unreadable"})`);
+  const absolute = path.join(fs.realpathSync(repoRoot), selection.files[0]);
+  const fd = fs.openSync(absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = fs.fstatSync(fd);
+    const current = fs.statSync(absolute);
+    if (!opened.isFile() || fs.realpathSync(absolute) !== absolute || current.dev !== opened.dev || current.ino !== opened.ino) {
+      throw new Error(`Source path changed while opening: ${file}`);
+    }
+    return fs.readFileSync(fd, "utf8");
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+// src/gitHelper.ts
+function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
+  const results = [];
+  const relative3 = (file) => path2.relative(path2.resolve(repoRoot), path2.resolve(file)).split(path2.sep).join("/");
+  function walk(dir) {
+    const rel = relative3(dir);
+    if (rel) {
+      const selection2 = selectReviewInputs(repoRoot, [rel], excludePatterns, { allowDirectories: true });
+      selection2.excluded.forEach((entry) => onExcluded?.(entry));
+      if (!selection2.files.length) return;
+    }
+    let entries;
+    try {
+      entries = fs2.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      onExcluded?.({ path: rel || ".", reason: "unreadable" });
+      return;
+    }
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative3(path2.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    selection.excluded.forEach((entry) => onExcluded?.(entry));
+    const allowed = new Set(selection.files);
+    for (const entry of entries) {
+      const absolute = path2.join(dir, entry.name);
+      const file = relative3(absolute);
+      if (!allowed.has(file)) continue;
+      if (entry.isDirectory()) walk(absolute);
+      else if (entry.isFile()) results.push(file);
+    }
+  }
+  walk(path2.resolve(dirPath));
+  return results.sort();
+}
+async function getRepoRoot(cwd) {
+  return (0, import_child_process2.execFileSync)("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+}
+function getStagedSelection(repoRoot, excludePatterns = []) {
+  const run = (args) => (0, import_child_process2.execFileSync)("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  const records = run(["diff", "--cached", "--name-status", "-z", "-M", "--diff-filter=ACMR"]).split("\0");
+  const changes = [];
+  for (let index = 0; index < records.length && records[index]; ) {
+    const status = records[index++];
+    const first = records[index++];
+    if (!first) throw new Error("Invalid staged change record");
+    const paths = [first];
+    if (/^[RC]/.test(status)) {
+      const second = records[index++];
+      if (!second) throw new Error("Invalid staged rename record");
+      paths.push(second);
+    }
+    changes.push(paths);
+  }
+  const selection = selectReviewInputs(repoRoot, changes.flat(), excludePatterns, { allowMissing: true });
+  const modes = /* @__PURE__ */ new Map();
+  for (const entry of run(["ls-files", "--stage", "-z"]).split("\0").filter(Boolean)) {
+    const tab = entry.indexOf("	");
+    modes.set(entry.slice(tab + 1), entry.slice(0, 6));
+  }
+  const files = [];
+  const excluded = [...selection.excluded];
+  for (const paths of changes) {
+    const target = paths[paths.length - 1];
+    const rejected = paths.find((file) => !selection.files.includes(file));
+    if (rejected) {
+      if (rejected !== target) excluded.push({ path: target, reason: selection.excluded.find((entry) => entry.path === rejected)?.reason ?? "invalid-path" });
+      continue;
+    }
+    if (modes.get(target) === "120000") {
+      excluded.push({ path: target, reason: "symlink" });
+      continue;
+    }
+    if (modes.get(target) === "160000") {
+      excluded.push({ path: target, reason: "not-file" });
+      continue;
+    }
+    files.push(target);
+  }
+  return { files: [...new Set(files)], excluded };
+}
+async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
+  const selection = getStagedSelection(repoRoot, excludePatterns);
+  selection.excluded.forEach((entry) => onExcluded?.(entry));
+  return selection.files;
+}
+
+// src/diff.ts
 var MAX_CONTENT_CHARS = 8e4;
 var EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
 function git(repoRoot, args) {
-  return new Promise((resolve, reject) => {
-    (0, import_child_process.execFile)("git", ["-C", repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err2, stdout, stderr) => {
+  return new Promise((resolve2, reject) => {
+    (0, import_child_process3.execFile)("git", ["--literal-pathspecs", "-C", repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err2, stdout, stderr) => {
       if (err2) {
         const e = new Error(`git ${args.join(" ")} failed: ${stderr.trim() || err2.message}`);
         e.code = err2.code;
         return reject(e);
       }
-      resolve(stdout);
+      resolve2(stdout);
     });
   });
 }
-async function getStagedDiff(repoRoot, relPaths) {
+async function getStagedDiff(repoRoot, relPaths, patterns = []) {
+  if (relPaths.length === 0) {
+    return "";
+  }
+  const selection = getStagedSelection(repoRoot, patterns);
+  relPaths = relPaths.filter((file) => selection.files.includes(file));
   if (relPaths.length === 0) {
     return "";
   }
   let out;
   try {
-    out = await git(repoRoot, ["diff", "--cached", "--diff-filter=d", "--", ...relPaths]);
+    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", "--", ...relPaths]);
   } catch {
-    out = await git(repoRoot, ["diff", "--cached", "--diff-filter=d", EMPTY_TREE, "--", ...relPaths]);
+    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", EMPTY_TREE, "--", ...relPaths]);
   }
   return truncate(out);
 }
-function getFileContents(repoRoot, relPaths) {
+function getFileContents(repoRoot, relPaths, patterns = [], onExcluded) {
   if (relPaths.length === 0) {
     return "";
   }
+  const selection = selectReviewInputs(repoRoot, relPaths, patterns);
+  selection.excluded.forEach((entry) => onExcluded?.(entry));
   const parts = [];
-  for (const rel of relPaths) {
-    const abs = path.join(repoRoot, rel);
-    let content;
-    try {
-      content = fs.readFileSync(abs, "utf8");
-    } catch {
-      continue;
-    }
-    const ext = path.extname(rel).replace(/^\./, "");
+  for (const rel of selection.files) {
+    const content = readReviewFile(repoRoot, rel, patterns);
+    const ext = path3.extname(rel).replace(/^\./, "");
     parts.push(`### ${rel}
 
 \`\`\`${ext}
@@ -488,8 +815,8 @@ function truncate(s) {
 }
 
 // src/skipMarkers.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
+var fs3 = __toESM(require("fs"));
+var path4 = __toESM(require("path"));
 var PATTERNS = [
   /#\s*CD\s*:\s*skip/i,
   /#\s*type\s*:\s*ignore/,
@@ -502,7 +829,7 @@ function scanFile(absPath) {
   const marked = /* @__PURE__ */ new Set();
   let text;
   try {
-    text = fs2.readFileSync(absPath, "utf8");
+    text = fs3.readFileSync(absPath, "utf8");
   } catch {
     return marked;
   }
@@ -517,7 +844,7 @@ function scanFile(absPath) {
 function applyMarkers(comments2, staged, repoRoot) {
   const skipMap = /* @__PURE__ */ new Map();
   for (const rel of staged) {
-    const lines = scanFile(path2.join(repoRoot, rel));
+    const lines = scanFile(path4.join(repoRoot, rel));
     if (lines.size > 0) {
       skipMap.set(rel, lines);
     }
@@ -529,13 +856,14 @@ function applyMarkers(comments2, staged, repoRoot) {
 }
 
 // src/skills.ts
-var fs3 = __toESM(require("fs"));
-var path3 = __toESM(require("path"));
-function loadSkills(repoRoot) {
-  const skillDir = path3.join(repoRoot, ".commit-defender");
+var fs4 = __toESM(require("fs"));
+var path5 = __toESM(require("path"));
+function loadSkills(repoRoot, excludePatterns = []) {
+  const skillDir = path5.join(repoRoot, ".commit-defender");
   let entries;
   try {
-    entries = fs3.readdirSync(skillDir, { withFileTypes: true });
+    if (fs4.lstatSync(skillDir).isSymbolicLink()) return "";
+    entries = fs4.readdirSync(skillDir, { withFileTypes: true });
   } catch {
     return "";
   }
@@ -544,10 +872,11 @@ function loadSkills(repoRoot) {
     if (!entry.isDirectory()) {
       continue;
     }
-    const skillFile = path3.join(skillDir, entry.name, "SKILL.md");
+    const skillFile = `.commit-defender/${entry.name}/SKILL.md`;
+    if (!selectReviewInputs(repoRoot, [skillFile], excludePatterns, { purpose: "skill" }).files.length) continue;
     let content;
     try {
-      content = fs3.readFileSync(skillFile, "utf8").trim();
+      content = readReviewFile(repoRoot, skillFile, excludePatterns, "skill").trim();
     } catch {
       continue;
     }
@@ -916,10 +1245,10 @@ Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
 `;
 
 // src/ai/providers.ts
-var import_child_process2 = require("child_process");
+var import_child_process4 = require("child_process");
 var import_promises = require("fs/promises");
 var import_os = require("os");
-var path4 = __toESM(require("path"));
+var path6 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
@@ -1164,9 +1493,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path4.join(dir, "review-request.md");
-  const schemaFile = path4.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path6.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path6.join(dir, "review-request.md");
+  const schemaFile = path6.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
@@ -1213,8 +1542,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path4.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path6.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path6.join(dir, "output-schema.json");
   try {
     await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -1223,12 +1552,12 @@ async function withSchemaFile(schema, fn) {
   }
 }
 function runCli(command, args, stdin, req, env2) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve2, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
       return;
     }
-    const child = (0, import_child_process2.spawn)(command, args, {
+    const child = (0, import_child_process4.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
       env: env2,
       shell: false,
@@ -1302,7 +1631,7 @@ function runCli(command, args, stdin, req, env2) {
       }
       settled = true;
       cleanup();
-      resolve({ code: code ?? 1, stdout, stderr });
+      resolve2({ code: code ?? 1, stdout, stderr });
     });
     child.stdin.on("error", (error) => {
       if (error.code !== "EPIPE" && !processError) {
@@ -1641,7 +1970,15 @@ var Reviewer = class {
   async reviewDiff(repoRoot, stagedFiles, signal) {
     const start = Date.now();
     try {
-      const diff = await getStagedDiff(repoRoot, stagedFiles);
+      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      stagedFiles = stagedFiles.filter((file) => selection.files.includes(file));
+      if (!stagedFiles.length) {
+        const report2 = this.errorReport("No permitted staged source files. Review was not run.");
+        report2.source_exclusions = selection.excluded;
+        return { report: report2, stderr: "", timedOut: false, cancelled: false };
+      }
+      const diff = await getStagedDiff(repoRoot, stagedFiles, this.cfg.excludePatterns);
+      if (!diff.trim()) throw new Error("No permitted staged source content. Review was not run.");
       const review = await this.singleCall({
         repoRoot,
         mode: "diff",
@@ -1650,6 +1987,7 @@ var Reviewer = class {
       });
       review.file_comments = applyMarkers(review.file_comments, stagedFiles, repoRoot);
       const report = this.assembleReport(stagedFiles, review, Date.now() - start);
+      report.source_exclusions = selection.excluded;
       return { report, stderr: "", timedOut: false, cancelled: false };
     } catch (e) {
       if (e.name === "AbortError") {
@@ -1661,6 +1999,14 @@ var Reviewer = class {
   /** On-demand scope: one AI call per file, then merge. */
   async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress) {
     const start = Date.now();
+    const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
+    relPaths = selection.files;
+    const exclusions = [...selection.excluded];
+    if (!relPaths.length) {
+      const report2 = this.errorReport("No permitted source files. Review was not run.");
+      report2.source_exclusions = exclusions;
+      return { report: report2, stderr: "", timedOut: false, cancelled: false };
+    }
     const allComments = [];
     const perFile = [];
     const summaries = [];
@@ -1673,9 +2019,10 @@ var Reviewer = class {
       }
       const rel = relPaths[i];
       onProgress?.(i + 1, relPaths.length, rel);
-      const content = getFileContents(repoRoot, [rel]);
       let result;
       try {
+        const content = getFileContents(repoRoot, [rel], this.cfg.excludePatterns, (entry) => exclusions.push(entry));
+        if (!content.trim()) throw new Error("No permitted source content. Review was not run.");
         result = await this.singleCall({ repoRoot, mode: "file", body: content, signal });
       } catch (e) {
         if (e.name === "AbortError") {
@@ -1727,13 +2074,22 @@ ${result.summary}`);
       per_file_summaries: perFile
     };
     const report = this.assembleReport(relPaths, review, Date.now() - start);
+    report.source_exclusions = exclusions;
     return { report, stderr: "", timedOut: false, cancelled: false };
   }
   /** Generate a conventional commit message from the current staged diff. */
   async generateCommitMessage(repoRoot, signal) {
     let diff;
     try {
-      diff = (await git(repoRoot, ["diff", "--cached"])).trim();
+      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      if (selection.excluded.length) {
+        return {
+          commit_message: "",
+          is_error: true,
+          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
+        };
+      }
+      diff = (await getStagedDiff(repoRoot, selection.files, this.cfg.excludePatterns)).trim();
     } catch (e) {
       return { commit_message: "", is_error: true, error: `git diff failed: ${e.message}` };
     }
@@ -1771,7 +2127,7 @@ ${diff}
   }
   // ── Internals ─────────────────────────────────────────────────────────────
   async singleCall(opts) {
-    const skillsText = loadSkills(opts.repoRoot);
+    const skillsText = loadSkills(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,
@@ -1923,7 +2279,7 @@ function worstGrade(grades) {
 var vscode2 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path5 = __toESM(require("path"));
+var path7 = __toESM(require("path"));
 var vscode = __toESM(require("vscode"));
 
 // src/types.ts
@@ -2056,7 +2412,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path5.join(repoRoot, b.file);
+      const absPath = path7.join(repoRoot, b.file);
       const uriKey = vscode.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -2131,7 +2487,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path6 = __toESM(require("path"));
+var path8 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -2157,7 +2513,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b) {
-    const uri = vscode3.Uri.file(path6.join(repoRoot, b.file));
+    const uri = vscode3.Uri.file(path8.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode3.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -2181,8 +2537,8 @@ var CommentManager = class {
 };
 
 // src/config.ts
-var fs4 = __toESM(require("fs"));
-var path7 = __toESM(require("path"));
+var fs5 = __toESM(require("fs"));
+var path9 = __toESM(require("path"));
 var vscode4 = __toESM(require("vscode"));
 function getConfig() {
   const cfg = vscode4.workspace.getConfiguration("commitDefender");
@@ -2227,8 +2583,8 @@ function resolveCodexPath(configured) {
   const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
     for (const name of names) {
-      const candidate = path7.join(extensionPath, "bin", `${platform}-${arch}`, name);
-      if (fs4.existsSync(candidate)) {
+      const candidate = path9.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      if (fs5.existsSync(candidate)) {
         return candidate;
       }
     }
@@ -2241,24 +2597,24 @@ function resolveExternalCliPath(configured, name) {
   }
   const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   const candidates = [];
-  for (const dir of (process.env.PATH ?? "").split(path7.delimiter).filter(Boolean)) {
+  for (const dir of (process.env.PATH ?? "").split(path9.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
-      candidates.push(path7.join(dir, executable));
+      candidates.push(path9.join(dir, executable));
     }
   }
   const userHome = process.env.HOME || process.env.USERPROFILE;
   if (userHome) {
     for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
       for (const executable of executableNames) {
-        candidates.push(path7.join(userHome, dir, executable));
+        candidates.push(path9.join(userHome, dir, executable));
       }
     }
-    const nvmVersions = path7.join(userHome, ".nvm", "versions", "node");
+    const nvmVersions = path9.join(userHome, ".nvm", "versions", "node");
     try {
-      const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
+      const versions = fs5.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
       for (const version of versions) {
         for (const executable of executableNames) {
-          candidates.push(path7.join(nvmVersions, version, "bin", executable));
+          candidates.push(path9.join(nvmVersions, version, "bin", executable));
         }
       }
     } catch {
@@ -2266,14 +2622,14 @@ function resolveExternalCliPath(configured, name) {
   }
   for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
     for (const executable of executableNames) {
-      candidates.push(path7.join(dir, executable));
+      candidates.push(path9.join(dir, executable));
     }
   }
-  return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured;
+  return candidates.find((candidate) => fs5.existsSync(candidate)) ?? configured;
 }
 
 // src/diagnostics.ts
-var path8 = __toESM(require("path"));
+var path10 = __toESM(require("path"));
 var vscode5 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode5.DiagnosticSeverity.Error,
@@ -2293,7 +2649,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode5.Uri.file(path8.join(repoRoot, relFile));
+    const uri = vscode5.Uri.file(path10.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -2312,203 +2668,6 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     });
     collection.set(uri, diagnostics);
   }
-}
-
-// src/gitHelper.ts
-var fs5 = __toESM(require("fs"));
-var path9 = __toESM(require("path"));
-var import_child_process3 = require("child_process");
-
-// src/excludeFilter.ts
-var import_ignore = __toESM(require_ignore());
-function buildIgnore(patterns) {
-  const ig = (0, import_ignore.default)();
-  if (patterns.length > 0) {
-    ig.add(patterns);
-  }
-  return ig;
-}
-function applyExcludes(relPaths, patterns) {
-  if (patterns.length === 0) {
-    return relPaths;
-  }
-  const ig = buildIgnore(patterns);
-  return relPaths.filter((p) => !ig.ignores(p));
-}
-
-// src/gitHelper.ts
-var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
-  // Images
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".gif",
-  ".bmp",
-  ".ico",
-  ".svg",
-  ".webp",
-  ".tiff",
-  ".tif",
-  ".heic",
-  ".heif",
-  ".avif",
-  // Video / audio
-  ".mp4",
-  ".mov",
-  ".avi",
-  ".mkv",
-  ".webm",
-  ".flv",
-  ".wmv",
-  ".mp3",
-  ".wav",
-  ".aac",
-  ".flac",
-  ".ogg",
-  ".m4a",
-  // Archives / packages
-  ".zip",
-  ".tar",
-  ".gz",
-  ".bz2",
-  ".xz",
-  ".7z",
-  ".rar",
-  ".jar",
-  ".war",
-  ".ear",
-  ".vsix",
-  ".whl",
-  ".egg",
-  // Compiled / native binaries
-  ".pyc",
-  ".pyo",
-  ".pyd",
-  ".class",
-  ".so",
-  ".dll",
-  ".dylib",
-  ".exe",
-  ".bin",
-  ".o",
-  ".a",
-  ".wasm",
-  // Fonts
-  ".ttf",
-  ".otf",
-  ".woff",
-  ".woff2",
-  ".eot",
-  // Office / documents
-  ".pdf",
-  ".doc",
-  ".docx",
-  ".xls",
-  ".xlsx",
-  ".ppt",
-  ".pptx",
-  // Database / data blobs
-  ".db",
-  ".sqlite",
-  ".sqlite3",
-  ".parquet",
-  ".arrow",
-  ".avro",
-  ".pkl",
-  ".pickle",
-  ".npy",
-  ".npz",
-  // Lock files (auto-generated, not useful to review)
-  ".lock"
-]);
-var SKIP_DIRS = /* @__PURE__ */ new Set([
-  ".git",
-  "node_modules",
-  "__pycache__",
-  ".venv",
-  "venv",
-  "env",
-  "dist",
-  "build",
-  "out",
-  "target",
-  ".next",
-  ".nuxt",
-  ".svelte-kit",
-  "coverage",
-  ".pytest_cache",
-  ".mypy_cache",
-  ".ruff_cache",
-  "vendor",
-  ".tox"
-]);
-function isBinary(filePath) {
-  const ext = path9.extname(filePath).toLowerCase();
-  if (!ext) {
-    return false;
-  }
-  return BINARY_EXTENSIONS.has(ext);
-}
-function filterForAnalysis(files) {
-  return files.filter((f) => !isBinary(f));
-}
-function collectFiles(dirPath, repoRoot, excludePatterns = []) {
-  const results = [];
-  function walk(dir) {
-    let entries;
-    try {
-      entries = fs5.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        if (entry.name.startsWith(".") && entry.name !== ".github" && entry.name !== ".commit-defender") {
-          continue;
-        }
-        if (SKIP_DIRS.has(entry.name)) {
-          continue;
-        }
-        walk(path9.join(dir, entry.name));
-      } else if (entry.isFile()) {
-        const fullPath = path9.join(dir, entry.name);
-        const rel = path9.relative(repoRoot, fullPath);
-        if (!rel.startsWith("..") && !isBinary(rel)) {
-          results.push(rel);
-        }
-      }
-    }
-  }
-  walk(dirPath);
-  return applyExcludes(results, excludePatterns);
-}
-function getRepoRoot(cwd) {
-  return execGit(["rev-parse", "--show-toplevel"], cwd);
-}
-async function getStagedFiles(repoRoot, excludePatterns = []) {
-  const output = await execGit(
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-    repoRoot
-  );
-  const all = output.split("\n").filter(Boolean);
-  return applyExcludes(filterForAnalysis(all), excludePatterns);
-}
-function execGit(args, cwd) {
-  return new Promise((resolve, reject) => {
-    const proc = (0, import_child_process3.spawn)("git", ["-C", cwd, ...args], { stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (d) => stdout += d.toString());
-    proc.stderr.on("data", (d) => stderr += d.toString());
-    proc.on("close", (code) => {
-      if (code === 0) {
-        resolve(stdout.trim());
-      } else {
-        reject(new Error(`git ${args.join(" ")} failed (exit ${code}): ${stderr.trim()}`));
-      }
-    });
-    proc.on("error", reject);
-  });
 }
 
 // src/historyProvider.ts
@@ -2817,7 +2976,7 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs6 = __toESM(require("fs"));
-var path10 = __toESM(require("path"));
+var path11 = __toESM(require("path"));
 var vscode8 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -2858,14 +3017,14 @@ function configToHookJson(cfg) {
   };
 }
 function writeHookConfig(repoRoot, cfg) {
-  const dir = path10.join(repoRoot, CONFIG_DIR);
+  const dir = path11.join(repoRoot, CONFIG_DIR);
   fs6.mkdirSync(dir, { recursive: true });
-  const file = path10.join(dir, CONFIG_FILE);
+  const file = path11.join(dir, CONFIG_FILE);
   fs6.writeFileSync(file, JSON.stringify(configToHookJson(cfg), null, 2) + "\n", { mode: 384 });
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path10.join(repoRoot, ".gitignore");
+  const gi = path11.join(repoRoot, ".gitignore");
   let text = "";
   try {
     text = fs6.readFileSync(gi, "utf8");
@@ -2874,13 +3033,13 @@ function ensureGitignored(repoRoot) {
   if (text.split(/\r?\n/).some((line) => line.trim() === GITIGNORE_LINE)) {
     return;
   }
-  const sep = text.length === 0 || text.endsWith("\n") ? "" : "\n";
-  fs6.writeFileSync(gi, `${text}${sep}# commit-defender (contains API key)
+  const sep3 = text.length === 0 || text.endsWith("\n") ? "" : "\n";
+  fs6.writeFileSync(gi, `${text}${sep3}# commit-defender (contains API key)
 ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path10.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path11.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -2905,8 +3064,8 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path10.join(repoRoot, ".git", "hooks");
-  const hookPath = path10.join(hookDir, "pre-commit");
+  const hookDir = path11.join(repoRoot, ".git", "hooks");
+  const hookPath = path11.join(hookDir, "pre-commit");
   try {
     fs6.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
@@ -2950,7 +3109,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path10.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path11.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs6.readFileSync(hookPath, "utf8");
@@ -2975,14 +3134,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs6.readFileSync(path10.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs6.readFileSync(path11.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path11 = __toESM(require("path"));
+var path12 = __toESM(require("path"));
 var vscode9 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -3050,11 +3209,11 @@ var PanelProvider = class {
     switch (node.kind) {
       case "file": {
         const item = new vscode9.TreeItem(
-          path11.basename(node.file),
+          path12.basename(node.file),
           vscode9.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node.uri;
-        const dir = path11.dirname(node.file);
+        const dir = path12.dirname(node.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node.blocks.length} finding${node.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node.blocks);
         const counts = countByPriority(node.blocks);
@@ -3168,7 +3327,7 @@ ${b.comment}`
         kind: "file",
         id,
         file,
-        absPath: path11.join(this._repoRoot, file),
+        absPath: path12.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id, blocks)
       };
@@ -3760,7 +3919,7 @@ function activate(context) {
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
     const cwd = await resolveRepoRoot() ?? vscode11.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path12.isAbsolute(executable) && !fs7.existsSync(executable)) {
+    if (path13.isAbsolute(executable) && !fs7.existsSync(executable)) {
       vscode11.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
@@ -3890,7 +4049,7 @@ function activate(context) {
     vscode11.window.registerFileDecorationProvider(panelProvider.decorationProvider),
     vscode11.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
   );
-  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget) {
+  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = []) {
     const cfg2 = getConfig();
     const timeoutSeconds = relPaths.length === 1 ? cfg2.fileTimeoutSeconds : cfg2.directoryTimeoutSeconds;
     const reviewer = new Reviewer(cfg2);
@@ -3919,6 +4078,10 @@ function activate(context) {
       historyProvider.setRunning(false);
       panelProvider.setRunning(false);
     }
+    result.report.source_exclusions = [...new Map(
+      [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
+    ).values()];
+    logSourceExclusions(result.report.source_exclusions);
     if (result.cancelled) {
       const reason = abort.signal.reason === "timeout" ? "timed out" : "cancelled";
       statusBar.setIdle(`Analysis ${reason}`);
@@ -3966,7 +4129,7 @@ function activate(context) {
     await vscode11.commands.executeCommand("commitDefender.panelView.focus");
     const srcFile = result.report.staged_files[0] ?? relPaths[0];
     if (srcFile) {
-      const absPath = path12.join(repoRoot, srcFile);
+      const absPath = path13.join(repoRoot, srcFile);
       await vscode11.window.showTextDocument(vscode11.Uri.file(absPath), {
         preserveFocus: false,
         preview: false,
@@ -4002,7 +4165,7 @@ function activate(context) {
           resolvedFile = fs7.realpathSync(filePath);
         } catch {
         }
-        const relPath = path12.relative(resolvedRoot, resolvedFile);
+        const relPath = path13.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -4041,17 +4204,19 @@ function activate(context) {
       statusBar.setRunning();
       try {
         const cfg2 = getConfig();
-        const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns);
+        const sourceExclusions = [];
+        const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (relPaths.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle("No supported files found");
           vscode11.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
           return;
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path12.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path13.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
-        await analyze(relPaths, rawRoot, "directory", dirPath);
+        await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
       } catch (err2) {
         handleError(err2, statusBar);
       }
@@ -4069,8 +4234,10 @@ function activate(context) {
       try {
         const rawRoot = await getRepoRoot(ws);
         const cfg2 = getConfig();
-        const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns);
+        const sourceExclusions = [];
+        const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (staged.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle("No staged files");
           vscode11.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
@@ -4097,7 +4264,7 @@ function activate(context) {
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze Staged Files: ${staged.length} file(s)`);
-        await analyze(staged, rawRoot, "staged");
+        await analyze(staged, rawRoot, "staged", void 0, sourceExclusions);
       } catch (err2) {
         handleError(err2, statusBar);
       }
@@ -4114,8 +4281,10 @@ function activate(context) {
       try {
         const cfg2 = getConfig();
         const rawRoot = await getRepoRoot(ws);
-        const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns);
+        const sourceExclusions = [];
+        const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (allFiles.length === 0) {
+          logSourceExclusions(sourceExclusions, true);
           statusBar.setIdle("No files found");
           vscode11.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
           return;
@@ -4134,7 +4303,7 @@ function activate(context) {
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze Repository: ${allFiles.length} file(s)`);
-        await analyze(allFiles, rawRoot, "repository");
+        await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions);
       } catch (err2) {
         handleError(err2, statusBar);
       }
@@ -4200,15 +4369,17 @@ function activate(context) {
         const channel = getOutputChannel();
         switch (histEntry.scope) {
           case "staged": {
-            const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns);
+            const sourceExclusions = [];
+            const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (staged.length === 0) {
+              logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle("No staged files");
               vscode11.window.showInformationMessage("Commit Defender: No staged files to analyze.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
-            await analyze(staged, rawRoot, "staged");
+            await analyze(staged, rawRoot, "staged", void 0, sourceExclusions);
             break;
           }
           case "file": {
@@ -4230,27 +4401,31 @@ function activate(context) {
               statusBar.setIdle();
               return;
             }
-            const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns);
+            const sourceExclusions = [];
+            const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (relPaths.length === 0) {
+              logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle("No supported files found");
               vscode11.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path12.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
-            await analyze(relPaths, rawRoot, "directory", dirPath);
+[Commit Defender] Re-analyze (directory): ${path13.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+            await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
           }
           case "repository": {
-            const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns);
+            const sourceExclusions = [];
+            const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (allFiles.length === 0) {
+              logSourceExclusions(sourceExclusions, true);
               statusBar.setIdle("No files found");
               vscode11.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
-            await analyze(allFiles, rawRoot, "repository");
+            await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions);
             break;
           }
         }
@@ -4336,7 +4511,7 @@ function signInCommand(provider) {
 async function pickDirectory(root) {
   let current = root;
   while (true) {
-    const rel = path12.relative(root, current) || ".";
+    const rel = path13.relative(root, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -4353,7 +4528,7 @@ async function pickDirectory(root) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path12.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path13.join(rel, name) });
     }
     const picked = await vscode11.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -4366,9 +4541,9 @@ async function pickDirectory(root) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path12.dirname(current);
+      current = path13.dirname(current);
     } else {
-      current = path12.join(current, picked.label.replace("$(folder) ", ""));
+      current = path13.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }
@@ -4441,7 +4616,7 @@ function _renderOverallSummary(review, blocks, repoRoot, palette) {
     const pMeta = PRIORITY_META[priority];
     const pColor = palette.priority[priority];
     const badge = pMeta ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>` : "";
-    const absFile = path12.join(repoRoot, pfs.file);
+    const absFile = path13.join(repoRoot, pfs.file);
     html += `<div class="per-file-summary">
       <div class="per-file-header">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
@@ -4461,7 +4636,7 @@ function _renderFileBlocks(blocks, repoRoot, palette) {
   }
   let html = "";
   for (const [relFile, fileBlocks] of byFile) {
-    const absFile = path12.join(repoRoot, relFile);
+    const absFile = path13.join(repoRoot, relFile);
     html += `<div class="file-block">
       <div class="file-name">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(relFile)}</a>
@@ -4483,6 +4658,12 @@ function _renderFileBlocks(blocks, repoRoot, palette) {
     html += "</div>";
   }
   return html;
+}
+function logSourceExclusions(excluded, show = false) {
+  if (!excluded.length) return;
+  const channel = getOutputChannel();
+  for (const entry of excluded) channel.appendLine(`Source excluded: ${JSON.stringify(entry.path)} (${entry.reason})`);
+  if (show) channel.show(true);
 }
 function buildSummaryHtml(report, repoRoot, palette) {
   const pal = palette ?? resolvePalette("theme-adaptive");
@@ -4509,6 +4690,13 @@ function buildSummaryHtml(report, repoRoot, palette) {
       </div>
       <div class="meta">${metaParts.join(" &nbsp;\xB7&nbsp; ")}</div>
     </div>`;
+  if (report.source_exclusions?.length) {
+    body += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
+    for (const entry of report.source_exclusions) {
+      body += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
+    }
+    body += "</ul></section>";
+  }
   if (report.review.summary) {
     if (isError) {
       const txt = report.review.summary.replace(/^AI review unavailable:\s*/i, "");
@@ -4527,7 +4715,7 @@ function buildSummaryHtml(report, repoRoot, palette) {
   if (report.staged_files.length > 0) {
     body += '<section><h2>\u{1F4C1} Analyzed File List</h2><ul class="file-list">';
     for (const f of report.staged_files) {
-      const absFile = path12.join(repoRoot, f);
+      const absFile = path13.join(repoRoot, f);
       body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;
     }
     body += "</ul></section>";
@@ -4711,7 +4899,7 @@ function setupIndexWatcher(context) {
     return;
   }
   const indexPattern = new vscode11.RelativePattern(
-    vscode11.Uri.file(path12.join(ws.fsPath, ".git")),
+    vscode11.Uri.file(path13.join(ws.fsPath, ".git")),
     "index"
   );
   const watcher = vscode11.workspace.createFileSystemWatcher(indexPattern, false, false, true);
