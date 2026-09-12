@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runTests } from "@vscode/test-electron";
+import { randomUUID } from "node:crypto";
 
 const extensionRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -13,6 +14,7 @@ const temporary = await mkdtemp(path.join(tmpdir(), "commit-defender-host-"));
 const workspace = path.join(temporary, "workspace");
 const version = process.env.VSCODE_TEST_VERSION || "stable";
 const executable = process.env.VSCODE_EXECUTABLE_PATH;
+const profileId = `cd-host-${randomUUID()}`;
 const evidenceFile = path.join(
   extensionRoot,
   "test-results",
@@ -29,6 +31,17 @@ try {
     path.join(workspace, ".vscode", "settings.json"),
     JSON.stringify({
       "commitDefender.preCommitHook": "disable",
+      "telemetry.telemetryLevel": "off",
+      "update.mode": "none",
+      "extensions.autoUpdate": false,
+    }),
+  );
+  await mkdir(path.join(temporary, "user-data", "User"), { recursive: true });
+  await writeFile(
+    path.join(temporary, "user-data", "User", "settings.json"),
+    JSON.stringify({
+      "commitDefender.localProfile": profileId,
+      "commitDefender.runOnStage": false,
       "telemetry.telemetryLevel": "off",
       "update.mode": "none",
       "extensions.autoUpdate": false,
@@ -53,6 +66,7 @@ try {
     extensionTestsEnv: {
       CD_TEST_WORKSPACE: workspace,
       CD_TEST_EVIDENCE_FILE: evidenceFile,
+      CD_TEST_PROFILE: profileId,
     },
     launchArgs: [
       workspace,

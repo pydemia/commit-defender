@@ -8,8 +8,11 @@ import { sourceHash } from "./reviewSource.js";
 import type { SourceExclusion } from "./sourcePolicy.js";
 import { loadSkillMaterial } from "./skills.js";
 import type { CommitMessageResult, RunResult } from "./types.js";
+import { prepareStandaloneWorker } from "./standaloneWorkerClient.js";
+import type { StandaloneReviewSettings } from "./standaloneReviewProtocol.js";
 
-export type ReviewScope = "staged" | "file" | "directory" | "repository";
+export type ReviewScope =
+  "staged" | "file" | "directory" | "repository" | "selection";
 export interface ReviewRequest {
   repoRoot: string;
   files: string[];
@@ -21,20 +24,42 @@ export interface PreparedExecution<T> {
   readonly backendId: string;
   readonly key: string;
   run(signal: AbortSignal, progress?: ProgressCb): Promise<T>;
+  /** Releases an unused snapshot/worker, including a duplicate preparation. */
+  dispose?(): void | Promise<void>;
 }
 export interface ReviewBackend {
-  prepareReview(request: ReviewRequest): PreparedExecution<RunResult>;
+  prepareReview(
+    request: ReviewRequest,
+    signal: AbortSignal,
+  ): Promise<PreparedExecution<RunResult>>;
   prepareCommitMessage(
     repoRoot: string,
   ): PreparedExecution<CommitMessageResult>;
 }
 
-/** One selection point. Future backends replace this adapter; a request never fans out to both. */
-export function createReviewBackend(config: ResolvedConfig): ReviewBackend {
+/** Manual reviews always use the shared fixed-source core. Account adapters remain for commit messages. */
+export function createReviewBackend(
+  config: ResolvedConfig,
+  local: { workerFile: string; settings: StandaloneReviewSettings },
+): ReviewBackend {
+  const settings = structuredClone(local.settings);
+  const commitMessages = createLegacyReviewBackend(config);
+  return {
+    prepareReview: (request, signal) =>
+      prepareStandaloneWorker(local.workerFile, request, settings, signal),
+    prepareCommitMessage: (repoRoot) =>
+      commitMessages.prepareCommitMessage(repoRoot),
+  };
+}
+
+/** Retained for commit-message generation and historical provider regression tests. */
+export function createLegacyReviewBackend(
+  config: ResolvedConfig,
+): LegacyReviewBackend {
   return new LegacyReviewBackend(config);
 }
 
-class LegacyReviewBackend implements ReviewBackend {
+class LegacyReviewBackend {
   private readonly config: ResolvedConfig;
   constructor(config: ResolvedConfig) {
     this.config = { ...config, excludePatterns: [...config.excludePatterns] };

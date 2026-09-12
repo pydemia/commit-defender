@@ -52,6 +52,23 @@ export class SourceViewCache {
 }
 export const sourceViews = new SourceViewCache();
 
+/** Retain worker-owned source before its snapshot closes, subject to the same bounded cache. */
+export function retainCapturedSources(
+  report: AnalysisReport,
+  sources: Readonly<Record<string, string>> | undefined,
+): void {
+  for (const [file, text] of Object.entries(sources ?? {})) {
+    const anchor = sourceAnchor(report, file);
+    if (
+      anchor &&
+      typeof text === "string" &&
+      sourceHash(text) === anchor.sha256 &&
+      text.split(/\r?\n/).length === anchor.line_count
+    )
+      sourceViews.put(text);
+  }
+}
+
 export function attachReviewSources(
   report: AnalysisReport,
   sources: ReadonlyMap<string, string>,

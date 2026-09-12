@@ -1,5 +1,7 @@
 # Commit Defender
 
+This development branch is integrating [standalone review and local Memory/Skills](docs/standalone-review.md). Manual reviews now use the shared GCR core and are advisory. The provider-based pre-commit hook described below remains a separate legacy path. This integration has not been published to Marketplace.
+
 **AI-powered pre-commit code review with priority-graded findings, inline in VS Code.**
 
 Commit Defender intercepts your staged changes before they land, asks an AI to review them, and surfaces findings directly in the editor — each tagged with a priority level so you know exactly what must be fixed now versus what can wait. P3 Critical findings block the commit automatically.

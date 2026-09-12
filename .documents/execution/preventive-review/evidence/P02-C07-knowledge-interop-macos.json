@@ -1,0 +1,17 @@
+{
+  "status": "verified",
+  "startedAt": "2026-09-12T20:55:57.421Z",
+  "runtime": "v25.9.0",
+  "modelCalls": 0,
+  "scope": "profile",
+  "credentialStore": "macOS Keychain",
+  "data": "synthetic",
+  "observations": [
+    "Editor-created candidate is identical in a fresh CLI process.",
+    "CLI activation is visible to a reopened editor store; stale editor revision is rejected without overwriting it.",
+    "Updated editor revision is identical in CLI; 0600 export does not overwrite; CLI import creates a distinct candidate visible to the editor store.",
+    "Deactivation and deletion propagate in both directions after reopening the stores."
+  ],
+  "cleanup": "completed",
+  "finishedAt": "2026-09-12T20:55:59.259Z"
+}

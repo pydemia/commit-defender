@@ -1,5 +1,7 @@
 /** TypeScript interfaces matching the Python JSON output schema (schema_version: 1). */
 import type { SourceExclusion } from './sourcePolicy.js';
+import type { CommitDefenderProjection } from '@gcr/client-contract';
+import type { LocalContextFreshness } from './localKnowledge.js';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -88,6 +90,10 @@ export interface ReviewResult {
 }
 
 export interface AnalysisReport {
+  /** Immutable core report; the legacy-shaped fields below are a display projection. */
+  gcr?: CommitDefenderProjection['gcr'];
+  /** Display-time observation, separate from the immutable report and encrypted history. */
+  local_context_freshness?: LocalContextFreshness;
   schema_version: 1;
   staged_files: string[];
   duration_ms: number;
@@ -107,6 +113,8 @@ export interface AnalysisReport {
 /** Internal result from DockerRunner */
 export interface RunResult {
   report: AnalysisReport;
+  /** Ephemeral selected source bodies for navigation. Never persisted in the report/history. */
+  capturedSources?: Record<string, string>;
   /** Raw stderr output (ANSI) for the output channel */
   stderr: string;
   timedOut: boolean;

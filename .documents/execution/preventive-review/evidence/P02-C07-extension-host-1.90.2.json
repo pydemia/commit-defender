@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "vscode": "1.90.2",
+  "node": "20.9.0",
+  "electron": "29.4.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "extensionVersion": "2.3.0",
+  "commandCount": 20,
+  "activation": true,
+  "hookDefault": "disable",
+  "modelCalled": false,
+  "checks": [
+    "activation",
+    "command registration",
+    "clear findings",
+    "cancel without run",
+    "no hook installed",
+    "standalone defaults and user profile",
+    "empty history refresh creates no local store or OS key"
+  ],
+  "visualInspection": false
+}

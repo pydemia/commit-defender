@@ -6,10 +6,11 @@ out-test/**
 out/**
 !out/extension.js
 !out/hook-cli.js
+!out/standalone-review-worker.js
 .gitignore
 tsconfig.json
 tsconfig.test.json
 .vscode-test/**
 test-results/**
-# Test-only GCR contract delivery; runtime integration follows in P02-C07.
+# GCR libraries are bundled into the worker. Their notices ship in third-party/gcr/.
 vendor/**

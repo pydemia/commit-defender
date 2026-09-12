@@ -1,0 +1,61 @@
+{
+  "recordedAt": "2026-09-12T20:35:03.222860+00:00",
+  "status": "in-progress-uncommitted",
+  "baseSourceCommit": "35575adae13dbafd8da9f1fb6fd443bc9fb783a9",
+  "gcrSourceCommit": "400b54ab2b391e87fdec4f4913ba2bfce9d16ff6",
+  "gcrPackageVersion": "0.1.0-alpha.9",
+  "tests": [
+    {
+      "command": "npm test",
+      "runtime": "Node 25.9.0",
+      "exitCode": 0,
+      "passed": 104,
+      "note": "Before final preparation-status callbacks; the affected backend suite was rerun afterward."
+    },
+    {
+      "command": "npm run test:review-backend",
+      "runtime": "Node 25.9.0",
+      "exitCode": 0,
+      "passed": 13,
+      "note": "After preparation-status callbacks."
+    },
+    {
+      "command": "node --test out-test/standalone-review.test.cjs out-test/standalone-config.test.cjs out-test/review-backend.test.cjs",
+      "runtime": "Node 18.20.8",
+      "exitCode": 0,
+      "passed": 24
+    },
+    {
+      "command": "npm run typecheck:test",
+      "exitCode": 0
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0
+    }
+  ],
+  "testPorts": "Synthetic executor and in-memory test key store. Worker protocol fixture is explicitly synthetic. Production worker unsupported-provider case loads the actual bundle.",
+  "realModelCallsThisCheckpoint": 0,
+  "gui": {
+    "status": "waiting-input",
+    "reason": "Mac locked; automatic unlock failed. Pending user unlock request has no answer."
+  },
+  "artifacts": {
+    "out/extension.js": "a499436ffbc6f5176e0a5854c74b4daffd59bb9e69bfbe9ec9c7d94816454512",
+    "out/standalone-review-worker.js": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+    "out/hook-cli.js": "f475fd89a7b3c0aaa65267b79eb1b4050c8b6cdeb63e01553b4ec044b8003081"
+  },
+  "delivery": {
+    "commit": false,
+    "push": false,
+    "vsixPublished": false,
+    "serverRollout": false
+  },
+  "remaining": [
+    "Actual model reviews through the CD worker",
+    "OS-backed CLI/extension cross-process and restart verification",
+    "Actual VS Code outcome, knowledge CRUD and navigation verification",
+    "VSIX contents and final review before C07 commit/push",
+    "P02-C08 credential migration and remaining P03-P13 plan"
+  ]
+}

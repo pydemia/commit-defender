@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { PaletteId } from './palette.js';
+import type { StandaloneReviewSettings } from './standaloneReviewProtocol.js';
 
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
 export type RichnessLevel   = 'colorful' | 'chatty' | 'moderate' | 'simple' | 'silent';
@@ -44,6 +45,26 @@ export interface ResolvedConfig {
 /** Backwards-compatible alias kept for code that hasn't been renamed yet. */
 export type ExtensionConfig = ResolvedConfig;
 
+/** Account selection and source grants are never read from a repository's settings.json. */
+export function getStandaloneReviewSettings(fileCount: number): StandaloneReviewSettings {
+  const cfg = vscode.workspace.getConfiguration('commitDefender');
+  const user = <T>(name: string): T | undefined => cfg.inspect<T>(name)?.globalValue;
+  const seconds = user<number>(fileCount === 1 ? 'fileTimeoutSeconds' : 'directoryTimeoutSeconds');
+  return {
+    mode: user<string>('reviewMode') ?? 'standalone',
+    profileId: user<string>('localProfile') ?? 'default',
+    provider: user<string>('aiProvider') ?? 'unconfigured',
+    model: user<string>('model') ?? '',
+    reasoningEffort: user<string>('reviewReasoningEffort') ?? 'xhigh',
+    executablePath: resolveCodexPath(user<string>('codexPath') ?? 'codex'),
+    workspaceTrusted: vscode.workspace.isTrusted,
+    durationMs: seconds && Number.isFinite(seconds) && seconds > 0
+      ? Math.min(600_000, Math.floor(seconds * 1000)) : (fileCount === 1 ? 120_000 : 360_000),
+    // Repository exclusions may only narrow the immutable source selection.
+    excludePatterns: cfg.get<string[]>('excludePatterns') ?? [],
+  };
+}
+
 export function getConfig(): ResolvedConfig {
   const cfg = vscode.workspace.getConfiguration('commitDefender');
   return {
@@ -67,7 +88,7 @@ export function getConfig(): ResolvedConfig {
     directoryTimeoutSeconds:   cfg.get<number>('directoryTimeoutSeconds')   ?? 360,
     stagedFilesWarnThreshold:  cfg.get<number>('stagedFilesWarnThreshold')  ?? 20,
     repoAnalysisWarnThreshold: cfg.get<number>('repoAnalysisWarnThreshold') ?? 80,
-    runOnStage:                cfg.get<boolean>('runOnStage') ?? true,
+    runOnStage:                cfg.inspect<boolean>('runOnStage')?.globalValue ?? false,
   };
 }
 

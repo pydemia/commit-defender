@@ -10,18 +10,25 @@ import {
   reviewExitCode,
   type ClientReviewReport,
 } from "@gcr/client-contract";
+import { clientCorePackage } from "@gcr/client-core";
+import { clientExecutorsPackage } from "@gcr/client-executors";
 import { normalizeReport } from "../src/commentFormatter.js";
 import { resolveExitCode } from "../src/exitResolver.js";
 import { reviewCoverage, reviewStatus } from "../src/reviewOutcome.js";
 import { liveBlocks, sourceAnchor } from "../src/reviewSource.js";
 import type { AnalysisReport } from "../src/types.js";
 import { fixture } from "./helpers/review-fixture.js";
+import { SummaryView } from "../src/summaryView.js";
+import { ReviewLinks } from "../src/reviewLinks.js";
+import { mergeLocalHistory } from "../src/historyEntries.js";
+import type { HistoryEntry } from "../src/historyProvider.js";
 
 const fixtureDir = path.resolve(__dirname, "../test/fixtures/client-contract");
 const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
+const deliveryVersion = "0.1.0-alpha.9";
 const corpus = JSON.parse(bytes.toString("utf8")) as {
   synthetic: boolean;
   sourceText: Record<string, string>;
@@ -37,31 +44,132 @@ const reportFor = (name: string): ClientReviewReport =>
 const sha256 = (value: Uint8Array | string) =>
   createHash("sha256").update(value).digest("hex");
 
+test("standalone summary distinguishes pinned evidence and a later local-context observation", () => {
+  const core = reportFor("source-evidence");
+  const projected: AnalysisReport = projectCommitDefender(core);
+  const original = structuredClone(core);
+  projected.local_context_freshness = {
+    checkedAt: "2026-09-13T00:00:00.000Z",
+    status: "stale",
+    changes: [{ id: "local-memory", reason: "inactive" }],
+  };
+  const view = new SummaryView(projected, "/synthetic", new ReviewLinks());
+  assert(view.html.includes("Standalone · advisory"));
+  assert(!view.html.includes("Legacy hook: would block"));
+  assert(view.html.includes("changed, expired or became inactive"));
+  assert(view.html.includes("source-confirmed"));
+  assert(
+    view.html.includes(
+      "Source-read observations record returned source ranges",
+    ),
+  );
+  assert(view.html.includes(core.identity.source.hash));
+  assert(view.html.includes(core.identity.context.hash));
+  assert(view.html.includes("Raw JSON"));
+  assert.deepEqual(projected.gcr?.report, original);
+});
+
+test("history reload preserves a concurrently completed review and excludes other profiles and worktrees", () => {
+  const old = reportFor("working-tree");
+  const newer = clientReviewReport({
+    ...old,
+    runId: "newer-run",
+    finishedAt: "2026-01-01T00:00:02.000Z",
+  });
+  const client = old.identity.client;
+  const scope = {
+    kind: "repository" as const,
+    profileId: client.profileId,
+    repositoryKey: client.repositoryKey,
+    worktreeKey: client.worktreeKey,
+  };
+  const otherProfile = clientReviewReport({
+    ...old,
+    runId: "other-profile",
+    identity: {
+      ...old.identity,
+      client: { ...client, profileId: "other-profile" },
+    },
+  });
+  const otherWorktree = clientReviewReport({
+    ...old,
+    runId: "other-worktree",
+    identity: {
+      ...old.identity,
+      client: { ...client, worktreeKey: "a".repeat(64) },
+    },
+  });
+  const entry: HistoryEntry = {
+    id: newer.runId,
+    timestamp: new Date(newer.finishedAt!),
+    report: projectCommitDefender(newer),
+    repoRoot: "/synthetic",
+    label: "Existing directory review",
+    scope: "directory",
+    scopeTarget: "/synthetic/src",
+  };
+  const merged = mergeLocalHistory(
+    [entry],
+    [old, otherProfile, otherWorktree],
+    "/synthetic",
+    scope,
+  );
+  assert.deepEqual(
+    merged.map((value) => value.id),
+    [newer.runId, old.runId],
+  );
+  assert.equal(merged[0].scope, "directory");
+  assert.equal(merged[0].scopeTarget, "/synthetic/src");
+  assert.equal(merged[1].scope, "selection");
+  assert.deepEqual(
+    merged[1].report.staged_files,
+    old.files.map((file) => file.source.path),
+  );
+});
+
 test("uses a pinned installed package and the byte-identical GCR fixture", () => {
   assert.equal(corpus.synthetic, true);
   assert.equal(sha256(bytes), provenance.fixtureSha256);
-  assert.equal(clientContractPackage.version, provenance.packageVersion);
+  // The C01 fixture retains its original provenance; the installed runtime release is newer.
+  assert.equal(provenance.packageVersion, "0.1.0-alpha.2");
+  for (const info of [
+    clientContractPackage,
+    clientCorePackage,
+    clientExecutorsPackage,
+  ]) {
+    assert.equal(info.version, deliveryVersion);
+    assert.equal(info.contractVersion, 1);
+  }
   const packageJson = JSON.parse(
     fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8"),
   );
   assert.equal(
-    packageJson.devDependencies["@gcr/client-contract"],
-    `file:vendor/gcr/${provenance.packageVersion}/gcr-client-contract-${provenance.packageVersion}.tgz`,
+    packageJson.dependencies["@gcr/client-contract"],
+    `file:vendor/gcr/${deliveryVersion}/gcr-client-contract-${deliveryVersion}.tgz`,
   );
-  const vendor = path.resolve(
-    __dirname,
-    "../vendor/gcr",
-    provenance.packageVersion,
-  );
+  const vendor = path.resolve(__dirname, "../vendor/gcr", deliveryVersion);
   const manifest = JSON.parse(
     fs.readFileSync(path.join(vendor, "manifest.json"), "utf8"),
   );
-  assert.equal(manifest.version, provenance.packageVersion);
-  for (const entry of manifest.packages)
+  const delivery = JSON.parse(
+    fs.readFileSync(path.join(vendor, "provenance.json"), "utf8"),
+  );
+  assert.equal(delivery.packageVersion, deliveryVersion);
+  assert.equal(
+    delivery.manifestSha256,
+    sha256(fs.readFileSync(path.join(vendor, "manifest.json"))),
+  );
+  assert.equal(manifest.version, deliveryVersion);
+  for (const entry of manifest.packages) {
+    assert.equal(
+      packageJson.dependencies[entry.name],
+      `file:vendor/gcr/${deliveryVersion}/${entry.file}`,
+    );
     assert.equal(
       sha256(fs.readFileSync(path.join(vendor, entry.file))),
       entry.sha256,
     );
+  }
 });
 
 for (const entry of corpus.cases)

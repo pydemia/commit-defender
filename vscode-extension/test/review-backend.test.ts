@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import {
-  createReviewBackend,
+  createLegacyReviewBackend,
   type PreparedExecution,
 } from "../src/reviewBackend.js";
 import {
@@ -78,6 +78,96 @@ const calls = (f: ReturnType<typeof fixture>) =>
         .split("\n")
         .map((line) => JSON.parse(line))
     : [];
+
+test("an asynchronous duplicate joins the captured execution and releases its unused worker", async () => {
+  const owner = new ReviewExecutionOwner<number>();
+  const events: string[] = [];
+  const original = pendingJob("captured", "standalone");
+  const first = owner.start(original.job, callbacks(events, "original"));
+  await flush();
+  let released = false;
+  const duplicate = pendingJob("captured", "standalone");
+  duplicate.job.dispose = () => {
+    released = true;
+  };
+  const second = owner.prepare(
+    async () => duplicate.job,
+    callbacks(events, "duplicate"),
+  );
+  await flush();
+  await flush();
+  assert(!original.signal().aborted);
+  assert.equal(duplicate.calls(), 0);
+  original.gate.resolve(1);
+  await Promise.all([first, second]);
+  await owner.settled();
+  assert(released);
+  assert.deepEqual(events, [
+    "original:start",
+    "original:result",
+    "original:finish",
+  ]);
+});
+
+test("clear or superseding preparation releases late snapshots without starting their executors", async () => {
+  const owner = new ReviewExecutionOwner<number>();
+  const events: string[] = [];
+  const firstPrepared = deferred<PreparedExecution<number>>();
+  const first = pendingJob("old");
+  let released = 0;
+  first.job.dispose = () => {
+    released++;
+  };
+  let firstSignal!: AbortSignal;
+  const a = owner.prepare(
+    (signal) => {
+      firstSignal = signal;
+      return firstPrepared.promise;
+    },
+    callbacks(events, "old"),
+  );
+  const secondPrepared = deferred<PreparedExecution<number>>();
+  const second = pendingJob("new");
+  second.job.dispose = () => {
+    released++;
+  };
+  const b = owner.prepare(
+    () => secondPrepared.promise,
+    callbacks(events, "new"),
+  );
+  assert.equal(firstSignal.reason, "superseded");
+  owner.invalidate();
+  assert(!owner.isRunning);
+  firstPrepared.resolve(first.job);
+  secondPrepared.resolve(second.job);
+  await Promise.all([a, b]);
+  await owner.settled();
+  assert.equal(released, 2);
+  assert.equal(first.calls() + second.calls(), 0);
+  assert.deepEqual(events, []);
+});
+
+test("shutdown waits for the worker release acknowledgment after a run resolves", async () => {
+  const owner = new ReviewExecutionOwner<number>();
+  const events: string[] = [];
+  const job = pendingJob("cleanup");
+  const release = deferred<void>();
+  job.job.dispose = () => release.promise;
+  const run = owner.start(job.job, callbacks(events, "run"));
+  await flush();
+  job.gate.resolve(1);
+  await flush();
+  await flush();
+  let settled = false;
+  const shutdown = owner.settled().then(() => {
+    settled = true;
+  });
+  await flush();
+  assert(!settled);
+  release.resolve();
+  await Promise.all([run, shutdown]);
+  assert(settled);
+});
 
 test("identical in-flight requests join one execution and publish exactly once", async () => {
   const owner = new ReviewExecutionOwner<number>();
@@ -230,7 +320,7 @@ test("backend preparation freezes source, Skill and provider config and duplicat
     provider(f);
     f.write("source.ts", "export const ORIGINAL_SOURCE = 1;");
     f.write(".commit-defender/rules/SKILL.md", "SYNTHETIC_ORIGINAL_SKILL");
-    const backend = createReviewBackend(f.cfg);
+    const backend = createLegacyReviewBackend(f.cfg);
     const request = {
       repoRoot: f.repo,
       files: ["source.ts"],
@@ -296,15 +386,16 @@ test("request identity distinguishes scope, settings, Skill and changed content;
       files: ["source.ts"],
       scope: "staged" as const,
     };
-    const backend = createReviewBackend(f.cfg);
+    const backend = createLegacyReviewBackend(f.cfg);
     const prepared = backend.prepareReview(request);
     assert.notEqual(
       backend.prepareReview({ ...request, scope: "file" }).key,
       prepared.key,
     );
     assert.notEqual(
-      createReviewBackend({ ...f.cfg, model: "other" }).prepareReview(request)
-        .key,
+      createLegacyReviewBackend({ ...f.cfg, model: "other" }).prepareReview(
+        request,
+      ).key,
       prepared.key,
     );
     f.write(".commit-defender/rules/SKILL.md", "new criterion");
@@ -331,7 +422,7 @@ test("a captured input failure is retained if the repository is repaired before 
     const index = path.join(f.repo, ".git", "index");
     const bytes = fs.readFileSync(index);
     fs.writeFileSync(index, "bad index");
-    const prepared = createReviewBackend(f.cfg).prepareReview({
+    const prepared = createLegacyReviewBackend(f.cfg).prepareReview({
       repoRoot: f.repo,
       files: ["source.ts"],
       scope: "staged",
@@ -352,7 +443,7 @@ test("commit-message preparation uses a separate operation identity and one froz
     provider(f, true);
     f.write("source.ts", "const STAGED = 2;");
     f.git("add", ".");
-    const backend = createReviewBackend(f.cfg);
+    const backend = createLegacyReviewBackend(f.cfg);
     const prepared = backend.prepareCommitMessage(f.repo);
     assert.notEqual(
       prepared.key,

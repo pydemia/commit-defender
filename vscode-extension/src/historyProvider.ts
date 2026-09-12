@@ -3,6 +3,8 @@ import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './
 import { ExtensionConfig } from './config.js';
 import type { ReviewScope } from './reviewBackend.js';
 import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
+import type { ClientReviewReport, LocalScope } from '@gcr/client-contract';
+import { mergeLocalHistory } from './historyEntries.js';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
@@ -49,16 +51,22 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     const grade = report.review.grade || 'ungraded';
     const count = report.staged_files.length;
     const entry: HistoryEntry = {
-      id: Date.now().toString(),
-      timestamp: new Date(),
+      id: report.gcr?.report.runId ?? Date.now().toString(),
+      timestamp: new Date(report.gcr?.report.finishedAt ?? Date.now()),
       report, repoRoot,
       label: `${OUTCOME_META[reviewStatus(report.review)].label} · ${count} file${count !== 1 ? 's' : ''}${reviewStatus(report.review) === 'completed' ? ` · ${grade}` : ''}`,
       scope,
       scopeTarget,
     };
-    this._history.unshift(entry);
+    this._history = [entry, ...this._history.filter(old => old.id !== entry.id)];
     if (this._history.length > 20) { this._history.pop(); }
     this._lastReport = report;
+    this._emitter.fire(undefined);
+  }
+
+  /** Reload only history; a saved report never becomes fresh editor diagnostics automatically. */
+  restore(reports: ClientReviewReport[], repoRoot: string, scope: Extract<LocalScope, { kind: 'repository' }>): void {
+    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope);
     this._emitter.fire(undefined);
   }
 
@@ -197,6 +205,8 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 
     children.push(
+      { kind: 'command', id: 'cmd-local-knowledge', label: 'Local Memory and Skills', desc: 'Manage encrypted personal review knowledge', icon: 'book', command: 'commitDefender.manageLocalKnowledge' },
+      { kind: 'command', id: 'cmd-local-history', label: 'Refresh Local History', desc: 'Load history shared with the GCR CLI', icon: 'refresh', command: 'commitDefender.refreshLocalHistory' },
       { kind: 'command', id: 'cmd-summary', label: 'Show Summary Panel', desc: 'Reopen last summary',                  icon: 'preview',   command: 'commitDefender.showSummary' },
       { kind: 'command', id: 'cmd-clear',   label: 'Clear Findings',     desc: 'Remove all comments & diagnostics',   icon: 'clear-all', command: 'commitDefender.clearFindings' },
     );
@@ -307,6 +317,7 @@ function scopeIcon(scope: AnalysisScope): string {
     case 'file':       return 'file-code';
     case 'directory':  return 'folder';
     case 'repository': return 'repo';
+    case 'selection': return 'files';
   }
 }
 
@@ -316,6 +327,7 @@ function scopeTag(scope: AnalysisScope): string {
     case 'file':       return 'file';
     case 'directory':  return 'dir';
     case 'repository': return 'repo';
+    case 'selection': return 'saved files';
   }
 }
 

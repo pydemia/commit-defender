@@ -1,0 +1,651 @@
+{
+  "status": "failed",
+  "startedAt": "2026-09-12T20:45:32.139Z",
+  "runtime": "v25.9.0",
+  "workerSha256": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+  "workerSelfContained": true,
+  "cliSha256": "c76b8bcfb6c1b9c94acdb565fc6d8adcddb015bebd73e4cc35e87f93813f86ba",
+  "model": "gpt-6-astra",
+  "reasoningEffort": "xhigh",
+  "durationMs": 180000,
+  "sourceKind": "index",
+  "fixtureRunnerSeparateFromModel": true,
+  "gui": "not-run",
+  "workerRunAttempts": 2,
+  "cases": [
+    {
+      "case": "python/fix",
+      "status": "completed",
+      "fixture": {
+        "file": "cache.py",
+        "caller": "caller.py",
+        "testFile": "test_cache.py",
+        "base": "def load(keys: list[str], cache: dict[str, int]) -> dict[str, int]:\n    \"\"\"Return every requested key; missing keys default to zero.\"\"\"\n    if cache:\n        return cache\n    return {key: cache.get(key, 0) for key in keys}\n",
+        "source": "def load(keys: list[str], cache: dict[str, int]) -> dict[str, int]:\n    \"\"\"Return every requested key; missing keys default to zero.\"\"\"\n    return {key: cache.get(key, 0) for key in keys}\n",
+        "baseSha256": "d14cc628d254f3afc77a3928babbc4eedfa69616b91364c059708f0714151e5c",
+        "sourceSha256": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+        "baseTest": {
+          "exitCode": 1
+        },
+        "sourceTest": {
+          "exitCode": 0
+        }
+      },
+      "knowledge": {
+        "id": "69fb30a5-a472-4a63-8aea-ca663885575e",
+        "revision": 3,
+        "hash": "81df84bf3b6f574d4389213d10005986cff92a96645809d66a92eea08dcb9da9",
+        "cliToExtension": true,
+        "extensionToCli": true
+      },
+      "executionKey": "eed65b9675dd271ebd1fc6721f91966740cafc535737cf6b441ed7ab0e360174",
+      "report": {
+        "contractVersion": 1,
+        "runId": "f1acbd73-9ea3-45a8-b2e8-f83e015bd4c9",
+        "identity": {
+          "client": {
+            "mode": "standalone",
+            "profileId": "cd-smoke-f590b0ae-5207-4386-b394-2074c3551dd3",
+            "repositoryKey": "0b0241e31cb05d41387c8a58e7a5e897182b589529471cc4b13c6af900e5eda0",
+            "worktreeKey": "6ea6a365a79f6d5f16010786d0a1fb4b25bd9a6f7295b750ec44cf8a7b729e64"
+          },
+          "source": {
+            "kind": "index",
+            "hash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "objectFormat": "sha1",
+            "baseCommit": "3c904319e5b5b1c867bea830a44afb6ea68e6554",
+            "baseTree": "39483f79934e6f309367f1a306c2e7a43abdb75a",
+            "sourceTree": "c7fab28aaa300f3ded1d274d31d54470aaa02cc3"
+          },
+          "context": {
+            "hash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "entries": [
+              {
+                "origin": "builtin",
+                "kind": "skill",
+                "id": "gcr-standalone-review",
+                "revision": 1,
+                "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+              },
+              {
+                "origin": "local",
+                "kind": "memory",
+                "id": "69fb30a5-a472-4a63-8aea-ca663885575e",
+                "revision": 3,
+                "hash": "81df84bf3b6f574d4389213d10005986cff92a96645809d66a92eea08dcb9da9",
+                "scope": {
+                  "kind": "repository",
+                  "profileId": "cd-smoke-f590b0ae-5207-4386-b394-2074c3551dd3",
+                  "repositoryKey": "0b0241e31cb05d41387c8a58e7a5e897182b589529471cc4b13c6af900e5eda0",
+                  "worktreeKey": "6ea6a365a79f6d5f16010786d0a1fb4b25bd9a6f7295b750ec44cf8a7b729e64"
+                }
+              }
+            ],
+            "required": [
+              {
+                "kind": "knowledge",
+                "reference": "builtin:gcr-standalone-review",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:46efa6aa5e61e1a707512b1e00ee836b96087d9e7860d7002ce7bdd84b366821",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:ce95ce7b7009047e06ba3b39eb363e2201d5356290d46cc806775f8d13b19b44",
+                "available": true,
+                "reason": ""
+              }
+            ]
+          },
+          "reviewProfile": {
+            "id": "gcr-standalone-review",
+            "revision": 1,
+            "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+          },
+          "executor": {
+            "id": "codex-account",
+            "version": "0.153.4/gcr-fixed-source-v1",
+            "model": "gpt-6-astra",
+            "configHash": "cacde4d7ad5ec3f6379bede6c69806453c8d3195af8504ee43657dded04743db"
+          },
+          "toolsHash": "aec5e1470b5e8c93071e89e543bc77196aeaa6d6a493e0da2ff4e61b93090fcc"
+        },
+        "status": "completed",
+        "trigger": "manual",
+        "requestedAt": "2026-09-12T20:45:35.808Z",
+        "startedAt": "2026-09-12T20:45:35.808Z",
+        "finishedAt": "2026-09-12T20:46:31.026Z",
+        "durationMs": 55218,
+        "summary": "No defects identified by source inspection. Reviewed the full selected source, fixed base, caller and tests. Tests were not run.",
+        "sourceFiles": [
+          {
+            "path": "cache.py",
+            "side": "source",
+            "hash": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+            "byteLength": 188,
+            "lineCount": 4,
+            "gitBlob": "56a4fa0e7a3f772bfbdee7830b284f98a0d35410"
+          },
+          {
+            "path": "cache.py",
+            "side": "base",
+            "hash": "d14cc628d254f3afc77a3928babbc4eedfa69616b91364c059708f0714151e5c",
+            "byteLength": 223,
+            "lineCount": 6,
+            "gitBlob": "5a0ba024a956b75ef8e40d48aaa151de4a1c81f4"
+          },
+          {
+            "path": "caller.py",
+            "side": "source",
+            "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+            "byteLength": 115,
+            "lineCount": 6,
+            "gitBlob": "06df95e4c63d326ccb7509833cb45bfcea3625a7"
+          },
+          {
+            "path": "caller.py",
+            "side": "base",
+            "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+            "byteLength": 115,
+            "lineCount": 6,
+            "gitBlob": "06df95e4c63d326ccb7509833cb45bfcea3625a7"
+          },
+          {
+            "path": "test_cache.py",
+            "side": "source",
+            "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+            "byteLength": 192,
+            "lineCount": 8,
+            "gitBlob": "4669d0e7c834a29047dbde2e368b21cd4087401d"
+          },
+          {
+            "path": "test_cache.py",
+            "side": "base",
+            "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+            "byteLength": 192,
+            "lineCount": 8,
+            "gitBlob": "4669d0e7c834a29047dbde2e368b21cd4087401d"
+          }
+        ],
+        "files": [
+          {
+            "source": {
+              "path": "cache.py",
+              "side": "source",
+              "hash": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+              "byteLength": 188,
+              "lineCount": 4,
+              "gitBlob": "56a4fa0e7a3f772bfbdee7830b284f98a0d35410"
+            },
+            "status": "completed",
+            "summary": "Removing the nonempty-cache shortcut supplies missing requested keys as required by the caller and test assertions. Checked empty inputs, partial/full hits, extra cached keys and return identity; no supported regression found."
+          }
+        ],
+        "excluded": [],
+        "problems": [],
+        "findings": [],
+        "evidence": [
+          {
+            "kind": "source-read",
+            "id": "dbfe07b8-4b0c-4954-a7bd-f4712f37ba26",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:dbfe07b8-4b0c-4954-a7bd-f4712f37ba26"
+            },
+            "observedAt": "2026-09-12T20:45:50.282Z",
+            "location": {
+              "path": "cache.py",
+              "side": "source",
+              "hash": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+              "startLine": 1,
+              "endLine": 4
+            },
+            "observation": "Returned excerpt sha256=e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "c7019adc-b2cb-4028-ba99-2637bc70b28e",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:c7019adc-b2cb-4028-ba99-2637bc70b28e"
+            },
+            "observedAt": "2026-09-12T20:45:54.818Z",
+            "location": {
+              "path": "cache.py",
+              "side": "base",
+              "hash": "d14cc628d254f3afc77a3928babbc4eedfa69616b91364c059708f0714151e5c",
+              "startLine": 1,
+              "endLine": 6
+            },
+            "observation": "Returned excerpt sha256=d14cc628d254f3afc77a3928babbc4eedfa69616b91364c059708f0714151e5c; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "305b41ce-ef99-4dcf-a85b-6ef22275d13b",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:305b41ce-ef99-4dcf-a85b-6ef22275d13b"
+            },
+            "observedAt": "2026-09-12T20:45:57.282Z",
+            "location": {
+              "path": "caller.py",
+              "side": "source",
+              "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+              "startLine": 1,
+              "endLine": 6
+            },
+            "observation": "Returned excerpt sha256=fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "b1650952-6cf5-4876-935e-48e7261c11e2",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:b1650952-6cf5-4876-935e-48e7261c11e2"
+            },
+            "observedAt": "2026-09-12T20:46:00.203Z",
+            "location": {
+              "path": "caller.py",
+              "side": "base",
+              "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+              "startLine": 1,
+              "endLine": 6
+            },
+            "observation": "Returned excerpt sha256=fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "befc732d-66b1-42a2-8838-a1d1acba5412",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:befc732d-66b1-42a2-8838-a1d1acba5412"
+            },
+            "observedAt": "2026-09-12T20:46:02.750Z",
+            "location": {
+              "path": "test_cache.py",
+              "side": "source",
+              "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+              "startLine": 1,
+              "endLine": 8
+            },
+            "observation": "Returned excerpt sha256=433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "54198376-eeb9-4f9f-898d-6b87bbd5dfb1",
+            "sourceHash": "9a22dceead637ca7fd7feb30a6a58ddc45093f9d0c3f06f505203563ba5594ea",
+            "contextHash": "b506eab531c89c943b86ea6701bf237b216c65ddf3908fe0f4f006fd55d0ba0a",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:54198376-eeb9-4f9f-898d-6b87bbd5dfb1"
+            },
+            "observedAt": "2026-09-12T20:46:08.840Z",
+            "location": {
+              "path": "test_cache.py",
+              "side": "base",
+              "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+              "startLine": 1,
+              "endLine": 8
+            },
+            "observation": "Returned excerpt sha256=433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7; truncated=false. Port return only; no test executed."
+          }
+        ],
+        "questions": []
+      },
+      "diagnostic": "",
+      "exitCode": 0,
+      "history": {
+        "cliExactMatch": true,
+        "freshExtensionProcessExactMatch": true
+      },
+      "originalSourceAndIndexUnchanged": true,
+      "knowledgeLifecycle": {
+        "deactivationObserved": true,
+        "deletionObserved": true
+      },
+      "verified": true
+    },
+    {
+      "case": "python/normal",
+      "status": "failed",
+      "fixture": {
+        "file": "cache.py",
+        "caller": "caller.py",
+        "testFile": "test_cache.py",
+        "base": "def load(keys: list[str], cache: dict[str, int]) -> dict[str, int]:\n    \"\"\"Return every requested key; missing keys default to zero.\"\"\"\n    return {key: cache.get(key, 0) for key in keys}\n",
+        "source": "def load(keys: list[str], cache: dict[str, int]) -> dict[str, int]:\n    \"\"\"Return every requested key; missing keys default to zero.\"\"\"\n    result = {}\n    for key in keys:\n        result[key] = cache.get(key, 0)\n    return result\n",
+        "baseSha256": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+        "sourceSha256": "a2c91bb0d07edece3d96ddcd0312fdd1d040c5073a7f5472a5d06cfd3f1f15b7",
+        "baseTest": {
+          "exitCode": 0
+        },
+        "sourceTest": {
+          "exitCode": 0
+        }
+      },
+      "knowledge": {
+        "id": "ba6f71f5-80f7-44c2-99f9-4580f92a582a",
+        "revision": 3,
+        "hash": "b0701675b0f30a5b66eb82d247f305828f4f8a51c7919709d32e6741ddcf96b3",
+        "cliToExtension": true,
+        "extensionToCli": true
+      },
+      "executionKey": "77c51b13f5deb233fc8e0b830856d00977029dc57e18568a3063731a2c81d441",
+      "report": {
+        "contractVersion": 1,
+        "runId": "86dbce95-3dd0-4588-a07e-75e4c5dd3105",
+        "identity": {
+          "client": {
+            "mode": "standalone",
+            "profileId": "cd-smoke-f590b0ae-5207-4386-b394-2074c3551dd3",
+            "repositoryKey": "0ec17f36514464357c1b1c00cef70c1b7ad07734c274b33f4fb5fa32fa297519",
+            "worktreeKey": "dc775e083703f6196a75c75bfbfe1e33d17e7aeb1f1dfcc34f561d1cf79e7c2d"
+          },
+          "source": {
+            "kind": "index",
+            "hash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "objectFormat": "sha1",
+            "baseCommit": "01476dd5bbf74b34abaf38de8599722671688433",
+            "baseTree": "c7fab28aaa300f3ded1d274d31d54470aaa02cc3",
+            "sourceTree": "4036e313d9cdd7e25a914f0a8c6c636a9e88b0dc"
+          },
+          "context": {
+            "hash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "entries": [
+              {
+                "origin": "builtin",
+                "kind": "skill",
+                "id": "gcr-standalone-review",
+                "revision": 1,
+                "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+              },
+              {
+                "origin": "local",
+                "kind": "memory",
+                "id": "ba6f71f5-80f7-44c2-99f9-4580f92a582a",
+                "revision": 3,
+                "hash": "b0701675b0f30a5b66eb82d247f305828f4f8a51c7919709d32e6741ddcf96b3",
+                "scope": {
+                  "kind": "repository",
+                  "profileId": "cd-smoke-f590b0ae-5207-4386-b394-2074c3551dd3",
+                  "repositoryKey": "0ec17f36514464357c1b1c00cef70c1b7ad07734c274b33f4fb5fa32fa297519",
+                  "worktreeKey": "dc775e083703f6196a75c75bfbfe1e33d17e7aeb1f1dfcc34f561d1cf79e7c2d"
+                }
+              }
+            ],
+            "required": [
+              {
+                "kind": "knowledge",
+                "reference": "builtin:gcr-standalone-review",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:46efa6aa5e61e1a707512b1e00ee836b96087d9e7860d7002ce7bdd84b366821",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:ce95ce7b7009047e06ba3b39eb363e2201d5356290d46cc806775f8d13b19b44",
+                "available": true,
+                "reason": ""
+              }
+            ]
+          },
+          "reviewProfile": {
+            "id": "gcr-standalone-review",
+            "revision": 1,
+            "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+          },
+          "executor": {
+            "id": "codex-account",
+            "version": "0.153.4/gcr-fixed-source-v1",
+            "model": "gpt-6-astra",
+            "configHash": "cacde4d7ad5ec3f6379bede6c69806453c8d3195af8504ee43657dded04743db"
+          },
+          "toolsHash": "65437d027aebc3557db04a82bcd0fbf4466b1e7894a7ddf0c350526537e1d44e"
+        },
+        "status": "failed",
+        "trigger": "manual",
+        "requestedAt": "2026-09-12T20:46:35.902Z",
+        "startedAt": "2026-09-12T20:46:35.902Z",
+        "finishedAt": "2026-09-12T20:47:28.146Z",
+        "durationMs": 52243,
+        "summary": "Review did not complete.",
+        "sourceFiles": [
+          {
+            "path": "cache.py",
+            "side": "source",
+            "hash": "a2c91bb0d07edece3d96ddcd0312fdd1d040c5073a7f5472a5d06cfd3f1f15b7",
+            "byteLength": 231,
+            "lineCount": 7,
+            "gitBlob": "733dba823ce7feac42b0824bd683b9dfd2f9a52a"
+          },
+          {
+            "path": "cache.py",
+            "side": "base",
+            "hash": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+            "byteLength": 188,
+            "lineCount": 4,
+            "gitBlob": "56a4fa0e7a3f772bfbdee7830b284f98a0d35410"
+          },
+          {
+            "path": "caller.py",
+            "side": "source",
+            "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+            "byteLength": 115,
+            "lineCount": 6,
+            "gitBlob": "06df95e4c63d326ccb7509833cb45bfcea3625a7"
+          },
+          {
+            "path": "caller.py",
+            "side": "base",
+            "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+            "byteLength": 115,
+            "lineCount": 6,
+            "gitBlob": "06df95e4c63d326ccb7509833cb45bfcea3625a7"
+          },
+          {
+            "path": "test_cache.py",
+            "side": "source",
+            "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+            "byteLength": 192,
+            "lineCount": 8,
+            "gitBlob": "4669d0e7c834a29047dbde2e368b21cd4087401d"
+          },
+          {
+            "path": "test_cache.py",
+            "side": "base",
+            "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+            "byteLength": 192,
+            "lineCount": 8,
+            "gitBlob": "4669d0e7c834a29047dbde2e368b21cd4087401d"
+          }
+        ],
+        "files": [
+          {
+            "source": {
+              "path": "cache.py",
+              "side": "source",
+              "hash": "a2c91bb0d07edece3d96ddcd0312fdd1d040c5073a7f5472a5d06cfd3f1f15b7",
+              "byteLength": 231,
+              "lineCount": 7,
+              "gitBlob": "733dba823ce7feac42b0824bd683b9dfd2f9a52a"
+            },
+            "status": "failed",
+            "summary": "Review did not complete."
+          }
+        ],
+        "excluded": [],
+        "problems": [
+          {
+            "code": "invalid-output",
+            "message": "No complete review is available; inspect the problem code before retrying."
+          }
+        ],
+        "findings": [],
+        "evidence": [
+          {
+            "kind": "source-read",
+            "id": "35a09be0-2180-4021-972d-f99c43b08e0a",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:35a09be0-2180-4021-972d-f99c43b08e0a"
+            },
+            "observedAt": "2026-09-12T20:46:50.623Z",
+            "location": {
+              "path": "cache.py",
+              "side": "source",
+              "hash": "a2c91bb0d07edece3d96ddcd0312fdd1d040c5073a7f5472a5d06cfd3f1f15b7",
+              "startLine": 1,
+              "endLine": 7
+            },
+            "observation": "Returned excerpt sha256=a2c91bb0d07edece3d96ddcd0312fdd1d040c5073a7f5472a5d06cfd3f1f15b7; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "d78f9fb3-2827-4aea-8c91-bfde41c001a5",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:d78f9fb3-2827-4aea-8c91-bfde41c001a5"
+            },
+            "observedAt": "2026-09-12T20:46:53.737Z",
+            "location": {
+              "path": "cache.py",
+              "side": "base",
+              "hash": "e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289",
+              "startLine": 1,
+              "endLine": 4
+            },
+            "observation": "Returned excerpt sha256=e8ea5b6a547cd6702c422c6bf29a54754c3a54090f0b991ce63f3e4139742289; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "649d9a61-a6b5-4f0d-81cd-0b352ea18297",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:649d9a61-a6b5-4f0d-81cd-0b352ea18297"
+            },
+            "observedAt": "2026-09-12T20:46:56.261Z",
+            "location": {
+              "path": "caller.py",
+              "side": "source",
+              "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+              "startLine": 1,
+              "endLine": 6
+            },
+            "observation": "Returned excerpt sha256=fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "6d4e5d3f-5a88-4d71-8b35-10d6b0b247a2",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:6d4e5d3f-5a88-4d71-8b35-10d6b0b247a2"
+            },
+            "observedAt": "2026-09-12T20:46:59.037Z",
+            "location": {
+              "path": "caller.py",
+              "side": "base",
+              "hash": "fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee",
+              "startLine": 1,
+              "endLine": 6
+            },
+            "observation": "Returned excerpt sha256=fe2fe8aa584fabc772f77d238f5a275b15a0a1a736c42d4f9fd1762ddf47beee; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "42ec860e-b086-4071-99c7-4991ad8013b8",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:42ec860e-b086-4071-99c7-4991ad8013b8"
+            },
+            "observedAt": "2026-09-12T20:47:01.699Z",
+            "location": {
+              "path": "test_cache.py",
+              "side": "source",
+              "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+              "startLine": 1,
+              "endLine": 8
+            },
+            "observation": "Returned excerpt sha256=433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7; truncated=false. Port return only; no test executed."
+          },
+          {
+            "kind": "source-read",
+            "id": "a3bcc9d4-a77e-4a56-b14f-0736d078d02f",
+            "sourceHash": "095cd1ce37ecdc911da1ee279f7ce9b6b8e81f1f6bbd41f8ca074973d24a884e",
+            "contextHash": "e7a77c71a4a7c8d180127c420da3076efd1fb5440e67f58ce9d5fac2f9879f10",
+            "provenance": {
+              "kind": "local-observation",
+              "producer": "@gcr/client-core",
+              "reference": "fixed-source-read:a3bcc9d4-a77e-4a56-b14f-0736d078d02f"
+            },
+            "observedAt": "2026-09-12T20:47:04.543Z",
+            "location": {
+              "path": "test_cache.py",
+              "side": "base",
+              "hash": "433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7",
+              "startLine": 1,
+              "endLine": 8
+            },
+            "observation": "Returned excerpt sha256=433b9adda0b5af95283640c725cc06de983932f83098271d3a246b18df27f1b7; truncated=false. Port return only; no test executed."
+          }
+        ],
+        "questions": []
+      },
+      "diagnostic": "",
+      "exitCode": 2,
+      "history": {
+        "cliExactMatch": true,
+        "freshExtensionProcessExactMatch": true
+      },
+      "originalSourceAndIndexUnchanged": true,
+      "knowledgeLifecycle": {
+        "deactivationObserved": true,
+        "deletionObserved": true
+      }
+    }
+  ],
+  "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'failed'\n- 'completed'\n",
+  "cleanup": "completed",
+  "finishedAt": "2026-09-12T20:47:29.548Z",
+  "centralRequests": 0
+}

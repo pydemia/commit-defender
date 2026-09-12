@@ -4,13 +4,15 @@ import * as vscode from 'vscode';
 import { reviewStatus } from './reviewOutcome.js';
 import { SummaryView } from './summaryView.js';
 import { reviewNavigation } from './reviewNavigation.js';
-import { liveBlocks, liveSource } from './reviewSource.js';
-import { createReviewBackend } from './reviewBackend.js';
+import { liveBlocks, liveSource, retainCapturedSources } from './reviewSource.js';
+import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.js';
 import { ReviewExecutionOwner } from './reviewExecution.js';
+import { checkLocalContextFreshness, knowledgeScope, readLocalHistory } from './localKnowledge.js';
+import { showLocalKnowledge } from './localKnowledgeView.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
-import { ExtensionConfig, getConfig } from './config.js';
+import { ExtensionConfig, getConfig, getStandaloneReviewSettings } from './config.js';
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
@@ -25,6 +27,7 @@ import { resolvePalette } from './palette.js';
 import { normalizeReport } from './commentFormatter.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
+let settleExecutions: (() => Promise<void>) | undefined;
 
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -46,7 +49,10 @@ export function activate(context: vscode.ExtensionContext): void {
     type ModelChoice = vscode.QuickPickItem & { model?: string; custom?: boolean };
     const current = getConfig();
     const choices: ModelChoice[] = [];
-    if (includeDefault) {
+    if (provider === 'codex') {
+      choices.push({ label: '$(sparkle) gpt-6-astra', description: 'xhigh · standalone review',
+        detail: 'Requires the supported local Codex executable. Uses captured source, base and related context.', model: 'gpt-6-astra' });
+    } else if (includeDefault) {
       choices.push({
         label: '$(sparkle) CLI default model',
         description: 'Recommended',
@@ -101,13 +107,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
   async function applyAccountProvider(provider: AccountProvider, model: string): Promise<void> {
     const settings = vscode.workspace.getConfiguration('commitDefender');
-    const target = vscode.workspace.workspaceFolders?.length
-      ? vscode.ConfigurationTarget.Workspace
-      : vscode.ConfigurationTarget.Global;
+    const target = vscode.ConfigurationTarget.Global;
     providerUpdateFromWizard = provider;
     // Clear an API-provider model before switching provider so no analysis can
     // observe the new CLI provider with the previous provider's model ID.
     await settings.update('model', model, target);
+    if (provider === 'codex') await settings.update('reviewReasoningEffort', 'xhigh', target);
     await settings.update('aiProvider', provider, target);
     setTimeout(() => {
       if (providerUpdateFromWizard === provider) { providerUpdateFromWizard = undefined; }
@@ -119,9 +124,15 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   async function promptModelAtProviderSetup(provider: AccountProvider): Promise<boolean> {
+    if (provider === 'codex') {
+      const model = await chooseAccountModel(provider, false);
+      if (model === undefined) return false;
+      await applyAccountProvider(provider, model);
+      return true;
+    }
     const name = accountProviderName(provider);
     const action = await vscode.window.showInformationMessage(
-      `Commit Defender: Use the ${name} CLI default model for this workspace?`,
+      `Commit Defender: Use the ${name} CLI default model in user settings? Fixed-source standalone review is not yet supported by this provider.`,
       'Use CLI Default',
       'Choose Model…',
     );
@@ -140,9 +151,13 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   async function promptProviderChangeAfterSignIn(provider: AccountProvider): Promise<void> {
+    if (provider === 'codex') {
+      await promptModelAtProviderSetup(provider);
+      return;
+    }
     const name = accountProviderName(provider);
     const action = await vscode.window.showInformationMessage(
-      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} for this workspace and change its model?`,
+      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} in user settings and change its model?`,
       'Use CLI Default',
       'Choose Model…',
       'Keep Current Provider',
@@ -158,10 +173,10 @@ export function activate(context: vscode.ExtensionContext): void {
   async function selectAccountProviderAndModel(): Promise<void> {
     type ProviderChoice = vscode.QuickPickItem & { provider: AccountProvider };
     const choices: ProviderChoice[] = [
-      { label: 'Codex', description: 'ChatGPT/Codex account', provider: 'codex' },
-      { label: 'Claude Code', description: 'Claude subscription account', provider: 'claudecode' },
-      { label: 'Gemini CLI', description: 'Google account authentication', provider: 'geminicli' },
-      { label: 'Antigravity', description: 'Antigravity account via agy', provider: 'antigravity' },
+      { label: 'Codex', description: 'Standalone review · gpt-6-astra / xhigh', provider: 'codex' },
+      { label: 'Claude Code', description: 'Account login and commit messages; standalone review unavailable', provider: 'claudecode' },
+      { label: 'Gemini CLI', description: 'Account login and commit messages; standalone review unavailable', provider: 'geminicli' },
+      { label: 'Antigravity', description: 'Account login and commit messages; standalone review unavailable', provider: 'antigravity' },
     ];
     const picked = await vscode.window.showQuickPick(choices, {
       title: 'Commit Defender: Select account provider',
@@ -311,6 +326,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar      = new StatusBarManager();
   const execution = new ReviewExecutionOwner<RunResult>();
   const messageExecution = new ReviewExecutionOwner<CommitMessageResult>();
+  settleExecutions = async () => {
+    execution.invalidate(); messageExecution.invalidate();
+    await Promise.all([execution.settled(), messageExecution.settled()]);
+  };
   let reviewIntent = 0;
   let messageIntent = 0;
   const setPreflightIdle = (message?: string, intent = reviewIntent): void => { if (intent === reviewIntent && !execution.isRunning) statusBar.setIdle(message); };
@@ -318,6 +337,55 @@ export function activate(context: vscode.ExtensionContext): void {
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider  = new HistoryProvider(cfg);
   const panelProvider    = new PanelProvider();
+  const localProfile = () => vscode.workspace.getConfiguration('commitDefender').inspect<string>('localProfile')?.globalValue ?? 'default';
+  let historyLoad = 0;
+  async function refreshLocalHistory(): Promise<void> {
+    const generation = ++historyLoad;
+    const profileId = localProfile();
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot || !vscode.workspace.isTrusted) return;
+    try {
+      const scope = knowledgeScope({ profileId, repoRoot, scope: 'repository' });
+      if (scope.kind !== 'repository') return;
+      const reports = await readLocalHistory({ profileId, repoRoot, scope: 'repository' });
+      if (generation === historyLoad && localProfile() === profileId) historyProvider.restore(reports, repoRoot, scope);
+    } catch {
+      getOutputChannel().appendLine('[Commit Defender] Encrypted local history could not be loaded. Check the OS credential store and refresh local history.');
+    }
+  }
+  async function refreshVisibleContext(): Promise<void> {
+    const view = _summaryView;
+    if (!view?.report.gcr) return;
+    const freshness = await checkLocalContextFreshness(view.report.gcr.report);
+    if (_summaryView !== view) return;
+    view.report.local_context_freshness = freshness;
+    renderSummary(view.report, view.repoRoot);
+  }
+  context.subscriptions.push(
+    vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
+    vscode.commands.registerCommand('commitDefender.manageLocalKnowledge', async () => {
+      const repoRoot = await resolveRepoRoot();
+      const choices = [
+        ...(repoRoot && vscode.workspace.isTrusted ? [{ label: 'This worktree', description: 'Only this repository and worktree', scope: 'repository' as const }] : []),
+        { label: 'Current profile', description: 'Shared across repositories in this local profile', scope: 'profile' as const },
+      ];
+      const selected = await vscode.window.showQuickPick(choices, { title: 'Local Memory and Skills: choose scope' });
+      if (!selected) return;
+      try {
+        const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
+        await showLocalKnowledge(context, scope, refreshVisibleContext);
+      } catch { void vscode.window.showErrorMessage('Local knowledge could not be opened. Check the profile and OS credential store.'); }
+    }),
+    vscode.window.onDidChangeWindowState(event => { if (event.focused) void refreshVisibleContext(); }),
+    vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('commitDefender.localProfile')) {
+        historyLoad++;
+        void vscode.commands.executeCommand('commitDefender.clearFindings').then(() => refreshLocalHistory());
+      }
+    }),
+  );
+  void refreshLocalHistory();
+
   const historyView = vscode.window.createTreeView('commitDefender.history', {
     treeDataProvider: historyProvider,
     showCollapseAll: false,
@@ -364,28 +432,47 @@ export function activate(context: vscode.ExtensionContext): void {
     sourceExclusions: SourceExclusion[] = [],
   ): Promise<void> {
     const cfg = getConfig();
-    const timeoutSeconds = relPaths.length === 1
-      ? cfg.fileTimeoutSeconds
-      : cfg.directoryTimeoutSeconds;
-
-    const job = createReviewBackend(cfg).prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions});
-    await execution.start(job, {
+    const localSettings = getStandaloneReviewSettings(relPaths.length);
+    const backend = createReviewBackend(cfg, {
+      workerFile: context.asAbsolutePath('out/standalone-review-worker.js'),
+      settings: localSettings,
+    });
+    await execution.prepare(signal => backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions}, signal), {
+      preparing: () => {
+        statusBar.setPreparing();
+        historyProvider.setRunning(true);
+        panelProvider.setRunning(true);
+      },
       started: () => {
         statusBar.setRunning();
         historyProvider.setRunning(true);
         panelProvider.setRunning(true);
       },
       progress: (current, total, file) => statusBar.setProgress(current, total, file),
-      error: error => handleError(error, statusBar),
+      error: error => {
+        const message = error instanceof Error ? error.message : 'Local review preparation failed.';
+        statusBar.setError(message);
+        getOutputChannel().appendLine(`[Commit Defender] ${message}`);
+        void vscode.window.showErrorMessage(
+          error instanceof Error ? error.message : 'Local review preparation failed.',
+          'Choose Account and Model…', 'Open User Settings',
+        ).then(action => {
+          if (action === 'Choose Account and Model…') return selectAccountProviderAndModel();
+          if (action === 'Open User Settings') return vscode.commands.executeCommand('workbench.action.openSettings', '@ext:pydemia.commit-defender');
+        });
+      },
       finished: () => {
+        if (execution.isRunning) return;
         historyProvider.setRunning(false);
         panelProvider.setRunning(false);
       },
       result: async (result, isCurrent) => {
+        retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
         ).values()];
         logSourceExclusions(result.report.source_exclusions);
+        if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
 
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), file => {
           const uri = vscode.Uri.file(path.join(repoRoot, file)).toString();
@@ -400,7 +487,8 @@ export function activate(context: vscode.ExtensionContext): void {
         commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
 
         const status = reviewStatus(result.report.review);
-        statusBar.setReport(result.report);
+        if (execution.isPreparing) statusBar.setPreparing();
+        else statusBar.setReport(result.report);
         if (status === 'failed') {
           const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
           const provider = accountProvider(cfg.aiProvider);
@@ -421,7 +509,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
         if (command) await reviewNavigation.open(command.arguments?.[0], isCurrent);
       },
-    }, timeoutSeconds * 1000);
+    }, localSettings.durationMs);
   }
 
   // ── 1. Analyze Current File ────────────────────────────────────────────
@@ -601,7 +689,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
         if (cfg.repoAnalysisWarnThreshold > 0 && allFiles.length > cfg.repoAnalysisWarnThreshold) {
           const answer = await vscode.window.showWarningMessage(
-            `Commit Defender: Found ${allFiles.length} files. Analyzing the full repository may take a while and only the first ~80K characters of content will be reviewed. Continue?`,
+            `Commit Defender: Found ${allFiles.length} files. The captured selection may exceed the review budget. Any unfinished file coverage will be reported as incomplete. Continue?`,
             { modal: true },
             'Analyze',
           );
@@ -718,6 +806,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await analyze(staged, rawRoot, 'staged', undefined, sourceExclusions);
             break;
           }
+          case 'selection':
           case 'file': {
             const files = histEntry.report.staged_files;
             if (!files.length) {
@@ -727,7 +816,7 @@ export function activate(context: vscode.ExtensionContext): void {
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (file): ${files[0]}`);
             if (intent !== reviewIntent) return;
-            await analyze(files, histEntry.repoRoot, 'file');
+            await analyze(files, histEntry.repoRoot, histEntry.scope);
             break;
           }
           case 'directory': {
@@ -787,7 +876,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (intent !== messageIntent) return;
       const cfg = getConfig();
-      const prepared = createReviewBackend(cfg).prepareCommitMessage(repoRoot);
+      const prepared = createLegacyReviewBackend(cfg).prepareCommitMessage(repoRoot);
       await messageExecution.start({
         ...prepared,
         run: async signal => vscode.window.withProgress(
@@ -846,7 +935,9 @@ export function activate(context: vscode.ExtensionContext): void {
   setupIndexWatcher(context);
 }
 
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
+  await settleExecutions?.();
+  settleExecutions = undefined;
   findingsStore.clear();
   disposeOutputChannel();
 }
@@ -990,6 +1081,12 @@ function showSummaryPanel(
 
   _summaryPanel.title = 'Commit Defender — Summary';
   renderSummary(report, repoRoot);
+  const view = _summaryView;
+  if (report.gcr) void checkLocalContextFreshness(report.gcr.report).then(freshness => {
+    if (_summaryView !== view) return;
+    report.local_context_freshness = freshness;
+    renderSummary(report, repoRoot);
+  });
 }
 
 function logSourceExclusions(excluded: SourceExclusion[], show = false): void {

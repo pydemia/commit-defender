@@ -29,6 +29,12 @@ export class StatusBarManager {
     this.item.color = undefined;
   }
 
+  setPreparing(): void {
+    this.setRunning();
+    this.item.text = '$(loading~spin) Preparing local review... $(stop-circle)';
+    this.item.tooltip = 'Capturing source and opening local context — click to cancel';
+  }
+
   setProgress(current: number, total: number, file: string): void {
     this.item.text = `$(loading~spin) CD: ${current}/${total} — ${file.split('/').pop()} $(stop-circle)`;
     this.item.tooltip = `Analyzing file ${current} of ${total}: ${file} — click to cancel`;
@@ -41,7 +47,7 @@ export class StatusBarManager {
     const state = reviewStatus(report.review);
     const meta = OUTCOME_META[state];
     this.item.text = `$(${meta.icon}) CD: ${meta.label}`;
-    this.item.tooltip = `${reviewCoverage(report)}. Legacy hook: ${resolveExitCode(report) ? 'would block' : 'allows commit'}. Click to re-analyze.`;
+    this.item.tooltip = `${reviewCoverage(report)}. ${report.gcr ? 'Standalone review is advisory' : `Legacy hook: ${resolveExitCode(report) ? 'would block' : 'allows commit'}`}. Click to re-analyze.`;
     this.item.command = 'commitDefender.analyze';
     this.item.backgroundColor = undefined;
     this.item.color = new vscode.ThemeColor(meta.color);

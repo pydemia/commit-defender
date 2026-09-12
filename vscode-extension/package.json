@@ -135,6 +135,14 @@
             {
                 "command": "commitDefender.selectAccountProviderAndModel",
                 "title": "Commit Defender: Select Account Provider and Model"
+            },
+            {
+                "command": "commitDefender.manageLocalKnowledge",
+                "title": "Commit Defender: Local Memory and Skills"
+            },
+            {
+                "command": "commitDefender.refreshLocalHistory",
+                "title": "Commit Defender: Refresh Local History"
             }
         ],
         "configuration": {
@@ -142,7 +150,7 @@
             "properties": {
                 "commitDefender.aiProvider": {
                     "type": "string",
-                    "scope": "window",
+                    "scope": "application",
                     "enum": [
                         "aoai",
                         "anthropic",
@@ -174,13 +182,13 @@
                         "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
-                    "description": "AI provider to use for code review. All providers return P0–P3 priority-graded comments. P3 Critical findings block the commit regardless of provider."
+                    "description": "Account selection in User Settings. This build supports fixed-source standalone review with Codex on macOS (CLI 0.153.4, gpt-6-astra, xhigh). Other provider adapters remain available for account login and commit-message generation. Standalone findings are advisory."
                 },
                 "commitDefender.model": {
                     "type": "string",
-                    "scope": "window",
+                    "scope": "application",
                     "default": "",
-                    "description": "Model or deployment name to use. Examples: 'claude-sonnet-4-6' (Anthropic), 'gpt-4o' (OpenAI), your deployment name (Azure). Leave empty for a local Codex, Claude Code, Gemini CLI, or Antigravity default."
+                    "description": "Model selected in User Settings. Standalone review requires gpt-6-astra. Other model names are preserved for existing account adapters; there is no automatic review-provider fallback."
                 },
                 "commitDefender.endpoint": {
                     "type": "string",
@@ -202,9 +210,9 @@
                 },
                 "commitDefender.codexPath": {
                     "type": "string",
-                    "scope": "window",
+                    "scope": "application",
                     "default": "codex",
-                    "description": "Codex CLI executable name or absolute path. Used only by the codex account provider. Set an absolute path when git hooks or GUI git clients have a different PATH."
+                    "description": "User-selected Codex executable. Standalone review verifies the binary and capabilities before execution; this build supports Codex 0.153.4 on macOS. A blank/default command uses discovery without changing your saved login."
                 },
                 "commitDefender.claudeCodePath": {
                     "type": "string",
@@ -230,7 +238,7 @@
                     "default": 4096,
                     "minimum": 512,
                     "maximum": 32000,
-                    "description": "Maximum output tokens for the AI review response. Increase if you see 'Could not parse AI response as JSON' on large diffs — the response was truncated before the JSON closed, which can cause P3 findings to be missed."
+                    "description": "Legacy provider output-token setting. The fixed-source Codex executor does not support a hard output-token limit and does not apply this setting."
                 },
                 "commitDefender.severityLevel": {
                     "type": "string",
@@ -243,11 +251,11 @@
                         "lean"
                     ],
                     "enumDescriptions": [
-                        "severe: Zero tolerance — nearly all findings become P2 (Warning) or P3 (Critical).",
-                        "rigorous: Strict — style issues escalate to P2 (Warning), most things flagged.",
-                        "moderate: Balanced — P1/P2/P3 assigned by genuine impact. (default)",
-                        "generous: Lenient — minor things become P1 (Info); only real risks reach P2/P3.",
-                        "lean: Minimal — only P3 Critical (security, syntax errors, data-loss) issues flagged."
+                        "severe: Zero tolerance \u2014 nearly all findings become P2 (Warning) or P3 (Critical).",
+                        "rigorous: Strict \u2014 style issues escalate to P2 (Warning), most things flagged.",
+                        "moderate: Balanced \u2014 P1/P2/P3 assigned by genuine impact. (default)",
+                        "generous: Lenient \u2014 minor things become P1 (Info); only real risks reach P2/P3.",
+                        "lean: Minimal \u2014 only P3 Critical (security, syntax errors, data-loss) issues flagged."
                     ],
                     "default": "moderate",
                     "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit)."
@@ -265,9 +273,9 @@
                     "enumDescriptions": [
                         "colorful: Elaborate feedback with examples, alternatives, and detailed explanations.",
                         "chatty: Detailed feedback with helpful context for each finding.",
-                        "moderate: Standard amount of detail — clear but concise. (default)",
+                        "moderate: Standard amount of detail \u2014 clear but concise. (default)",
                         "simple: Brief, to-the-point findings with minimal explanation.",
-                        "silent: One-line summaries only — no elaboration."
+                        "silent: One-line summaries only \u2014 no elaboration."
                     ],
                     "default": "moderate",
                     "description": "Controls the verbosity and detail level of each priority comment's explanation."
@@ -281,7 +289,7 @@
                     ],
                     "enumDescriptions": [
                         "en: English",
-                        "ko: 한국어"
+                        "ko: \ud55c\uad6d\uc5b4"
                     ],
                     "default": "en",
                     "description": "Language for AI review output."
@@ -315,29 +323,29 @@
                         "okabe-ito"
                     ],
                     "enumDescriptions": [
-                        "Theme Adaptive — inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
-                        "Cobalt9 — electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
-                        "Tailwind — modern web palette, high saturation, familiar.",
-                        "Pastel Soft — low saturation, gentle on the eyes. Best on light themes.",
-                        "Material — Google Material A-tones, punchy.",
-                        "Solarized — muted terminal-familiar tones, lower contrast.",
-                        "Muted Modern — Tailwind × Solarized blend; works on both light and dark themes.",
-                        "Nord — arctic, cool, low visual noise.",
-                        "Dracula — classic purple/pink/cyan dark-theme accents.",
-                        "Gruvbox — 70s retro, earthy warm tones.",
-                        "CVD Consensus (colorblind-safe) — balanced across light and dark themes.",
-                        "CVD Deep (colorblind-safe) — darker tones tuned for light themes.",
-                        "CVD Vivid (colorblind-safe) — electric tones tuned for dark themes.",
-                        "Okabe-Ito (colorblind-safe) — canonical palette from Nature methodology papers."
+                        "Theme Adaptive \u2014 inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
+                        "Cobalt9 \u2014 electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
+                        "Tailwind \u2014 modern web palette, high saturation, familiar.",
+                        "Pastel Soft \u2014 low saturation, gentle on the eyes. Best on light themes.",
+                        "Material \u2014 Google Material A-tones, punchy.",
+                        "Solarized \u2014 muted terminal-familiar tones, lower contrast.",
+                        "Muted Modern \u2014 Tailwind \u00d7 Solarized blend; works on both light and dark themes.",
+                        "Nord \u2014 arctic, cool, low visual noise.",
+                        "Dracula \u2014 classic purple/pink/cyan dark-theme accents.",
+                        "Gruvbox \u2014 70s retro, earthy warm tones.",
+                        "CVD Consensus (colorblind-safe) \u2014 balanced across light and dark themes.",
+                        "CVD Deep (colorblind-safe) \u2014 darker tones tuned for light themes.",
+                        "CVD Vivid (colorblind-safe) \u2014 electric tones tuned for dark themes.",
+                        "Okabe-Ito (colorblind-safe) \u2014 canonical palette from Nature methodology papers."
                     ],
                     "default": "theme-adaptive",
-                    "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only — no env var."
+                    "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only \u2014 no env var."
                 },
                 "commitDefender.runOnStage": {
                     "type": "boolean",
-                    "scope": "window",
-                    "default": true,
-                    "description": "Automatically analyze whenever files are staged (git add). Also available manually via the checklist icon."
+                    "scope": "application",
+                    "default": false,
+                    "description": "Opt in to advisory review after staging. Disabled on new installations. Manual review remains available. Repository settings cannot enable this trigger."
                 },
                 "commitDefender.preCommitHook": {
                     "type": "string",
@@ -355,17 +363,17 @@
                 },
                 "commitDefender.fileTimeoutSeconds": {
                     "type": "number",
-                    "scope": "window",
+                    "scope": "application",
                     "default": 120,
                     "minimum": 0,
-                    "description": "Maximum seconds to wait when analyzing a single file. Set to 0 for no limit."
+                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 120 seconds. Legacy commit-message behavior is unchanged."
                 },
                 "commitDefender.directoryTimeoutSeconds": {
                     "type": "number",
-                    "scope": "window",
+                    "scope": "application",
                     "default": 360,
                     "minimum": 0,
-                    "description": "Maximum seconds to wait when analyzing a directory or the full repository. Set to 0 for no limit."
+                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 360 seconds. Legacy commit-message behavior is unchanged."
                 },
                 "commitDefender.stagedFilesWarnThreshold": {
                     "type": "number",
@@ -380,6 +388,31 @@
                     "default": 80,
                     "minimum": 0,
                     "description": "Show a confirmation prompt when analyzing the full repository and the file count exceeds this threshold. Set to 0 to disable the prompt."
+                },
+                "commitDefender.reviewMode": {
+                    "type": "string",
+                    "scope": "application",
+                    "enum": [
+                        "standalone"
+                    ],
+                    "default": "standalone",
+                    "description": "Run with captured local source and encrypted personal knowledge. Standalone mode makes no requests to a GCR server."
+                },
+                "commitDefender.localProfile": {
+                    "type": "string",
+                    "scope": "application",
+                    "default": "default",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$",
+                    "description": "Local profile shared with the GCR CLI. Repository knowledge and history are further separated by repository and worktree."
+                },
+                "commitDefender.reviewReasoningEffort": {
+                    "type": "string",
+                    "scope": "application",
+                    "enum": [
+                        "xhigh"
+                    ],
+                    "default": "xhigh",
+                    "description": "Reasoning effort supported by the fixed-source Codex review executor."
                 }
             }
         },
@@ -518,13 +551,13 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
-        "build": "npm run typecheck && npm run bundle-extension && npm run bundle-hook",
+        "build": "npm run typecheck && npm run bundle-extension && npm run bundle-review-worker && npm run bundle-hook",
         "typecheck": "tsc -p ./ --noEmit",
         "compile": "tsc -p ./",
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -537,7 +570,13 @@
         "test:outcome-ui": "npm run build && esbuild test/outcome-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/outcome-host.cjs && node test/run-outcome-host.mjs",
         "test:review-security": "esbuild test/review-security.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-security.test.cjs && node --test out-test/review-security.test.cjs",
         "test:review-backend": "esbuild test/review-backend.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-backend.test.cjs && node --test out-test/review-backend.test.cjs",
-        "test:client-contract": "esbuild test/client-contract.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/client-contract.test.cjs && node --test out-test/client-contract.test.cjs"
+        "test:client-contract": "esbuild test/client-contract.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/client-contract.test.cjs && node --test out-test/client-contract.test.cjs",
+        "bundle-review-worker": "esbuild src/standaloneReviewWorker.ts --bundle --platform=node --target=node18 --outfile=out/standalone-review-worker.js",
+        "test:standalone-review": "npm run bundle-review-worker && esbuild test/standalone-review.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/standalone-review.test.cjs && node --test out-test/standalone-review.test.cjs",
+        "test:standalone-config": "esbuild test/standalone-config.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-config.ts --outfile=out-test/standalone-config.test.cjs && node --test out-test/standalone-config.test.cjs",
+        "bundle:standalone-smoke": "esbuild test/standalone-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/standalone-smoke.cjs",
+        "bundle:standalone-diagnostic": "esbuild test/standalone-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/standalone-diagnostic-worker.cjs",
+        "bundle:knowledge-smoke": "esbuild test/knowledge-interop-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/knowledge-interop-smoke.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
@@ -545,10 +584,12 @@
         "mdast-util-gfm-autolink-literal": "2.0.1",
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
-        "micromark-extension-gfm-autolink-literal": "2.1.0"
+        "micromark-extension-gfm-autolink-literal": "2.1.0",
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.9/gcr-client-contract-0.1.0-alpha.9.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.9/gcr-client-core-0.1.0-alpha.9.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.9/gcr-client-executors-0.1.0-alpha.9.tgz"
     },
     "devDependencies": {
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.2/gcr-client-contract-0.1.0-alpha.2.tgz",
         "@types/node": "^20.0.0",
         "@types/vscode": "1.90.0",
         "@vscode/test-electron": "3.1.0",

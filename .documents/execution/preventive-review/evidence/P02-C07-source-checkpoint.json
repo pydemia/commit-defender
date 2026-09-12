@@ -1,0 +1,258 @@
+{
+  "recordedAt": "2026-09-12T21:21:49.497332+00:00",
+  "status": "source-checkpoint-gui-and-output-reliability-pending",
+  "baseSourceCommit": "35575ad",
+  "gcrSourceCommit": "400b54ab2b391e87fdec4f4913ba2bfce9d16ff6",
+  "libraries": "0.1.0-alpha.9",
+  "productionWorkerRunAttempts": 11,
+  "diagnosticWorkerRunAttempts": 2,
+  "attempts": [
+    {
+      "file": "P02-C07-worker-defect-diagnostic.json",
+      "sha256": "cf3df725a8631839448f5e172419137fd4e4b8b78736019ec0bc2f00154e8177",
+      "status": "verified",
+      "diagnosticWorker": true,
+      "workerSha256": "109f759662326d44e2a9bb74dcc51c9b254c690a4effdc02491997b554142c34",
+      "runAttempts": 1,
+      "cases": [
+        {
+          "case": "python/defect",
+          "status": "completed",
+          "exitCode": 1,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": {
+            "selectedSourceRetainedAfterWorkerExit": true,
+            "resolvesExactCapturedBytesAfterWorkingTreeEdit": true,
+            "guiVerified": false
+          }
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-macos-node25-attempt2.json",
+      "sha256": "e136a8ca3a5943cf23785d50e120324d0c926ca489aa283a868ba09db58bbb34",
+      "status": "failed",
+      "diagnosticWorker": false,
+      "workerSha256": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+      "runAttempts": 2,
+      "cases": [
+        {
+          "case": "python/fix",
+          "status": "completed",
+          "exitCode": 0,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "python/normal",
+          "status": "failed",
+          "exitCode": 2,
+          "verified": false,
+          "problems": [
+            "invalid-output"
+          ],
+          "sourceNavigation": null
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-macos-node25-attempt3.json",
+      "sha256": "e7edd9353da591b248f5f7c87f60735296b0c4d5c3f6799d1c446faa92a3c324",
+      "status": "failed",
+      "diagnosticWorker": false,
+      "workerSha256": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+      "runAttempts": 3,
+      "cases": [
+        {
+          "case": "python/normal",
+          "status": "completed",
+          "exitCode": 0,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "typescript/defect",
+          "status": "completed",
+          "exitCode": 1,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "typescript/fix",
+          "status": "completed",
+          "exitCode": 1,
+          "verified": false,
+          "problems": [],
+          "sourceNavigation": null
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-macos-node25.json",
+      "sha256": "28de0a5a65c5ff5e09e92034bc1fd8b325f159cb5dfd48ab05397a6fb1a8b681",
+      "status": "failed",
+      "diagnosticWorker": false,
+      "workerSha256": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+      "runAttempts": 2,
+      "cases": [
+        {
+          "case": "python/defect",
+          "status": "completed",
+          "exitCode": 1,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "python/fix",
+          "status": "failed",
+          "exitCode": 2,
+          "verified": false,
+          "problems": [
+            "invalid-output"
+          ],
+          "sourceNavigation": null
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-output-diagnostic.json",
+      "sha256": "a53127736d3e9ec762a062dc77697cf4500eb908bfbf92aa0768b6108c521d0d",
+      "status": "verified",
+      "diagnosticWorker": true,
+      "workerSha256": "01f184a04880dac35b6c7884f6de40e219b59b9585a8078aa994b32bbef8f5d0",
+      "runAttempts": 1,
+      "cases": [
+        {
+          "case": "python/normal",
+          "status": "completed",
+          "exitCode": 0,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-source-navigation.json",
+      "sha256": "26270448fa269263e10b0081cde041ff941de9703814a079efef1aeb547f0ef8",
+      "status": "failed",
+      "diagnosticWorker": false,
+      "workerSha256": "716397fdc523eea8a281c50fb4ac66cb976627887fc23982c63079bddf29f1e6",
+      "runAttempts": 1,
+      "cases": [
+        {
+          "case": "python/defect",
+          "status": "failed",
+          "exitCode": 2,
+          "verified": false,
+          "problems": [
+            "invalid-output"
+          ],
+          "sourceNavigation": {
+            "selectedSourceRetainedAfterWorkerExit": true,
+            "resolvesExactCapturedBytesAfterWorkingTreeEdit": true,
+            "guiVerified": false
+          }
+        }
+      ]
+    },
+    {
+      "file": "P02-C07-worker-typescript-precision.json",
+      "sha256": "130d22dcadd40d3d0a16fd60af72870607948814dea7de7e37ee404baee6ba12",
+      "status": "verified",
+      "diagnosticWorker": false,
+      "workerSha256": "020148b10020c4efa5a32f47be878415fa93a1a139eab2a463e9efc24e325e85",
+      "runAttempts": 3,
+      "cases": [
+        {
+          "case": "typescript/defect",
+          "status": "completed",
+          "exitCode": 1,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "typescript/fix",
+          "status": "completed",
+          "exitCode": 0,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        },
+        {
+          "case": "typescript/normal",
+          "status": "completed",
+          "exitCode": 0,
+          "verified": true,
+          "problems": [],
+          "sourceNavigation": null
+        }
+      ]
+    }
+  ],
+  "verifiedSixProductionCases": [
+    {
+      "case": "python/defect",
+      "evidence": "P02-C07-worker-macos-node25.json"
+    },
+    {
+      "case": "python/fix",
+      "evidence": "P02-C07-worker-macos-node25-attempt2.json"
+    },
+    {
+      "case": "python/normal",
+      "evidence": "P02-C07-worker-macos-node25-attempt3.json"
+    },
+    {
+      "case": "typescript/defect",
+      "evidence": "P02-C07-worker-typescript-precision.json"
+    },
+    {
+      "case": "typescript/fix",
+      "evidence": "P02-C07-worker-typescript-precision.json"
+    },
+    {
+      "case": "typescript/normal",
+      "evidence": "P02-C07-worker-typescript-precision.json"
+    }
+  ],
+  "tests": {
+    "npmTest": {
+      "passed": 108,
+      "failed": 0
+    },
+    "node18Targeted": 45,
+    "afterSourceCacheChange": {
+      "node25Standalone": 10,
+      "node18Standalone": 10,
+      "security": 9,
+      "typecheckTest": "passed",
+      "build": "passed"
+    },
+    "extensionHost": [
+      "P02-C07-extension-host-1.135.0.json",
+      "P02-C07-extension-host-1.90.2.json"
+    ]
+  },
+  "knowledgeInterop": "P02-C07-knowledge-interop-macos.json",
+  "vsixContents": "P02-C07-vsix-final-contents.json",
+  "vsixIsolatedInstall": "P02-C07-vsix-install.json",
+  "limitations": [
+    "Three production attempts returned invalid-output. Raw production outputs were not retained; two separate diagnostic attempts passed and did not reproduce the failures. Root cause is unresolved.",
+    "The original TypeScript fixed fixture had a real pre-existing intermediate-number precision bug. BigInt fixtures and positive/negative cancellation tests replace this assumption; prior evidence is retained.",
+    "Final worker adds ephemeral navigation bodies after the core report is produced. One final production attempt failed model-output validation while source recovery, history and knowledge lifecycle checks passed. A distinct diagnostic worker completed the same defect and navigation checks.",
+    "Actual VS Code visual review, finding navigation, knowledge CRUD and Raw JSON inspection remain pending. Extension Host API tests do not establish these.",
+    "Marketplace publication and P09 immutable release verification remain pending."
+  ],
+  "delivery": {
+    "marketplacePublished": false,
+    "newServerRollout": false,
+    "serverRuntimeChanged": false
+  }
+}

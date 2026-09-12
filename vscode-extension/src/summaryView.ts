@@ -163,7 +163,7 @@ function buildSummaryHtml(
   const metaParts: string[] = [
     reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
-    `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
+    report.gcr ? "Standalone · advisory" : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`,
   ].filter(Boolean);
 
@@ -175,6 +175,32 @@ function buildSummaryHtml(
       </div>
       <div class="meta">${metaParts.map(esc).join(" &nbsp;·&nbsp; ")}</div>
     </div>`;
+
+  if (report.gcr) {
+    const core = report.gcr.report;
+    const freshness = report.local_context_freshness;
+    const current = !freshness ? "Current local entries have not been checked."
+      : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review."
+      : freshness.status === "stale" ? "One or more local entries used by this review changed, expired or became inactive. Run another review to use current context."
+      : "Current local entries could not be checked. The report retains the context captured when it ran.";
+    body += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
+      ${freshness ? `<p>Checked ${esc(freshness.checkedAt)}</p>` : ""}
+      <p>Run <code>${esc(core.runId)}</code> · ${esc(core.identity.source.kind)} · ${esc(core.finishedAt ?? "No completion timestamp")}</p>
+      <p>Source <code>${esc(core.identity.source.hash)}</code><br>Context <code>${esc(core.identity.context.hash)}</code></p>
+      <p>Executor ${esc(core.identity.executor.id)} · ${esc(core.identity.executor.model)}</p>
+      <details><summary>Review criteria used</summary><ul>${core.identity.context.entries.map(entry =>
+        `<li>${esc(entry.origin)} ${esc(entry.kind)}: <code>${esc(entry.id)}</code> · revision ${entry.revision} · <code>${esc(entry.hash)}</code></li>`).join("")}</ul></details>
+      ${freshness?.changes.length ? `<ul>${freshness.changes.map(change => `<li><code>${esc(change.id)}</code>: ${esc(change.reason)}</li>`).join("")}</ul>` : ""}
+      </section><section><h2>Evidence</h2>
+      <p>Source-read observations record returned source ranges. Anchor validation checks positions. Neither records execution of tests.</p>
+      ${core.findings.map(finding => `<details><summary>${esc(finding.title)} · ${esc(finding.evidenceAssessment.level)}</summary>
+        <p>Anchor: ${esc(finding.anchorValidation.status)} — ${esc(finding.anchorValidation.reason)}</p>
+        <p>${view.markdown(finding.evidenceAssessment.rationale)}</p>
+        <p>Counter-evidence: ${esc(finding.evidenceAssessment.counterEvidence.status)}</p>
+        <p>${view.markdown(finding.evidenceAssessment.counterEvidence.summary)}</p></details>`).join("")}
+      <ul>${core.evidence.map(evidence => `<li>${esc(evidence.kind)} · ${esc(evidence.provenance.kind)}${evidence.kind === "source-read"
+        ? ` · ${esc(evidence.location.path)}:${evidence.location.startLine}–${evidence.location.endLine} (${esc(evidence.location.side)}) · <code>${esc(evidence.location.hash)}</code>` : ""}</li>`).join("")}</ul></section>`;
+  }
 
   if (report.review.rejected_finding_count) {
     body += `<p class="summary-error">${esc(String(report.review.rejected_finding_count))} invalid finding(s) rejected. Review output is incomplete.</p>`;
