@@ -83,6 +83,10 @@ export interface AnalysisReport {
   review: ReviewResult;
   /** Excluded source paths. Explicitly allowed SKILL.md review material is handled separately. */
   source_exclusions?: SourceExclusion[];
+  /** Source identity captured before review; legacy CLI tool reads are not yet isolated. */
+  source_snapshot?:
+    | { kind: 'index'; base_commit: string | null; base_tree: string; source_tree: string }
+    | { kind: 'working-tree'; content_sha256: Record<string, string> };
 }
 
 /** Internal result from DockerRunner */

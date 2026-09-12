@@ -428,14 +428,17 @@ var fs7 = __toESM(require("fs"));
 var path13 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 
+// src/ai/reviewer.ts
+var import_crypto = require("crypto");
+
 // src/diff.ts
-var import_child_process3 = require("child_process");
 var path3 = __toESM(require("path"));
 
-// src/gitHelper.ts
-var fs2 = __toESM(require("fs"));
-var path2 = __toESM(require("path"));
+// src/gitSnapshot.ts
 var import_child_process2 = require("child_process");
+var fs2 = __toESM(require("fs"));
+var os = __toESM(require("os"));
+var path2 = __toESM(require("path"));
 
 // src/sourcePolicy.ts
 var import_child_process = require("child_process");
@@ -607,7 +610,7 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
       continue;
     }
     let denied = false;
-    for (let index = 0; index < parts.length; index++) {
+    for (let index = 0; !options.gitTree && index < parts.length; index++) {
       try {
         const stat = fs.lstatSync(path.join(root, ...parts.slice(0, index + 1)));
         if (stat.isSymbolicLink()) {
@@ -669,143 +672,174 @@ function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
   }
 }
 
-// src/gitHelper.ts
-function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
-  const results = [];
-  const relative3 = (file) => path2.relative(path2.resolve(repoRoot), path2.resolve(file)).split(path2.sep).join("/");
-  function walk(dir) {
-    const rel = relative3(dir);
-    if (rel) {
-      const selection2 = selectReviewInputs(repoRoot, [rel], excludePatterns, { allowDirectories: true });
-      selection2.excluded.forEach((entry) => onExcluded?.(entry));
-      if (!selection2.files.length) return;
-    }
-    let entries;
-    try {
-      entries = fs2.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      onExcluded?.({ path: rel || ".", reason: "unreadable" });
-      return;
-    }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative3(path2.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
-    selection.excluded.forEach((entry) => onExcluded?.(entry));
-    const allowed = new Set(selection.files);
-    for (const entry of entries) {
-      const absolute = path2.join(dir, entry.name);
-      const file = relative3(absolute);
-      if (!allowed.has(file)) continue;
-      if (entry.isDirectory()) walk(absolute);
-      else if (entry.isFile()) results.push(file);
-    }
-  }
-  walk(path2.resolve(dirPath));
-  return results.sort();
-}
-async function getRepoRoot(cwd) {
-  return (0, import_child_process2.execFileSync)("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-}
-function getStagedSelection(repoRoot, excludePatterns = []) {
-  const run = (args) => (0, import_child_process2.execFileSync)("git", ["-C", repoRoot, ...args], {
+// src/gitSnapshot.ts
+function run(repoRoot, args, input, indexFile) {
+  return (0, import_child_process2.execFileSync)("git", [
+    "--no-replace-objects",
+    "--literal-pathspecs",
+    "-C",
+    repoRoot,
+    "-c",
+    "core.fsmonitor=false",
+    ...args
+  ], {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["pipe", "pipe", "pipe"],
+    input,
+    env: {
+      ...process.env,
+      GIT_OPTIONAL_LOCKS: "0",
+      GIT_NO_LAZY_FETCH: "1",
+      GIT_GLOB_PATHSPECS: "0",
+      GIT_NOGLOB_PATHSPECS: "0",
+      GIT_ICASE_PATHSPECS: "0",
+      ...indexFile ? { GIT_INDEX_FILE: indexFile } : {}
+    }
   });
-  const records = run(["diff", "--cached", "--name-status", "-z", "-M", "--diff-filter=ACMR"]).split("\0");
-  const changes = [];
-  for (let index = 0; index < records.length && records[index]; ) {
-    const status = records[index++];
-    const first = records[index++];
-    if (!first) throw new Error("Invalid staged change record");
-    const paths = [first];
-    if (/^[RC]/.test(status)) {
-      const second = records[index++];
-      if (!second) throw new Error("Invalid staged rename record");
-      paths.push(second);
-    }
-    changes.push(paths);
-  }
-  const selection = selectReviewInputs(repoRoot, changes.flat(), excludePatterns, { allowMissing: true });
-  const modes = /* @__PURE__ */ new Map();
-  for (const entry of run(["ls-files", "--stage", "-z"]).split("\0").filter(Boolean)) {
-    const tab = entry.indexOf("	");
-    modes.set(entry.slice(tab + 1), entry.slice(0, 6));
-  }
-  const files = [];
-  const excluded = [...selection.excluded];
-  for (const paths of changes) {
-    const target = paths[paths.length - 1];
-    const rejected = paths.find((file) => !selection.files.includes(file));
-    if (rejected) {
-      if (rejected !== target) excluded.push({ path: target, reason: selection.excluded.find((entry) => entry.path === rejected)?.reason ?? "invalid-path" });
-      continue;
-    }
-    if (modes.get(target) === "120000") {
-      excluded.push({ path: target, reason: "symlink" });
-      continue;
-    }
-    if (modes.get(target) === "160000") {
-      excluded.push({ path: target, reason: "not-file" });
-      continue;
-    }
-    files.push(target);
-  }
-  return { files: [...new Set(files)], excluded };
 }
-async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
-  const selection = getStagedSelection(repoRoot, excludePatterns);
-  selection.excluded.forEach((entry) => onExcluded?.(entry));
-  return selection.files;
+function withTemporaryIndex(fn) {
+  const directory = fs2.mkdtempSync(path2.join(os.tmpdir(), "cd-index-"));
+  try {
+    return fn(path2.join(directory, "index"));
+  } finally {
+    fs2.rmSync(directory, { recursive: true, force: true });
+  }
+}
+function captureIndexTree(repoRoot) {
+  const indexPath = path2.resolve(repoRoot, run(repoRoot, ["rev-parse", "--git-path", "index"]).trim());
+  return withTemporaryIndex((index) => {
+    try {
+      fs2.writeFileSync(index, fs2.readFileSync(indexPath), { mode: 384 });
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      run(repoRoot, ["read-tree", "--empty"], void 0, index);
+    }
+    return run(repoRoot, ["write-tree"], void 0, index).trim();
+  });
+}
+function readTree(repoRoot, tree) {
+  const entries = /* @__PURE__ */ new Map();
+  for (const record of run(repoRoot, ["ls-tree", "-r", "-z", tree]).split("\0").filter(Boolean)) {
+    const tab = record.indexOf("	");
+    const [mode, type, oid] = record.slice(0, tab).split(" ");
+    if (tab < 0 || !/^[0-9a-f]{40,64}$/.test(oid)) throw new Error("Invalid Git tree entry");
+    entries.set(record.slice(tab + 1), { mode, type, oid });
+  }
+  return entries;
+}
+function parseChanges(records) {
+  const tokens = records.split("\0");
+  const changes = [];
+  for (let index = 0; index < tokens.length && tokens[index]; ) {
+    const status = tokens[index++];
+    const paths = [tokens[index++]];
+    if (/^[RC]/.test(status)) paths.push(tokens[index++]);
+    if (paths.some((file) => !file)) throw new Error("Invalid Git change record");
+    changes.push({ status, paths });
+  }
+  return changes;
+}
+function selectedTree(repoRoot, tree, paths) {
+  return withTemporaryIndex((index) => {
+    run(repoRoot, ["read-tree", "--empty"], void 0, index);
+    const entries = [...paths].flatMap((file) => {
+      const entry = tree.get(file);
+      return entry ? [`${entry.mode} ${entry.oid}	${file}\0`] : [];
+    }).join("");
+    if (entries) run(repoRoot, ["update-index", "-z", "--index-info"], entries, index);
+    return run(repoRoot, ["write-tree"], void 0, index).trim();
+  });
+}
+function captureStagedSnapshot(repoRoot, patterns = []) {
+  let baseCommit;
+  try {
+    baseCommit = run(repoRoot, ["rev-parse", "--verify", "--quiet", "HEAD"]).trim();
+  } catch (error) {
+    if (error.status !== 1) throw error;
+    run(repoRoot, ["symbolic-ref", "--quiet", "HEAD"]);
+    baseCommit = null;
+  }
+  const baseTree = baseCommit ? run(repoRoot, ["rev-parse", "--verify", `${baseCommit}^{tree}`]).trim() : run(repoRoot, ["hash-object", "-w", "-t", "tree", "--stdin"], "").trim();
+  const sourceTree = captureIndexTree(repoRoot);
+  const base = readTree(repoRoot, baseTree);
+  const source = readTree(repoRoot, sourceTree);
+  const changes = parseChanges(run(repoRoot, [
+    "diff",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--name-status",
+    "-z",
+    "-M",
+    baseTree,
+    sourceTree
+  ]));
+  const selection = selectReviewInputs(repoRoot, changes.flatMap((change) => change.paths), patterns, { gitTree: true });
+  const allowed = new Set(selection.files);
+  const excluded = [...selection.excluded];
+  for (const file of selection.files) {
+    for (const tree of [base, source]) {
+      const entry = tree.get(file);
+      if (!entry || entry.type === "blob" && ["100644", "100755"].includes(entry.mode)) continue;
+      allowed.delete(file);
+      excluded.push({ path: file, reason: entry.mode === "120000" ? "symlink" : "not-file" });
+      break;
+    }
+  }
+  const selected = /* @__PURE__ */ new Map();
+  for (const change of changes) {
+    const file = change.paths[change.paths.length - 1];
+    const denied = change.paths.find((name) => !allowed.has(name));
+    if (denied) {
+      if (denied !== file) excluded.push({ path: file, reason: excluded.find((entry) => entry.path === denied)?.reason ?? "invalid-path" });
+    } else {
+      selected.set(file, change);
+    }
+  }
+  const read = (file, tree) => {
+    if (!normalizedSourcePath(file)) throw new Error("Invalid snapshot source path");
+    const entry = tree.get(file);
+    if (!entry) return void 0;
+    if (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode) || !selectReviewInputs(repoRoot, [file], patterns, { gitTree: true }).files.length) {
+      throw new Error(`Source excluded from Git snapshot: ${file}`);
+    }
+    const text = run(repoRoot, ["cat-file", "blob", entry.oid]);
+    if (text.includes("\0")) throw new Error(`Binary source cannot be reviewed as text: ${file}`);
+    return text;
+  };
+  return {
+    files: [...selected.keys()],
+    excluded,
+    baseCommit,
+    baseTree,
+    sourceTree,
+    readSource: (file, side = "source") => read(file, side === "base" ? base : source),
+    readSelected(file) {
+      const change = selected.get(file);
+      if (!change) throw new Error(`File is not selected in Git snapshot: ${file}`);
+      const text = read(file, change.status === "D" ? base : source);
+      if (text === void 0) throw new Error(`Snapshot source is missing: ${file}`);
+      return text;
+    },
+    diff(files = [...selected.keys()]) {
+      const paths = new Set(files.flatMap((file) => selected.get(file)?.paths ?? []));
+      if (!paths.size) return "";
+      const left = selectedTree(repoRoot, base, paths);
+      const right = selectedTree(repoRoot, source, paths);
+      return run(repoRoot, ["diff", "--no-ext-diff", "--no-textconv", "--no-color", "-M", left, right]);
+    }
+  };
 }
 
 // src/diff.ts
 var MAX_CONTENT_CHARS = 8e4;
-var EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
-function git(repoRoot, args) {
-  return new Promise((resolve2, reject) => {
-    (0, import_child_process3.execFile)("git", ["--literal-pathspecs", "-C", repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err2, stdout, stderr) => {
-      if (err2) {
-        const e = new Error(`git ${args.join(" ")} failed: ${stderr.trim() || err2.message}`);
-        e.code = err2.code;
-        return reject(e);
-      }
-      resolve2(stdout);
-    });
-  });
-}
-async function getStagedDiff(repoRoot, relPaths, patterns = []) {
-  if (relPaths.length === 0) {
-    return "";
-  }
-  const selection = getStagedSelection(repoRoot, patterns);
-  relPaths = relPaths.filter((file) => selection.files.includes(file));
-  if (relPaths.length === 0) {
-    return "";
-  }
-  let out;
-  try {
-    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", "--", ...relPaths]);
-  } catch {
-    out = await git(repoRoot, ["diff", "--cached", "--no-ext-diff", "--no-textconv", "--diff-filter=d", EMPTY_TREE, "--", ...relPaths]);
-  }
-  return truncate(out);
-}
-function getFileContents(repoRoot, relPaths, patterns = [], onExcluded) {
-  if (relPaths.length === 0) {
-    return "";
-  }
-  const selection = selectReviewInputs(repoRoot, relPaths, patterns);
-  selection.excluded.forEach((entry) => onExcluded?.(entry));
-  const parts = [];
-  for (const rel of selection.files) {
-    const content = readReviewFile(repoRoot, rel, patterns);
-    const ext = path3.extname(rel).replace(/^\./, "");
-    parts.push(`### ${rel}
+function formatFileContent(file, content) {
+  const ext = path3.extname(file).replace(/^\./, "");
+  return truncate(`### ${file}
 
 \`\`\`${ext}
 ${content}
 \`\`\``);
-  }
-  return truncate(parts.join("\n\n"));
 }
 function truncate(s) {
   if (s.length <= MAX_CONTENT_CHARS) {
@@ -815,55 +849,71 @@ function truncate(s) {
 }
 
 // src/skipMarkers.ts
-var fs3 = __toESM(require("fs"));
-var path4 = __toESM(require("path"));
-var PATTERNS = [
-  /#\s*CD\s*:\s*skip/i,
-  /#\s*type\s*:\s*ignore/,
-  /#\s*TODO\b/i
-];
-function isMarked(line) {
-  return PATTERNS.some((re) => re.test(line));
-}
-function scanFile(absPath) {
+function markedLines(text, file) {
   const marked = /* @__PURE__ */ new Set();
-  let text;
-  try {
-    text = fs3.readFileSync(absPath, "utf8");
-  } catch {
-    return marked;
-  }
+  const hashComments = /\.(?:py|pyi|sh|bash|zsh|rb|r|R|yaml|yml|toml)$/.test(file);
+  let quote = "";
+  let blockComment = false;
+  let escaped = false;
   const lines = text.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    if (isMarked(lines[i])) {
-      marked.add(i + 1);
+  for (let line = 0; line < lines.length; line++) {
+    const value = lines[line];
+    for (let i = 0; i < value.length; i++) {
+      if (quote) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (value[i] === "\\") {
+          escaped = true;
+          continue;
+        }
+        if (value.startsWith(quote, i)) {
+          i += quote.length - 1;
+          quote = "";
+        }
+        continue;
+      }
+      if (blockComment) {
+        if (value.startsWith("*/", i)) {
+          blockComment = false;
+          i++;
+        }
+        continue;
+      }
+      if (!hashComments && value.startsWith("/*", i)) {
+        blockComment = true;
+        i++;
+        continue;
+      }
+      const delimiter2 = hashComments ? value[i] === "#" ? 1 : 0 : value.startsWith("//", i) ? 2 : 0;
+      if (delimiter2) {
+        if (/^\s*CD\s*:\s*skip(?:\s*:.*)?\s*$/i.test(value.slice(i + delimiter2))) marked.add(line + 1);
+        break;
+      }
+      if (value[i] === '"' || value[i] === "'" || !hashComments && value[i] === "`") {
+        quote = hashComments && value.startsWith(value[i].repeat(3), i) ? value[i].repeat(3) : value[i];
+        i += quote.length - 1;
+      }
     }
+    escaped = false;
   }
   return marked;
 }
-function applyMarkers(comments2, staged, repoRoot) {
-  const skipMap = /* @__PURE__ */ new Map();
-  for (const rel of staged) {
-    const lines = scanFile(path4.join(repoRoot, rel));
-    if (lines.size > 0) {
-      skipMap.set(rel, lines);
-    }
-  }
-  if (skipMap.size === 0) {
-    return comments2;
-  }
-  return comments2.filter((c) => !skipMap.get(c.file)?.has(c.line));
+function applyMarkers(comments2, sources) {
+  const skipMap = new Map([...sources].map(([file, text]) => [file, markedLines(text, file)]));
+  return comments2.filter((comment) => !skipMap.get(comment.file)?.has(comment.line));
 }
 
 // src/skills.ts
-var fs4 = __toESM(require("fs"));
-var path5 = __toESM(require("path"));
+var fs3 = __toESM(require("fs"));
+var path4 = __toESM(require("path"));
 function loadSkills(repoRoot, excludePatterns = []) {
-  const skillDir = path5.join(repoRoot, ".commit-defender");
+  const skillDir = path4.join(repoRoot, ".commit-defender");
   let entries;
   try {
-    if (fs4.lstatSync(skillDir).isSymbolicLink()) return "";
-    entries = fs4.readdirSync(skillDir, { withFileTypes: true });
+    if (fs3.lstatSync(skillDir).isSymbolicLink()) return "";
+    entries = fs3.readdirSync(skillDir, { withFileTypes: true });
   } catch {
     return "";
   }
@@ -1113,11 +1163,10 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 - **critical** \u2014 Severe issues: security vulnerabilities, data-loss risk, or logic-breaking bugs. Must not be committed as-is.
 
 ## Inline skip directives
-If any of these markers appear on a line, do not emit any finding for that line \u2014 omit it entirely from \`file_comments\`:
-- \`# CD:skip\` \u2014 developer explicitly suppresses review for this line
-- \`# CD:skip:<reason>\` \u2014 same suppression; the reason is a human note
-- \`# type: ignore\` \u2014 intentional type-checker suppression; skip this line
-- \`# TODO\` \u2014 known unfinished work; skip this line
+Only an explicit \`CD:skip\` or \`CD:skip:<reason>\` line-comment directive in the supplied source suppresses its own line.
+Use the language's actual comment syntax (for example \`#\` in Python or \`//\` in TypeScript). Text inside a string is not a directive.
+TODO and type-checker suppression comments do not exempt code from correctness or security review.
+Evaluate directives against the supplied snapshot. Do not use markers from a later working-tree version.
 
 ## Core guidelines
 - Be direct and specific. Reference file names and line numbers.
@@ -1144,6 +1193,8 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
+- For additions, modifications and renames, use the new path and new-side line number. For a deleted file, use its old path and old-side line number.
+- Review deletions and renamed APIs for broken consumers. Do not assume unchanged callers were updated.
 - Limit to at most 15 comments total.
 - Every comment must include both "category" and "priority" fields.
 - Omit the array (or use []) if there is nothing specific to annotate.
@@ -1245,10 +1296,10 @@ Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
 `;
 
 // src/ai/providers.ts
-var import_child_process4 = require("child_process");
+var import_child_process3 = require("child_process");
 var import_promises = require("fs/promises");
 var import_os = require("os");
-var path6 = __toESM(require("path"));
+var path5 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
@@ -1493,9 +1544,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises.mkdtemp)(path6.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path6.join(dir, "review-request.md");
-  const schemaFile = path6.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path5.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path5.join(dir, "review-request.md");
+  const schemaFile = path5.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
@@ -1542,8 +1593,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises.mkdtemp)(path6.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path6.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path5.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path5.join(dir, "output-schema.json");
   try {
     await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -1552,12 +1603,12 @@ async function withSchemaFile(schema, fn) {
   }
 }
 function runCli(command, args, stdin, req, env2) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve3, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
       return;
     }
-    const child = (0, import_child_process4.spawn)(command, args, {
+    const child = (0, import_child_process3.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
       env: env2,
       shell: false,
@@ -1631,7 +1682,7 @@ function runCli(command, args, stdin, req, env2) {
       }
       settled = true;
       cleanup();
-      resolve2({ code: code ?? 1, stdout, stderr });
+      resolve3({ code: code ?? 1, stdout, stderr });
     });
     child.stdin.on("error", (error) => {
       if (error.code !== "EPIPE" && !processError) {
@@ -1970,24 +2021,26 @@ var Reviewer = class {
   async reviewDiff(repoRoot, stagedFiles, signal) {
     const start = Date.now();
     try {
-      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       stagedFiles = stagedFiles.filter((file) => selection.files.includes(file));
       if (!stagedFiles.length) {
         const report2 = this.errorReport("No permitted staged source files. Review was not run.");
         report2.source_exclusions = selection.excluded;
         return { report: report2, stderr: "", timedOut: false, cancelled: false };
       }
-      const diff = await getStagedDiff(repoRoot, stagedFiles, this.cfg.excludePatterns);
+      const diff = truncate(selection.diff(stagedFiles));
       if (!diff.trim()) throw new Error("No permitted staged source content. Review was not run.");
+      const sources = new Map(stagedFiles.map((file) => [file, selection.readSelected(file)]));
       const review = await this.singleCall({
         repoRoot,
         mode: "diff",
         body: diff,
         signal
       });
-      review.file_comments = applyMarkers(review.file_comments, stagedFiles, repoRoot);
+      review.file_comments = applyMarkers(review.file_comments, sources);
       const report = this.assembleReport(stagedFiles, review, Date.now() - start);
       report.source_exclusions = selection.excluded;
+      report.source_snapshot = { kind: "index", base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree };
       return { report, stderr: "", timedOut: false, cancelled: false };
     } catch (e) {
       if (e.name === "AbortError") {
@@ -2008,6 +2061,15 @@ var Reviewer = class {
       return { report: report2, stderr: "", timedOut: false, cancelled: false };
     }
     const allComments = [];
+    const sources = /* @__PURE__ */ new Map();
+    const readErrors = /* @__PURE__ */ new Map();
+    for (const file of relPaths) {
+      try {
+        sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns));
+      } catch (error) {
+        readErrors.set(file, error);
+      }
+    }
     const perFile = [];
     const summaries = [];
     const grades = [];
@@ -2021,7 +2083,8 @@ var Reviewer = class {
       onProgress?.(i + 1, relPaths.length, rel);
       let result;
       try {
-        const content = getFileContents(repoRoot, [rel], this.cfg.excludePatterns, (entry) => exclusions.push(entry));
+        if (readErrors.has(rel)) throw readErrors.get(rel);
+        const content = formatFileContent(rel, sources.get(rel));
         if (!content.trim()) throw new Error("No permitted source content. Review was not run.");
         result = await this.singleCall({ repoRoot, mode: "file", body: content, signal });
       } catch (e) {
@@ -2030,7 +2093,7 @@ var Reviewer = class {
         }
         result = this.errorResult(e.message);
       }
-      result.file_comments = applyMarkers(result.file_comments, [rel], repoRoot);
+      result.file_comments = applyMarkers(result.file_comments.map((comment) => ({ ...comment, file: rel })), sources);
       if (result.is_error) {
         const errText = `\u26A0 ${result.summary}`;
         summaries.push(`**\`${rel}\`** \u2014 ${errText}`);
@@ -2075,13 +2138,16 @@ ${result.summary}`);
     };
     const report = this.assembleReport(relPaths, review, Date.now() - start);
     report.source_exclusions = exclusions;
+    report.source_snapshot = { kind: "working-tree", content_sha256: Object.fromEntries(
+      [...sources].map(([file, text]) => [file, (0, import_crypto.createHash)("sha256").update(text).digest("hex")])
+    ) };
     return { report, stderr: "", timedOut: false, cancelled: false };
   }
   /** Generate a conventional commit message from the current staged diff. */
   async generateCommitMessage(repoRoot, signal) {
     let diff;
     try {
-      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       if (selection.excluded.length) {
         return {
           commit_message: "",
@@ -2089,7 +2155,7 @@ ${result.summary}`);
           error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
         };
       }
-      diff = (await getStagedDiff(repoRoot, selection.files, this.cfg.excludePatterns)).trim();
+      diff = truncate(selection.diff()).trim();
     } catch (e) {
       return { commit_message: "", is_error: true, error: `git diff failed: ${e.message}` };
     }
@@ -2279,7 +2345,7 @@ function worstGrade(grades) {
 var vscode2 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path7 = __toESM(require("path"));
+var path6 = __toESM(require("path"));
 var vscode = __toESM(require("vscode"));
 
 // src/types.ts
@@ -2412,7 +2478,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path7.join(repoRoot, b.file);
+      const absPath = path6.join(repoRoot, b.file);
       const uriKey = vscode.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -2487,7 +2553,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path8 = __toESM(require("path"));
+var path7 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -2513,7 +2579,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b) {
-    const uri = vscode3.Uri.file(path8.join(repoRoot, b.file));
+    const uri = vscode3.Uri.file(path7.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode3.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -2537,8 +2603,8 @@ var CommentManager = class {
 };
 
 // src/config.ts
-var fs5 = __toESM(require("fs"));
-var path9 = __toESM(require("path"));
+var fs4 = __toESM(require("fs"));
+var path8 = __toESM(require("path"));
 var vscode4 = __toESM(require("vscode"));
 function getConfig() {
   const cfg = vscode4.workspace.getConfiguration("commitDefender");
@@ -2583,8 +2649,8 @@ function resolveCodexPath(configured) {
   const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
     for (const name of names) {
-      const candidate = path9.join(extensionPath, "bin", `${platform}-${arch}`, name);
-      if (fs5.existsSync(candidate)) {
+      const candidate = path8.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      if (fs4.existsSync(candidate)) {
         return candidate;
       }
     }
@@ -2597,24 +2663,24 @@ function resolveExternalCliPath(configured, name) {
   }
   const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   const candidates = [];
-  for (const dir of (process.env.PATH ?? "").split(path9.delimiter).filter(Boolean)) {
+  for (const dir of (process.env.PATH ?? "").split(path8.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
-      candidates.push(path9.join(dir, executable));
+      candidates.push(path8.join(dir, executable));
     }
   }
   const userHome = process.env.HOME || process.env.USERPROFILE;
   if (userHome) {
     for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
       for (const executable of executableNames) {
-        candidates.push(path9.join(userHome, dir, executable));
+        candidates.push(path8.join(userHome, dir, executable));
       }
     }
-    const nvmVersions = path9.join(userHome, ".nvm", "versions", "node");
+    const nvmVersions = path8.join(userHome, ".nvm", "versions", "node");
     try {
-      const versions = fs5.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
+      const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
       for (const version of versions) {
         for (const executable of executableNames) {
-          candidates.push(path9.join(nvmVersions, version, "bin", executable));
+          candidates.push(path8.join(nvmVersions, version, "bin", executable));
         }
       }
     } catch {
@@ -2622,14 +2688,14 @@ function resolveExternalCliPath(configured, name) {
   }
   for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
     for (const executable of executableNames) {
-      candidates.push(path9.join(dir, executable));
+      candidates.push(path8.join(dir, executable));
     }
   }
-  return candidates.find((candidate) => fs5.existsSync(candidate)) ?? configured;
+  return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured;
 }
 
 // src/diagnostics.ts
-var path10 = __toESM(require("path"));
+var path9 = __toESM(require("path"));
 var vscode5 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode5.DiagnosticSeverity.Error,
@@ -2649,7 +2715,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode5.Uri.file(path10.join(repoRoot, relFile));
+    const uri = vscode5.Uri.file(path9.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -2668,6 +2734,54 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     });
     collection.set(uri, diagnostics);
   }
+}
+
+// src/gitHelper.ts
+var fs5 = __toESM(require("fs"));
+var path10 = __toESM(require("path"));
+var import_child_process4 = require("child_process");
+function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
+  const results = [];
+  const relative3 = (file) => path10.relative(path10.resolve(repoRoot), path10.resolve(file)).split(path10.sep).join("/");
+  function walk(dir) {
+    const rel = relative3(dir);
+    if (rel) {
+      const selection2 = selectReviewInputs(repoRoot, [rel], excludePatterns, { allowDirectories: true });
+      selection2.excluded.forEach((entry) => onExcluded?.(entry));
+      if (!selection2.files.length) return;
+    }
+    let entries;
+    try {
+      entries = fs5.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      onExcluded?.({ path: rel || ".", reason: "unreadable" });
+      return;
+    }
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative3(path10.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    selection.excluded.forEach((entry) => onExcluded?.(entry));
+    const allowed = new Set(selection.files);
+    for (const entry of entries) {
+      const absolute = path10.join(dir, entry.name);
+      const file = relative3(absolute);
+      if (!allowed.has(file)) continue;
+      if (entry.isDirectory()) walk(absolute);
+      else if (entry.isFile()) results.push(file);
+    }
+  }
+  walk(path10.resolve(dirPath));
+  return results.sort();
+}
+async function getRepoRoot(cwd) {
+  return (0, import_child_process4.execFileSync)("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+}
+function getStagedSelection(repoRoot, excludePatterns = []) {
+  const { files, excluded } = captureStagedSnapshot(repoRoot, excludePatterns);
+  return { files, excluded };
+}
+async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
+  const selection = getStagedSelection(repoRoot, excludePatterns);
+  selection.excluded.forEach((entry) => onExcluded?.(entry));
+  return selection.files;
 }
 
 // src/historyProvider.ts

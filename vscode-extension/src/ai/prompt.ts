@@ -112,11 +112,10 @@ Assign ONE grade that reflects the overall quality of the reviewed code:
 - **critical** — Severe issues: security vulnerabilities, data-loss risk, or logic-breaking bugs. Must not be committed as-is.
 
 ## Inline skip directives
-If any of these markers appear on a line, do not emit any finding for that line — omit it entirely from \`file_comments\`:
-- \`# CD:skip\` — developer explicitly suppresses review for this line
-- \`# CD:skip:<reason>\` — same suppression; the reason is a human note
-- \`# type: ignore\` — intentional type-checker suppression; skip this line
-- \`# TODO\` — known unfinished work; skip this line
+Only an explicit \`CD:skip\` or \`CD:skip:<reason>\` line-comment directive in the supplied source suppresses its own line.
+Use the language's actual comment syntax (for example \`#\` in Python or \`//\` in TypeScript). Text inside a string is not a directive.
+TODO and type-checker suppression comments do not exempt code from correctness or security review.
+Evaluate directives against the supplied snapshot. Do not use markers from a later working-tree version.
 
 ## Core guidelines
 - Be direct and specific. Reference file names and line numbers.
@@ -145,6 +144,8 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
+- For additions, modifications and renames, use the new path and new-side line number. For a deleted file, use its old path and old-side line number.
+- Review deletions and renamed APIs for broken consumers. Do not assume unchanged callers were updated.
 - Limit to at most 15 comments total.
 - Every comment must include both "category" and "priority" fields.
 - Omit the array (or use []) if there is nothing specific to annotate.

@@ -43,6 +43,8 @@ export interface SourcePolicyOptions {
   allowMissing?: boolean;
   allowDirectories?: boolean;
   purpose?: 'source' | 'skill';
+  /** The caller validates immutable Git entry modes instead of working-tree metadata. */
+  gitTree?: boolean;
 }
 
 /** Metadata-only policy. Contents are read only after this check succeeds. */
@@ -70,7 +72,7 @@ export function selectReviewInputs(
     if (excludes.ignores(file)) { deny('user-excluded'); continue; }
 
     let denied = false;
-    for (let index = 0; index < parts.length; index++) {
+    for (let index = 0; !options.gitTree && index < parts.length; index++) {
       try {
         const stat = fs.lstatSync(path.join(root, ...parts.slice(0, index + 1)));
         if (stat.isSymbolicLink()) { deny('symlink'); denied = true; break; }

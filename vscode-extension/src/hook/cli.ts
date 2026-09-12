@@ -13,8 +13,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ResolvedConfig } from '../config.js';
-import { getStagedDiff } from '../diff.js';
-import { getStagedSelection } from '../gitHelper.js';
+import { truncate } from '../diff.js';
+import { captureStagedSnapshot } from '../gitSnapshot.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
 import { loadSkills } from '../skills.js';
@@ -35,15 +35,16 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const selection = getStagedSelection(repoRoot, cfg.excludePatterns);
+  const selection = captureStagedSnapshot(repoRoot, cfg.excludePatterns);
   const staged = selection.files;
   for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
   if (staged.length === 0) {
     process.exit(0);
   }
 
-  const diff = await getStagedDiff(repoRoot, staged, cfg.excludePatterns);
+  const diff = truncate(selection.diff());
   if (!diff.trim()) { process.exit(0); }
+  const sources = new Map(staged.map(file => [file, selection.readSelected(file)]));
 
   eprintln(`\n🛡  commit-defender — reviewing ${staged.length} staged file(s)…`);
 
@@ -97,7 +98,7 @@ async function main(): Promise<void> {
   let comments: FileComment[] = parsed.file_comments
     .map(fc => ({ ...fc, priority: enforceP3(fc.priority, fc.comment) } as FileComment))
     .filter(fc => (PRIORITY_RANK[fc.priority] ?? 1) >= minRank);
-  comments = applyMarkers(comments, staged, repoRoot);
+  comments = applyMarkers(comments, sources);
 
   const report: AnalysisReport = {
     schema_version: 1,
@@ -106,6 +107,7 @@ async function main(): Promise<void> {
     exit_code: 0,
     lint_findings: [],
     source_exclusions: selection.excluded,
+    source_snapshot: { kind: 'index', base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree },
     review: {
       summary: parsed.summary,
       blocking: parsed.blocking,

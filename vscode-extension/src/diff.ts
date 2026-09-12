@@ -3,47 +3,17 @@
  * DiffExtractor.
  */
 
-import { execFile } from 'child_process';
 import * as path from 'path';
-import { getStagedSelection } from './gitHelper.js';
+import { captureStagedSnapshot } from './gitSnapshot.js';
 import { readReviewFile, selectReviewInputs, type ExclusionObserver } from './sourcePolicy.js';
 
 /** Cap diff/file content size to keep token usage bounded (~25K tokens). */
 export const MAX_CONTENT_CHARS = 80_000;
 
-/** Empty-tree SHA used as the diff base on the very first commit. */
-const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
-
-/** Promise wrapper around `git -C <repoRoot> <args...>`. */
-export function git(repoRoot: string, args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile('git', ['--literal-pathspecs', '-C', repoRoot, ...args], { maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' }, (err, stdout, stderr) => {
-      if (err) {
-        const e = new Error(`git ${args.join(' ')} failed: ${stderr.trim() || err.message}`);
-        (e as NodeJS.ErrnoException).code = (err as NodeJS.ErrnoException).code;
-        return reject(e);
-      }
-      resolve(stdout);
-    });
-  });
-}
-
-/**
- * Combined unified diff for the listed staged files. Falls back to diffing
- * against the empty tree when there is no HEAD yet (initial commit).
- */
+/** The diff and marker source can share a single captured snapshot. */
 export async function getStagedDiff(repoRoot: string, relPaths: string[], patterns: string[] = []): Promise<string> {
-  if (relPaths.length === 0) { return ''; }
-  const selection = getStagedSelection(repoRoot, patterns);
-  relPaths = relPaths.filter(file => selection.files.includes(file));
-  if (relPaths.length === 0) { return ''; }
-  let out: string;
-  try {
-    out = await git(repoRoot, ['diff', '--cached', '--no-ext-diff', '--no-textconv', '--diff-filter=d', '--', ...relPaths]);
-  } catch {
-    out = await git(repoRoot, ['diff', '--cached', '--no-ext-diff', '--no-textconv', '--diff-filter=d', EMPTY_TREE, '--', ...relPaths]);
-  }
-  return truncate(out);
+  if (relPaths.length === 0) return '';
+  return truncate(captureStagedSnapshot(repoRoot, patterns).diff(relPaths));
 }
 
 /**
@@ -58,13 +28,17 @@ export function getFileContents(repoRoot: string, relPaths: string[], patterns: 
   const parts: string[] = [];
   for (const rel of selection.files) {
     const content = readReviewFile(repoRoot, rel, patterns);
-    const ext = path.extname(rel).replace(/^\./, '');
-    parts.push(`### ${rel}\n\n\`\`\`${ext}\n${content}\n\`\`\``);
+    parts.push(formatFileContent(rel, content));
   }
   return truncate(parts.join('\n\n'));
 }
 
-function truncate(s: string): string {
+export function formatFileContent(file: string, content: string): string {
+  const ext = path.extname(file).replace(/^\./, '');
+  return truncate(`### ${file}\n\n\`\`\`${ext}\n${content}\n\`\`\``);
+}
+
+export function truncate(s: string): string {
   if (s.length <= MAX_CONTENT_CHARS) { return s; }
   return s.slice(0, MAX_CONTENT_CHARS) + '\n\n[... truncated for token limit ...]';
 }

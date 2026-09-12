@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "vscode": "1.135.0",
+  "node": "24.18.1",
+  "electron": "42.8.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "extensionVersion": "2.3.0",
+  "commandCount": 18,
+  "activation": true,
+  "hookDefault": "disable",
+  "modelCalled": false,
+  "checks": [
+    "activation",
+    "command registration",
+    "clear findings",
+    "cancel without run",
+    "no hook installed"
+  ]
+}

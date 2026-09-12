@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
 import { isBinary, selectReviewInputs, type ExclusionObserver, type SourceSelection } from './sourcePolicy.js';
+import { captureStagedSnapshot } from './gitSnapshot.js';
 
 export { isBinary, SKIP_DIRS } from './sourcePolicy.js';
 
@@ -45,45 +46,10 @@ export async function getRepoRoot(cwd: string): Promise<string> {
   return execFileSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
-/** Apply the same policy to both sides of rename/copy and to index symlink modes. */
+/** Select from the same fixed index/base pair used by staged review. */
 export function getStagedSelection(repoRoot: string, excludePatterns: string[] = []): SourceSelection {
-  const run = (args: string[]) => execFileSync('git', ['-C', repoRoot, ...args], {
-    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const records = run(['diff', '--cached', '--name-status', '-z', '-M', '--diff-filter=ACMR']).split('\0');
-  const changes: string[][] = [];
-  for (let index = 0; index < records.length && records[index];) {
-    const status = records[index++];
-    const first = records[index++];
-    if (!first) throw new Error('Invalid staged change record');
-    const paths = [first];
-    if (/^[RC]/.test(status)) {
-      const second = records[index++];
-      if (!second) throw new Error('Invalid staged rename record');
-      paths.push(second);
-    }
-    changes.push(paths);
-  }
-  const selection = selectReviewInputs(repoRoot, changes.flat(), excludePatterns, { allowMissing: true });
-  const modes = new Map<string, string>();
-  for (const entry of run(['ls-files', '--stage', '-z']).split('\0').filter(Boolean)) {
-    const tab = entry.indexOf('\t');
-    modes.set(entry.slice(tab + 1), entry.slice(0, 6));
-  }
-  const files: string[] = [];
-  const excluded = [...selection.excluded];
-  for (const paths of changes) {
-    const target = paths[paths.length - 1];
-    const rejected = paths.find(file => !selection.files.includes(file));
-    if (rejected) {
-      if (rejected !== target) excluded.push({ path: target, reason: selection.excluded.find(entry => entry.path === rejected)?.reason ?? 'invalid-path' });
-      continue;
-    }
-    if (modes.get(target) === '120000') { excluded.push({ path: target, reason: 'symlink' }); continue; }
-    if (modes.get(target) === '160000') { excluded.push({ path: target, reason: 'not-file' }); continue; }
-    files.push(target);
-  }
-  return { files: [...new Set(files)], excluded };
+  const { files, excluded } = captureStagedSnapshot(repoRoot, excludePatterns);
+  return { files, excluded };
 }
 
 export async function getStagedFiles(repoRoot: string, excludePatterns: string[] = [], onExcluded?: ExclusionObserver): Promise<string[]> {

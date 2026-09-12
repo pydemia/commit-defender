@@ -10,10 +10,11 @@
  */
 
 import * as path from 'path';
+import { createHash } from 'crypto';
 import { ResolvedConfig } from '../config.js';
-import { getFileContents, getStagedDiff } from '../diff.js';
-import { getStagedSelection } from '../gitHelper.js';
-import { selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
+import { formatFileContent, truncate } from '../diff.js';
+import { captureStagedSnapshot } from '../gitSnapshot.js';
+import { readReviewFile, selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
 import { loadSkills } from '../skills.js';
@@ -37,21 +38,23 @@ export class Reviewer {
   async reviewDiff(repoRoot: string, stagedFiles: string[], signal?: AbortSignal): Promise<RunResult> {
     const start = Date.now();
     try {
-      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       stagedFiles = stagedFiles.filter(file => selection.files.includes(file));
       if (!stagedFiles.length) {
         const report = this.errorReport('No permitted staged source files. Review was not run.');
         report.source_exclusions = selection.excluded;
         return { report, stderr: '', timedOut: false, cancelled: false };
       }
-      const diff = await getStagedDiff(repoRoot, stagedFiles, this.cfg.excludePatterns);
+      const diff = truncate(selection.diff(stagedFiles));
       if (!diff.trim()) throw new Error('No permitted staged source content. Review was not run.');
+      const sources = new Map(stagedFiles.map(file => [file, selection.readSelected(file)]));
       const review = await this.singleCall({
         repoRoot, mode: 'diff', body: diff, signal,
       });
-      review.file_comments = applyMarkers(review.file_comments, stagedFiles, repoRoot);
+      review.file_comments = applyMarkers(review.file_comments, sources);
       const report = this.assembleReport(stagedFiles, review, Date.now() - start);
       report.source_exclusions = selection.excluded;
+      report.source_snapshot = { kind: 'index', base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree };
       return { report, stderr: '', timedOut: false, cancelled: false };
     } catch (e) {
       if ((e as Error).name === 'AbortError') {
@@ -78,6 +81,13 @@ export class Reviewer {
       return { report, stderr: '', timedOut: false, cancelled: false };
     }
     const allComments: FileComment[] = [];
+    // Freeze every selected saved file before the first provider call or progress callback.
+    const sources = new Map<string, string>();
+    const readErrors = new Map<string, Error>();
+    for (const file of relPaths) {
+      try { sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns)); }
+      catch (error) { readErrors.set(file, error as Error); }
+    }
     const perFile: PerFileSummary[] = [];
     const summaries: string[] = [];
     const grades: string[] = [];
@@ -95,7 +105,8 @@ export class Reviewer {
 
       let result: ReviewResult;
       try {
-        const content = getFileContents(repoRoot, [rel], this.cfg.excludePatterns, entry => exclusions.push(entry));
+        if (readErrors.has(rel)) throw readErrors.get(rel);
+        const content = formatFileContent(rel, sources.get(rel)!);
         if (!content.trim()) throw new Error('No permitted source content. Review was not run.');
         result = await this.singleCall({ repoRoot, mode: 'file', body: content, signal });
       } catch (e) {
@@ -105,7 +116,7 @@ export class Reviewer {
         result = this.errorResult((e as Error).message);
       }
 
-      result.file_comments = applyMarkers(result.file_comments, [rel], repoRoot);
+      result.file_comments = applyMarkers(result.file_comments.map(comment => ({ ...comment, file: rel })), sources);
 
       if (result.is_error) {
         const errText = `⚠ ${result.summary}`;
@@ -155,6 +166,9 @@ export class Reviewer {
 
     const report = this.assembleReport(relPaths, review, Date.now() - start);
     report.source_exclusions = exclusions;
+    report.source_snapshot = { kind: 'working-tree', content_sha256: Object.fromEntries(
+      [...sources].map(([file, text]) => [file, createHash('sha256').update(text).digest('hex')]),
+    ) };
     return { report, stderr: '', timedOut: false, cancelled: false };
   }
 
@@ -162,12 +176,12 @@ export class Reviewer {
   async generateCommitMessage(repoRoot: string, signal?: AbortSignal): Promise<CommitMessageResult> {
     let diff: string;
     try {
-      const selection = getStagedSelection(repoRoot, this.cfg.excludePatterns);
+      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       if (selection.excluded.length) {
         return { commit_message: '', is_error: true,
           error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.` };
       }
-      diff = (await getStagedDiff(repoRoot, selection.files, this.cfg.excludePatterns)).trim();
+      diff = truncate(selection.diff()).trim();
     } catch (e) {
       return { commit_message: '', is_error: true, error: `git diff failed: ${(e as Error).message}` };
     }
