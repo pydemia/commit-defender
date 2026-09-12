@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CommentBlock } from './types.js';
+import { AnalysisReport, CommentBlock } from './types.js';
 import { metaForBlock, formatCategory } from './commentFormatter.js';
+import { reviewNavigation } from './reviewNavigation.js';
 
 export class CommentManager {
   private threads: vscode.CommentThread[] = [];
@@ -11,12 +12,20 @@ export class CommentManager {
     this.threads = [];
   }
 
+  clearFile(uri: vscode.Uri): void {
+    this.threads = this.threads.filter(thread => {
+      if (thread.uri.toString() !== uri.toString()) return true;
+      thread.dispose();
+      return false;
+    });
+  }
+
   /** Create one thread per CommentBlock — one unit-comment-block per code segment. */
-  apply(blocks: CommentBlock[], repoRoot: string, ctrl: vscode.CommentController): void {
+  apply(blocks: CommentBlock[], repoRoot: string, ctrl: vscode.CommentController, report: AnalysisReport): void {
     this.clearAll();
     for (const b of blocks) {
       if (b.line <= 0) { continue; }
-      this._createThread(ctrl, repoRoot, b);
+      this._createThread(ctrl, repoRoot, b, report);
     }
   }
 
@@ -31,6 +40,7 @@ export class CommentManager {
     ctrl: vscode.CommentController,
     repoRoot: string,
     b: CommentBlock,
+    report: AnalysisReport,
   ): void {
     const uri   = vscode.Uri.file(path.join(repoRoot, b.file));
     const line  = Math.max(0, b.line - 1);
@@ -43,9 +53,7 @@ export class CommentManager {
     const bodyText = b.source === 'lint' && b.rule
       ? `\`${b.rule}\` — ${b.comment}`
       : b.comment;
-    const md = new vscode.MarkdownString(bodyText);
-    md.isTrusted   = true;
-    md.supportHtml = false;
+    const md = reviewNavigation.markdown(bodyText, repoRoot, report, b.file);
 
     const comment: vscode.Comment = {
       author: { name: 'Commit Defender' },

@@ -524,7 +524,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -534,10 +534,16 @@
         "test:source-policy": "npm run bundle-hook && esbuild test/source-policy.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/source-policy.test.cjs && node --test out-test/source-policy.test.cjs",
         "test:git-snapshot": "npm run bundle-hook && esbuild test/git-snapshot.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/git-snapshot.test.cjs && node --test out-test/git-snapshot.test.cjs",
         "test:review-outcome": "npm run bundle-hook && esbuild test/review-outcome.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-outcome.test.cjs && node --test out-test/review-outcome.test.cjs",
-        "test:outcome-ui": "npm run build && esbuild test/outcome-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/outcome-host.cjs && node test/run-outcome-host.mjs"
+        "test:outcome-ui": "npm run build && esbuild test/outcome-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/outcome-host.cjs && node test/run-outcome-host.mjs",
+        "test:review-security": "esbuild test/review-security.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-security.test.cjs && node --test out-test/review-security.test.cjs"
     },
     "dependencies": {
-        "ignore": "^5.3.1"
+        "ignore": "^5.3.1",
+        "mdast-util-from-markdown": "2.0.3",
+        "mdast-util-gfm-autolink-literal": "2.0.1",
+        "mdast-util-to-markdown": "2.1.2",
+        "micromark": "4.0.2",
+        "micromark-extension-gfm-autolink-literal": "2.1.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

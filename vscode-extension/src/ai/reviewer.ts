@@ -14,10 +14,11 @@ import { ResolvedConfig } from '../config.js';
 import { formatFileContent, truncate, MAX_CONTENT_CHARS } from '../diff.js';
 import { captureStagedSnapshot } from '../gitSnapshot.js';
 import { readReviewFile, selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
+import { attachReviewSources, validateFindingAnchors } from '../reviewSource.js';
 import { reviewStatus } from '../reviewOutcome.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
-import { loadSkills } from '../skills.js';
+import { loadSkillMaterial } from '../skills.js';
 import { AnalysisReport, CommitMessageResult, FileComment, IncompleteReason, PerFileSummary, ReviewResult, ReviewStatus, RunResult } from '../types.js';
 import { ParsedReview, enforceP3, parseReviewJson } from './json.js';
 import { COMMIT_MESSAGE_SYSTEM_PROMPT, SEVERITY_MIN_RANK, ReviewMode, buildSystemPrompt, buildUserMessage } from './prompt.js';
@@ -53,8 +54,10 @@ export class Reviewer {
       const review = await this.singleCall({
         repoRoot, mode: 'diff', body: truncate(diff), sourceTruncated: diff.length > MAX_CONTENT_CHARS, signal,
       });
+      validateFindingAnchors(review, sources);
       review.file_comments = applyMarkers(review.file_comments, sources);
       const report = { ...this.assembleReport(stagedFiles, review, Date.now() - start), ...source };
+      attachReviewSources(report, sources, snapshot.sideOf);
       return this.runResult(report);
     } catch (error) {
       if ((error as Error).name === 'AbortError' || signal?.aborted) {
@@ -98,6 +101,7 @@ export class Reviewer {
     const perFile: PerFileSummary[] = [];
     const grades: string[] = [];
     const reasons = new Set<IncompleteReason>();
+    let rejected = 0;
     let blocking = false;
     let cancelled = false;
 
@@ -123,9 +127,11 @@ export class Reviewer {
           cancelled = true;
         } else { result = this.errorResult((error as Error).message); }
       }
+      validateFindingAnchors(result, new Map(sources.has(file) ? [[file, sources.get(file)!]] : []), file);
       const status = reviewStatus(result);
-      result.file_comments = applyMarkers(result.file_comments.map(comment => ({ ...comment, file })), sources);
+      result.file_comments = applyMarkers(result.file_comments, sources);
       for (const reason of result.incomplete_reasons ?? []) reasons.add(reason);
+      rejected += result.rejected_finding_count ?? 0;
       const usable = status === 'completed' || status === 'partial';
       if (usable) {
         allComments.push(...result.file_comments);
@@ -150,13 +156,14 @@ export class Reviewer {
       summary: perFile.map(entry => `**\`${entry.file}\`** — ${entry.status}\n\n${entry.summary}`).join('\n\n---\n\n'),
       status, blocking, is_error: status === 'failed', file_comments: allComments,
       grade: status === 'completed' ? worstGrade(grades) as ReviewResult['grade'] : '',
-      incomplete_reasons: [...reasons], per_file_summaries: perFile,
+      incomplete_reasons: [...reasons], rejected_finding_count: rejected, per_file_summaries: perFile,
     };
     const report = this.assembleReport(relPaths, review, Date.now() - start);
     report.source_exclusions = exclusions;
     report.source_snapshot = { kind: 'working-tree', content_sha256: Object.fromEntries(
       [...sources].map(([file, text]) => [file, createHash('sha256').update(text).digest('hex')]),
     ) };
+    attachReviewSources(report, sources);
     return this.runResult(report);
   }
 
@@ -215,7 +222,7 @@ export class Reviewer {
     sourceTruncated?: boolean;
     signal?: AbortSignal;
   }): Promise<ReviewResult> {
-    const skillsText = loadSkills(opts.repoRoot, this.cfg.excludePatterns);
+    const { text: skillsText, truncated: skillsTruncated } = loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,
@@ -223,7 +230,7 @@ export class Reviewer {
       locale: this.cfg.locale,
       skillsText,
     });
-    const userMessage = buildUserMessage(opts.mode, opts.body);
+    const userMessage = buildUserMessage(opts.mode, opts.body, skillsText);
 
     const req = this.buildProviderRequest(
       opts.repoRoot,
@@ -272,7 +279,12 @@ export class Reviewer {
     }
 
     const reasons: IncompleteReason[] = [];
+    if (parsed.rejectedComments) reasons.push('invalid-output');
     if (opts.sourceTruncated) reasons.push('source-truncated');
+    if (skillsTruncated) {
+      reasons.push('context-truncated');
+      summary = `Repository review material exceeded the input limit; only part was included.\n\n${summary}`;
+    }
     if (parsed.truncated) reasons.push('response-truncated');
     else if (resp.incomplete) reasons.push('response-incomplete');
     if (opts.sourceTruncated) summary = `Source exceeded the input limit; only part of it was reviewed.\n\n${summary}`;
@@ -280,6 +292,7 @@ export class Reviewer {
       summary,
       status: reasons.length ? 'partial' : 'completed',
       incomplete_reasons: reasons,
+      rejected_finding_count: parsed.rejectedComments,
       blocking: parsed.blocking,
       is_error: false,
       file_comments: comments,

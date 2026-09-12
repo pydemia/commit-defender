@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
-import { resolveExitCode } from './exitResolver.js';
+import { reviewStatus } from './reviewOutcome.js';
+import { SummaryView } from './summaryView.js';
+import { reviewNavigation } from './reviewNavigation.js';
+import { liveBlocks, liveSource } from './reviewSource.js';
 import { Reviewer } from './ai/reviewer.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
@@ -17,14 +19,15 @@ import { hookIsInstalled, installHook, uninstallHook, writeHookConfig } from './
 import { PanelProvider } from './panelProvider.js';
 import { getOutputChannel, disposeOutputChannel } from './outputChannel.js';
 import { StatusBarManager } from './statusBar.js';
-import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META, RunResult } from './types.js';
-import { normalizeReport, worstPriority, metaForBlock, formatCategory, PRIORITY_RANK } from './commentFormatter.js';
-import { Palette, resolvePalette, gradeColor as paletteGradeColor } from './palette.js';
+import { AnalysisReport, RunResult } from './types.js';
+import { resolvePalette } from './palette.js';
+import { normalizeReport } from './commentFormatter.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 
 
 export function activate(context: vscode.ExtensionContext): void {
+  reviewNavigation.register(context);
   let lastConfiguredProvider = getConfig().aiProvider;
   let providerUpdateFromWizard: AccountProvider | undefined;
 
@@ -287,10 +290,8 @@ export function activate(context: vscode.ExtensionContext): void {
     }
     // Re-render the summary panel when the color palette changes.
     if (e.affectsConfiguration('commitDefender.colorPalette')) {
-      const last = findingsStore.lastReport();
-      if (last && _summaryPanel) {
-        const palette = resolvePalette(getConfig().colorPalette);
-        _summaryPanel.webview.html = buildSummaryHtml(last.report, last.repoRoot, palette);
+      if (_summaryView && _summaryPanel) {
+        renderSummary(_summaryView.report, _summaryView.repoRoot);
       }
     }
   }));
@@ -328,6 +329,22 @@ export function activate(context: vscode.ExtensionContext): void {
     panelView,
     vscode.window.registerFileDecorationProvider(panelProvider.decorationProvider),
     vscode.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider),
+  );
+
+  const invalidateChangedSource = (document: vscode.TextDocument): void => {
+    if (document.uri.scheme !== 'file') return;
+    const last = findingsStore.lastReport();
+    if (!last) return;
+    const file = path.relative(last.repoRoot, document.uri.fsPath).split(path.sep).join('/');
+    if (!last.report.staged_files.includes(file)) return;
+    if (liveSource(last.repoRoot, last.report, file, document.getText()) !== undefined) return;
+    diagnostics.delete(document.uri);
+    commentManager.clearFile(document.uri);
+    findingsStore.invalidateFile(document.uri);
+  };
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument(event => invalidateChangedSource(event.document)),
+    vscode.workspace.onDidOpenTextDocument(invalidateChangedSource),
   );
 
   // ── Shared analysis pipeline ────────────────────────────────────────────
@@ -377,13 +394,17 @@ export function activate(context: vscode.ExtensionContext): void {
     ).values()];
     logSourceExclusions(result.report.source_exclusions);
 
-    findingsStore.update(result.report, repoRoot);
+    const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), file => {
+      const uri = vscode.Uri.file(path.join(repoRoot, file)).toString();
+      return vscode.workspace.textDocuments.find(document => document.uri.toString() === uri)?.getText();
+    });
+    findingsStore.update(result.report, repoRoot, displayBlocks);
     historyProvider.push(result.report, repoRoot, scope, scopeTarget);
     const blocks = findingsStore.lastReport()!.blocks;
     historyProvider.updateFindings(blocks);
     panelProvider.updateFindings(blocks, repoRoot, result.report);
-    applyDiagnostics(blocks, repoRoot, diagnostics);
-    commentManager.apply(blocks, repoRoot, commentCtrl);
+    applyDiagnostics(displayBlocks, repoRoot, diagnostics);
+    commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
 
     const status = reviewStatus(result.report.review);
     statusBar.setReport(result.report);
@@ -402,16 +423,9 @@ export function activate(context: vscode.ExtensionContext): void {
     showSummaryPanel(result.report, repoRoot, context);
     await vscode.commands.executeCommand('commitDefender.panelView.focus');
 
-    // Bring the source file back to the front so inline comment threads render.
-    const srcFile = result.report.staged_files.find(file => fs.existsSync(path.join(repoRoot, file)));
-    if (srcFile) {
-      const absPath = path.join(repoRoot, srcFile);
-      await vscode.window.showTextDocument(vscode.Uri.file(absPath), {
-        preserveFocus: false,
-        preview: false,
-        viewColumn: vscode.ViewColumn.One,
-      });
-    }
+    const srcFile = result.report.staged_files[0];
+    const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
+    if (command) await reviewNavigation.open(command.arguments?.[0]);
   }
 
   // ── 1. Analyze Current File ────────────────────────────────────────────
@@ -626,11 +640,14 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── Show line suggestion (CodeLens click) ──────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.showLineSuggestion',
-    async (uri: vscode.Uri, line0: number) => {
-      await vscode.window.showTextDocument(uri, {
-        selection:     new vscode.Range(line0, 0, line0, 0),
-        preserveFocus: false,
-      });
+    async (uri: unknown, line0: unknown) => {
+      if (!(uri instanceof vscode.Uri) || uri.scheme !== 'file' || typeof line0 !== 'number'
+          || !Number.isSafeInteger(line0) || line0 < 0) return;
+      const last = findingsStore.lastReport();
+      if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
+      const file = path.relative(last.repoRoot, uri.fsPath).split(path.sep).join('/');
+      const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
+      if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
   ));
 
@@ -908,14 +925,18 @@ function handleError(err: unknown, statusBar: StatusBarManager): void {
 // ── Summary webview panel ─────────────────────────────────────────────────────
 
 let _summaryPanel: vscode.WebviewPanel | undefined;
-let _summaryReport: AnalysisReport | undefined;
+let _summaryView: SummaryView | undefined;
+
+function renderSummary(report: AnalysisReport, repoRoot: string): void {
+  _summaryView = new SummaryView(report, repoRoot, reviewNavigation.links, resolvePalette(getConfig().colorPalette));
+  if (_summaryPanel) _summaryPanel.webview.html = _summaryView.html;
+}
 
 function showSummaryPanel(
   report: AnalysisReport,
   repoRoot: string,
   context: vscode.ExtensionContext,
 ): void {
-  _summaryReport = report;
   if (_summaryPanel) {
     _summaryPanel.reveal(vscode.ViewColumn.Beside, true);
   } else {
@@ -923,24 +944,20 @@ function showSummaryPanel(
       'commitDefenderSummary',
       'Commit Defender — Summary',
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-      { enableScripts: true, retainContextWhenHidden: true },
+      { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] },
     );
-    _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; _summaryReport = undefined; }, null, context.subscriptions);
+    _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; _summaryView = undefined; }, null, context.subscriptions);
 
     _summaryPanel.webview.onDidReceiveMessage(
-      async (msg: { command: string; path: string; line: number }) => {
-        if (msg.command === 'open') {
-          const uri = vscode.Uri.file(msg.path);
-          const line = Math.max(0, (msg.line ?? 1) - 1);
-          vscode.window.showTextDocument(uri, {
-            selection: new vscode.Range(line, 0, line, 0),
-            preserveFocus: false,
-          });
-        } else if (msg.command === 'showJson') {
-          if (!_summaryReport) return;
-          const json = JSON.stringify(_summaryReport, null, 2);
-          const doc = await vscode.workspace.openTextDocument({ content: json, language: 'json' });
-          vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });
+      async (value: unknown) => {
+        const view = _summaryView;
+        const message = view?.message(value);
+        if (!view || !message) return;
+        if (message.command === 'open') {
+          await reviewNavigation.open(message.id);
+        } else {
+          const doc = await vscode.workspace.openTextDocument({ content: JSON.stringify(view.report, null, 2), language: 'json' });
+          await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
       },
       undefined,
@@ -949,85 +966,7 @@ function showSummaryPanel(
   }
 
   _summaryPanel.title = 'Commit Defender — Summary';
-  const palette = resolvePalette(getConfig().colorPalette);
-  _summaryPanel.webview.html = buildSummaryHtml(report, repoRoot, palette);
-}
-
-function _renderOverallSummary(
-  review: AnalysisReport['review'],
-  blocks: CommentBlock[],
-  repoRoot: string,
-  palette: Palette,
-): string {
-  const perFile = review.per_file_summaries ?? [];
-
-  if (perFile.length === 0) {
-    return `<div class="per-file-summary">${mdToHtml(review.summary)}</div>`;
-  }
-
-  const worstByFile = new Map<string, CommentPriority>();
-  for (const b of blocks) {
-    const cur = worstByFile.get(b.file);
-    if (!cur || PRIORITY_RANK[b.priority] > PRIORITY_RANK[cur]) {
-      worstByFile.set(b.file, b.priority);
-    }
-  }
-
-  let html = '';
-  for (const pfs of perFile) {
-    const priority = worstByFile.get(pfs.file) ?? pfs.priority;
-    const pMeta    = priority ? PRIORITY_META[priority] : undefined;
-    const pColor   = priority ? palette.priority[priority] : undefined;
-    const badge    = pMeta
-      ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>`
-      : '';
-    const absFile = path.join(repoRoot, pfs.file);
-    html += `<div class="per-file-summary">
-      <div class="per-file-header">
-        <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
-        ${pfs.status ? `<span class="mode-tag">${esc(pfs.status)}</span>` : ''} ${badge}
-      </div>
-      <div class="per-file-body">${mdToHtml(pfs.summary)}</div>
-    </div>`;
-  }
-  return html;
-}
-
-function _renderFileBlocks(blocks: CommentBlock[], repoRoot: string, palette: Palette): string {
-  const byFile = new Map<string, CommentBlock[]>();
-  for (const b of blocks) {
-    const list = byFile.get(b.file) ?? [];
-    list.push(b);
-    byFile.set(b.file, list);
-  }
-  let html = '';
-  for (const [relFile, fileBlocks] of byFile) {
-    const absFile = path.join(repoRoot, relFile);
-    html += `<div class="file-block">
-      <div class="file-name">
-        <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#">${esc(relFile)}</a>
-      </div>`;
-    for (const b of fileBlocks) {
-      const meta     = metaForBlock(b);
-      const cat      = formatCategory(b.category);
-      const catSlug  = (b.category || '').toLowerCase();
-      const pColor   = palette.priority[b.priority];
-      const pBadge   = `<span class="priority-badge" style="color:${pColor}">${meta.emoji} ${b.priority} ${meta.label}</span>`;
-      const catBadge = b.priority !== 'P0' && b.category
-        ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>`
-        : '';
-      const lineRef  = b.line > 0
-        ? `<a class="line-link" data-path="${esc(absFile)}" data-line="${b.line}" href="#">line ${b.line}</a>`
-        : '<span class="line-label">file-level</span>';
-      const bodyHtml = mdToHtml(b.comment);
-      html += `<div class="suggestion priority-${esc(b.priority)}">
-        <div class="suggestion-header">${pBadge} ${catBadge} &nbsp;${lineRef}</div>
-        <div class="suggestion-body">${bodyHtml}</div>
-      </div>`;
-    }
-    html += '</div>';
-  }
-  return html;
+  renderSummary(report, repoRoot);
 }
 
 function logSourceExclusions(excluded: SourceExclusion[], show = false): void {
@@ -1035,244 +974,6 @@ function logSourceExclusions(excluded: SourceExclusion[], show = false): void {
   const channel = getOutputChannel();
   for (const entry of excluded) channel.appendLine(`Source excluded: ${JSON.stringify(entry.path)} (${entry.reason})`);
   if (show) channel.show(true);
-}
-
-function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Palette): string {
-  const pal = palette ?? resolvePalette('theme-adaptive');
-  const blocks = normalizeReport(report);
-
-  const status = reviewStatus(report.review);
-  const outcome = OUTCOME_META[status];
-  const grade = status === 'completed' ? report.review.grade : '';
-  const isError = status === 'failed';
-  const wp = worstPriority(blocks);
-  const wpMeta = wp ? PRIORITY_META[wp] : undefined;
-  const headerBadge = `<span class="badge" style="background:var(--vscode-${outcome.color.replaceAll('.', '-')})">${outcome.label.toUpperCase()}</span>`;
-  const gradeBadge = grade
-    ? `<span class="badge" style="background:${paletteGradeColor(pal, grade)}">${grade.toUpperCase()}</span>`
-    : '';
-  const worstBadge = wpMeta && wp
-    ? `<span class="priority-badge" style="color:${pal.priority[wp]}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>`
-    : '';
-
-  const metaParts: string[] = [
-    reviewCoverage(report),
-    blocks.length > 0 ? `${blocks.length} comment(s)` : '',
-    `Legacy hook: ${resolveExitCode(report) === 1 ? 'would block' : 'allows commit'}`,
-    `${report.duration_ms} ms`,
-  ].filter(Boolean);
-
-  let body = `
-    <div class="header">
-      <div class="header-row">
-        <h1>🛡 Commit Defender &nbsp;${headerBadge} ${gradeBadge} &nbsp;${worstBadge}</h1>
-        <button class="json-btn" id="btnShowJson" title="Open raw JSON report in editor">{ } Raw JSON</button>
-      </div>
-      <div class="meta">${metaParts.join(' &nbsp;·&nbsp; ')}</div>
-    </div>`;
-
-  if (report.source_exclusions?.length) {
-    body += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
-    for (const entry of report.source_exclusions) {
-      body += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
-    }
-    body += '</ul></section>';
-  }
-
-  if (report.review.summary) {
-    if (isError) {
-      const txt = report.review.summary.replace(/^AI review unavailable:\s*/i, '');
-      body += `<section><h2>⚠ AI Review Error</h2>
-        <div class="summary-error">${mdToHtml(txt)}</div></section>`;
-    } else {
-      body += `<section><h2>📋 Overall Summary</h2>
-        ${_renderOverallSummary(report.review, blocks, repoRoot, pal)}</section>`;
-    }
-  }
-
-  if (blocks.length > 0) {
-    body += '<section><h2>💡 AI Comments</h2>';
-    body += _renderFileBlocks(blocks, repoRoot, pal);
-    body += '</section>';
-  }
-
-  if (report.staged_files.length > 0) {
-    body += '<section><h2>📁 Selected File List</h2><ul class="file-list">';
-    for (const f of report.staged_files) {
-      const absFile = path.join(repoRoot, f);
-      body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;
-    }
-    body += '</ul></section>';
-  }
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-  :root {
-    --radius: 6px;
-    --cd-p3: ${pal.priority.P3};
-    --cd-p2: ${pal.priority.P2};
-    --cd-p1: ${pal.priority.P1};
-    --cd-p0: ${pal.priority.P0};
-    --cd-cat-security:        ${pal.category.security};
-    --cd-cat-correctness:     ${pal.category.correctness};
-    --cd-cat-maintenance:     ${pal.category.maintenance};
-    --cd-cat-optimization:    ${pal.category.optimization};
-    --cd-cat-setting:         ${pal.category.setting};
-    --cd-cat-review-history:  ${pal.category['review-history']};
-  }
-  body {
-    font-family: var(--vscode-font-family);
-    font-size: var(--vscode-font-size);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-    padding: 24px 32px;
-    line-height: 1.65;
-    max-width: 960px;
-  }
-  h1 { font-size: 1.3em; margin: 0 0 6px; }
-  h2 { font-size: 1em; font-weight: 600; margin: 1.8em 0 0.6em;
-       border-bottom: 1px solid var(--vscode-widget-border); padding-bottom: 4px; }
-  a  { color: var(--vscode-textLink-foreground); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  code {
-    font-family: var(--vscode-editor-font-family);
-    background: var(--vscode-textBlockQuote-background);
-    padding: 1px 5px; border-radius: 3px; font-size: 0.88em;
-  }
-  .header { margin-bottom: 1.4em; }
-  .meta { color: var(--vscode-descriptionForeground); font-size: 0.85em; margin-top: 4px; }
-  .badge {
-    display: inline-block; padding: 2px 12px; border-radius: 4px;
-    font-size: 0.78em; font-weight: 700; margin-left: 8px; vertical-align: middle;
-  }
-  .badge.pass    { background: #2d7d46; color: #fff; }
-  .badge.blocked { background: var(--vscode-statusBarItem-errorBackground, #c72e2e); color: #fff; }
-  .mode-tag { display: inline-block; font-size: 0.78em; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); vertical-align: middle; }
-  .file-block { margin-bottom: 1.2em; }
-  .file-name { font-size: 0.88em; font-weight: 600; margin-bottom: 4px; color: var(--vscode-descriptionForeground); }
-  .suggestion {
-    background: var(--vscode-textBlockQuote-background);
-    border-left: 3px solid var(--vscode-textLink-foreground);
-    border-radius: 0 var(--radius) var(--radius) 0;
-    padding: 8px 14px; margin: 5px 0;
-  }
-  .suggestion-header { font-size: 0.85em; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .priority-badge { font-weight: 600; white-space: nowrap; }
-  .suggestion.priority-P3 { border-left: 3px solid var(--cd-p3); padding-left: 8px; }
-  .suggestion.priority-P2 { border-left: 3px solid var(--cd-p2); padding-left: 8px; }
-  .suggestion.priority-P1 { border-left: 3px solid var(--cd-p1); padding-left: 8px; }
-  .suggestion.priority-P0 { border-left: 3px solid var(--cd-p0); padding-left: 8px; }
-  .suggestion-body p { margin: 4px 0; }
-  .line-label { color: var(--vscode-descriptionForeground); font-size: 0.82em; }
-  .cat {
-    display: inline-block; font-size: 0.72em; font-weight: 600;
-    padding: 1px 6px; border-radius: 3px; margin-left: 6px;
-    vertical-align: middle; text-transform: uppercase;
-    background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);
-  }
-  .cat-security       { background: var(--cd-cat-security);        color: #fff; }
-  .cat-correctness    { background: var(--cd-cat-correctness);     color: #fff; }
-  .cat-maintenance    { background: var(--cd-cat-maintenance);     color: #fff; }
-  .cat-optimization   { background: var(--cd-cat-optimization);    color: #fff; }
-  .cat-setting        { background: var(--cd-cat-setting);         color: #fff; }
-  .cat-review-history { background: var(--cd-cat-review-history);  color: #fff; }
-  .file-list { margin: 4px 0; padding-left: 20px; }
-  .file-list li { margin: 2px 0; font-size: 0.88em; }
-  .summary-text p { margin: 6px 0; }
-  .per-file-summary {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--vscode-widget-border);
-  }
-  .per-file-summary:last-child { border-bottom: none; }
-  .per-file-header {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 6px; flex-wrap: wrap;
-  }
-  .per-file-header code {
-    font-size: 0.9em;
-    background: var(--vscode-textBlockQuote-background);
-  }
-  .per-file-body p { margin: 4px 0; }
-  .summary-error {
-    background: var(--vscode-inputValidation-errorBackground, rgba(199,46,46,0.15));
-    border-left: 3px solid var(--vscode-errorForeground);
-    border-radius: 0 var(--radius) var(--radius) 0;
-    padding: 10px 14px;
-  }
-  section { margin-bottom: 1.6em; }
-  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .header-row h1 { margin: 0; flex: 1; }
-  .json-btn {
-    cursor: pointer;
-    font-family: var(--vscode-editor-font-family);
-    font-size: 0.78em;
-    padding: 4px 12px;
-    border-radius: 4px;
-    border: 1px solid var(--vscode-button-border, var(--vscode-widget-border));
-    background: var(--vscode-button-secondaryBackground, var(--vscode-editor-background));
-    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-    white-space: nowrap;
-  }
-  .json-btn:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); }
-</style>
-</head>
-<body>
-${body}
-<script>
-  const vscode = acquireVsCodeApi();
-  document.addEventListener('click', e => {
-    const link = e.target.closest('a[data-path]');
-    if (link) {
-      e.preventDefault();
-      vscode.postMessage({
-        command: 'open',
-        path: link.dataset.path,
-        line: parseInt(link.dataset.line || '1', 10),
-      });
-      return;
-    }
-    if (e.target && e.target.id === 'btnShowJson') {
-      vscode.postMessage({ command: 'showJson' });
-    }
-  });
-</script>
-</body>
-</html>`;
-}
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function mdToHtml(md: string): string {
-  const inline = (s: string) => s
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
-    .replace(/`([^`]+)`/g,     '<code>$1</code>');
-
-  const blocks = md.split(/\n{2,}/);
-  return blocks.map(block => {
-    const trimmed = block.trim();
-    if (!trimmed) { return ''; }
-
-    if (trimmed.startsWith('### ')) { return `<h4>${inline(trimmed.slice(4))}</h4>`; }
-    if (trimmed.startsWith('## '))  { return `<h3>${inline(trimmed.slice(3))}</h3>`; }
-    if (trimmed.startsWith('# '))   { return `<h2>${inline(trimmed.slice(2))}</h2>`; }
-    if (trimmed === '---')           { return '<hr>'; }
-
-    const lines = trimmed.split('\n');
-    if (lines.every(l => l.trimStart().startsWith('- '))) {
-      const items = lines.map(l => `<li>${inline(l.trimStart().slice(2))}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    }
-
-    return `<p>${lines.map(inline).join('<br>')}</p>`;
-  }).filter(Boolean).join('');
 }
 
 function setupIndexWatcher(context: vscode.ExtensionContext): void {

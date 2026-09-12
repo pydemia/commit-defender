@@ -55,7 +55,13 @@ export interface CommentBlock {
 
 export type Grade = 'exceptional' | 'proficient' | 'adequate' | 'insufficient' | 'critical' | '';
 export type ReviewStatus = 'completed' | 'partial' | 'failed' | 'cancelled';
-export type IncompleteReason = 'provider-error' | 'source-error' | 'timeout' | 'cancelled' | 'source-truncated' | 'response-truncated' | 'response-incomplete';
+export type IncompleteReason = 'provider-error' | 'source-error' | 'timeout' | 'cancelled' | 'source-truncated' | 'response-truncated' | 'response-incomplete' | 'context-truncated' | 'invalid-output';
+
+export interface SourceAnchor {
+  sha256: string;
+  line_count: number;
+  side: 'source' | 'base';
+}
 
 /** Structured per-file overall-summary. One entry per analyzed file. */
 export interface PerFileSummary {
@@ -76,6 +82,7 @@ export interface ReviewResult {
   /** Absent only in legacy reports. Completion is independent from hook enforcement. */
   status?: ReviewStatus;
   incomplete_reasons?: IncompleteReason[];
+  rejected_finding_count?: number;
   /** Structured per-file summaries. Empty on single-file diff mode. */
   per_file_summaries?: PerFileSummary[];
 }
@@ -89,6 +96,8 @@ export interface AnalysisReport {
   review: ReviewResult;
   /** Excluded source paths. Explicitly allowed SKILL.md review material is handled separately. */
   source_exclusions?: SourceExclusion[];
+  /** Position validation, not proof that the model read or understood this source. */
+  source_anchors?: Record<string, SourceAnchor>;
   /** Source identity captured before review; legacy CLI tool reads are not yet isolated. */
   source_snapshot?:
     | { kind: 'index'; base_commit: string | null; base_tree: string; source_tree: string }

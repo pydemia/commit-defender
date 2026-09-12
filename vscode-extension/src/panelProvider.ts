@@ -11,6 +11,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
 import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
+import { reviewNavigation } from './reviewNavigation.js';
+import { safeMarkdown } from './reviewMarkdown.js';
 import { formatCategory, PRIORITY_RANK } from './commentFormatter.js';
 
 type PanelNode =
@@ -134,24 +136,13 @@ export class PanelProvider implements vscode.TreeDataProvider<PanelNode> {
           ? `Ln ${b.line}${b.col ? `, Col ${b.col}` : ''}`
           : 'file-level';
         item.description = lineRef;
-        item.tooltip = new vscode.MarkdownString(
-          `**${meta.emoji} ${b.priority} ${meta.label}** · _@${author}_\n\n${b.comment}`,
-        );
-        item.command = {
-          command: 'vscode.open',
-          title: 'Open',
-          arguments: [
-            vscode.Uri.file(node.absPath),
-            {
-              selection: new vscode.Range(
-                Math.max(0, b.line - 1), Math.max(0, (b.col ?? 1) - 1),
-                Math.max(0, b.line - 1), Math.max(0, (b.col ?? 1) - 1),
-              ),
-              preserveFocus: false,
-              preview: true,
-            } as vscode.TextDocumentShowOptions,
-          ],
-        };
+        const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** · _@${author}_\n\n${b.comment}`;
+        item.tooltip = this._report
+          ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file)
+          : new vscode.MarkdownString(safeMarkdown(tooltip, () => undefined));
+        item.command = this._report
+          ? reviewNavigation.sourceCommand(this._repoRoot, this._report, b.file, b.line)
+          : undefined;
         item.id = node.id;
         return item;
       }

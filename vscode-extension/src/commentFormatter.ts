@@ -14,6 +14,9 @@ import {
   PRIORITY_META, AnalysisReport, CommentBlock,
 } from './types.js';
 
+import { normalizedSourcePath } from './sourcePolicy.js';
+import { sourceAnchor, validLine } from './reviewSource.js';
+
 const VALID_PRIORITIES = new Set<string>(['P0', 'P1', 'P2', 'P3']);
 
 /** Returns true if the FileComment has a recognised priority. */
@@ -150,7 +153,12 @@ export function normalizeReport(report: AnalysisReport): CommentBlock[] {
     });
   }
 
-  return blocks.sort((a, b) => {
+  return blocks.filter(block => {
+    if (!normalizedSourcePath(block.file) || !report.staged_files.includes(block.file)) return false;
+    const anchor = sourceAnchor(report, block.file);
+    return validLine(block.line, anchor?.line_count ?? Number.MAX_SAFE_INTEGER)
+      && (block.col === undefined || (Number.isSafeInteger(block.col) && block.col >= 1));
+  }).sort((a, b) => {
     const ra = PRIORITY_RANK[a.priority] ?? 1;
     const rb = PRIORITY_RANK[b.priority] ?? 1;
     if (rb !== ra) { return rb - ra; }

@@ -16,6 +16,7 @@ export interface ParsedReview {
   }>;
   /** True when the input did not end with a closing brace (likely truncated). */
   truncated: boolean;
+  rejectedComments: number;
 }
 
 export function parseReviewJson(raw: string): ParsedReview {
@@ -37,17 +38,13 @@ export function parseReviewJson(raw: string): ParsedReview {
 
   const fcRaw: any[] = Array.isArray(data?.file_comments) ? data.file_comments : [];
   const file_comments = fcRaw
-    .filter(fc => fc && typeof fc.file === 'string' && typeof fc.comment === 'string')
+    .filter(fc => fc && typeof fc.file === 'string' && typeof fc.comment === 'string'
+      && Number.isSafeInteger(fc.line) && fc.line >= 0
+      && typeof fc.priority === 'string' && validPriorities.has(fc.priority.toUpperCase()))
     .map(fc => {
-      const rawPri = String(fc.priority ?? 'P1').toUpperCase();
       const rawCat = String(fc.category ?? '').toLowerCase();
-      return {
-        file: String(fc.file),
-        line: Number.isFinite(+fc.line) ? Math.max(0, Math.floor(+fc.line)) : 0,
-        comment: String(fc.comment),
-        category: validCategories.has(rawCat) ? rawCat : '',
-        priority: validPriorities.has(rawPri) ? rawPri : 'P1',
-      };
+      return { file: fc.file, line: fc.line, comment: fc.comment,
+        category: validCategories.has(rawCat) ? rawCat : '', priority: fc.priority.toUpperCase() };
     });
 
   const grade = validGrades.has(String(data?.grade ?? '').toLowerCase())
@@ -60,6 +57,7 @@ export function parseReviewJson(raw: string): ParsedReview {
     grade,
     file_comments,
     truncated,
+    rejectedComments: fcRaw.length - file_comments.length,
   };
 }
 

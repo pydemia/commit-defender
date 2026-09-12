@@ -17,7 +17,7 @@ const finding = (file = 'source.py', line = 1): FileComment => ({
 const response = (file = 'source.py', line = 1) => ({
   summary: 'Snapshot finding.', blocking: false, grade: 'insufficient', file_comments: [finding(file, line)],
 });
-function provider(f: ReturnType<typeof fixture>, raw: object, before = '') {
+function provider(f: ReturnType<typeof fixture>, raw: object, before = '', dynamicFile = false) {
   fs.writeFileSync(f.executable, `#!/usr/bin/env node
 const fs = require('node:fs');
 const cp = require('node:child_process');
@@ -25,7 +25,9 @@ let text = ''; process.stdin.on('data', chunk => text += chunk);
 process.stdin.on('end', () => {
   fs.appendFileSync(${JSON.stringify(f.capture)}, JSON.stringify(text) + '\\n');
   ${before}
-  process.stdout.write(JSON.stringify(${JSON.stringify(raw)}));
+  const response = ${JSON.stringify(raw)};
+  ${dynamicFile ? "if (text.includes('second.py')) response.file_comments[0].file = 'second.py';" : ''}
+  process.stdout.write(JSON.stringify(response));
 });
 `);
 }
@@ -102,7 +104,7 @@ test('on-demand source and marker decisions freeze all files before progress and
   try {
     f.write('source.py', 'value = 1\n');
     f.write('second.py', 'other = 2\n');
-    provider(f, response());
+    provider(f, response(), '', true);
     const result = await new Reviewer(f.cfg).reviewFilesSeparately(f.repo, ['source.py', 'second.py'], undefined, () => {
       f.write('source.py', 'value = 5 # CD:skip: later\n');
       f.write('second.py', 'other = 6 # CD:skip: later\n');

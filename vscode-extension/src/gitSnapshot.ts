@@ -86,6 +86,7 @@ export interface StagedSnapshot extends SourceSelection {
   baseCommit: string | null;
   baseTree: string;
   sourceTree: string;
+  sideOf(file: string): 'source' | 'base';
   /** Fixed base for deleted paths, fixed index for other selected paths. */
   readSelected(file: string): string;
   /** Related source remains available from the same tree without a working-tree fallback. */
@@ -145,6 +146,7 @@ export function captureStagedSnapshot(repoRoot: string, patterns: string[] = [])
   };
   return {
     files: [...selected.keys()], excluded, baseCommit, baseTree, sourceTree,
+    sideOf: file => selected.get(file)?.status === 'D' ? 'base' : 'source',
     readSource: (file, side = 'source') => read(file, side === 'base' ? base : source),
     readSelected(file) {
       const change = selected.get(file);
@@ -162,4 +164,14 @@ export function captureStagedSnapshot(repoRoot: string, patterns: string[] = [])
       return run(repoRoot, ['diff', '--no-ext-diff', '--no-textconv', '--no-color', '-M', left, right]);
     },
   };
+}
+
+/** Read an exact immutable entry; never interpret a report path as a Git expression. */
+export function readGitTreeFile(repoRoot: string, tree: string, file: string): string | undefined {
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(tree) || !normalizedSourcePath(file)) return undefined;
+  if (!selectReviewInputs(repoRoot, [file], [], { gitTree: true }).files.length) return undefined;
+  const entry = readTree(repoRoot, tree).get(file);
+  if (!entry || entry.type !== 'blob' || !['100644', '100755'].includes(entry.mode)) return undefined;
+  const content = run(repoRoot, ['cat-file', 'blob', entry.oid]);
+  return content.includes('\0') ? undefined : content;
 }

@@ -32,6 +32,7 @@ export function isBinary(file: string): boolean {
 }
 
 export function normalizedSourcePath(value: string): string | undefined {
+  if (typeof value !== 'string') return undefined;
   const normalized = path.sep === '\\' ? value.replaceAll('\\', '/') : value;
   if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized)
       || path.posix.isAbsolute(normalized) || path.win32.isAbsolute(normalized)

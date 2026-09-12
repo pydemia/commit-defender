@@ -23,12 +23,12 @@ class FindingsStore {
   readonly onDidChange = new vscode.EventEmitter<void>();
 
   /** Populate the store from a completed AnalysisReport. */
-  update(report: AnalysisReport, repoRoot: string): void {
+  update(report: AnalysisReport, repoRoot: string, displayBlocks: CommentBlock[]): void {
     const blocks = normalizeReport(report);
     this._last = { report, repoRoot, blocks };
     this._data.clear();
 
-    for (const b of blocks) {
+    for (const b of displayBlocks) {
       if (b.line <= 0) { continue; }
       const absPath = path.join(repoRoot, b.file);
       const uriKey = vscode.Uri.file(absPath).toString();
@@ -45,6 +45,10 @@ class FindingsStore {
   /** Return findings for a given document URI (string form). */
   get(uri: vscode.Uri): FileBlockSet | undefined {
     return this._data.get(uri.toString());
+  }
+
+  invalidateFile(uri: vscode.Uri): void {
+    if (this._data.delete(uri.toString())) this.onDidChange.fire();
   }
 
   /** Return the most recent report + repoRoot + blocks, or undefined if none yet. */

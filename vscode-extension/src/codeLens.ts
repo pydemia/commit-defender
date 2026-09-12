@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { findingsStore } from './findingsStore.js';
 import { metaForBlock, PRIORITY_RANK } from './commentFormatter.js';
 import { CommentBlock } from './types.js';
+import * as path from 'path';
+import { liveSource } from './reviewSource.js';
 
 export class SuggestionCodeLensProvider implements vscode.CodeLensProvider {
   private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
@@ -13,12 +15,15 @@ export class SuggestionCodeLensProvider implements vscode.CodeLensProvider {
 
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
     const set = findingsStore.get(document.uri);
-    if (!set) { return []; }
+    const last = findingsStore.lastReport();
+    if (!set || !last || document.uri.scheme !== 'file') { return []; }
+    const file = path.relative(last.repoRoot, document.uri.fsPath).split(path.sep).join('/');
+    if (liveSource(last.repoRoot, last.report, file, document.getText()) === undefined) return [];
 
     const lenses: vscode.CodeLens[] = [];
 
     for (const [line0, blocks] of set.byLine) {
-      if (line0 < 0) { continue; }
+      if (line0 < 0 || line0 >= document.lineCount) { continue; }
 
       const worst = blocks.reduce<CommentBlock | undefined>((w, b) => {
         if (!w) { return b; }

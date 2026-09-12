@@ -30,7 +30,7 @@ export function applyDiagnostics(
     const diagnostics = fileBlocks.map(b => {
       const line  = Math.max(0, b.line - 1);
       const col   = Math.max(0, (b.col ?? 1) - 1);
-      const range = new vscode.Range(line, col, line, Number.MAX_SAFE_INTEGER);
+      const range = new vscode.Range(line, col, line, col);
 
       // Message format: "[P3·Security] rule — first line of comment"
       //                 "[P1·Maintenance] first line of comment"
