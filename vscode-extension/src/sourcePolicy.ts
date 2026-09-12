@@ -5,7 +5,7 @@ import { buildIgnore } from './excludeFilter.js';
 
 export type SourceExclusionReason =
   | 'invalid-path' | 'private-data' | 'generated' | 'binary'
-  | 'user-excluded' | 'git-ignored' | 'symlink' | 'not-file' | 'unreadable';
+  | 'user-excluded' | 'git-ignored' | 'symlink' | 'not-file' | 'unreadable' | 'unsupported-source' | 'policy-excluded';
 export interface SourceExclusion { path: string; reason: SourceExclusionReason }
 export interface SourceSelection { files: string[]; excluded: SourceExclusion[] }
 export type ExclusionObserver = (entry: SourceExclusion) => void;

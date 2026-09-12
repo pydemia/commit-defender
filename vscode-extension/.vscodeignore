@@ -11,3 +11,5 @@ tsconfig.json
 tsconfig.test.json
 .vscode-test/**
 test-results/**
+# Test-only GCR contract delivery; runtime integration follows in P02-C07.
+vendor/**

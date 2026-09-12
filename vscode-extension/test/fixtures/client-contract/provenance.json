@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "0.1.0-alpha.2",
+  "sourceRepository": "git-code-reviewer",
+  "sourcePath": "tests/fixtures/client-contract/reports.json",
+  "fixtureSha256": "95195bdec5d49201994ced3f40e8db11ae8e1f47e5dd3bf553154bb0f3224711",
+  "sourceCommit": "5af394dacb195d95526efb497fff05706cafa53b"
+}

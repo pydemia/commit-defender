@@ -55,7 +55,7 @@ export interface CommentBlock {
 
 export type Grade = 'exceptional' | 'proficient' | 'adequate' | 'insufficient' | 'critical' | '';
 export type ReviewStatus = 'completed' | 'partial' | 'failed' | 'cancelled';
-export type IncompleteReason = 'provider-error' | 'source-error' | 'timeout' | 'cancelled' | 'source-truncated' | 'response-truncated' | 'response-incomplete' | 'context-truncated' | 'invalid-output';
+export type IncompleteReason = 'provider-error' | 'source-error' | 'timeout' | 'cancelled' | 'source-truncated' | 'response-truncated' | 'response-incomplete' | 'context-truncated' | 'invalid-output' | 'superseded' | 'missing-context' | 'executor-unavailable' | 'policy-unavailable' | 'quota-exceeded';
 
 export interface SourceAnchor {
   sha256: string;
