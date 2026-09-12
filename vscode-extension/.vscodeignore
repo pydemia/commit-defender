@@ -8,3 +8,6 @@ out/**
 !out/hook-cli.js
 .gitignore
 tsconfig.json
+tsconfig.test.json
+.vscode-test/**
+test-results/**

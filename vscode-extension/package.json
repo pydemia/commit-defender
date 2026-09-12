@@ -526,14 +526,19 @@
         "watch": "tsc -watch -p ./",
         "test": "npm run test:providers",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
-        "package": "vsce package"
+        "package": "vsce package",
+        "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
+        "test:extension": "npm run build && npm run bundle:test-host && node test/run-extension-host.mjs",
+        "test:executor-poc": "esbuild test/account-executor-poc.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-executor-poc.cjs && node out-test/account-executor-poc.cjs",
+        "typecheck:test": "tsc -p tsconfig.test.json --noEmit"
     },
     "dependencies": {
         "ignore": "^5.3.1"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
-        "@types/vscode": "^1.90.0",
+        "@types/vscode": "1.90.0",
+        "@vscode/test-electron": "3.1.0",
         "esbuild": "^0.21.0",
         "typescript": "^5.4.0"
     }

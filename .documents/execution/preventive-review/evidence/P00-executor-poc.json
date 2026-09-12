@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "cliVersion": "codex-cli 0.153.4",
+  "selectedModel": "gpt-6-astra",
+  "effort": "xhigh",
+  "account": "current CODEX_HOME (no credential copied)",
+  "source": "two temporary synthetic Python files",
+  "sourceHash": "172a1636a1a16a3154501b11eae12ffffc81368ff4741c337ad7acec8b0aad94",
+  "actualReviewCompleted": true,
+  "matchingFileReadWitnesses": true,
+  "missingIds": ["b"],
+  "rationale": "caller.py의 batch()는 [\"a\", \"b\"]를 요청하지만 캐시에는 \"a\"만 있습니다. cache.py의 load()는 found가 {\"a\": 10}으로 비어 있지 않아 즉시 반환합니다. 따라서 fetch는 호출되지 않고 결과에서 요청한 ID \"b\"가 누락됩니다.",
+  "reviewDurationMs": 21480,
+  "cancellation": "AbortError after actual CLI launch",
+  "cancellationDurationMs": 1509,
+  "requestLimit": 2,
+  "filesUnchanged": true,
+  "limitations": [
+    "The cancelled invocation may stop before a model request reaches the service.",
+    "Correct read witnesses prove access to these files; they do not prove absence of other filesystem reads.",
+    "read-only is a write restriction, not a source read allowlist. Fixed-view isolation is required in P02.",
+    "This does not verify descendant-process cleanup against an uncooperative process.",
+    "maxTokens is not enforced by this legacy Codex adapter; the timeout and request count bound this PoC."
+  ]
+}
