@@ -1,3 +1,4 @@
+import { API_DEFAULT_ENDPOINTS } from './apiEndpoints.js';
 /**
  * Provider adapters. Each call returns the raw model text (expected to be a
  * JSON object) or an error message. API providers use Node 18+ global fetch;
@@ -43,9 +44,9 @@ export interface ProviderResponse {
 
 export type AccountProvider = Extract<AIProvider, 'codex' | 'claudecode' | 'geminicli' | 'antigravity'>;
 
-const DEFAULT_OPENAI = 'https://api.openai.com/v1';
-const DEFAULT_ANTHROPIC = 'https://api.anthropic.com/v1';
-const DEFAULT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
+const DEFAULT_OPENAI = API_DEFAULT_ENDPOINTS.openai;
+const DEFAULT_ANTHROPIC = API_DEFAULT_ENDPOINTS.anthropic;
+const DEFAULT_GEMINI = API_DEFAULT_ENDPOINTS.gemini;
 
 export async function callProvider(req: ProviderRequest): Promise<ProviderResponse> {
   const controller = new AbortController();
@@ -100,7 +101,9 @@ function ctxLine(req: ProviderRequest): string {
 }
 
 function err(req: ProviderRequest, msg: string): ProviderResponse {
-  return { raw: '', error: `${msg}\n${ctxLine(req)}` };
+  const detail = `${msg}\n${ctxLine(req)}`;
+  const redacted = req.apiKey ? [req.apiKey, encodeURIComponent(req.apiKey)].reduce((text, secret) => text.split(secret).join('[redacted]'), detail) : detail;
+  return { raw: '', error: redacted };
 }
 
 async function withTimeout<T>(req: ProviderRequest, fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
@@ -489,6 +492,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
     let resp: Response;
     try {
       resp = await fetch(url, {
+        redirect: 'error',
         method: 'POST',
         headers: { 'api-key': req.apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify(tryBody(true)),
@@ -505,6 +509,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
         let retry: Response;
         try {
           retry = await fetch(url, {
+            redirect: 'error',
             method: 'POST',
             headers: { 'api-key': req.apiKey, 'Content-Type': 'application/json' },
             body: JSON.stringify(tryBody(false)),
@@ -524,7 +529,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
 // ── OpenAI ──────────────────────────────────────────────────────────────────
 
 async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing OpenAI API key. Set commitDefender.apiKey.'); }
+  if (!req.apiKey) { return err(req, 'Missing OpenAI API key. Use Commit Defender: Manage Model API Credential.'); }
   const base = (req.endpoint || DEFAULT_OPENAI).replace(/\/+$/, '');
   const url = `${base}/chat/completions`;
   const model = req.model || 'gpt-4o';
@@ -543,6 +548,7 @@ async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
     let resp: Response;
     try {
       resp = await fetch(url, {
+        redirect: 'error',
         method: 'POST',
         headers: { Authorization: `Bearer ${req.apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(tryBody(true)),
@@ -558,6 +564,7 @@ async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
         let retry: Response;
         try {
           retry = await fetch(url, {
+            redirect: 'error',
             method: 'POST',
             headers: { Authorization: `Bearer ${req.apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify(tryBody(false)),
@@ -606,7 +613,7 @@ function openaiHttpError(req: ProviderRequest, resp: Response, body: string): Pr
 // ── Anthropic ───────────────────────────────────────────────────────────────
 
 async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing Anthropic API key. Set commitDefender.apiKey.'); }
+  if (!req.apiKey) { return err(req, 'Missing Anthropic API key. Use Commit Defender: Manage Model API Credential.'); }
   const base = (req.endpoint || DEFAULT_ANTHROPIC).replace(/\/+$/, '');
   const url = `${base}/messages`;
   const model = req.model || 'claude-sonnet-4-6';
@@ -622,6 +629,7 @@ async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
     let resp: Response;
     try {
       resp = await fetch(url, {
+        redirect: 'error',
         method: 'POST',
         headers: {
           'x-api-key': req.apiKey,
@@ -664,7 +672,7 @@ async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
 // ── Google Gemini ───────────────────────────────────────────────────────────
 
 async function callGemini(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing Gemini API key. Set commitDefender.apiKey.'); }
+  if (!req.apiKey) { return err(req, 'Missing Gemini API key. Use Commit Defender: Manage Model API Credential.'); }
   const base = (req.endpoint || DEFAULT_GEMINI).replace(/\/+$/, '');
   const model = req.model || 'gemini-2.5-flash';
   const url = `${base}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(req.apiKey)}`;
@@ -682,6 +690,7 @@ async function callGemini(req: ProviderRequest): Promise<ProviderResponse> {
     let resp: Response;
     try {
       resp = await fetch(url, {
+        redirect: 'error',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,

@@ -9,6 +9,8 @@ import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.
 import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope, readLocalHistory } from './localKnowledge.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
+import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
+import { manageModelCredential } from './modelCredentialView.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
@@ -290,7 +292,7 @@ export function activate(context: vscode.ExtensionContext): void {
       // on the next commit, even when VS Code isn't running.
       const repoRoot = await resolveRepoRoot();
       if (repoRoot && hookIsInstalled(repoRoot)) {
-        try { writeHookConfig(repoRoot, getConfig()); }
+        try { await writeHookConfig(repoRoot, getConfig()); }
         catch (err) {
           getOutputChannel().appendLine(`[Commit Defender] Could not update hook config: ${(err as Error).message}`);
         }
@@ -362,6 +364,7 @@ export function activate(context: vscode.ExtensionContext): void {
     renderSummary(view.report, view.repoRoot);
   }
   context.subscriptions.push(
+    vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => manageModelCredential(await resolveRepoRoot())),
     vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
     vscode.commands.registerCommand('commitDefender.manageLocalKnowledge', async () => {
       const repoRoot = await resolveRepoRoot();
@@ -380,6 +383,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('commitDefender.localProfile')) {
         historyLoad++;
+        messageIntent++;
+        messageExecution.invalidate();
         void vscode.commands.executeCommand('commitDefender.clearFindings').then(() => refreshLocalHistory());
       }
     }),
@@ -876,15 +881,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
       if (intent !== messageIntent) return;
       const cfg = getConfig();
-      const prepared = createLegacyReviewBackend(cfg).prepareCommitMessage(repoRoot);
-      await messageExecution.start({
-        ...prepared,
-        run: async signal => vscode.window.withProgress(
-          { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
-          () => prepared.run(signal),
-        ),
+      const profileId = localProfile();
+      await messageExecution.prepare(async signal => {
+        const runtime = await resolveModelRuntimeConfig(cfg, profileId);
+        if (signal.aborted) throw new Error('Commit message preparation was cancelled.');
+        const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot);
+        return {
+          ...prepared,
+          run: async runSignal => vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
+            () => prepared.run(runSignal),
+          ),
+        };
       }, {
-        error: error => handleError(error, statusBar, !execution.isRunning),
+        error: error => {
+          if (!(error instanceof ModelCredentialError)) { handleError(error, statusBar, !execution.isRunning); return; }
+          void vscode.window.showErrorMessage('Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.', 'Manage Model API Credential').then(action => {
+            if (action && intent === messageIntent) return manageModelCredential(repoRoot);
+          });
+        },
         result: async (result, isCurrent) => {
           if (result.is_error || !result.commit_message) {
             const provider = accountProvider(cfg.aiProvider);

@@ -143,6 +143,10 @@
             {
                 "command": "commitDefender.refreshLocalHistory",
                 "title": "Commit Defender: Refresh Local History"
+            },
+            {
+                "command": "commitDefender.manageModelCredential",
+                "title": "Commit Defender: Manage Model API Credential"
             }
         ],
         "configuration": {
@@ -194,7 +198,7 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta/models` |"
+                    "markdownDescription": "API endpoint URL. Required for `aoai`. For `openai`, `anthropic`, and `gemini`, leave empty to use the default public endpoint shown below.\n\n**Per-provider endpoints:**\n\n| Provider | Endpoint |\n| --- | --- |\n| `aoai` | `https://YOUR_RESOURCE.openai.azure.com` |\n| `anthropic` | `https://api.anthropic.com/v1` |\n| `openai` | `https://api.openai.com/v1` |\n| `gemini` | `https://generativelanguage.googleapis.com/v1beta` |"
                 },
                 "commitDefender.apiVersion": {
                     "type": "string",
@@ -206,7 +210,8 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "API key for an API provider. Ignored by codex, claudecode, geminicli, and antigravity, which use their local saved login. Store keys in User Settings (not Workspace)."
+                    "description": "Legacy plaintext API key. Preserved until you explicitly migrate it with Manage Model API Credential. Runtime API requests use a verified OS-backed credential reference.",
+                    "markdownDeprecationMessage": "Run **Commit Defender: Manage Model API Credential** to move this value to encrypted OS-backed storage after verification."
                 },
                 "commitDefender.codexPath": {
                     "type": "string",
@@ -413,6 +418,27 @@
                     ],
                     "default": "xhigh",
                     "description": "Reasoning effort supported by the fixed-source Codex review executor."
+                },
+                "commitDefender.modelCredentialRef": {
+                    "type": "object",
+                    "scope": "application",
+                    "default": {},
+                    "description": "Reference created by Manage Model API Credential. Contains no secret. Bound to the local profile, provider, endpoint and model.",
+                    "properties": {
+                        "version": {
+                            "type": "number",
+                            "enum": [
+                                1
+                            ]
+                        },
+                        "profileId": {
+                            "type": "string"
+                        },
+                        "id": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
                 }
             }
         },
@@ -557,7 +583,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -576,7 +602,9 @@
         "test:standalone-config": "esbuild test/standalone-config.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-config.ts --outfile=out-test/standalone-config.test.cjs && node --test out-test/standalone-config.test.cjs",
         "bundle:standalone-smoke": "esbuild test/standalone-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/standalone-smoke.cjs",
         "bundle:standalone-diagnostic": "esbuild test/standalone-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/standalone-diagnostic-worker.cjs",
-        "bundle:knowledge-smoke": "esbuild test/knowledge-interop-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/knowledge-interop-smoke.cjs"
+        "bundle:knowledge-smoke": "esbuild test/knowledge-interop-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/knowledge-interop-smoke.cjs",
+        "test:model-credentials": "esbuild test/model-credentials.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/model-credentials.test.cjs && node --test out-test/model-credentials.test.cjs",
+        "bundle:credential-smoke": "esbuild test/model-credential-smoke.ts --bundle --platform=node --target=node22 --format=cjs --external:@vscode/test-electron --outfile=out-test/model-credential-smoke.cjs && esbuild test/model-credential-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/model-credential-host.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",

@@ -3,6 +3,19 @@ import test from "node:test";
 import { getStandaloneReviewSettings, getConfig } from "../src/config.js";
 import { values, workspace } from "./helpers/vscode-config.js";
 
+test("runtime config never reads legacy plaintext keys and accepts model references only from user settings", () => {
+  const ref = { version: 1, profileId: "test", id: "a".repeat(64) };
+  values.global = { apiKey: "synthetic-user-key", modelCredentialRef: ref };
+  values.repository = { apiKey: "synthetic-workspace-key", modelCredentialRef: { ...ref, id: "b".repeat(64) } };
+  values.reads = [];
+  const cfg = getConfig();
+  assert.equal(cfg.apiKey, "");
+  assert.deepEqual(cfg.modelCredentialRef, ref);
+  assert(!values.reads.includes("apiKey"));
+  assert.equal(values.global.apiKey, "synthetic-user-key");
+  assert.equal(values.repository.apiKey, "synthetic-workspace-key");
+});
+
 test("standalone execution uses only explicit user account choices and ignores residual central credentials", () => {
   values.global = {
     aiProvider: "codex",

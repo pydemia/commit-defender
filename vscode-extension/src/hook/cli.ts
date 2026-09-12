@@ -10,9 +10,7 @@
  * as external; calling into it here would explode at runtime.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { ResolvedConfig } from '../config.js';
+import { readHookRuntimeConfig } from './config.js';
 import { getStagedSelection } from '../gitHelper.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { OUTCOME_META, reviewCoverage, reviewStatus } from '../reviewOutcome.js';
@@ -23,7 +21,7 @@ const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 
 async function main(): Promise<void> {
   const repoRoot = process.argv[2] || process.cwd();
-  const cfg = readConfig(repoRoot);
+  const cfg = await readHookRuntimeConfig(repoRoot);
   if (!cfg) {
     eprintln('commit-defender: hook config not found — skipping review.');
     eprintln('  Re-install the hook from VS Code: command "Commit Defender: Install Pre-commit Hook".');
@@ -46,38 +44,6 @@ async function main(): Promise<void> {
   const exitCode = resolveExitCode(report, 'legacy-hook');
   printReport(report, exitCode === 1);
   process.exit(exitCode);
-}
-
-function readConfig(repoRoot: string): ResolvedConfig | null {
-  const file = path.join(repoRoot, '.commit-defender', 'hook.json');
-  let text: string;
-  try { text = fs.readFileSync(file, 'utf8'); } catch { return null; }
-  let raw: any;
-  try { raw = JSON.parse(text); } catch { return null; }
-  return {
-    aiProvider:      raw.aiProvider ?? 'aoai',
-    model:           raw.model ?? '',
-    endpoint:        raw.endpoint ?? '',
-    apiVersion:      raw.apiVersion ?? '2024-08-01-preview',
-    apiKey:          raw.apiKey ?? '',
-    codexPath:       raw.codexPath ?? 'codex',
-    claudeCodePath:  raw.claudeCodePath ?? 'claude',
-    geminiCliPath:   raw.geminiCliPath ?? 'gemini',
-    antigravityPath: raw.antigravityPath ?? 'agy',
-    maxTokens:       Number.isFinite(+raw.maxTokens) ? +raw.maxTokens : 4096,
-    severityLevel:   raw.severityLevel ?? 'moderate',
-    richnessLevel:   raw.richnessLevel ?? 'moderate',
-    locale:          raw.locale ?? 'en',
-    excludePatterns: Array.isArray(raw.excludePatterns) ? raw.excludePatterns : [],
-    // UX fields aren't read by the hook but the type demands them.
-    colorPalette: 'theme-adaptive',
-    preCommitHook: 'enable',
-    fileTimeoutSeconds: 0,
-    directoryTimeoutSeconds: 0,
-    stagedFilesWarnThreshold: 0,
-    repoAnalysisWarnThreshold: 0,
-    runOnStage: false,
-  };
 }
 
 // ── Plain-text report (no ANSI deps; emoji is enough) ───────────────────────

@@ -30,4 +30,4 @@ Entries and history use the shared encrypted OS-backed store. An unavailable cre
 
 **Refresh Local History** reloads reviews shared with the CLI. Reloading history does not automatically restore editor diagnostics. Reopening a summary checks the local entries it used; returning focus to the window checks them again. Export explicitly creates a new plaintext JSON file at your chosen location. Import verifies an exported record and creates a new candidate in the selected scope.
 
-Stage-triggered review is disabled on new installations. Its existing user opt-in remains advisory. The legacy pre-commit hook is separate and will receive its credential migration and automatic-review integration in later planned changes.
+Stage-triggered review is disabled on new installations. Its existing user opt-in remains advisory. The legacy pre-commit hook is separate. Its API credentials use the [model credential migration](model-credentials.md); automatic-review integration with the common core remains a later planned change.

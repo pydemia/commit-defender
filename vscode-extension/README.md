@@ -83,7 +83,7 @@ Drop a `SKILL.md` file under `<repo>/.commit-defender/<topic>/SKILL.md` and it i
 
 Open **Settings → Extensions → Commit Defender** (or paste directly into `settings.json`) and fill in the block for your provider.
 
-> Store `commitDefender.apiKey` in **User Settings**, not Workspace Settings — Workspace settings live in `.vscode/settings.json` and are typically committed to the repo.
+After choosing the provider, endpoint and model in User Settings, run **Commit Defender: Manage Model API Credential**. Enter a new key in its password box or explicitly migrate an existing User Settings, Workspace Settings or hook value. The command verifies encrypted storage before removing the selected plaintext value. [Credential storage and migration](docs/model-credentials.md) describes the supported environments and recovery behavior.
 
 #### Azure OpenAI (`aoai`)
 
@@ -91,32 +91,28 @@ Open **Settings → Extensions → Commit Defender** (or paste directly into `se
 "commitDefender.aiProvider": "aoai",
 "commitDefender.endpoint":   "https://YOUR_RESOURCE.openai.azure.com",
 "commitDefender.model":      "your-deployment-name",
-"commitDefender.apiVersion": "2024-08-01-preview",
-"commitDefender.apiKey":     "your-azure-openai-key"
+"commitDefender.apiVersion": "2024-08-01-preview"
 ```
 
 #### Anthropic
 
 ```json
 "commitDefender.aiProvider": "anthropic",
-"commitDefender.model":      "claude-sonnet-4-6",
-"commitDefender.apiKey":     "sk-ant-..."
+"commitDefender.model":      "claude-sonnet-4-6"
 ```
 
 #### OpenAI
 
 ```json
 "commitDefender.aiProvider": "openai",
-"commitDefender.model":      "gpt-4o",
-"commitDefender.apiKey":     "sk-..."
+"commitDefender.model":      "gpt-4o"
 ```
 
 #### Google Gemini
 
 ```json
 "commitDefender.aiProvider": "gemini",
-"commitDefender.model":      "gemini-2.5-flash",
-"commitDefender.apiKey":     "your-gemini-api-key"
+"commitDefender.model":      "gemini-2.5-flash"
 ```
 
 #### Codex account (`codex`)
@@ -173,7 +169,7 @@ caches the resulting credentials:
 ```
 
 No API key is required. This is distinct from the `gemini` provider, which
-calls the public Gemini API with `commitDefender.apiKey`. Account mode removes
+calls the public Gemini API with the resolved OS-backed model credential. Account mode removes
 Gemini API-key and Vertex override variables from the child process.
 
 #### Antigravity account (`antigravity`)
@@ -240,7 +236,8 @@ P3 findings unconditionally block the commit. P0 is only emitted when the file h
 | `commitDefender.model` | *(empty)* | Model or deployment name |
 | `commitDefender.endpoint` | *(empty)* | API endpoint URL (required for Azure OpenAI; defaults used for others) |
 | `commitDefender.apiVersion` | `2024-08-01-preview` | Azure API version (ignored for other providers) |
-| `commitDefender.apiKey` | *(empty)* | API key — **set in User Settings, never Workspace** |
+| `commitDefender.apiKey` | *(empty)* | Legacy plaintext value; migrate explicitly with Manage Model API Credential |
+| `commitDefender.modelCredentialRef` | *(unset)* | Non-secret reference created by credential management; User Settings only |
 | `commitDefender.codexPath` | `codex` | Codex executable name or absolute path |
 | `commitDefender.claudeCodePath` | `claude` | Claude Code executable name or absolute path |
 | `commitDefender.geminiCliPath` | `gemini` | Gemini CLI executable name or absolute path |
@@ -313,19 +310,24 @@ When `commitDefender.preCommitHook` is `enable`, the extension installs a small 
 exec node "<extension-path>/out/hook-cli.js" "$REPO_ROOT"
 ```
 
-That bundled CLI does the exact same review as the in-editor command and exits non-zero on P3 findings — blocking the commit. It works from any context that runs git: terminal, Tower, GitKraken, lazygit, GitHub Desktop, CI runners.
+The legacy hook uses its existing provider adapter and exits non-zero on P3 findings. The development branch's standalone in-editor review is advisory and uses the shared GCR core. Hook integration with that core is a later implementation step. API-based hooks require access to the same local profile and OS credential store that holds the model key.
 
 ### How settings reach the hook
 
-The hook can't query VS Code at commit time, so the extension materialises your settings into `<repo>/.commit-defender/hook.json` whenever they change. The file is automatically added to `.gitignore` so the API key doesn't leak.
+The extension mirrors non-secret settings and a credential reference into `<repo>/.commit-defender/hook.json`. The headless hook resolves the reference from encrypted storage after VS Code exits. The file remains ignored by Git. Existing plaintext hook configurations are preserved until an explicit migration; API-based hooks report an unperformed review while migration is required.
 
 ```jsonc
 // <repo>/.commit-defender/hook.json (auto-generated, do NOT edit by hand)
 {
+  "version": 3,
   "aiProvider": "anthropic",
   "model": "claude-sonnet-4-6",
   "endpoint": "",
-  "apiKey": "sk-ant-...",
+  "modelCredentialRef": {
+    "version": 1,
+    "profileId": "default",
+    "id": "<generated destination reference>"
+  },
   "codexPath": "codex",
   "claudeCodePath": "claude",
   "geminiCliPath": "gemini",
@@ -409,7 +411,7 @@ Review your provider's data-retention policy before enabling AI review on sensit
 Increase `commitDefender.maxTokens`. The response was truncated mid-JSON, usually on large diffs.
 
 **"AI review unavailable: Missing … API key"**
-Set `commitDefender.apiKey` in User Settings.
+Run **Commit Defender: Manage Model API Credential**. Confirm the provider, endpoint, model and local profile match the saved reference and the OS credential store is available.
 
 **Codex, Claude Code, Gemini CLI, or Antigravity executable was not found**
 Install the corresponding CLI and ensure it is in `PATH`, or set an absolute

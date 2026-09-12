@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-09-12T22:04:18.508454+00:00",
+  "status": "source-checkpoint-local-validation",
+  "baseSourceCommit": "5afe1d4c6a7ea737c0ab89ca6882abc8cd98da75",
+  "gcrLibraryVersion": "0.1.0-alpha.9",
+  "modelCredentialService": "com.commitdefender.model-credentials.v1",
+  "tests": {
+    "npmTestBeforeExplicitReplacement": {
+      "passed": 123,
+      "failed": 0
+    },
+    "afterExplicitReplacement": {
+      "node25ModelCredentials": 13,
+      "node18ModelCredentials": 13
+    },
+    "node18ProviderConfigCredentialBeforeReplacement": 25,
+    "typecheckTest": "passed",
+    "build": "passed",
+    "diffCheck": "passed"
+  },
+  "osAndHostEvidence": [
+    "P02-C08-credential-macos.json",
+    "P02-C08-credential-macos-attempt2.json",
+    "P02-C08-credential-macos-minimum.json"
+  ],
+  "osAndHostResults": {
+    "firstAttempt": "VS Code socket path was too long; owned synthetic credential cleanup completed",
+    "currentHost": "VS Code 1.135.0 with Node 24.18.1 passed",
+    "minimumTestedHost": "VS Code 1.90.2 with Node 20.9.0 passed",
+    "actualKeychainUsed": true,
+    "hookAfterHostExit": true,
+    "sameCredentialAccepted": true,
+    "endpointChangeRejected": true,
+    "missingKeyRejectedWithoutPlaintextFallback": true,
+    "syntheticLocalApiRequests": 4,
+    "realModelCalls": 0,
+    "credentialUnderTest": "newly generated synthetic key",
+    "existingUserModelCredentialsMigrated": false
+  },
+  "artifactEvidence": "P02-C08-vsix-contents.json",
+  "limits": [
+    "Native password and migration dialogs have not been visually operated; Mac remains locked. Extension Host API tests are distinct.",
+    "VS Code settings updates recheck the selected value and destination but are not a cross-process atomic transaction.",
+    "This C08 end-to-end verification was run on macOS. Linux Secret Service adapter evidence from C02 is not counted as a C08 Extension Host test. Windows is unsupported.",
+    "C07 invalid-output cause, P01/C07 GUI gates, P03-P13 work and P09 publishing/release verification remain outstanding."
+  ],
+  "delivery": {
+    "marketplacePublished": false,
+    "serverRuntimeChanged": false,
+    "newServerRollout": false
+  }
+}

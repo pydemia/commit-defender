@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import http from 'node:http';
 import { callProvider, type ProviderRequest } from '../src/ai/providers.js';
 import { REVIEW_OUTPUT_SCHEMA } from '../src/ai/schemas.js';
 
@@ -12,6 +13,38 @@ const REVIEW = {
   grade: 'proficient',
   file_comments: [],
 };
+
+test('API error messages redact the credential, including URL-encoded echoes', async t => {
+  const secret = 'synthetic-secret+must-not-be-logged';
+  const server = http.createServer((_req, res) => {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: { message: `Rejected ${secret}; encoded=${encodeURIComponent(secret)}` } }));
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
+  const endpoint = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  for (const provider of ['aoai', 'openai', 'anthropic', 'gemini'] as const) {
+    const result = await callProvider(request({ provider, endpoint, apiKey: secret, model: 'fixture', timeoutMs: 3000 }));
+    assert(result.error); assert(!result.error.includes(secret)); assert(!result.error.includes(encodeURIComponent(secret)));
+  }
+});
+
+test('API redirects cannot forward model credentials to another destination', async t => {
+  let redirected = 0;
+  const target = http.createServer((_req, res) => { redirected++; res.end('{}'); });
+  await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>(resolve => target.close(() => resolve())));
+  const location = `http://127.0.0.1:${(target.address() as { port: number }).port}/unexpected`;
+  const server = http.createServer((_req, res) => { res.writeHead(307, { Location: location }); res.end(); });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
+  const endpoint = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  for (const provider of ['aoai', 'openai', 'anthropic', 'gemini'] as const) {
+    const result = await callProvider(request({ provider, endpoint, apiKey: 'synthetic-model-key', model: 'fixture', timeoutMs: 3000 }));
+    assert(result.error);
+  }
+  assert.equal(redirected, 0);
+});
 
 function request(overrides: Partial<ProviderRequest> = {}): ProviderRequest {
   return {

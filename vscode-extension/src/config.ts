@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { PaletteId } from './palette.js';
 import type { StandaloneReviewSettings } from './standaloneReviewProtocol.js';
+import type { ModelCredentialReference } from './modelCredentials.js';
 
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
 export type RichnessLevel   = 'colorful' | 'chatty' | 'moderate' | 'simple' | 'silent';
@@ -22,6 +23,8 @@ export interface ResolvedConfig {
   endpoint: string;
   apiVersion: string;
   apiKey: string;
+  /** User-level reference only; apiKey is populated later by the runtime credential resolver. */
+  modelCredentialRef?: ModelCredentialReference;
   codexPath: string;
   claudeCodePath: string;
   geminiCliPath: string;
@@ -72,7 +75,8 @@ export function getConfig(): ResolvedConfig {
     model:                     cfg.get<string>('model')          ?? '',
     endpoint:                  cfg.get<string>('endpoint')       ?? '',
     apiVersion:                cfg.get<string>('apiVersion')     ?? '2024-08-01-preview',
-    apiKey:                    cfg.get<string>('apiKey')         ?? '',
+    apiKey:                    '',
+    modelCredentialRef:        cfg.inspect<ModelCredentialReference>('modelCredentialRef')?.globalValue,
     codexPath:                 resolveCodexPath(cfg.get<string>('codexPath') ?? 'codex'),
     claudeCodePath:            resolveExternalCliPath(cfg.get<string>('claudeCodePath') ?? 'claude', 'claude'),
     geminiCliPath:             resolveExternalCliPath(cfg.get<string>('geminiCliPath') ?? 'gemini', 'gemini'),

@@ -13,60 +13,18 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ResolvedConfig } from '../config.js';
 import { getOutputChannel } from '../outputChannel.js';
+import { writeHookConfig as saveHookConfig } from './config.js';
 
 const HOOK_SIGNATURE = '# commit-defender hook v2';
 const CONFIG_DIR = '.commit-defender';
 const CONFIG_FILE = 'hook.json';
 const GITIGNORE_LINE = `${CONFIG_DIR}/${CONFIG_FILE}`;
 
-export interface HookConfigJson {
-  // AI connection
-  aiProvider: ResolvedConfig['aiProvider'];
-  model: string;
-  endpoint: string;
-  apiVersion: string;
-  apiKey: string;
-  codexPath: string;
-  claudeCodePath: string;
-  geminiCliPath: string;
-  antigravityPath: string;
-  maxTokens: number;
-  // Review behavior
-  severityLevel: ResolvedConfig['severityLevel'];
-  richnessLevel: ResolvedConfig['richnessLevel'];
-  locale: ResolvedConfig['locale'];
-  excludePatterns: string[];
-}
+export { configToHookJson, hookConfigPath } from './config.js';
 
-export function configToHookJson(cfg: ResolvedConfig): HookConfigJson {
-  return {
-    aiProvider:      cfg.aiProvider,
-    model:           cfg.model,
-    endpoint:        cfg.endpoint,
-    apiVersion:      cfg.apiVersion,
-    apiKey:          cfg.apiKey,
-    codexPath:       cfg.codexPath,
-    claudeCodePath:  cfg.claudeCodePath,
-    geminiCliPath:   cfg.geminiCliPath,
-    antigravityPath: cfg.antigravityPath,
-    maxTokens:       cfg.maxTokens,
-    severityLevel:   cfg.severityLevel,
-    richnessLevel:   cfg.richnessLevel,
-    locale:          cfg.locale,
-    excludePatterns: cfg.excludePatterns,
-  };
-}
-
-/**
- * Write VS Code settings into <repo>/.commit-defender/hook.json. Idempotent —
- * always overwrites with the current snapshot. Adds the file to .gitignore if
- * it isn't already ignored.
- */
-export function writeHookConfig(repoRoot: string, cfg: ResolvedConfig): void {
-  const dir = path.join(repoRoot, CONFIG_DIR);
-  fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, CONFIG_FILE);
-  fs.writeFileSync(file, JSON.stringify(configToHookJson(cfg), null, 2) + '\n', { mode: 0o600 });
+/** Mirrors non-secret settings after validating the saved credential reference. */
+export async function writeHookConfig(repoRoot: string, cfg: ResolvedConfig): Promise<void> {
+  await saveHookConfig(repoRoot, cfg, cfg.modelCredentialRef);
   ensureGitignored(repoRoot);
 }
 
@@ -76,7 +34,7 @@ function ensureGitignored(repoRoot: string): void {
   try { text = fs.readFileSync(gi, 'utf8'); } catch { /* missing — will create */ }
   if (text.split(/\r?\n/).some(line => line.trim() === GITIGNORE_LINE)) { return; }
   const sep = text.length === 0 || text.endsWith('\n') ? '' : '\n';
-  fs.writeFileSync(gi, `${text}${sep}# commit-defender (contains API key)\n${GITIGNORE_LINE}\n`);
+  fs.writeFileSync(gi, `${text}${sep}# commit-defender local hook configuration\n${GITIGNORE_LINE}\n`);
 }
 
 /** Build the shell script body that invokes the bundled hook CLI. */
@@ -143,11 +101,14 @@ export async function installHook(repoRoot: string, extensionPath: string, cfg: 
     }
   }
 
+  try { await writeHookConfig(repoRoot, cfg); }
+  catch {
+    void vscode.window.showErrorMessage('Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.');
+    return;
+  }
   fs.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 0o755 });
   // Some filesystems clear the mode flag on write — re-chmod to be safe.
   try { fs.chmodSync(hookPath, 0o755); } catch { /* best-effort */ }
-
-  writeHookConfig(repoRoot, cfg);
 
   channel.appendLine(`[Commit Defender] Pre-commit hook installed at ${hookPath}`);
   vscode.window.showInformationMessage(
@@ -190,9 +151,4 @@ export function hookIsInstalled(repoRoot: string): boolean {
     return fs.readFileSync(path.join(repoRoot, '.git', 'hooks', 'pre-commit'), 'utf8')
       .includes(HOOK_SIGNATURE);
   } catch { return false; }
-}
-
-/** Path to the hook config file inside a repo. */
-export function hookConfigPath(repoRoot: string): string {
-  return path.join(repoRoot, CONFIG_DIR, CONFIG_FILE);
 }
