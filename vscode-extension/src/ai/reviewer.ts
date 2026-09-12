@@ -12,8 +12,8 @@
 import { createHash } from 'crypto';
 import { ResolvedConfig } from '../config.js';
 import { formatFileContent, truncate, MAX_CONTENT_CHARS } from '../diff.js';
-import { captureStagedSnapshot } from '../gitSnapshot.js';
-import { readReviewFile, selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
+import { captureStagedSnapshot, type StagedSnapshot } from '../gitSnapshot.js';
+import { captureWorkingFiles, type CapturedFiles } from '../reviewInput.js';
 import { attachReviewSources, validateFindingAnchors } from '../reviewSource.js';
 import { reviewStatus } from '../reviewOutcome.js';
 import { resolveExitCode } from '../exitResolver.js';
@@ -33,15 +33,16 @@ const GRADE_RANK: Record<string, number> = {
 export type ProgressCb = (current: number, total: number, file: string) => void;
 
 export class Reviewer {
-  constructor(private readonly cfg: ResolvedConfig) {}
+  constructor(private readonly cfg: ResolvedConfig, private readonly material?: ReturnType<typeof loadSkillMaterial>) {}
 
   /** Pre-commit / staged scope: send the combined diff in a single call. */
-  async reviewDiff(repoRoot: string, stagedFiles: string[], signal?: AbortSignal): Promise<RunResult> {
+  async reviewDiff(repoRoot: string, stagedFiles: string[], signal?: AbortSignal, prepared?: StagedSnapshot | Error): Promise<RunResult> {
     const start = Date.now();
     let source: Pick<AnalysisReport, 'source_exclusions' | 'source_snapshot'> = {};
     try {
       if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
-      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      if (prepared instanceof Error) throw prepared;
+      const snapshot = prepared ?? captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       stagedFiles = stagedFiles.filter(file => snapshot.files.includes(file));
       source = {
         source_exclusions: snapshot.excluded,
@@ -75,27 +76,23 @@ export class Reviewer {
     relPaths: string[],
     signal?: AbortSignal,
     onProgress?: ProgressCb,
+    prepared?: CapturedFiles | Error,
   ): Promise<RunResult> {
     const start = Date.now();
     if (signal?.aborted) return this.interrupted(relPaths, start, signal);
-    let exclusions: SourceExclusion[];
+    let captured: CapturedFiles;
     try {
-      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
-      relPaths = selection.files;
-      exclusions = selection.excluded;
+      if (prepared instanceof Error) throw prepared;
+      captured = prepared ?? captureWorkingFiles(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = captured.files;
     } catch (error) {
       return this.runResult(this.assembleReport(relPaths, this.errorResult((error as Error).message, 'source-error'), Date.now() - start));
     }
+    const { exclusions, sources, readErrors } = captured;
     if (!relPaths.length) {
       const report = this.assembleReport([], this.errorResult('No permitted source files. Review was not run.', 'source-error'), Date.now() - start);
       report.source_exclusions = exclusions;
       return this.runResult(report);
-    }
-    const sources = new Map<string, string>();
-    const readErrors = new Map<string, Error>();
-    for (const file of relPaths) {
-      try { sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns)); }
-      catch (error) { readErrors.set(file, error as Error); }
     }
     const allComments: FileComment[] = [];
     const perFile: PerFileSummary[] = [];
@@ -168,15 +165,19 @@ export class Reviewer {
   }
 
   /** Generate a conventional commit message from the current staged diff. */
-  async generateCommitMessage(repoRoot: string, signal?: AbortSignal): Promise<CommitMessageResult> {
+  async generateCommitMessage(repoRoot: string, signal?: AbortSignal, prepared?: string | Error): Promise<CommitMessageResult> {
     let diff: string;
     try {
-      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
-      if (selection.excluded.length) {
-        return { commit_message: '', is_error: true,
-          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.` };
+      if (prepared instanceof Error) throw prepared;
+      if (prepared !== undefined) diff = prepared;
+      else {
+        const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+        if (selection.excluded.length) {
+          return { commit_message: '', is_error: true,
+            error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.` };
+        }
+        diff = truncate(selection.diff()).trim();
       }
-      diff = truncate(selection.diff()).trim();
     } catch (e) {
       return { commit_message: '', is_error: true, error: `git diff failed: ${(e as Error).message}` };
     }
@@ -222,7 +223,7 @@ export class Reviewer {
     sourceTruncated?: boolean;
     signal?: AbortSignal;
   }): Promise<ReviewResult> {
-    const { text: skillsText, truncated: skillsTruncated } = loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
+    const { text: skillsText, truncated: skillsTruncated } = this.material ?? loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,

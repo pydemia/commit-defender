@@ -22,6 +22,7 @@ export type ReviewLink =
 /** Requests carry opaque IDs, never model-authored paths or command arguments. */
 export class ReviewLinks {
   private targets = new Map<string, ReviewLink>();
+  clear(): void { this.targets.clear(); }
   constructor(private readonly limit = 4096) {
     if (!Number.isSafeInteger(limit) || limit < 1)
       throw new Error("Invalid review link limit");

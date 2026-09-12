@@ -191,6 +191,8 @@ test("source links enforce selected paths, anchors and line ranges; web links re
   const second = limited.source("/unused", r, "source.ts")!;
   assert.equal(limited.get(first), undefined);
   assert(limited.get(second));
+  limited.clear();
+  assert.equal(limited.get(second), undefined);
 });
 
 test("webview accepts only issued IDs for its current render and its script sends no paths", () => {

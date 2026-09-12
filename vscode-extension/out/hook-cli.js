@@ -888,6 +888,26 @@ function truncate(s) {
   return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
 }
 
+// src/reviewInput.ts
+function captureWorkingFiles(repoRoot, files, patterns) {
+  const selection = selectReviewInputs(repoRoot, files, patterns);
+  const sources = /* @__PURE__ */ new Map();
+  const readErrors = /* @__PURE__ */ new Map();
+  for (const file of selection.files) {
+    try {
+      sources.set(file, readReviewFile(repoRoot, file, patterns));
+    } catch (error) {
+      readErrors.set(file, error);
+    }
+  }
+  return {
+    files: selection.files,
+    exclusions: selection.excluded,
+    sources,
+    readErrors
+  };
+}
+
 // src/reviewSource.ts
 var import_crypto = require("crypto");
 var path4 = __toESM(require("path"));
@@ -2164,16 +2184,18 @@ var GRADE_RANK = {
   critical: 1
 };
 var Reviewer = class {
-  constructor(cfg) {
+  constructor(cfg, material) {
     this.cfg = cfg;
+    this.material = material;
   }
   /** Pre-commit / staged scope: send the combined diff in a single call. */
-  async reviewDiff(repoRoot, stagedFiles, signal) {
+  async reviewDiff(repoRoot, stagedFiles, signal, prepared) {
     const start = Date.now();
     let source = {};
     try {
       if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
-      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      if (prepared instanceof Error) throw prepared;
+      const snapshot = prepared ?? captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       stagedFiles = stagedFiles.filter((file) => snapshot.files.includes(file));
       source = {
         source_exclusions: snapshot.excluded,
@@ -2205,30 +2227,22 @@ var Reviewer = class {
     }
   }
   /** On-demand scope: freeze source first, then preserve each file's actual outcome. */
-  async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress) {
+  async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress, prepared) {
     const start = Date.now();
     if (signal?.aborted) return this.interrupted(relPaths, start, signal);
-    let exclusions;
+    let captured;
     try {
-      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
-      relPaths = selection.files;
-      exclusions = selection.excluded;
+      if (prepared instanceof Error) throw prepared;
+      captured = prepared ?? captureWorkingFiles(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = captured.files;
     } catch (error) {
       return this.runResult(this.assembleReport(relPaths, this.errorResult(error.message, "source-error"), Date.now() - start));
     }
+    const { exclusions, sources, readErrors } = captured;
     if (!relPaths.length) {
       const report2 = this.assembleReport([], this.errorResult("No permitted source files. Review was not run.", "source-error"), Date.now() - start);
       report2.source_exclusions = exclusions;
       return this.runResult(report2);
-    }
-    const sources = /* @__PURE__ */ new Map();
-    const readErrors = /* @__PURE__ */ new Map();
-    for (const file of relPaths) {
-      try {
-        sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns));
-      } catch (error) {
-        readErrors.set(file, error);
-      }
     }
     const allComments = [];
     const perFile = [];
@@ -2309,18 +2323,22 @@ ${entry.summary}`).join("\n\n---\n\n"),
     return this.runResult(report);
   }
   /** Generate a conventional commit message from the current staged diff. */
-  async generateCommitMessage(repoRoot, signal) {
+  async generateCommitMessage(repoRoot, signal, prepared) {
     let diff;
     try {
-      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
-      if (selection.excluded.length) {
-        return {
-          commit_message: "",
-          is_error: true,
-          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
-        };
+      if (prepared instanceof Error) throw prepared;
+      if (prepared !== void 0) diff = prepared;
+      else {
+        const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+        if (selection.excluded.length) {
+          return {
+            commit_message: "",
+            is_error: true,
+            error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
+          };
+        }
+        diff = truncate(selection.diff()).trim();
       }
-      diff = truncate(selection.diff()).trim();
     } catch (e) {
       return { commit_message: "", is_error: true, error: `git diff failed: ${e.message}` };
     }
@@ -2358,7 +2376,7 @@ ${diff}
   }
   // ── Internals ─────────────────────────────────────────────────────────────
   async singleCall(opts) {
-    const { text: skillsText, truncated: skillsTruncated } = loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
+    const { text: skillsText, truncated: skillsTruncated } = this.material ?? loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,

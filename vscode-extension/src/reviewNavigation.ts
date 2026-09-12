@@ -64,7 +64,11 @@ class ReviewNavigation {
         }
       : undefined;
   }
-  async open(id: unknown): Promise<void> {
+  async open(
+    id: unknown,
+    isCurrent: () => boolean = () => true,
+  ): Promise<void> {
+    if (!isCurrent()) return;
     const target = this.links.get(id);
     if (!target) return;
     if (target.kind === "web") {
@@ -108,10 +112,14 @@ class ReviewNavigation {
     this.documents.set(destination.toString(), content);
     try {
       const document = await vscode.workspace.openTextDocument(destination);
+      if (!isCurrent()) {
+        this.documents.delete(destination.toString());
+        return;
+      }
       await vscode.window.showTextDocument(document, options);
     } catch {
       this.documents.delete(destination.toString());
-      void vscode.window.showInformationMessage(
+      if (isCurrent()) void vscode.window.showInformationMessage(
         "Commit Defender: Could not open the reviewed source.",
       );
     }

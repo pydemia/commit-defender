@@ -11398,6 +11398,9 @@ var ReviewLinks = class {
       throw new Error("Invalid review link limit");
   }
   targets = /* @__PURE__ */ new Map();
+  clear() {
+    this.targets.clear();
+  }
   issue(target) {
     const id = (0, import_crypto2.randomBytes)(16).toString("hex");
     this.targets.set(id, target);
@@ -11812,7 +11815,8 @@ var ReviewNavigation = class {
       arguments: [id]
     } : void 0;
   }
-  async open(id) {
+  async open(id, isCurrent = () => true) {
+    if (!isCurrent()) return;
     const target = this.links.get(id);
     if (!target) return;
     if (target.kind === "web") {
@@ -11848,16 +11852,23 @@ var ReviewNavigation = class {
     this.documents.set(destination.toString(), content3);
     try {
       const document3 = await vscode.workspace.openTextDocument(destination);
+      if (!isCurrent()) {
+        this.documents.delete(destination.toString());
+        return;
+      }
       await vscode.window.showTextDocument(document3, options);
     } catch {
       this.documents.delete(destination.toString());
-      void vscode.window.showInformationMessage(
+      if (isCurrent()) void vscode.window.showInformationMessage(
         "Commit Defender: Could not open the reviewed source."
       );
     }
   }
 };
 var reviewNavigation = new ReviewNavigation();
+
+// src/reviewBackend.ts
+var import_crypto6 = require("crypto");
 
 // src/ai/reviewer.ts
 var import_crypto5 = require("crypto");
@@ -11878,6 +11889,26 @@ function truncate(s) {
     return s;
   }
   return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
+}
+
+// src/reviewInput.ts
+function captureWorkingFiles(repoRoot, files, patterns) {
+  const selection = selectReviewInputs(repoRoot, files, patterns);
+  const sources = /* @__PURE__ */ new Map();
+  const readErrors = /* @__PURE__ */ new Map();
+  for (const file of selection.files) {
+    try {
+      sources.set(file, readReviewFile(repoRoot, file, patterns));
+    } catch (error) {
+      readErrors.set(file, error);
+    }
+  }
+  return {
+    files: selection.files,
+    exclusions: selection.excluded,
+    sources,
+    readErrors
+  };
 }
 
 // src/skipMarkers.ts
@@ -13083,16 +13114,18 @@ var GRADE_RANK = {
   critical: 1
 };
 var Reviewer = class {
-  constructor(cfg) {
+  constructor(cfg, material) {
     this.cfg = cfg;
+    this.material = material;
   }
   /** Pre-commit / staged scope: send the combined diff in a single call. */
-  async reviewDiff(repoRoot, stagedFiles, signal) {
+  async reviewDiff(repoRoot, stagedFiles, signal, prepared) {
     const start = Date.now();
     let source = {};
     try {
       if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
-      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      if (prepared instanceof Error) throw prepared;
+      const snapshot = prepared ?? captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
       stagedFiles = stagedFiles.filter((file) => snapshot.files.includes(file));
       source = {
         source_exclusions: snapshot.excluded,
@@ -13124,30 +13157,22 @@ var Reviewer = class {
     }
   }
   /** On-demand scope: freeze source first, then preserve each file's actual outcome. */
-  async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress) {
+  async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress, prepared) {
     const start = Date.now();
     if (signal?.aborted) return this.interrupted(relPaths, start, signal);
-    let exclusions;
+    let captured;
     try {
-      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
-      relPaths = selection.files;
-      exclusions = selection.excluded;
+      if (prepared instanceof Error) throw prepared;
+      captured = prepared ?? captureWorkingFiles(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = captured.files;
     } catch (error) {
       return this.runResult(this.assembleReport(relPaths, this.errorResult(error.message, "source-error"), Date.now() - start));
     }
+    const { exclusions, sources, readErrors } = captured;
     if (!relPaths.length) {
       const report2 = this.assembleReport([], this.errorResult("No permitted source files. Review was not run.", "source-error"), Date.now() - start);
       report2.source_exclusions = exclusions;
       return this.runResult(report2);
-    }
-    const sources = /* @__PURE__ */ new Map();
-    const readErrors = /* @__PURE__ */ new Map();
-    for (const file of relPaths) {
-      try {
-        sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns));
-      } catch (error) {
-        readErrors.set(file, error);
-      }
     }
     const allComments = [];
     const perFile = [];
@@ -13228,18 +13253,22 @@ ${entry.summary}`).join("\n\n---\n\n"),
     return this.runResult(report);
   }
   /** Generate a conventional commit message from the current staged diff. */
-  async generateCommitMessage(repoRoot, signal) {
+  async generateCommitMessage(repoRoot, signal, prepared) {
     let diff;
     try {
-      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
-      if (selection.excluded.length) {
-        return {
-          commit_message: "",
-          is_error: true,
-          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
-        };
+      if (prepared instanceof Error) throw prepared;
+      if (prepared !== void 0) diff = prepared;
+      else {
+        const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+        if (selection.excluded.length) {
+          return {
+            commit_message: "",
+            is_error: true,
+            error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
+          };
+        }
+        diff = truncate(selection.diff()).trim();
       }
-      diff = truncate(selection.diff()).trim();
     } catch (e) {
       return { commit_message: "", is_error: true, error: `git diff failed: ${e.message}` };
     }
@@ -13277,7 +13306,7 @@ ${diff}
   }
   // ── Internals ─────────────────────────────────────────────────────────────
   async singleCall(opts) {
-    const { text: skillsText, truncated: skillsTruncated } = loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
+    const { text: skillsText, truncated: skillsTruncated } = this.material ?? loadSkillMaterial(opts.repoRoot, this.cfg.excludePatterns);
     const systemPrompt = buildSystemPrompt({
       mode: opts.mode,
       severity: this.cfg.severityLevel,
@@ -13427,6 +13456,180 @@ function worstGrade(grades) {
   }
   return worst;
 }
+
+// src/reviewBackend.ts
+function createReviewBackend(config) {
+  return new LegacyReviewBackend(config);
+}
+var LegacyReviewBackend = class {
+  config;
+  constructor(config) {
+    this.config = { ...config, excludePatterns: [...config.excludePatterns] };
+  }
+  key(operation, source) {
+    return (0, import_crypto6.createHash)("sha256").update(
+      JSON.stringify({
+        backend: "legacy",
+        operation,
+        config: this.config,
+        source
+      })
+    ).digest("hex");
+  }
+  prepareReview(input) {
+    const request = {
+      ...input,
+      files: [...input.files],
+      sourceExclusions: input.sourceExclusions?.map((entry) => ({ ...entry }))
+    };
+    let captured;
+    let material = {
+      text: "",
+      truncated: false
+    };
+    try {
+      captured = request.scope === "staged" ? captureStagedSnapshot(request.repoRoot, this.config.excludePatterns) : captureWorkingFiles(
+        request.repoRoot,
+        request.files,
+        this.config.excludePatterns
+      );
+      material = loadSkillMaterial(
+        request.repoRoot,
+        this.config.excludePatterns
+      );
+    } catch (error) {
+      captured = error instanceof Error ? error : new Error(String(error));
+    }
+    const identity = captured instanceof Error ? { error: captured.message } : "sourceTree" in captured ? {
+      baseCommit: captured.baseCommit,
+      base: captured.baseTree,
+      source: captured.sourceTree,
+      files: captured.files,
+      excluded: captured.excluded
+    } : {
+      files: captured.files,
+      excluded: captured.exclusions,
+      sources: [...captured.sources].map(([file, text5]) => [
+        file,
+        sourceHash(text5)
+      ]),
+      errors: [...captured.readErrors].map(([file, error]) => [
+        file,
+        error.message
+      ])
+    };
+    const reviewer = new Reviewer(this.config, material);
+    return {
+      backendId: "legacy",
+      key: this.key("review", { request, identity, material }),
+      run: (signal, progress) => request.scope === "staged" ? reviewer.reviewDiff(
+        request.repoRoot,
+        request.files,
+        signal,
+        captured
+      ) : reviewer.reviewFilesSeparately(
+        request.repoRoot,
+        request.files,
+        signal,
+        progress,
+        captured
+      )
+    };
+  }
+  prepareCommitMessage(repoRoot) {
+    let captured;
+    let identity;
+    try {
+      const snapshot = captureStagedSnapshot(
+        repoRoot,
+        this.config.excludePatterns
+      );
+      if (snapshot.excluded.length)
+        throw new Error(
+          `Commit message was not generated: ${snapshot.excluded.length} staged path(s) are excluded by source policy.`
+        );
+      captured = truncate(snapshot.diff()).trim();
+      identity = {
+        baseCommit: snapshot.baseCommit,
+        base: snapshot.baseTree,
+        source: snapshot.sourceTree
+      };
+    } catch (error) {
+      captured = error instanceof Error ? error : new Error(String(error));
+    }
+    const reviewer = new Reviewer(this.config);
+    return {
+      backendId: "legacy",
+      key: this.key("commit-message", {
+        repoRoot,
+        identity,
+        captured: captured instanceof Error ? { error: captured.message } : captured
+      }),
+      run: (signal) => reviewer.generateCommitMessage(repoRoot, signal, captured)
+    };
+  }
+};
+
+// src/reviewExecution.ts
+var ReviewExecutionOwner = class {
+  active;
+  get isRunning() {
+    return !!this.active;
+  }
+  start(job, callbacks, timeoutMs = 0) {
+    if (this.active?.key === job.key && this.active.backendId === job.backendId && !this.active.controller.signal.aborted)
+      return this.active.promise;
+    const previous3 = this.active;
+    const current = {
+      key: job.key,
+      backendId: job.backendId,
+      controller: new AbortController(),
+      promise: Promise.resolve()
+    };
+    this.active = current;
+    if (previous3?.timer) clearTimeout(previous3.timer);
+    previous3?.controller.abort("superseded");
+    const isCurrent = () => this.active === current;
+    current.promise = Promise.resolve().then(async () => {
+      if (!isCurrent()) return;
+      if (timeoutMs > 0)
+        current.timer = setTimeout(
+          () => current.controller.abort("timeout"),
+          timeoutMs
+        );
+      try {
+        callbacks.started?.();
+        const value = await job.run(
+          current.controller.signal,
+          (index2, count, file) => {
+            if (isCurrent()) callbacks.progress?.(index2, count, file);
+          }
+        );
+        if (current.timer) clearTimeout(current.timer);
+        if (isCurrent()) await callbacks.result(value, isCurrent);
+      } catch (error) {
+        if (isCurrent()) callbacks.error(error);
+      } finally {
+        if (current.timer) clearTimeout(current.timer);
+        if (isCurrent()) {
+          this.active = void 0;
+          callbacks.finished?.();
+        }
+      }
+    });
+    return current.promise;
+  }
+  cancel() {
+    this.active?.controller.abort("user");
+  }
+  /** Clear/dispose must prevent a late result from restoring findings the user removed. */
+  invalidate() {
+    const current = this.active;
+    this.active = void 0;
+    if (current?.timer) clearTimeout(current.timer);
+    current?.controller.abort("cleared");
+  }
+};
 
 // src/codeLens.ts
 var vscode3 = __toESM(require("vscode"));
@@ -14817,7 +15020,17 @@ function activate(context) {
   const commentCtrl = vscode12.comments.createCommentController("commit-defender", "Commit Defender");
   const commentManager = new CommentManager();
   const statusBar = new StatusBarManager();
-  let currentAbort = null;
+  const execution = new ReviewExecutionOwner();
+  const messageExecution = new ReviewExecutionOwner();
+  let reviewIntent = 0;
+  let messageIntent = 0;
+  const setPreflightIdle = (message, intent = reviewIntent) => {
+    if (intent === reviewIntent && !execution.isRunning) statusBar.setIdle(message);
+  };
+  context.subscriptions.push({ dispose: () => {
+    execution.invalidate();
+    messageExecution.invalidate();
+  } });
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider = new HistoryProvider(cfg);
   const panelProvider = new PanelProvider();
@@ -14856,69 +15069,61 @@ function activate(context) {
   async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = []) {
     const cfg2 = getConfig();
     const timeoutSeconds = relPaths.length === 1 ? cfg2.fileTimeoutSeconds : cfg2.directoryTimeoutSeconds;
-    const reviewer = new Reviewer(cfg2);
-    const abort = new AbortController();
-    currentAbort = abort;
-    const timeoutHandle = timeoutSeconds > 0 ? setTimeout(() => abort.abort("timeout"), timeoutSeconds * 1e3) : null;
-    historyProvider.setRunning(true);
-    panelProvider.setRunning(true);
-    let result;
-    try {
-      if (scope === "staged") {
-        result = await reviewer.reviewDiff(repoRoot, relPaths, abort.signal);
-      } else {
-        result = await reviewer.reviewFilesSeparately(
-          repoRoot,
-          relPaths,
-          abort.signal,
-          (current, total, file) => statusBar.setProgress(current, total, file)
-        );
+    const job = createReviewBackend(cfg2).prepareReview({ repoRoot, files: relPaths, scope, scopeTarget, sourceExclusions });
+    await execution.start(job, {
+      started: () => {
+        statusBar.setRunning();
+        historyProvider.setRunning(true);
+        panelProvider.setRunning(true);
+      },
+      progress: (current, total, file) => statusBar.setProgress(current, total, file),
+      error: (error) => handleError(error, statusBar),
+      finished: () => {
+        historyProvider.setRunning(false);
+        panelProvider.setRunning(false);
+      },
+      result: async (result, isCurrent) => {
+        result.report.source_exclusions = [...new Map(
+          [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
+        ).values()];
+        logSourceExclusions(result.report.source_exclusions);
+        const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
+          const uri = vscode12.Uri.file(path17.join(repoRoot, file)).toString();
+          return vscode12.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
+        });
+        findingsStore.update(result.report, repoRoot, displayBlocks);
+        historyProvider.push(result.report, repoRoot, scope, scopeTarget);
+        const blocks = findingsStore.lastReport().blocks;
+        historyProvider.updateFindings(blocks);
+        panelProvider.updateFindings(blocks, repoRoot, result.report);
+        applyDiagnostics(displayBlocks, repoRoot, diagnostics);
+        commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
+        const status = reviewStatus(result.report.review);
+        statusBar.setReport(result.report);
+        if (status === "failed") {
+          const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
+          const provider = accountProvider(cfg2.aiProvider);
+          const signIn2 = provider ? signInLabel(provider) : void 0;
+          const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
+          void vscode12.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
+            if (action === signIn2 && provider) await vscode12.commands.executeCommand(signInCommand(provider));
+            else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
+            else if (action === "Show Output") getOutputChannel().show();
+          });
+        }
+        showSummaryPanel(result.report, repoRoot, context);
+        await vscode12.commands.executeCommand("commitDefender.panelView.focus");
+        if (!isCurrent()) return;
+        const srcFile = result.report.staged_files[0];
+        const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
+        if (command) await reviewNavigation.open(command.arguments?.[0], isCurrent);
       }
-    } finally {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-      currentAbort = null;
-      historyProvider.setRunning(false);
-      panelProvider.setRunning(false);
-    }
-    result.report.source_exclusions = [...new Map(
-      [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
-    ).values()];
-    logSourceExclusions(result.report.source_exclusions);
-    const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-      const uri = vscode12.Uri.file(path17.join(repoRoot, file)).toString();
-      return vscode12.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
-    });
-    findingsStore.update(result.report, repoRoot, displayBlocks);
-    historyProvider.push(result.report, repoRoot, scope, scopeTarget);
-    const blocks = findingsStore.lastReport().blocks;
-    historyProvider.updateFindings(blocks);
-    panelProvider.updateFindings(blocks, repoRoot, result.report);
-    applyDiagnostics(displayBlocks, repoRoot, diagnostics);
-    commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
-    const status = reviewStatus(result.report.review);
-    statusBar.setReport(result.report);
-    if (status === "failed") {
-      const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
-      const provider = accountProvider(cfg2.aiProvider);
-      const signIn2 = provider ? signInLabel(provider) : void 0;
-      const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
-      void vscode12.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
-        if (action === signIn2 && provider) await vscode12.commands.executeCommand(signInCommand(provider));
-        else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
-        else if (action === "Show Output") getOutputChannel().show();
-      });
-    }
-    showSummaryPanel(result.report, repoRoot, context);
-    await vscode12.commands.executeCommand("commitDefender.panelView.focus");
-    const srcFile = result.report.staged_files[0];
-    const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
-    if (command) await reviewNavigation.open(command.arguments?.[0]);
+    }, timeoutSeconds * 1e3);
   }
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.analyzeCurrentFile",
     async (uri) => {
+      const intent = ++reviewIntent;
       let filePath;
       if (uri?.scheme === "file") {
         filePath = uri.fsPath;
@@ -14934,9 +15139,9 @@ function activate(context) {
       if (!ws) {
         return;
       }
-      statusBar.setRunning();
       try {
         const rawRoot = await getRepoRoot(ws);
+        if (intent !== reviewIntent) return;
         let resolvedRoot = rawRoot;
         let resolvedFile = filePath;
         try {
@@ -14953,18 +15158,20 @@ function activate(context) {
         channel.appendLine(`  relPath : ${relPath || "(empty)"}`);
         if (!relPath || relPath.startsWith("..")) {
           vscode12.window.showWarningMessage("Commit Defender: File is outside the repository.");
-          statusBar.setIdle();
+          setPreflightIdle(void 0, intent);
           return;
         }
+        if (intent !== reviewIntent) return;
         await analyze([relPath], rawRoot, "file");
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.analyzeDirectory",
     async (uri) => {
+      const intent = ++reviewIntent;
       const ws = vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
@@ -14972,22 +15179,22 @@ function activate(context) {
       let rawRoot;
       try {
         rawRoot = await getRepoRoot(ws);
+        if (intent !== reviewIntent) return;
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
         return;
       }
       const dirPath = uri?.scheme === "file" ? uri.fsPath : await pickDirectory(rawRoot);
       if (!dirPath) {
         return;
       }
-      statusBar.setRunning();
       try {
         const cfg2 = getConfig();
         const sourceExclusions = [];
         const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (relPaths.length === 0) {
           logSourceExclusions(sourceExclusions, true);
-          statusBar.setIdle("No supported files found");
+          setPreflightIdle("No supported files found", intent);
           vscode12.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
           return;
         }
@@ -14995,29 +15202,31 @@ function activate(context) {
         channel.appendLine(`
 [Commit Defender] Analyze Directory: ${path17.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
+        if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.analyze",
     async () => {
+      const intent = ++reviewIntent;
       const ws = vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         vscode12.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
-      statusBar.setRunning();
       try {
         const rawRoot = await getRepoRoot(ws);
+        if (intent !== reviewIntent) return;
         const cfg2 = getConfig();
         const sourceExclusions = [];
         const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (staged.length === 0) {
           logSourceExclusions(sourceExclusions, true);
-          statusBar.setIdle("No staged files");
+          setPreflightIdle("No staged files", intent);
           vscode12.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
         }
@@ -15030,12 +15239,12 @@ function activate(context) {
             "Abort"
           );
           if (answer === "Skip") {
-            statusBar.setIdle("Analysis skipped");
+            setPreflightIdle("Analysis skipped", intent);
             vscode12.window.showInformationMessage("Commit Defender: Analysis skipped.");
             return;
           }
           if (answer === "Abort" || answer === void 0) {
-            statusBar.setIdle("Commit aborted");
+            setPreflightIdle("Commit aborted", intent);
             vscode12.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
             return;
           }
@@ -15043,28 +15252,30 @@ function activate(context) {
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze Staged Files: ${staged.length} file(s)`);
+        if (intent !== reviewIntent) return;
         await analyze(staged, rawRoot, "staged", void 0, sourceExclusions);
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.analyzeRepository",
     async () => {
+      const intent = ++reviewIntent;
       const ws = vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
-      statusBar.setRunning();
       try {
         const cfg2 = getConfig();
         const rawRoot = await getRepoRoot(ws);
+        if (intent !== reviewIntent) return;
         const sourceExclusions = [];
         const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
         if (allFiles.length === 0) {
           logSourceExclusions(sourceExclusions, true);
-          statusBar.setIdle("No files found");
+          setPreflightIdle("No files found", intent);
           vscode12.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
           return;
         }
@@ -15075,33 +15286,37 @@ function activate(context) {
             "Analyze"
           );
           if (answer !== "Analyze") {
-            statusBar.setIdle();
+            setPreflightIdle(void 0, intent);
             return;
           }
         }
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze Repository: ${allFiles.length} file(s)`);
+        if (intent !== reviewIntent) return;
         await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions);
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
   context.subscriptions.push(vscode12.commands.registerCommand("commitDefender.cancel", () => {
-    if (currentAbort) {
-      currentAbort.abort("user");
-      currentAbort = null;
-      statusBar.setIdle("Cancellation requested; waiting for review to stop");
-    }
+    reviewIntent++;
+    execution.cancel();
   }));
   context.subscriptions.push(vscode12.commands.registerCommand("commitDefender.clearFindings", () => {
+    reviewIntent++;
+    execution.invalidate();
+    _summaryPanel?.dispose();
+    reviewNavigation.links.clear();
+    historyProvider.setRunning(false);
+    panelProvider.setRunning(false);
     diagnostics.clear();
     commentManager.clearAll();
     findingsStore.clear();
     historyProvider.clear();
     panelProvider.clear();
-    statusBar.setIdle();
+    setPreflightIdle();
   }));
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.showLineSuggestion",
@@ -15134,6 +15349,7 @@ function activate(context) {
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.reanalyzeHistoryEntry",
     async (arg) => {
+      const intent = ++reviewIntent;
       const histEntry = arg?.kind === "entry" ? arg.entry : arg?.report ? arg : void 0;
       if (!histEntry) {
         vscode12.window.showWarningMessage("Commit Defender: Could not read history entry.");
@@ -15143,10 +15359,10 @@ function activate(context) {
       if (!ws) {
         return;
       }
-      statusBar.setRunning();
       try {
         const cfg2 = getConfig();
         const rawRoot = await getRepoRoot(ws);
+        if (intent !== reviewIntent) return;
         const channel = getOutputChannel();
         switch (histEntry.scope) {
           case "staged": {
@@ -15154,12 +15370,13 @@ function activate(context) {
             const staged = await getStagedFiles(rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (staged.length === 0) {
               logSourceExclusions(sourceExclusions, true);
-              statusBar.setIdle("No staged files");
+              setPreflightIdle("No staged files", intent);
               vscode12.window.showInformationMessage("Commit Defender: No staged files to analyze.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
+            if (intent !== reviewIntent) return;
             await analyze(staged, rawRoot, "staged", void 0, sourceExclusions);
             break;
           }
@@ -15167,11 +15384,12 @@ function activate(context) {
             const files = histEntry.report.staged_files;
             if (!files.length) {
               vscode12.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
-              statusBar.setIdle();
+              setPreflightIdle(void 0, intent);
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (file): ${files[0]}`);
+            if (intent !== reviewIntent) return;
             await analyze(files, histEntry.repoRoot, "file");
             break;
           }
@@ -15179,19 +15397,20 @@ function activate(context) {
             const dirPath = histEntry.scopeTarget;
             if (!dirPath) {
               vscode12.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
-              statusBar.setIdle();
+              setPreflightIdle(void 0, intent);
               return;
             }
             const sourceExclusions = [];
             const relPaths = collectFiles(dirPath, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (relPaths.length === 0) {
               logSourceExclusions(sourceExclusions, true);
-              statusBar.setIdle("No supported files found");
+              setPreflightIdle("No supported files found", intent);
               vscode12.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (directory): ${path17.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+            if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
           }
@@ -15200,24 +15419,26 @@ function activate(context) {
             const allFiles = collectFiles(rawRoot, rawRoot, cfg2.excludePatterns, (entry) => sourceExclusions.push(entry));
             if (allFiles.length === 0) {
               logSourceExclusions(sourceExclusions, true);
-              statusBar.setIdle("No files found");
+              setPreflightIdle("No files found", intent);
               vscode12.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
+            if (intent !== reviewIntent) return;
             await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions);
             break;
           }
         }
       } catch (err2) {
-        handleError(err2, statusBar);
+        handleError(err2, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
   context.subscriptions.push(vscode12.commands.registerCommand(
     "commitDefender.generateCommitMessage",
     async () => {
+      const intent = ++messageIntent;
       const ws = vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         vscode12.window.showWarningMessage("Commit Defender: No workspace folder open.");
@@ -15230,45 +15451,56 @@ function activate(context) {
         vscode12.window.showWarningMessage("Commit Defender: No git repository found.");
         return;
       }
-      const result = await vscode12.window.withProgress(
-        { location: vscode12.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
-        () => new Reviewer(getConfig()).generateCommitMessage(repoRoot)
-      );
-      if (result.is_error || !result.commit_message) {
-        const provider = accountProvider(getConfig().aiProvider);
-        const signIn2 = provider ? signInLabel(provider) : void 0;
-        const action = await vscode12.window.showErrorMessage(
-          `Commit Defender: ${result.error || "Failed to generate commit message"}`,
-          ...signIn2 ? [signIn2] : []
-        );
-        if (action === signIn2 && provider) {
-          await vscode12.commands.executeCommand(signInCommand(provider));
-        }
-        return;
-      }
-      const gitExt = vscode12.extensions.getExtension("vscode.git");
-      const gitApi = gitExt?.exports?.getAPI?.(1);
-      const repo = gitApi?.getRepository?.(vscode12.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
-      if (repo?.inputBox) {
-        repo.inputBox.value = result.commit_message;
-        vscode12.window.showInformationMessage(
-          "Commit Defender: Commit message inserted into the Source Control input box."
-        );
-      } else {
-        await vscode12.env.clipboard.writeText(result.commit_message);
-        vscode12.window.showInformationMessage(
-          "Commit Defender: Commit message copied to clipboard.",
-          "Preview"
-        ).then((action) => {
-          if (action === "Preview") {
-            vscode12.window.showInputBox({
-              value: result.commit_message,
-              prompt: "Generated commit message (read-only preview)",
-              ignoreFocusOut: true
+      if (intent !== messageIntent) return;
+      const cfg2 = getConfig();
+      const prepared = createReviewBackend(cfg2).prepareCommitMessage(repoRoot);
+      await messageExecution.start({
+        ...prepared,
+        run: async (signal) => vscode12.window.withProgress(
+          { location: vscode12.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
+          () => prepared.run(signal)
+        )
+      }, {
+        error: (error) => handleError(error, statusBar, !execution.isRunning),
+        result: async (result, isCurrent) => {
+          if (result.is_error || !result.commit_message) {
+            const provider = accountProvider(cfg2.aiProvider);
+            const signIn2 = provider ? signInLabel(provider) : void 0;
+            const action = await vscode12.window.showErrorMessage(
+              `Commit Defender: ${result.error || "Failed to generate commit message"}`,
+              ...signIn2 ? [signIn2] : []
+            );
+            if (action === signIn2 && provider) {
+              await vscode12.commands.executeCommand(signInCommand(provider));
+            }
+            return;
+          }
+          const gitExt = vscode12.extensions.getExtension("vscode.git");
+          const gitApi = gitExt?.exports?.getAPI?.(1);
+          const repo = gitApi?.getRepository?.(vscode12.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
+          if (repo?.inputBox) {
+            repo.inputBox.value = result.commit_message;
+            vscode12.window.showInformationMessage(
+              "Commit Defender: Commit message inserted into the Source Control input box."
+            );
+          } else {
+            await vscode12.env.clipboard.writeText(result.commit_message);
+            if (!isCurrent()) return;
+            vscode12.window.showInformationMessage(
+              "Commit Defender: Commit message copied to clipboard.",
+              "Preview"
+            ).then((action) => {
+              if (action === "Preview") {
+                vscode12.window.showInputBox({
+                  value: result.commit_message,
+                  prompt: "Generated commit message (read-only preview)",
+                  ignoreFocusOut: true
+                });
+              }
             });
           }
-        });
-      }
+        }
+      }, cfg2.fileTimeoutSeconds * 1e3);
     }
   ));
   setupIndexWatcher(context);
@@ -15328,9 +15560,9 @@ async function pickDirectory(root2) {
     }
   }
 }
-function handleError(err2, statusBar) {
+function handleError(err2, statusBar, updateStatus = true) {
   const message = err2 instanceof Error ? err2.message : String(err2);
-  statusBar.setError(message);
+  if (updateStatus) statusBar.setError(message);
   const firstLine = message.split("\n")[0];
   vscode12.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
     if (action === "Show Output") {

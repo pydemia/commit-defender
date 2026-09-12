@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
 import { ExtensionConfig } from './config.js';
+import type { ReviewScope } from './reviewBackend.js';
 import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
-export type AnalysisScope = 'staged' | 'file' | 'directory' | 'repository';
+export type AnalysisScope = ReviewScope;
 
 export interface HistoryEntry {
   id: string;
