@@ -9,7 +9,8 @@
 
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
+import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
+import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
 import { formatCategory, PRIORITY_RANK } from './commentFormatter.js';
 
 type PanelNode =
@@ -66,8 +67,11 @@ export class PanelProvider implements vscode.TreeDataProvider<PanelNode> {
     },
   };
 
-  updateFindings(blocks: CommentBlock[], repoRoot: string): void {
+  private _report?: AnalysisReport;
+
+  updateFindings(blocks: CommentBlock[], repoRoot: string, report?: AnalysisReport): void {
     this._blocks = blocks;
+    this._report = report;
     this._repoRoot = repoRoot;
     this._rebuildDecorations();
     this._emitter.fire(undefined);
@@ -79,6 +83,7 @@ export class PanelProvider implements vscode.TreeDataProvider<PanelNode> {
   }
 
   clear(): void {
+    this._report = undefined;
     const oldUris = Array.from(this._decorations.keys()).map(s => vscode.Uri.parse(s));
     this._blocks = [];
     this._repoRoot = '';
@@ -191,7 +196,9 @@ export class PanelProvider implements vscode.TreeDataProvider<PanelNode> {
       return [{ kind: 'empty', id: 'panel-running', label: 'Analyzing…' }];
     }
     if (this._blocks.length === 0) {
-      return [{ kind: 'empty', id: 'panel-empty', label: 'No Commit Defender findings.' }];
+      return [{ kind: 'empty', id: 'panel-empty', label: this._report
+        ? `${OUTCOME_META[reviewStatus(this._report.review)].label}: ${reviewCoverage(this._report)}. No findings recorded.`
+        : 'No Commit Defender review yet.' }];
     }
 
     const byFile = new Map<string, CommentBlock[]>();

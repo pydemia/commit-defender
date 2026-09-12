@@ -4,7 +4,7 @@
  *
  * Reads <repo>/.commit-defender/hook.json (written by the extension on hook
  * install), runs the AI review against the staged diff, prints a colour
- * report to stderr, and exits 0 (pass) or 1 (block).
+ * report to stderr, and exits 0 (allowed by legacy hook policy) or 1 (block).
  *
  * Cannot import anything from vscode.* — esbuild is configured to mark vscode
  * as external; calling into it here would explode at runtime.
@@ -13,16 +13,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ResolvedConfig } from '../config.js';
-import { truncate } from '../diff.js';
-import { captureStagedSnapshot } from '../gitSnapshot.js';
+import { getStagedSelection } from '../gitHelper.js';
 import { resolveExitCode } from '../exitResolver.js';
-import { applyMarkers } from '../skipMarkers.js';
-import { loadSkills } from '../skills.js';
+import { OUTCOME_META, reviewCoverage, reviewStatus } from '../reviewOutcome.js';
 import { AnalysisReport, FileComment } from '../types.js';
-import { ParsedReview, enforceP3, parseReviewJson } from '../ai/json.js';
-import { SEVERITY_MIN_RANK, buildSystemPrompt, buildUserMessage } from '../ai/prompt.js';
-import { callProvider } from '../ai/providers.js';
-import { REVIEW_OUTPUT_SCHEMA } from '../ai/schemas.js';
+import { Reviewer } from '../ai/reviewer.js';
 
 const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 
@@ -35,88 +30,20 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  const selection = captureStagedSnapshot(repoRoot, cfg.excludePatterns);
-  const staged = selection.files;
-  for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
-  if (staged.length === 0) {
+  const selection = getStagedSelection(repoRoot, cfg.excludePatterns);
+  if (selection.files.length === 0) {
+    for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
+    eprintln('commit-defender: review NOT RUN — no permitted staged source. Commit not blocked.');
     process.exit(0);
   }
-
-  const diff = truncate(selection.diff());
-  if (!diff.trim()) { process.exit(0); }
-  const sources = new Map(staged.map(file => [file, selection.readSelected(file)]));
-
-  eprintln(`\n🛡  commit-defender — reviewing ${staged.length} staged file(s)…`);
-
-  const skillsText = loadSkills(repoRoot, cfg.excludePatterns);
-  const systemPrompt = buildSystemPrompt({
-    mode: 'diff',
-    severity: cfg.severityLevel,
-    richness: cfg.richnessLevel,
-    locale: cfg.locale,
-    skillsText,
-  });
-  const userMessage = buildUserMessage('diff', diff);
-
-  const resp = await callProvider({
-    provider: cfg.aiProvider,
-    apiKey: cfg.apiKey,
-    endpoint: cfg.endpoint,
-    apiVersion: cfg.apiVersion,
-    model: cfg.model,
-    maxTokens: cfg.maxTokens,
-    systemPrompt,
-    userMessage,
-    workingDirectory: repoRoot,
-    executablePath: cfg.aiProvider === 'codex'
-      ? cfg.codexPath
-      : cfg.aiProvider === 'claudecode'
-        ? cfg.claudeCodePath
-        : cfg.aiProvider === 'geminicli'
-          ? cfg.geminiCliPath
-          : cfg.aiProvider === 'antigravity'
-            ? cfg.antigravityPath
-            : '',
-    responseSchema: REVIEW_OUTPUT_SCHEMA,
-    timeoutMs: 120_000,
-  });
-
-  if (resp.error) {
-    eprintln(`\n⚠ AI review unavailable — commit not blocked.\n  ${indent(resp.error, '  ')}`);
-    process.exit(0);
-  }
-
-  let parsed: ParsedReview;
-  try {
-    parsed = parseReviewJson(resp.raw);
-  } catch (e) {
-    eprintln(`\n⚠ Could not parse AI response — commit not blocked.\n  ${(e as Error).message}`);
-    process.exit(0);
-  }
-
-  const minRank = SEVERITY_MIN_RANK[cfg.severityLevel] ?? 1;
-  let comments: FileComment[] = parsed.file_comments
-    .map(fc => ({ ...fc, priority: enforceP3(fc.priority, fc.comment) } as FileComment))
-    .filter(fc => (PRIORITY_RANK[fc.priority] ?? 1) >= minRank);
-  comments = applyMarkers(comments, sources);
-
-  const report: AnalysisReport = {
-    schema_version: 1,
-    staged_files: staged,
-    duration_ms: 0,
-    exit_code: 0,
-    lint_findings: [],
-    source_exclusions: selection.excluded,
-    source_snapshot: { kind: 'index', base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree },
-    review: {
-      summary: parsed.summary,
-      blocking: parsed.blocking,
-      is_error: false,
-      file_comments: comments,
-      grade: parsed.grade as AnalysisReport['review']['grade'],
-    },
-  };
-  const exitCode = resolveExitCode(report);
+  eprintln(`\ncommit-defender — reviewing ${selection.files.length} staged file(s)…`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort('timeout'), 120_000);
+  let report: AnalysisReport;
+  try { report = (await new Reviewer(cfg).reviewDiff(repoRoot, selection.files, controller.signal)).report; }
+  finally { clearTimeout(timer); }
+  for (const entry of report.source_exclusions ?? []) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
+  const exitCode = resolveExitCode(report, 'legacy-hook');
   printReport(report, exitCode === 1);
   process.exit(exitCode);
 }
@@ -163,8 +90,10 @@ function printReport(report: AnalysisReport, blocked: boolean): void {
   const r = report.review;
   eprintln('');
   eprintln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  eprintln(blocked ? '  🛡  commit-defender — BLOCKED' : '  🛡  commit-defender — PASS');
-  if (r.grade) { eprintln(`  Grade: ${r.grade}`); }
+  eprintln(`  Review: ${OUTCOME_META[reviewStatus(r)].label.toUpperCase()}`);
+  eprintln(`  Legacy hook: ${blocked ? 'BLOCKED' : 'ALLOWED'}`);
+  eprintln(`  ${reviewCoverage(report)}`);
+  if (r.grade && reviewStatus(r) === 'completed') { eprintln(`  Grade: ${r.grade}`); }
   eprintln('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   if (r.summary) {
@@ -194,7 +123,7 @@ function printReport(report: AnalysisReport, blocked: boolean): void {
   }
 
   if (blocked) {
-    eprintln('\nThis commit was blocked because at least one P3 Critical finding was raised.');
+    eprintln('\nThis commit was blocked by a P3 Critical finding or the model blocking flag.');
     eprintln('Fix the issues above and try again, or use `git commit --no-verify` to skip the check.');
   }
   eprintln('');
@@ -209,6 +138,6 @@ function indent(text: string, prefix: string): string {
 }
 
 main().catch(e => {
-  eprintln(`commit-defender: unexpected error — ${(e as Error).stack ?? e}`);
+  eprintln(`commit-defender: review FAILED; commit not blocked — ${(e as Error).message}`);
   process.exit(0); // do not block commits on internal errors
 });

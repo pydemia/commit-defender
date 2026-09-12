@@ -10,9 +10,16 @@
  */
 
 import { AnalysisReport } from './types.js';
+import { reviewStatus } from './reviewOutcome.js';
 
-export function resolveExitCode(report: AnalysisReport): 0 | 1 {
-  if (report.review.is_error) { return 0; }
+export type EnforcementPolicy = 'legacy-hook' | 'advisory';
+
+export function resolveExitCode(report: AnalysisReport, policy: EnforcementPolicy = 'legacy-hook'): 0 | 1 {
+  // New automatic review uses advisory explicitly; existing hooks keep their policy.
+  // A zero enforcement code does not prove that the review completed.
+  if (policy === 'advisory') return 0;
+  const status = reviewStatus(report.review);
+  if (status === 'failed' || status === 'cancelled') { return 0; }
   if (report.review.file_comments.some(c => c.priority === 'P3')) { return 1; }
   if (report.review.blocking) { return 1; }
   return 0;

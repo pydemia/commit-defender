@@ -19,8 +19,14 @@ export interface ParsedReview {
 }
 
 export function parseReviewJson(raw: string): ParsedReview {
-  const truncated = !raw.trim().replace(/`+\s*$/, '').endsWith('}');
-  const data = robustJson(raw);
+  const { data, repaired: truncated } = robustJson(raw);
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+      || typeof data.summary !== 'string'
+      || (data.blocking !== undefined && typeof data.blocking !== 'boolean')
+      || (data.file_comments !== undefined && !Array.isArray(data.file_comments))
+      || (!truncated && (typeof data.blocking !== 'boolean' || !Array.isArray(data.file_comments)))) {
+    throw new Error('Model response does not contain a review object');
+  }
 
   const validPriorities = new Set(['P0', 'P1', 'P2', 'P3']);
   const validCategories = new Set([
@@ -57,16 +63,16 @@ export function parseReviewJson(raw: string): ParsedReview {
   };
 }
 
-function robustJson(raw: string): any {
+function robustJson(raw: string): { data: any; repaired: boolean } {
   // 1. Direct parse
-  try { return JSON.parse(raw); } catch { /* continue */ }
+  try { return { data: JSON.parse(raw), repaired: false }; } catch { /* continue */ }
 
   // 2. Strip markdown fences
   const stripped = raw.trim()
     .replace(/^```(?:json)?\s*/m, '')
     .replace(/```\s*$/m, '')
     .trim();
-  try { return JSON.parse(stripped); } catch { /* continue */ }
+  try { return { data: JSON.parse(stripped), repaired: false }; } catch { /* continue */ }
 
   // 3. First complete top-level {...} block
   let depth = 0;
@@ -79,7 +85,7 @@ function robustJson(raw: string): any {
     } else if (ch === '}') {
       depth--;
       if (depth === 0 && start !== null) {
-        try { return JSON.parse(raw.slice(start, i + 1)); } catch { /* continue */ }
+        try { return { data: JSON.parse(raw.slice(start, i + 1)), repaired: false }; } catch { /* continue */ }
         start = null;
       }
     }
@@ -89,7 +95,7 @@ function robustJson(raw: string): any {
   const open = raw.indexOf('{');
   if (open !== -1) {
     const repaired = repairTruncated(raw.slice(open));
-    try { return JSON.parse(repaired); } catch { /* fall through */ }
+    try { return { data: JSON.parse(repaired), repaired: true }; } catch { /* fall through */ }
   }
 
   throw new Error('No valid JSON found in response');

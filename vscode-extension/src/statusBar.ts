@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import type { AnalysisReport } from './types.js';
+import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
+import { resolveExitCode } from './exitResolver.js';
 
 export class StatusBarManager {
   readonly item: vscode.StatusBarItem;
@@ -34,20 +37,14 @@ export class StatusBarManager {
     this.item.color = undefined;
   }
 
-  setResult(passed: boolean, grade?: string): void {
-    const gradeLabel = grade ? ` · ${grade}` : '';
+  setReport(report: AnalysisReport): void {
+    const state = reviewStatus(report.review);
+    const meta = OUTCOME_META[state];
+    this.item.text = `$(${meta.icon}) CD: ${meta.label}`;
+    this.item.tooltip = `${reviewCoverage(report)}. Legacy hook: ${resolveExitCode(report) ? 'would block' : 'allows commit'}. Click to re-analyze.`;
     this.item.command = 'commitDefender.analyze';
-    if (passed) {
-      this.item.text = `$(shield-check) CD: Pass${gradeLabel}`;
-      this.item.tooltip = `Commit Defender: passed${grade ? ` (${grade})` : ''}. Click to re-analyze.`;
-      this.item.backgroundColor = undefined;
-      this.item.color = new vscode.ThemeColor('terminal.ansiGreen');
-    } else {
-      this.item.text = `$(shield-x) CD: Blocked${gradeLabel}`;
-      this.item.tooltip = `Commit Defender: commit blocked${grade ? ` (${grade})` : ''}. Click to re-analyze.`;
-      this.item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      this.item.color = undefined;
-    }
+    this.item.backgroundColor = undefined;
+    this.item.color = new vscode.ThemeColor(meta.color);
   }
 
   setError(message: string): void {

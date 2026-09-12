@@ -35,7 +35,7 @@ export function getFileContents(repoRoot: string, relPaths: string[], patterns: 
 
 export function formatFileContent(file: string, content: string): string {
   const ext = path.extname(file).replace(/^\./, '');
-  return truncate(`### ${file}\n\n\`\`\`${ext}\n${content}\n\`\`\``);
+  return `### ${file}\n\n\`\`\`${ext}\n${content}\n\`\`\``;
 }
 
 export function truncate(s: string): string {

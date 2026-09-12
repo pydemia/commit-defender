@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
+import { resolveExitCode } from './exitResolver.js';
 import { Reviewer } from './ai/reviewer.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
@@ -375,59 +377,33 @@ export function activate(context: vscode.ExtensionContext): void {
     ).values()];
     logSourceExclusions(result.report.source_exclusions);
 
-    if (result.cancelled) {
-      const reason = abort.signal.reason === 'timeout' ? 'timed out' : 'cancelled';
-      statusBar.setIdle(`Analysis ${reason}`);
-      vscode.window.showInformationMessage(`Commit Defender: Analysis ${reason}.`);
-      return;
-    }
-
-    if (result.report.staged_files.length === 0) {
-      statusBar.setIdle('No files analyzed');
-      const summary = result.report.review?.summary ?? 'No files matched for analysis.';
-      const channel = getOutputChannel();
-      channel.show(true);
-      vscode.window.showInformationMessage(`Commit Defender: ${summary}`);
-      return;
-    }
-
     findingsStore.update(result.report, repoRoot);
     historyProvider.push(result.report, repoRoot, scope, scopeTarget);
     const blocks = findingsStore.lastReport()!.blocks;
     historyProvider.updateFindings(blocks);
-    panelProvider.updateFindings(blocks, repoRoot);
+    panelProvider.updateFindings(blocks, repoRoot, result.report);
     applyDiagnostics(blocks, repoRoot, diagnostics);
     commentManager.apply(blocks, repoRoot, commentCtrl);
 
-    const passed = result.report.exit_code === 0;
-    const isAiError = result.report.review.is_error
-      || /AI review unavailable/i.test(result.report.review.summary);
-    if (isAiError) {
+    const status = reviewStatus(result.report.review);
+    statusBar.setReport(result.report);
+    if (status === 'failed') {
       const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
-      statusBar.setError(msg);
       const provider = accountProvider(cfg.aiProvider);
       const signIn = provider ? signInLabel(provider) : undefined;
       const actions = signIn ? [signIn, 'Show Summary', 'Show Output'] : ['Show Summary', 'Show Output'];
-      const action = await vscode.window.showErrorMessage(
-        `Commit Defender: AI review failed — ${msg}`,
-        ...actions,
-      );
-      if (action === signIn && provider) {
-        await vscode.commands.executeCommand(signInCommand(provider));
-      } else if (action === 'Show Summary') {
-        showSummaryPanel(result.report, repoRoot, context);
-      } else if (action === 'Show Output') {
-        getOutputChannel().show();
-      }
-    } else {
-      statusBar.setResult(passed, result.report.review.grade);
+      void vscode.window.showErrorMessage(`Commit Defender: Review failed — ${msg}`, ...actions).then(async action => {
+        if (action === signIn && provider) await vscode.commands.executeCommand(signInCommand(provider));
+        else if (action === 'Show Summary') showSummaryPanel(result.report, repoRoot, context);
+        else if (action === 'Show Output') getOutputChannel().show();
+      });
     }
 
     showSummaryPanel(result.report, repoRoot, context);
     await vscode.commands.executeCommand('commitDefender.panelView.focus');
 
     // Bring the source file back to the front so inline comment threads render.
-    const srcFile = result.report.staged_files[0] ?? relPaths[0];
+    const srcFile = result.report.staged_files.find(file => fs.existsSync(path.join(repoRoot, file)));
     if (srcFile) {
       const absPath = path.join(repoRoot, srcFile);
       await vscode.window.showTextDocument(vscode.Uri.file(absPath), {
@@ -633,7 +609,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (currentAbort) {
       currentAbort.abort('user');
       currentAbort = null;
-      statusBar.setIdle('Analysis cancelled');
+      statusBar.setIdle('Cancellation requested; waiting for review to stop');
     }
   }));
 
@@ -932,12 +908,14 @@ function handleError(err: unknown, statusBar: StatusBarManager): void {
 // ── Summary webview panel ─────────────────────────────────────────────────────
 
 let _summaryPanel: vscode.WebviewPanel | undefined;
+let _summaryReport: AnalysisReport | undefined;
 
 function showSummaryPanel(
   report: AnalysisReport,
   repoRoot: string,
   context: vscode.ExtensionContext,
 ): void {
+  _summaryReport = report;
   if (_summaryPanel) {
     _summaryPanel.reveal(vscode.ViewColumn.Beside, true);
   } else {
@@ -947,7 +925,7 @@ function showSummaryPanel(
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true },
     );
-    _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; }, null, context.subscriptions);
+    _summaryPanel.onDidDispose(() => { _summaryPanel = undefined; _summaryReport = undefined; }, null, context.subscriptions);
 
     _summaryPanel.webview.onDidReceiveMessage(
       async (msg: { command: string; path: string; line: number }) => {
@@ -959,7 +937,8 @@ function showSummaryPanel(
             preserveFocus: false,
           });
         } else if (msg.command === 'showJson') {
-          const json = JSON.stringify(report, null, 2);
+          if (!_summaryReport) return;
+          const json = JSON.stringify(_summaryReport, null, 2);
           const doc = await vscode.workspace.openTextDocument({ content: json, language: 'json' });
           vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
@@ -997,8 +976,8 @@ function _renderOverallSummary(
   let html = '';
   for (const pfs of perFile) {
     const priority = worstByFile.get(pfs.file) ?? pfs.priority;
-    const pMeta    = PRIORITY_META[priority];
-    const pColor   = palette.priority[priority];
+    const pMeta    = priority ? PRIORITY_META[priority] : undefined;
+    const pColor   = priority ? palette.priority[priority] : undefined;
     const badge    = pMeta
       ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>`
       : '';
@@ -1006,7 +985,7 @@ function _renderOverallSummary(
     html += `<div class="per-file-summary">
       <div class="per-file-header">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
-        ${badge}
+        ${pfs.status ? `<span class="mode-tag">${esc(pfs.status)}</span>` : ''} ${badge}
       </div>
       <div class="per-file-body">${mdToHtml(pfs.summary)}</div>
     </div>`;
@@ -1062,17 +1041,13 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Pa
   const pal = palette ?? resolvePalette('theme-adaptive');
   const blocks = normalizeReport(report);
 
-  const passed  = report.exit_code === 0;
-  const grade   = report.review.grade;
-  const isError = report.review.is_error || /AI review unavailable/i.test(report.review.summary);
-
-  const wp     = worstPriority(blocks);
+  const status = reviewStatus(report.review);
+  const outcome = OUTCOME_META[status];
+  const grade = status === 'completed' ? report.review.grade : '';
+  const isError = status === 'failed';
+  const wp = worstPriority(blocks);
   const wpMeta = wp ? PRIORITY_META[wp] : undefined;
-
-  const headerBadge = isError
-    ? '<span class="badge" style="background:#888">AI ERROR ⚠</span>'
-    : passed ? '<span class="badge pass">PASS ✓</span>'
-             : '<span class="badge blocked">BLOCKED ✗</span>';
+  const headerBadge = `<span class="badge" style="background:var(--vscode-${outcome.color.replaceAll('.', '-')})">${outcome.label.toUpperCase()}</span>`;
   const gradeBadge = grade
     ? `<span class="badge" style="background:${paletteGradeColor(pal, grade)}">${grade.toUpperCase()}</span>`
     : '';
@@ -1081,11 +1056,9 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Pa
     : '';
 
   const metaParts: string[] = [
-    `${report.staged_files.length} file(s) analyzed`,
+    reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : '',
-    isError
-      ? '<span class="mode-tag" style="background:#c72e2e">ai error</span>'
-      : '<span class="mode-tag">ai-powered</span>',
+    `Legacy hook: ${resolveExitCode(report) === 1 ? 'would block' : 'allows commit'}`,
     `${report.duration_ms} ms`,
   ].filter(Boolean);
 
@@ -1124,7 +1097,7 @@ function buildSummaryHtml(report: AnalysisReport, repoRoot: string, palette?: Pa
   }
 
   if (report.staged_files.length > 0) {
-    body += '<section><h2>📁 Analyzed File List</h2><ul class="file-list">';
+    body += '<section><h2>📁 Selected File List</h2><ul class="file-list">';
     for (const f of report.staged_files) {
       const absFile = path.join(repoRoot, f);
       body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;

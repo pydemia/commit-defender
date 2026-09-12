@@ -54,14 +54,17 @@ export interface CommentBlock {
 }
 
 export type Grade = 'exceptional' | 'proficient' | 'adequate' | 'insufficient' | 'critical' | '';
+export type ReviewStatus = 'completed' | 'partial' | 'failed' | 'cancelled';
+export type IncompleteReason = 'provider-error' | 'source-error' | 'timeout' | 'cancelled' | 'source-truncated' | 'response-truncated' | 'response-incomplete';
 
 /** Structured per-file overall-summary. One entry per analyzed file. */
 export interface PerFileSummary {
   file: string;
   summary: string;
-  priority: CommentPriority;
+  priority?: CommentPriority;
   blocking: boolean;
   grade: Grade;
+  status?: ReviewStatus | 'not-run';
 }
 
 export interface ReviewResult {
@@ -70,6 +73,9 @@ export interface ReviewResult {
   is_error: boolean;
   file_comments: FileComment[];
   grade: Grade;
+  /** Absent only in legacy reports. Completion is independent from hook enforcement. */
+  status?: ReviewStatus;
+  incomplete_reasons?: IncompleteReason[];
   /** Structured per-file summaries. Empty on single-file diff mode. */
   per_file_summaries?: PerFileSummary[];
 }

@@ -37,6 +37,8 @@ export interface ProviderResponse {
   raw: string;
   /** Set when the call failed before the model produced text. */
   error?: string;
+  errorKind?: 'timeout';
+  incomplete?: boolean;
 }
 
 export type AccountProvider = Extract<AIProvider, 'codex' | 'claudecode' | 'geminicli' | 'antigravity'>;
@@ -46,6 +48,33 @@ const DEFAULT_ANTHROPIC = 'https://api.anthropic.com/v1';
 const DEFAULT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta';
 
 export async function callProvider(req: ProviderRequest): Promise<ProviderResponse> {
+  const controller = new AbortController();
+  const relay = () => controller.abort(req.signal?.reason);
+  if (req.signal?.aborted) relay();
+  else req.signal?.addEventListener('abort', relay, { once: true });
+  const timer = req.timeoutMs && req.timeoutMs > 0
+    ? setTimeout(() => controller.abort('timeout'), req.timeoutMs) : undefined;
+  const interruption = (): ProviderResponse => {
+    if (controller.signal.reason === 'timeout' || controller.signal.reason?.name === 'TimeoutError') {
+      return { raw: '', error: 'AI request timed out.', errorKind: 'timeout' };
+    }
+    throw abortError();
+  };
+  try {
+    if (controller.signal.aborted) return interruption();
+    // One cancellation/timeout boundary includes both response headers and body parsing.
+    const response = await dispatchProvider({ ...req, signal: controller.signal, timeoutMs: 0 });
+    return controller.signal.aborted ? interruption() : response;
+  } catch (error) {
+    if (controller.signal.aborted) return interruption();
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+    req.signal?.removeEventListener('abort', relay);
+  }
+}
+
+async function dispatchProvider(req: ProviderRequest): Promise<ProviderResponse> {
   switch (req.provider) {
     case 'aoai':      return callAzureOpenAI(req);
     case 'openai':    return callOpenAI(req);
@@ -560,7 +589,7 @@ async function parseOpenAIResp(req: ProviderRequest, resp: Response): Promise<Pr
   if (typeof raw !== 'string') {
     return err(req, `Empty or malformed response: ${JSON.stringify(data).slice(0, 300)}`);
   }
-  return { raw: raw.trim() };
+  return { raw: raw.trim(), incomplete: data?.choices?.[0]?.finish_reason !== 'stop' };
 }
 
 function openaiHttpError(req: ProviderRequest, resp: Response, body: string): ProviderResponse {
@@ -628,7 +657,7 @@ async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
     if (typeof raw !== 'string') {
       return err(req, `Empty or malformed Anthropic response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: !['end_turn', 'stop_sequence'].includes(data?.stop_reason) };
   });
 }
 
@@ -689,6 +718,6 @@ async function callGemini(req: ProviderRequest): Promise<ProviderResponse> {
     if (typeof raw !== 'string' || !raw.trim()) {
       return err(req, `Empty or malformed Gemini response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: data?.candidates?.[0]?.finishReason !== 'STOP' };
   });
 }

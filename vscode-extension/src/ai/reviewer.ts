@@ -9,16 +9,16 @@
  * extension already consumes.
  */
 
-import * as path from 'path';
 import { createHash } from 'crypto';
 import { ResolvedConfig } from '../config.js';
-import { formatFileContent, truncate } from '../diff.js';
+import { formatFileContent, truncate, MAX_CONTENT_CHARS } from '../diff.js';
 import { captureStagedSnapshot } from '../gitSnapshot.js';
 import { readReviewFile, selectReviewInputs, type SourceExclusion } from '../sourcePolicy.js';
+import { reviewStatus } from '../reviewOutcome.js';
 import { resolveExitCode } from '../exitResolver.js';
 import { applyMarkers } from '../skipMarkers.js';
 import { loadSkills } from '../skills.js';
-import { AnalysisReport, CommitMessageResult, FileComment, PerFileSummary, ReviewResult, RunResult } from '../types.js';
+import { AnalysisReport, CommitMessageResult, FileComment, IncompleteReason, PerFileSummary, ReviewResult, ReviewStatus, RunResult } from '../types.js';
 import { ParsedReview, enforceP3, parseReviewJson } from './json.js';
 import { COMMIT_MESSAGE_SYSTEM_PROMPT, SEVERITY_MIN_RANK, ReviewMode, buildSystemPrompt, buildUserMessage } from './prompt.js';
 import { ProviderRequest, callProvider } from './providers.js';
@@ -37,34 +37,36 @@ export class Reviewer {
   /** Pre-commit / staged scope: send the combined diff in a single call. */
   async reviewDiff(repoRoot: string, stagedFiles: string[], signal?: AbortSignal): Promise<RunResult> {
     const start = Date.now();
+    let source: Pick<AnalysisReport, 'source_exclusions' | 'source_snapshot'> = {};
     try {
-      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
-      stagedFiles = stagedFiles.filter(file => selection.files.includes(file));
-      if (!stagedFiles.length) {
-        const report = this.errorReport('No permitted staged source files. Review was not run.');
-        report.source_exclusions = selection.excluded;
-        return { report, stderr: '', timedOut: false, cancelled: false };
-      }
-      const diff = truncate(selection.diff(stagedFiles));
+      if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
+      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      stagedFiles = stagedFiles.filter(file => snapshot.files.includes(file));
+      source = {
+        source_exclusions: snapshot.excluded,
+        source_snapshot: { kind: 'index', base_commit: snapshot.baseCommit, base_tree: snapshot.baseTree, source_tree: snapshot.sourceTree },
+      };
+      if (!stagedFiles.length) throw new Error('No permitted staged source files. Review was not run.');
+      const diff = snapshot.diff(stagedFiles);
       if (!diff.trim()) throw new Error('No permitted staged source content. Review was not run.');
-      const sources = new Map(stagedFiles.map(file => [file, selection.readSelected(file)]));
+      const sources = new Map(stagedFiles.map(file => [file, snapshot.readSelected(file)]));
       const review = await this.singleCall({
-        repoRoot, mode: 'diff', body: diff, signal,
+        repoRoot, mode: 'diff', body: truncate(diff), sourceTruncated: diff.length > MAX_CONTENT_CHARS, signal,
       });
       review.file_comments = applyMarkers(review.file_comments, sources);
-      const report = this.assembleReport(stagedFiles, review, Date.now() - start);
-      report.source_exclusions = selection.excluded;
-      report.source_snapshot = { kind: 'index', base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree };
-      return { report, stderr: '', timedOut: false, cancelled: false };
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') {
-        return { report: this.emptyReport('Cancelled'), stderr: '', timedOut: false, cancelled: true };
+      const report = { ...this.assembleReport(stagedFiles, review, Date.now() - start), ...source };
+      return this.runResult(report);
+    } catch (error) {
+      if ((error as Error).name === 'AbortError' || signal?.aborted) {
+        const result = this.interrupted(stagedFiles, start, signal);
+        Object.assign(result.report, source);
+        return result;
       }
-      return { report: this.errorReport((e as Error).message), stderr: '', timedOut: false, cancelled: false };
+      return this.runResult({ ...this.assembleReport(stagedFiles, this.errorResult((error as Error).message, 'source-error'), Date.now() - start), ...source });
     }
   }
 
-  /** On-demand scope: one AI call per file, then merge. */
+  /** On-demand scope: freeze source first, then preserve each file's actual outcome. */
   async reviewFilesSeparately(
     repoRoot: string,
     relPaths: string[],
@@ -72,104 +74,90 @@ export class Reviewer {
     onProgress?: ProgressCb,
   ): Promise<RunResult> {
     const start = Date.now();
-    const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
-    relPaths = selection.files;
-    const exclusions: SourceExclusion[] = [...selection.excluded];
-    if (!relPaths.length) {
-      const report = this.errorReport('No permitted source files. Review was not run.');
-      report.source_exclusions = exclusions;
-      return { report, stderr: '', timedOut: false, cancelled: false };
+    if (signal?.aborted) return this.interrupted(relPaths, start, signal);
+    let exclusions: SourceExclusion[];
+    try {
+      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = selection.files;
+      exclusions = selection.excluded;
+    } catch (error) {
+      return this.runResult(this.assembleReport(relPaths, this.errorResult((error as Error).message, 'source-error'), Date.now() - start));
     }
-    const allComments: FileComment[] = [];
-    // Freeze every selected saved file before the first provider call or progress callback.
+    if (!relPaths.length) {
+      const report = this.assembleReport([], this.errorResult('No permitted source files. Review was not run.', 'source-error'), Date.now() - start);
+      report.source_exclusions = exclusions;
+      return this.runResult(report);
+    }
     const sources = new Map<string, string>();
     const readErrors = new Map<string, Error>();
     for (const file of relPaths) {
       try { sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns)); }
       catch (error) { readErrors.set(file, error as Error); }
     }
+    const allComments: FileComment[] = [];
     const perFile: PerFileSummary[] = [];
-    const summaries: string[] = [];
     const grades: string[] = [];
+    const reasons = new Set<IncompleteReason>();
     let blocking = false;
-
-    const isMeaningful = (s: string): boolean =>
-      Boolean(s) && s !== '(no summary)' && s !== 'AI review skipped';
+    let cancelled = false;
 
     for (let i = 0; i < relPaths.length; i++) {
       if (signal?.aborted) {
-        return { report: this.emptyReport('Cancelled'), stderr: '', timedOut: false, cancelled: true };
+        cancelled = signal.reason !== 'timeout' && signal.reason?.name !== 'TimeoutError';
+        reasons.add(cancelled ? 'cancelled' : 'timeout');
+        break;
       }
-      const rel = relPaths[i];
-      onProgress?.(i + 1, relPaths.length, rel);
-
+      const file = relPaths[i];
       let result: ReviewResult;
       try {
-        if (readErrors.has(rel)) throw readErrors.get(rel);
-        const content = formatFileContent(rel, sources.get(rel)!);
-        if (!content.trim()) throw new Error('No permitted source content. Review was not run.');
-        result = await this.singleCall({ repoRoot, mode: 'file', body: content, signal });
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') {
-          return { report: this.emptyReport('Cancelled'), stderr: '', timedOut: false, cancelled: true };
+        onProgress?.(i + 1, relPaths.length, file);
+        if (readErrors.has(file)) {
+          result = this.errorResult(readErrors.get(file)!.message, 'source-error');
+        } else {
+          const content = formatFileContent(file, sources.get(file)!);
+          result = await this.singleCall({ repoRoot, mode: 'file', body: truncate(content), sourceTruncated: content.length > MAX_CONTENT_CHARS, signal });
         }
-        result = this.errorResult((e as Error).message);
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          result = this.cancelledResult();
+          cancelled = true;
+        } else { result = this.errorResult((error as Error).message); }
       }
-
-      result.file_comments = applyMarkers(result.file_comments.map(comment => ({ ...comment, file: rel })), sources);
-
-      if (result.is_error) {
-        const errText = `⚠ ${result.summary}`;
-        summaries.push(`**\`${rel}\`** — ${errText}`);
-        perFile.push({ file: rel, summary: errText, priority: 'P3', blocking: false, grade: result.grade });
-        continue;
+      const status = reviewStatus(result);
+      result.file_comments = applyMarkers(result.file_comments.map(comment => ({ ...comment, file })), sources);
+      for (const reason of result.incomplete_reasons ?? []) reasons.add(reason);
+      const usable = status === 'completed' || status === 'partial';
+      if (usable) {
+        allComments.push(...result.file_comments);
+        blocking ||= result.blocking;
+        grades.push(result.grade);
       }
-
-      blocking = blocking || result.blocking;
-      // Rewrite each comment's `file` to the repo-relative path of the file we
-      // sent (the model may echo back a different path it inferred from the
-      // header) so downstream rendering points to the correct file.
-      const filePriority = pickFilePriority(result);
-      for (const fc of result.file_comments) {
-        allComments.push({ ...fc, file: rel });
-      }
-
-      if (result.file_comments.length === 0 && isMeaningful(result.summary)) {
-        allComments.push({
-          file: rel, line: 1, comment: result.summary, category: '', priority: filePriority,
-        });
-      }
-
-      grades.push(result.grade);
-      if (isMeaningful(result.summary)) {
-        summaries.push(`**\`${rel}\`**\n\n${result.summary}`);
-        perFile.push({
-          file: rel,
-          summary: result.summary,
-          priority: filePriority,
-          blocking: result.blocking,
-          grade: result.grade as PerFileSummary['grade'],
-        });
-      }
+      perFile.push({
+        file, summary: result.summary, status,
+        priority: usable && (result.file_comments.length || result.blocking) ? pickFilePriority(result) : undefined,
+        blocking: usable && result.blocking, grade: usable ? result.grade : '',
+      });
+      if (cancelled) break;
     }
-
-    const review: ReviewResult = (summaries.length === 0 && allComments.length === 0)
-      ? { summary: 'AI review produced no output.', blocking: false, is_error: false, file_comments: [], grade: '' }
-      : {
-          summary:       summaries.join('\n\n---\n\n'),
-          blocking,
-          is_error:      false,
-          file_comments: allComments,
-          grade:         (worstGrade(grades) as ReviewResult['grade']) || '',
-          per_file_summaries: perFile,
-        };
-
+    for (const file of relPaths.slice(perFile.length)) {
+      perFile.push({ file, summary: 'Review was not run.', status: 'not-run', blocking: false, grade: '' });
+    }
+    const usable = perFile.filter(entry => entry.status === 'completed' || entry.status === 'partial').length;
+    const status: ReviewStatus = cancelled ? 'cancelled'
+      : usable === 0 ? 'failed'
+      : perFile.every(entry => entry.status === 'completed') ? 'completed' : 'partial';
+    const review: ReviewResult = {
+      summary: perFile.map(entry => `**\`${entry.file}\`** — ${entry.status}\n\n${entry.summary}`).join('\n\n---\n\n'),
+      status, blocking, is_error: status === 'failed', file_comments: allComments,
+      grade: status === 'completed' ? worstGrade(grades) as ReviewResult['grade'] : '',
+      incomplete_reasons: [...reasons], per_file_summaries: perFile,
+    };
     const report = this.assembleReport(relPaths, review, Date.now() - start);
     report.source_exclusions = exclusions;
     report.source_snapshot = { kind: 'working-tree', content_sha256: Object.fromEntries(
       [...sources].map(([file, text]) => [file, createHash('sha256').update(text).digest('hex')]),
     ) };
-    return { report, stderr: '', timedOut: false, cancelled: false };
+    return this.runResult(report);
   }
 
   /** Generate a conventional commit message from the current staged diff. */
@@ -224,6 +212,7 @@ export class Reviewer {
     repoRoot: string;
     mode: ReviewMode;
     body: string;
+    sourceTruncated?: boolean;
     signal?: AbortSignal;
   }): Promise<ReviewResult> {
     const skillsText = loadSkills(opts.repoRoot, this.cfg.excludePatterns);
@@ -245,7 +234,7 @@ export class Reviewer {
       REVIEW_OUTPUT_SCHEMA,
     );
     const resp = await callProvider(req);
-    if (resp.error) { return this.errorResult(resp.error); }
+    if (resp.error) { return this.errorResult(resp.error, resp.errorKind === 'timeout' ? 'timeout' : 'provider-error'); }
 
     let parsed: ParsedReview;
     try {
@@ -253,7 +242,7 @@ export class Reviewer {
     } catch (e) {
       return this.errorResult(
         `Could not parse AI response as JSON (max_tokens=${this.cfg.maxTokens}). ` +
-        `Raw response head: ${resp.raw.slice(0, 200)}`,
+        'Provider output did not contain a usable review.',
       );
     }
 
@@ -278,17 +267,23 @@ export class Reviewer {
     }
 
     let summary = parsed.summary;
-    if (parsed.truncated) {
-      summary = `⚠ Response truncated (max_tokens=${this.cfg.maxTokens}) — ` +
-                `increase \`commitDefender.maxTokens\` for a complete review.\n\n${summary}`;
+    if (parsed.truncated || resp.incomplete) {
+      summary = `Provider response is incomplete; findings may be missing.\n\n${summary}`;
     }
 
+    const reasons: IncompleteReason[] = [];
+    if (opts.sourceTruncated) reasons.push('source-truncated');
+    if (parsed.truncated) reasons.push('response-truncated');
+    else if (resp.incomplete) reasons.push('response-incomplete');
+    if (opts.sourceTruncated) summary = `Source exceeded the input limit; only part of it was reviewed.\n\n${summary}`;
     return {
       summary,
+      status: reasons.length ? 'partial' : 'completed',
+      incomplete_reasons: reasons,
       blocking: parsed.blocking,
       is_error: false,
       file_comments: comments,
-      grade: parsed.grade as ReviewResult['grade'],
+      grade: reasons.length ? '' : parsed.grade as ReviewResult['grade'],
     };
   }
 
@@ -326,48 +321,32 @@ export class Reviewer {
   }
 
   private assembleReport(stagedFiles: string[], review: ReviewResult, durationMs: number): AnalysisReport {
-    const exit_code = review.is_error ? 0 : (review.file_comments.some(c => c.priority === 'P3') ? 1 : (review.blocking ? 1 : 0));
-    return {
-      schema_version: 1,
-      staged_files: stagedFiles,
-      duration_ms: durationMs,
-      exit_code: exit_code as 0 | 1,
-      lint_findings: [],
-      review,
+    const report: AnalysisReport = {
+      schema_version: 1, staged_files: stagedFiles, duration_ms: durationMs,
+      exit_code: 0, lint_findings: [], review,
     };
+    report.exit_code = resolveExitCode(report);
+    return report;
   }
 
-  private emptyReport(summary: string): AnalysisReport {
-    return {
-      schema_version: 1,
-      staged_files: [],
-      duration_ms: 0,
-      exit_code: 0,
-      lint_findings: [],
-      review: { summary, blocking: false, is_error: false, file_comments: [], grade: '' },
-    };
+  private runResult(report: AnalysisReport): RunResult {
+    return { report, stderr: '', timedOut: report.review.incomplete_reasons?.includes('timeout') ?? false, cancelled: reviewStatus(report.review) === 'cancelled' };
   }
 
-  private errorReport(message: string): AnalysisReport {
-    return {
-      schema_version: 1,
-      staged_files: [],
-      duration_ms: 0,
-      exit_code: 0,
-      lint_findings: [],
-      review: this.errorResult(message),
-    };
+  private interrupted(files: string[], start: number, signal?: AbortSignal): RunResult {
+    const timedOut = signal?.reason === 'timeout' || signal?.reason?.name === 'TimeoutError';
+    const review = timedOut ? this.errorResult('AI request timed out.', 'timeout') : this.cancelledResult();
+    return this.runResult(this.assembleReport(files, review, Date.now() - start));
   }
 
-  private errorResult(message: string): ReviewResult {
-    return {
-      summary: `AI review unavailable: ${message}`,
-      blocking: false,
-      is_error: true,
-      file_comments: [],
-      grade: '',
-    };
+  private cancelledResult(): ReviewResult {
+    return { summary: 'Review was cancelled.', status: 'cancelled', incomplete_reasons: ['cancelled'], blocking: false, is_error: false, file_comments: [], grade: '' };
   }
+
+  private errorResult(message: string, reason: IncompleteReason = 'provider-error'): ReviewResult {
+    return { summary: `AI review unavailable: ${message}`, status: 'failed', incomplete_reasons: [reason], blocking: false, is_error: true, file_comments: [], grade: '' };
+  }
+
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

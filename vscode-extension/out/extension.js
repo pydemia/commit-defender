@@ -428,6 +428,54 @@ var fs7 = __toESM(require("fs"));
 var path13 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 
+// src/reviewOutcome.ts
+function reviewStatus(review) {
+  if (review.is_error) return "failed";
+  return review.status ?? "completed";
+}
+var OUTCOME_META = {
+  completed: { label: "Completed", icon: "check", color: "terminal.ansiGreen" },
+  partial: { label: "Partial", icon: "warning", color: "terminal.ansiYellow" },
+  failed: { label: "Failed", icon: "error", color: "terminal.ansiRed" },
+  cancelled: {
+    label: "Cancelled",
+    icon: "circle-slash",
+    color: "descriptionForeground"
+  }
+};
+function reviewCoverage(report) {
+  const outcomes = report.review.per_file_summaries;
+  if (!outcomes?.length) {
+    return `${reviewStatus(report.review) === "completed" ? report.staged_files.length : 0}/${report.staged_files.length} selected file(s) completed`;
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const entry of outcomes) {
+    const state = entry.status ?? "completed";
+    counts.set(state, (counts.get(state) ?? 0) + 1);
+  }
+  const details = ["partial", "failed", "cancelled", "not-run"].filter((state) => counts.has(state)).map((state) => `${counts.get(state)} ${state}`);
+  return [
+    `${counts.get("completed") ?? 0}/${report.staged_files.length} selected file(s) completed`,
+    ...details
+  ].join("; ");
+}
+
+// src/exitResolver.ts
+function resolveExitCode(report, policy = "legacy-hook") {
+  if (policy === "advisory") return 0;
+  const status = reviewStatus(report.review);
+  if (status === "failed" || status === "cancelled") {
+    return 0;
+  }
+  if (report.review.file_comments.some((c) => c.priority === "P3")) {
+    return 1;
+  }
+  if (report.review.blocking) {
+    return 1;
+  }
+  return 0;
+}
+
 // src/ai/reviewer.ts
 var import_crypto = require("crypto");
 
@@ -835,11 +883,11 @@ function captureStagedSnapshot(repoRoot, patterns = []) {
 var MAX_CONTENT_CHARS = 8e4;
 function formatFileContent(file, content) {
   const ext = path3.extname(file).replace(/^\./, "");
-  return truncate(`### ${file}
+  return `### ${file}
 
 \`\`\`${ext}
 ${content}
-\`\`\``);
+\`\`\``;
 }
 function truncate(s) {
   if (s.length <= MAX_CONTENT_CHARS) {
@@ -945,8 +993,10 @@ ${content}`);
 
 // src/ai/json.ts
 function parseReviewJson(raw) {
-  const truncated = !raw.trim().replace(/`+\s*$/, "").endsWith("}");
-  const data = robustJson(raw);
+  const { data, repaired: truncated } = robustJson(raw);
+  if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.summary !== "string" || data.blocking !== void 0 && typeof data.blocking !== "boolean" || data.file_comments !== void 0 && !Array.isArray(data.file_comments) || !truncated && (typeof data.blocking !== "boolean" || !Array.isArray(data.file_comments))) {
+    throw new Error("Model response does not contain a review object");
+  }
   const validPriorities = /* @__PURE__ */ new Set(["P0", "P1", "P2", "P3"]);
   const validCategories = /* @__PURE__ */ new Set([
     "correctness",
@@ -980,12 +1030,12 @@ function parseReviewJson(raw) {
 }
 function robustJson(raw) {
   try {
-    return JSON.parse(raw);
+    return { data: JSON.parse(raw), repaired: false };
   } catch {
   }
   const stripped = raw.trim().replace(/^```(?:json)?\s*/m, "").replace(/```\s*$/m, "").trim();
   try {
-    return JSON.parse(stripped);
+    return { data: JSON.parse(stripped), repaired: false };
   } catch {
   }
   let depth = 0;
@@ -1001,7 +1051,7 @@ function robustJson(raw) {
       depth--;
       if (depth === 0 && start !== null) {
         try {
-          return JSON.parse(raw.slice(start, i + 1));
+          return { data: JSON.parse(raw.slice(start, i + 1)), repaired: false };
         } catch {
         }
         start = null;
@@ -1012,7 +1062,7 @@ function robustJson(raw) {
   if (open !== -1) {
     const repaired = repairTruncated(raw.slice(open));
     try {
-      return JSON.parse(repaired);
+      return { data: JSON.parse(repaired), repaired: true };
     } catch {
     }
   }
@@ -1304,6 +1354,30 @@ var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 async function callProvider(req) {
+  const controller = new AbortController();
+  const relay = () => controller.abort(req.signal?.reason);
+  if (req.signal?.aborted) relay();
+  else req.signal?.addEventListener("abort", relay, { once: true });
+  const timer = req.timeoutMs && req.timeoutMs > 0 ? setTimeout(() => controller.abort("timeout"), req.timeoutMs) : void 0;
+  const interruption = () => {
+    if (controller.signal.reason === "timeout" || controller.signal.reason?.name === "TimeoutError") {
+      return { raw: "", error: "AI request timed out.", errorKind: "timeout" };
+    }
+    throw abortError();
+  };
+  try {
+    if (controller.signal.aborted) return interruption();
+    const response = await dispatchProvider({ ...req, signal: controller.signal, timeoutMs: 0 });
+    return controller.signal.aborted ? interruption() : response;
+  } catch (error) {
+    if (controller.signal.aborted) return interruption();
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+    req.signal?.removeEventListener("abort", relay);
+  }
+}
+async function dispatchProvider(req) {
   switch (req.provider) {
     case "aoai":
       return callAzureOpenAI(req);
@@ -1842,7 +1916,7 @@ async function parseOpenAIResp(req, resp) {
   if (typeof raw !== "string") {
     return err(req, `Empty or malformed response: ${JSON.stringify(data).slice(0, 300)}`);
   }
-  return { raw: raw.trim() };
+  return { raw: raw.trim(), incomplete: data?.choices?.[0]?.finish_reason !== "stop" };
 }
 function openaiHttpError(req, resp, body) {
   const detail = body.slice(0, 600);
@@ -1904,7 +1978,7 @@ async function callAnthropic(req) {
     if (typeof raw !== "string") {
       return err(req, `Empty or malformed Anthropic response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: !["end_turn", "stop_sequence"].includes(data?.stop_reason) };
   });
 }
 async function callGemini(req) {
@@ -1958,7 +2032,7 @@ async function callGemini(req) {
     if (typeof raw !== "string" || !raw.trim()) {
       return err(req, `Empty or malformed Gemini response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: data?.candidates?.[0]?.finishReason !== "STOP" };
   });
 }
 
@@ -2020,47 +2094,55 @@ var Reviewer = class {
   /** Pre-commit / staged scope: send the combined diff in a single call. */
   async reviewDiff(repoRoot, stagedFiles, signal) {
     const start = Date.now();
+    let source = {};
     try {
-      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
-      stagedFiles = stagedFiles.filter((file) => selection.files.includes(file));
-      if (!stagedFiles.length) {
-        const report2 = this.errorReport("No permitted staged source files. Review was not run.");
-        report2.source_exclusions = selection.excluded;
-        return { report: report2, stderr: "", timedOut: false, cancelled: false };
-      }
-      const diff = truncate(selection.diff(stagedFiles));
+      if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
+      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      stagedFiles = stagedFiles.filter((file) => snapshot.files.includes(file));
+      source = {
+        source_exclusions: snapshot.excluded,
+        source_snapshot: { kind: "index", base_commit: snapshot.baseCommit, base_tree: snapshot.baseTree, source_tree: snapshot.sourceTree }
+      };
+      if (!stagedFiles.length) throw new Error("No permitted staged source files. Review was not run.");
+      const diff = snapshot.diff(stagedFiles);
       if (!diff.trim()) throw new Error("No permitted staged source content. Review was not run.");
-      const sources = new Map(stagedFiles.map((file) => [file, selection.readSelected(file)]));
+      const sources = new Map(stagedFiles.map((file) => [file, snapshot.readSelected(file)]));
       const review = await this.singleCall({
         repoRoot,
         mode: "diff",
-        body: diff,
+        body: truncate(diff),
+        sourceTruncated: diff.length > MAX_CONTENT_CHARS,
         signal
       });
       review.file_comments = applyMarkers(review.file_comments, sources);
-      const report = this.assembleReport(stagedFiles, review, Date.now() - start);
-      report.source_exclusions = selection.excluded;
-      report.source_snapshot = { kind: "index", base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree };
-      return { report, stderr: "", timedOut: false, cancelled: false };
-    } catch (e) {
-      if (e.name === "AbortError") {
-        return { report: this.emptyReport("Cancelled"), stderr: "", timedOut: false, cancelled: true };
+      const report = { ...this.assembleReport(stagedFiles, review, Date.now() - start), ...source };
+      return this.runResult(report);
+    } catch (error) {
+      if (error.name === "AbortError" || signal?.aborted) {
+        const result = this.interrupted(stagedFiles, start, signal);
+        Object.assign(result.report, source);
+        return result;
       }
-      return { report: this.errorReport(e.message), stderr: "", timedOut: false, cancelled: false };
+      return this.runResult({ ...this.assembleReport(stagedFiles, this.errorResult(error.message, "source-error"), Date.now() - start), ...source });
     }
   }
-  /** On-demand scope: one AI call per file, then merge. */
+  /** On-demand scope: freeze source first, then preserve each file's actual outcome. */
   async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress) {
     const start = Date.now();
-    const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
-    relPaths = selection.files;
-    const exclusions = [...selection.excluded];
-    if (!relPaths.length) {
-      const report2 = this.errorReport("No permitted source files. Review was not run.");
-      report2.source_exclusions = exclusions;
-      return { report: report2, stderr: "", timedOut: false, cancelled: false };
+    if (signal?.aborted) return this.interrupted(relPaths, start, signal);
+    let exclusions;
+    try {
+      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = selection.files;
+      exclusions = selection.excluded;
+    } catch (error) {
+      return this.runResult(this.assembleReport(relPaths, this.errorResult(error.message, "source-error"), Date.now() - start));
     }
-    const allComments = [];
+    if (!relPaths.length) {
+      const report2 = this.assembleReport([], this.errorResult("No permitted source files. Review was not run.", "source-error"), Date.now() - start);
+      report2.source_exclusions = exclusions;
+      return this.runResult(report2);
+    }
     const sources = /* @__PURE__ */ new Map();
     const readErrors = /* @__PURE__ */ new Map();
     for (const file of relPaths) {
@@ -2070,70 +2152,70 @@ var Reviewer = class {
         readErrors.set(file, error);
       }
     }
+    const allComments = [];
     const perFile = [];
-    const summaries = [];
     const grades = [];
+    const reasons = /* @__PURE__ */ new Set();
     let blocking = false;
-    const isMeaningful = (s) => Boolean(s) && s !== "(no summary)" && s !== "AI review skipped";
+    let cancelled = false;
     for (let i = 0; i < relPaths.length; i++) {
       if (signal?.aborted) {
-        return { report: this.emptyReport("Cancelled"), stderr: "", timedOut: false, cancelled: true };
+        cancelled = signal.reason !== "timeout" && signal.reason?.name !== "TimeoutError";
+        reasons.add(cancelled ? "cancelled" : "timeout");
+        break;
       }
-      const rel = relPaths[i];
-      onProgress?.(i + 1, relPaths.length, rel);
+      const file = relPaths[i];
       let result;
       try {
-        if (readErrors.has(rel)) throw readErrors.get(rel);
-        const content = formatFileContent(rel, sources.get(rel));
-        if (!content.trim()) throw new Error("No permitted source content. Review was not run.");
-        result = await this.singleCall({ repoRoot, mode: "file", body: content, signal });
-      } catch (e) {
-        if (e.name === "AbortError") {
-          return { report: this.emptyReport("Cancelled"), stderr: "", timedOut: false, cancelled: true };
+        onProgress?.(i + 1, relPaths.length, file);
+        if (readErrors.has(file)) {
+          result = this.errorResult(readErrors.get(file).message, "source-error");
+        } else {
+          const content = formatFileContent(file, sources.get(file));
+          result = await this.singleCall({ repoRoot, mode: "file", body: truncate(content), sourceTruncated: content.length > MAX_CONTENT_CHARS, signal });
         }
-        result = this.errorResult(e.message);
+      } catch (error) {
+        if (error.name === "AbortError") {
+          result = this.cancelledResult();
+          cancelled = true;
+        } else {
+          result = this.errorResult(error.message);
+        }
       }
-      result.file_comments = applyMarkers(result.file_comments.map((comment) => ({ ...comment, file: rel })), sources);
-      if (result.is_error) {
-        const errText = `\u26A0 ${result.summary}`;
-        summaries.push(`**\`${rel}\`** \u2014 ${errText}`);
-        perFile.push({ file: rel, summary: errText, priority: "P3", blocking: false, grade: result.grade });
-        continue;
+      const status2 = reviewStatus(result);
+      result.file_comments = applyMarkers(result.file_comments.map((comment) => ({ ...comment, file })), sources);
+      for (const reason of result.incomplete_reasons ?? []) reasons.add(reason);
+      const usable2 = status2 === "completed" || status2 === "partial";
+      if (usable2) {
+        allComments.push(...result.file_comments);
+        blocking ||= result.blocking;
+        grades.push(result.grade);
       }
-      blocking = blocking || result.blocking;
-      const filePriority = pickFilePriority(result);
-      for (const fc of result.file_comments) {
-        allComments.push({ ...fc, file: rel });
-      }
-      if (result.file_comments.length === 0 && isMeaningful(result.summary)) {
-        allComments.push({
-          file: rel,
-          line: 1,
-          comment: result.summary,
-          category: "",
-          priority: filePriority
-        });
-      }
-      grades.push(result.grade);
-      if (isMeaningful(result.summary)) {
-        summaries.push(`**\`${rel}\`**
-
-${result.summary}`);
-        perFile.push({
-          file: rel,
-          summary: result.summary,
-          priority: filePriority,
-          blocking: result.blocking,
-          grade: result.grade
-        });
-      }
+      perFile.push({
+        file,
+        summary: result.summary,
+        status: status2,
+        priority: usable2 && (result.file_comments.length || result.blocking) ? pickFilePriority(result) : void 0,
+        blocking: usable2 && result.blocking,
+        grade: usable2 ? result.grade : ""
+      });
+      if (cancelled) break;
     }
-    const review = summaries.length === 0 && allComments.length === 0 ? { summary: "AI review produced no output.", blocking: false, is_error: false, file_comments: [], grade: "" } : {
-      summary: summaries.join("\n\n---\n\n"),
+    for (const file of relPaths.slice(perFile.length)) {
+      perFile.push({ file, summary: "Review was not run.", status: "not-run", blocking: false, grade: "" });
+    }
+    const usable = perFile.filter((entry) => entry.status === "completed" || entry.status === "partial").length;
+    const status = cancelled ? "cancelled" : usable === 0 ? "failed" : perFile.every((entry) => entry.status === "completed") ? "completed" : "partial";
+    const review = {
+      summary: perFile.map((entry) => `**\`${entry.file}\`** \u2014 ${entry.status}
+
+${entry.summary}`).join("\n\n---\n\n"),
+      status,
       blocking,
-      is_error: false,
+      is_error: status === "failed",
       file_comments: allComments,
-      grade: worstGrade(grades) || "",
+      grade: status === "completed" ? worstGrade(grades) : "",
+      incomplete_reasons: [...reasons],
       per_file_summaries: perFile
     };
     const report = this.assembleReport(relPaths, review, Date.now() - start);
@@ -2141,7 +2223,7 @@ ${result.summary}`);
     report.source_snapshot = { kind: "working-tree", content_sha256: Object.fromEntries(
       [...sources].map(([file, text]) => [file, (0, import_crypto.createHash)("sha256").update(text).digest("hex")])
     ) };
-    return { report, stderr: "", timedOut: false, cancelled: false };
+    return this.runResult(report);
   }
   /** Generate a conventional commit message from the current staged diff. */
   async generateCommitMessage(repoRoot, signal) {
@@ -2212,14 +2294,14 @@ ${diff}
     );
     const resp = await callProvider(req);
     if (resp.error) {
-      return this.errorResult(resp.error);
+      return this.errorResult(resp.error, resp.errorKind === "timeout" ? "timeout" : "provider-error");
     }
     let parsed;
     try {
       parsed = parseReviewJson(resp.raw);
     } catch (e) {
       return this.errorResult(
-        `Could not parse AI response as JSON (max_tokens=${this.cfg.maxTokens}). Raw response head: ${resp.raw.slice(0, 200)}`
+        `Could not parse AI response as JSON (max_tokens=${this.cfg.maxTokens}). Provider output did not contain a usable review.`
       );
     }
     const minRank = SEVERITY_MIN_RANK[this.cfg.severityLevel] ?? 1;
@@ -2239,17 +2321,26 @@ ${diff}
       });
     }
     let summary = parsed.summary;
-    if (parsed.truncated) {
-      summary = `\u26A0 Response truncated (max_tokens=${this.cfg.maxTokens}) \u2014 increase \`commitDefender.maxTokens\` for a complete review.
+    if (parsed.truncated || resp.incomplete) {
+      summary = `Provider response is incomplete; findings may be missing.
 
 ${summary}`;
     }
+    const reasons = [];
+    if (opts.sourceTruncated) reasons.push("source-truncated");
+    if (parsed.truncated) reasons.push("response-truncated");
+    else if (resp.incomplete) reasons.push("response-incomplete");
+    if (opts.sourceTruncated) summary = `Source exceeded the input limit; only part of it was reviewed.
+
+${summary}`;
     return {
       summary,
+      status: reasons.length ? "partial" : "completed",
+      incomplete_reasons: reasons,
       blocking: parsed.blocking,
       is_error: false,
       file_comments: comments2,
-      grade: parsed.grade
+      grade: reasons.length ? "" : parsed.grade
     };
   }
   buildProviderRequest(repoRoot, systemPrompt, userMessage, maxTokens, signal, responseSchema = REVIEW_OUTPUT_SCHEMA) {
@@ -2270,44 +2361,30 @@ ${summary}`;
     };
   }
   assembleReport(stagedFiles, review, durationMs) {
-    const exit_code = review.is_error ? 0 : review.file_comments.some((c) => c.priority === "P3") ? 1 : review.blocking ? 1 : 0;
-    return {
+    const report = {
       schema_version: 1,
       staged_files: stagedFiles,
       duration_ms: durationMs,
-      exit_code,
+      exit_code: 0,
       lint_findings: [],
       review
     };
+    report.exit_code = resolveExitCode(report);
+    return report;
   }
-  emptyReport(summary) {
-    return {
-      schema_version: 1,
-      staged_files: [],
-      duration_ms: 0,
-      exit_code: 0,
-      lint_findings: [],
-      review: { summary, blocking: false, is_error: false, file_comments: [], grade: "" }
-    };
+  runResult(report) {
+    return { report, stderr: "", timedOut: report.review.incomplete_reasons?.includes("timeout") ?? false, cancelled: reviewStatus(report.review) === "cancelled" };
   }
-  errorReport(message) {
-    return {
-      schema_version: 1,
-      staged_files: [],
-      duration_ms: 0,
-      exit_code: 0,
-      lint_findings: [],
-      review: this.errorResult(message)
-    };
+  interrupted(files, start, signal) {
+    const timedOut = signal?.reason === "timeout" || signal?.reason?.name === "TimeoutError";
+    const review = timedOut ? this.errorResult("AI request timed out.", "timeout") : this.cancelledResult();
+    return this.runResult(this.assembleReport(files, review, Date.now() - start));
   }
-  errorResult(message) {
-    return {
-      summary: `AI review unavailable: ${message}`,
-      blocking: false,
-      is_error: true,
-      file_comments: [],
-      grade: ""
-    };
+  cancelledResult() {
+    return { summary: "Review was cancelled.", status: "cancelled", incomplete_reasons: ["cancelled"], blocking: false, is_error: false, file_comments: [], grade: "" };
+  }
+  errorResult(message, reason = "provider-error") {
+    return { summary: `AI review unavailable: ${message}`, status: "failed", incomplete_reasons: [reason], blocking: false, is_error: true, file_comments: [], grade: "" };
   }
 };
 function pickFilePriority(result) {
@@ -2427,7 +2504,8 @@ function normalizeReport(report) {
       source: "ai"
     });
   }
-  if (blocks.length === 0 && !report.review.is_error && report.review.summary && report.staged_files.length > 0) {
+  if (blocks.length === 0 && !report.review.status && // Preserve summary projection only for legacy reports.
+  !report.review.is_error && report.review.summary && report.staged_files.length > 0) {
     const priority = report.review.blocking ? "P3" : "P1";
     blocks.push({
       file: report.staged_files[0],
@@ -2806,7 +2884,7 @@ var HistoryProvider = class {
       timestamp: /* @__PURE__ */ new Date(),
       report,
       repoRoot,
-      label: `${count} file${count !== 1 ? "s" : ""} \xB7 ${grade}`,
+      label: `${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${count} file${count !== 1 ? "s" : ""}${reviewStatus(report.review) === "completed" ? ` \xB7 ${grade}` : ""}`,
       scope,
       scopeTarget
     };
@@ -2946,26 +3024,26 @@ var HistoryProvider = class {
   // ── Current Findings section ──────────────────────────────────────────────
   _buildFindings() {
     const children = [];
+    if (!this._isRunning && this._lastReport) {
+      const outcome = OUTCOME_META[reviewStatus(this._lastReport.review)];
+      children.push({
+        kind: "status",
+        id: "findings-outcome",
+        label: outcome.label,
+        value: reviewCoverage(this._lastReport),
+        icon: outcome.icon,
+        command: "commitDefender.showSummary"
+      });
+    }
     if (this._isRunning) {
       children.push({ kind: "empty", id: "findings-running", label: "Analyzing\u2026", icon: "loading~spin" });
     } else if (this._blocks.length === 0) {
-      children.push({ kind: "empty", id: "findings-empty", label: "No findings", icon: "check" });
+      children.push({ kind: "empty", id: "findings-empty", label: "No findings recorded", icon: "list-flat" });
     } else {
       const counts = {};
       for (const b of this._blocks) {
         counts[b.priority] = (counts[b.priority] ?? 0) + 1;
       }
-      const passed = this._lastReport?.exit_code === 0;
-      const verdict = {
-        kind: "status",
-        id: "findings-verdict",
-        label: passed ? "PASS" : "BLOCKED",
-        value: `${this._blocks.length} finding${this._blocks.length !== 1 ? "s" : ""}`,
-        icon: passed ? "pass" : "error",
-        command: "commitDefender.showSummary",
-        tooltip: passed ? "All findings are advisory \u2014 commit is allowed" : "P3 Critical finding blocks the commit"
-      };
-      children.push(verdict);
       for (const p of ["P3", "P2", "P1", "P0"]) {
         const n = counts[p];
         if (n) {
@@ -3299,8 +3377,10 @@ var PanelProvider = class {
       return new vscode9.FileDecoration(entry.badge, entry.tooltip);
     }
   };
-  updateFindings(blocks, repoRoot) {
+  _report;
+  updateFindings(blocks, repoRoot, report) {
     this._blocks = blocks;
+    this._report = report;
     this._repoRoot = repoRoot;
     this._rebuildDecorations();
     this._emitter.fire(void 0);
@@ -3310,6 +3390,7 @@ var PanelProvider = class {
     this._emitter.fire(void 0);
   }
   clear() {
+    this._report = void 0;
     const oldUris = Array.from(this._decorations.keys()).map((s) => vscode9.Uri.parse(s));
     this._blocks = [];
     this._repoRoot = "";
@@ -3417,7 +3498,7 @@ ${b.comment}`
       return [{ kind: "empty", id: "panel-running", label: "Analyzing\u2026" }];
     }
     if (this._blocks.length === 0) {
-      return [{ kind: "empty", id: "panel-empty", label: "No Commit Defender findings." }];
+      return [{ kind: "empty", id: "panel-empty", label: this._report ? `${OUTCOME_META[reviewStatus(this._report.review)].label}: ${reviewCoverage(this._report)}. No findings recorded.` : "No Commit Defender review yet." }];
     }
     const byFile = /* @__PURE__ */ new Map();
     for (const b of this._blocks) {
@@ -3571,20 +3652,14 @@ var StatusBarManager = class {
     this.item.backgroundColor = void 0;
     this.item.color = void 0;
   }
-  setResult(passed, grade) {
-    const gradeLabel = grade ? ` \xB7 ${grade}` : "";
+  setReport(report) {
+    const state = reviewStatus(report.review);
+    const meta = OUTCOME_META[state];
+    this.item.text = `$(${meta.icon}) CD: ${meta.label}`;
+    this.item.tooltip = `${reviewCoverage(report)}. Legacy hook: ${resolveExitCode(report) ? "would block" : "allows commit"}. Click to re-analyze.`;
     this.item.command = "commitDefender.analyze";
-    if (passed) {
-      this.item.text = `$(shield-check) CD: Pass${gradeLabel}`;
-      this.item.tooltip = `Commit Defender: passed${grade ? ` (${grade})` : ""}. Click to re-analyze.`;
-      this.item.backgroundColor = void 0;
-      this.item.color = new vscode10.ThemeColor("terminal.ansiGreen");
-    } else {
-      this.item.text = `$(shield-x) CD: Blocked${gradeLabel}`;
-      this.item.tooltip = `Commit Defender: commit blocked${grade ? ` (${grade})` : ""}. Click to re-analyze.`;
-      this.item.backgroundColor = new vscode10.ThemeColor("statusBarItem.errorBackground");
-      this.item.color = void 0;
-    }
+    this.item.backgroundColor = void 0;
+    this.item.color = new vscode10.ThemeColor(meta.color);
   }
   setError(message) {
     this.item.text = "$(warning) CD: Error";
@@ -4196,52 +4271,29 @@ function activate(context) {
       [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
     ).values()];
     logSourceExclusions(result.report.source_exclusions);
-    if (result.cancelled) {
-      const reason = abort.signal.reason === "timeout" ? "timed out" : "cancelled";
-      statusBar.setIdle(`Analysis ${reason}`);
-      vscode11.window.showInformationMessage(`Commit Defender: Analysis ${reason}.`);
-      return;
-    }
-    if (result.report.staged_files.length === 0) {
-      statusBar.setIdle("No files analyzed");
-      const summary = result.report.review?.summary ?? "No files matched for analysis.";
-      const channel = getOutputChannel();
-      channel.show(true);
-      vscode11.window.showInformationMessage(`Commit Defender: ${summary}`);
-      return;
-    }
     findingsStore.update(result.report, repoRoot);
     historyProvider.push(result.report, repoRoot, scope, scopeTarget);
     const blocks = findingsStore.lastReport().blocks;
     historyProvider.updateFindings(blocks);
-    panelProvider.updateFindings(blocks, repoRoot);
+    panelProvider.updateFindings(blocks, repoRoot, result.report);
     applyDiagnostics(blocks, repoRoot, diagnostics);
     commentManager.apply(blocks, repoRoot, commentCtrl);
-    const passed = result.report.exit_code === 0;
-    const isAiError = result.report.review.is_error || /AI review unavailable/i.test(result.report.review.summary);
-    if (isAiError) {
+    const status = reviewStatus(result.report.review);
+    statusBar.setReport(result.report);
+    if (status === "failed") {
       const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
-      statusBar.setError(msg);
       const provider = accountProvider(cfg2.aiProvider);
       const signIn2 = provider ? signInLabel(provider) : void 0;
       const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
-      const action = await vscode11.window.showErrorMessage(
-        `Commit Defender: AI review failed \u2014 ${msg}`,
-        ...actions
-      );
-      if (action === signIn2 && provider) {
-        await vscode11.commands.executeCommand(signInCommand(provider));
-      } else if (action === "Show Summary") {
-        showSummaryPanel(result.report, repoRoot, context);
-      } else if (action === "Show Output") {
-        getOutputChannel().show();
-      }
-    } else {
-      statusBar.setResult(passed, result.report.review.grade);
+      void vscode11.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
+        if (action === signIn2 && provider) await vscode11.commands.executeCommand(signInCommand(provider));
+        else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
+        else if (action === "Show Output") getOutputChannel().show();
+      });
     }
     showSummaryPanel(result.report, repoRoot, context);
     await vscode11.commands.executeCommand("commitDefender.panelView.focus");
-    const srcFile = result.report.staged_files[0] ?? relPaths[0];
+    const srcFile = result.report.staged_files.find((file) => fs7.existsSync(path13.join(repoRoot, file)));
     if (srcFile) {
       const absPath = path13.join(repoRoot, srcFile);
       await vscode11.window.showTextDocument(vscode11.Uri.file(absPath), {
@@ -4427,7 +4479,7 @@ function activate(context) {
     if (currentAbort) {
       currentAbort.abort("user");
       currentAbort = null;
-      statusBar.setIdle("Analysis cancelled");
+      statusBar.setIdle("Cancellation requested; waiting for review to stop");
     }
   }));
   context.subscriptions.push(vscode11.commands.registerCommand("commitDefender.clearFindings", () => {
@@ -4676,7 +4728,9 @@ function handleError(err2, statusBar) {
   channel.show(true);
 }
 var _summaryPanel;
+var _summaryReport;
 function showSummaryPanel(report, repoRoot, context) {
+  _summaryReport = report;
   if (_summaryPanel) {
     _summaryPanel.reveal(vscode11.ViewColumn.Beside, true);
   } else {
@@ -4688,6 +4742,7 @@ function showSummaryPanel(report, repoRoot, context) {
     );
     _summaryPanel.onDidDispose(() => {
       _summaryPanel = void 0;
+      _summaryReport = void 0;
     }, null, context.subscriptions);
     _summaryPanel.webview.onDidReceiveMessage(
       async (msg) => {
@@ -4699,7 +4754,8 @@ function showSummaryPanel(report, repoRoot, context) {
             preserveFocus: false
           });
         } else if (msg.command === "showJson") {
-          const json = JSON.stringify(report, null, 2);
+          if (!_summaryReport) return;
+          const json = JSON.stringify(_summaryReport, null, 2);
           const doc = await vscode11.workspace.openTextDocument({ content: json, language: "json" });
           vscode11.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
@@ -4727,14 +4783,14 @@ function _renderOverallSummary(review, blocks, repoRoot, palette) {
   let html = "";
   for (const pfs of perFile) {
     const priority = worstByFile.get(pfs.file) ?? pfs.priority;
-    const pMeta = PRIORITY_META[priority];
-    const pColor = palette.priority[priority];
+    const pMeta = priority ? PRIORITY_META[priority] : void 0;
+    const pColor = priority ? palette.priority[priority] : void 0;
     const badge = pMeta ? `<span class="priority-badge" style="color:${pColor}">${pMeta.emoji} ${priority} ${pMeta.label}</span>` : "";
     const absFile = path13.join(repoRoot, pfs.file);
     html += `<div class="per-file-summary">
       <div class="per-file-header">
         <a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(pfs.file)}</code></a>
-        ${badge}
+        ${pfs.status ? `<span class="mode-tag">${esc(pfs.status)}</span>` : ""} ${badge}
       </div>
       <div class="per-file-body">${mdToHtml(pfs.summary)}</div>
     </div>`;
@@ -4782,18 +4838,19 @@ function logSourceExclusions(excluded, show = false) {
 function buildSummaryHtml(report, repoRoot, palette) {
   const pal = palette ?? resolvePalette("theme-adaptive");
   const blocks = normalizeReport(report);
-  const passed = report.exit_code === 0;
-  const grade = report.review.grade;
-  const isError = report.review.is_error || /AI review unavailable/i.test(report.review.summary);
+  const status = reviewStatus(report.review);
+  const outcome = OUTCOME_META[status];
+  const grade = status === "completed" ? report.review.grade : "";
+  const isError = status === "failed";
   const wp = worstPriority(blocks);
   const wpMeta = wp ? PRIORITY_META[wp] : void 0;
-  const headerBadge = isError ? '<span class="badge" style="background:#888">AI ERROR \u26A0</span>' : passed ? '<span class="badge pass">PASS \u2713</span>' : '<span class="badge blocked">BLOCKED \u2717</span>';
+  const headerBadge = `<span class="badge" style="background:var(--vscode-${outcome.color.replaceAll(".", "-")})">${outcome.label.toUpperCase()}</span>`;
   const gradeBadge = grade ? `<span class="badge" style="background:${gradeColor(pal, grade)}">${grade.toUpperCase()}</span>` : "";
   const worstBadge = wpMeta && wp ? `<span class="priority-badge" style="color:${pal.priority[wp]}">${wpMeta.emoji} ${wp} ${wpMeta.label}</span>` : "";
   const metaParts = [
-    `${report.staged_files.length} file(s) analyzed`,
+    reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
-    isError ? '<span class="mode-tag" style="background:#c72e2e">ai error</span>' : '<span class="mode-tag">ai-powered</span>',
+    `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`
   ].filter(Boolean);
   let body = `
@@ -4827,7 +4884,7 @@ function buildSummaryHtml(report, repoRoot, palette) {
     body += "</section>";
   }
   if (report.staged_files.length > 0) {
-    body += '<section><h2>\u{1F4C1} Analyzed File List</h2><ul class="file-list">';
+    body += '<section><h2>\u{1F4C1} Selected File List</h2><ul class="file-list">';
     for (const f of report.staged_files) {
       const absFile = path13.join(repoRoot, f);
       body += `<li><a class="file-link" data-path="${esc(absFile)}" data-line="1" href="#"><code>${esc(f)}</code></a></li>`;

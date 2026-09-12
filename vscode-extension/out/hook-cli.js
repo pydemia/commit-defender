@@ -255,17 +255,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path6, originalPath, doThrow) => {
-      if (!isString(path6)) {
+    var checkPath = (path7, originalPath, doThrow) => {
+      if (!isString(path7)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path6) {
+      if (!path7) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path6)) {
+      if (checkPath.isNotRelative(path7)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -274,7 +274,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path6) => REGEX_TEST_INVALID_PATH.test(path6);
+    var isNotRelative = (path7) => REGEX_TEST_INVALID_PATH.test(path7);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -333,7 +333,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path6, checkUnignored) {
+      _testOne(path7, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -341,7 +341,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path6);
+          const matched = rule.regex.test(path7);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -354,24 +354,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path6 = originalPath && checkPath.convert(originalPath);
+        const path7 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path6,
+          path7,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path6, cache, checkUnignored, slices);
+        return this._t(path7, cache, checkUnignored, slices);
       }
-      _t(path6, cache, checkUnignored, slices) {
-        if (path6 in cache) {
-          return cache[path6];
+      _t(path7, cache, checkUnignored, slices) {
+        if (path7 in cache) {
+          return cache[path7];
         }
         if (!slices) {
-          slices = path6.split(SLASH);
+          slices = path7.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path6] = this._testOne(path6, checkUnignored);
+          return cache[path7] = this._testOne(path7, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -379,24 +379,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path6] = parent.ignored ? parent : this._testOne(path6, checkUnignored);
+        return cache[path7] = parent.ignored ? parent : this._testOne(path7, checkUnignored);
       }
-      ignores(path6) {
-        return this._test(path6, this._ignoreCache, false).ignored;
+      ignores(path7) {
+        return this._test(path7, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path6) => !this.ignores(path6);
+        return (path7) => !this.ignores(path7);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path6) {
-        return this._test(path6, this._testCache, true);
+      test(path7) {
+        return this._test(path7, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path6) => checkPath(path6 && checkPath.convert(path6), path6, RETURN_FALSE);
+    var isPathValid = (path7) => checkPath(path7 && checkPath.convert(path7), path7, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -407,20 +407,14 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path6) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path6) || isNotRelative(path6);
+      checkPath.isNotRelative = (path7) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path7) || isNotRelative(path7);
     }
   }
 });
 
 // src/hook/cli.ts
 var fs4 = __toESM(require("fs"));
-var path5 = __toESM(require("path"));
-
-// src/gitSnapshot.ts
-var import_child_process2 = require("child_process");
-var fs2 = __toESM(require("fs"));
-var os = __toESM(require("os"));
-var path2 = __toESM(require("path"));
+var path6 = __toESM(require("path"));
 
 // src/sourcePolicy.ts
 var import_child_process = require("child_process");
@@ -655,6 +649,10 @@ function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
 }
 
 // src/gitSnapshot.ts
+var import_child_process2 = require("child_process");
+var fs2 = __toESM(require("fs"));
+var os = __toESM(require("os"));
+var path2 = __toESM(require("path"));
 function run(repoRoot, args, input, indexFile) {
   return (0, import_child_process2.execFileSync)("git", [
     "--no-replace-objects",
@@ -813,18 +811,49 @@ function captureStagedSnapshot(repoRoot, patterns = []) {
   };
 }
 
-// src/diff.ts
-var MAX_CONTENT_CHARS = 8e4;
-function truncate(s) {
-  if (s.length <= MAX_CONTENT_CHARS) {
-    return s;
+// src/gitHelper.ts
+function getStagedSelection(repoRoot, excludePatterns = []) {
+  const { files, excluded } = captureStagedSnapshot(repoRoot, excludePatterns);
+  return { files, excluded };
+}
+
+// src/reviewOutcome.ts
+function reviewStatus(review) {
+  if (review.is_error) return "failed";
+  return review.status ?? "completed";
+}
+var OUTCOME_META = {
+  completed: { label: "Completed", icon: "check", color: "terminal.ansiGreen" },
+  partial: { label: "Partial", icon: "warning", color: "terminal.ansiYellow" },
+  failed: { label: "Failed", icon: "error", color: "terminal.ansiRed" },
+  cancelled: {
+    label: "Cancelled",
+    icon: "circle-slash",
+    color: "descriptionForeground"
   }
-  return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
+};
+function reviewCoverage(report) {
+  const outcomes = report.review.per_file_summaries;
+  if (!outcomes?.length) {
+    return `${reviewStatus(report.review) === "completed" ? report.staged_files.length : 0}/${report.staged_files.length} selected file(s) completed`;
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const entry of outcomes) {
+    const state = entry.status ?? "completed";
+    counts.set(state, (counts.get(state) ?? 0) + 1);
+  }
+  const details = ["partial", "failed", "cancelled", "not-run"].filter((state) => counts.has(state)).map((state) => `${counts.get(state)} ${state}`);
+  return [
+    `${counts.get("completed") ?? 0}/${report.staged_files.length} selected file(s) completed`,
+    ...details
+  ].join("; ");
 }
 
 // src/exitResolver.ts
-function resolveExitCode(report) {
-  if (report.review.is_error) {
+function resolveExitCode(report, policy = "legacy-hook") {
+  if (policy === "advisory") return 0;
+  const status = reviewStatus(report.review);
+  if (status === "failed" || status === "cancelled") {
     return 0;
   }
   if (report.review.file_comments.some((c) => c.priority === "P3")) {
@@ -834,6 +863,27 @@ function resolveExitCode(report) {
     return 1;
   }
   return 0;
+}
+
+// src/ai/reviewer.ts
+var import_crypto = require("crypto");
+
+// src/diff.ts
+var path3 = __toESM(require("path"));
+var MAX_CONTENT_CHARS = 8e4;
+function formatFileContent(file, content) {
+  const ext = path3.extname(file).replace(/^\./, "");
+  return `### ${file}
+
+\`\`\`${ext}
+${content}
+\`\`\``;
+}
+function truncate(s) {
+  if (s.length <= MAX_CONTENT_CHARS) {
+    return s;
+  }
+  return s.slice(0, MAX_CONTENT_CHARS) + "\n\n[... truncated for token limit ...]";
 }
 
 // src/skipMarkers.ts
@@ -895,9 +945,9 @@ function applyMarkers(comments, sources) {
 
 // src/skills.ts
 var fs3 = __toESM(require("fs"));
-var path3 = __toESM(require("path"));
+var path4 = __toESM(require("path"));
 function loadSkills(repoRoot, excludePatterns = []) {
-  const skillDir = path3.join(repoRoot, ".commit-defender");
+  const skillDir = path4.join(repoRoot, ".commit-defender");
   let entries;
   try {
     if (fs3.lstatSync(skillDir).isSymbolicLink()) return "";
@@ -933,8 +983,10 @@ ${content}`);
 
 // src/ai/json.ts
 function parseReviewJson(raw) {
-  const truncated = !raw.trim().replace(/`+\s*$/, "").endsWith("}");
-  const data = robustJson(raw);
+  const { data, repaired: truncated } = robustJson(raw);
+  if (!data || typeof data !== "object" || Array.isArray(data) || typeof data.summary !== "string" || data.blocking !== void 0 && typeof data.blocking !== "boolean" || data.file_comments !== void 0 && !Array.isArray(data.file_comments) || !truncated && (typeof data.blocking !== "boolean" || !Array.isArray(data.file_comments))) {
+    throw new Error("Model response does not contain a review object");
+  }
   const validPriorities = /* @__PURE__ */ new Set(["P0", "P1", "P2", "P3"]);
   const validCategories = /* @__PURE__ */ new Set([
     "correctness",
@@ -968,12 +1020,12 @@ function parseReviewJson(raw) {
 }
 function robustJson(raw) {
   try {
-    return JSON.parse(raw);
+    return { data: JSON.parse(raw), repaired: false };
   } catch {
   }
   const stripped = raw.trim().replace(/^```(?:json)?\s*/m, "").replace(/```\s*$/m, "").trim();
   try {
-    return JSON.parse(stripped);
+    return { data: JSON.parse(stripped), repaired: false };
   } catch {
   }
   let depth = 0;
@@ -989,7 +1041,7 @@ function robustJson(raw) {
       depth--;
       if (depth === 0 && start !== null) {
         try {
-          return JSON.parse(raw.slice(start, i + 1));
+          return { data: JSON.parse(raw.slice(start, i + 1)), repaired: false };
         } catch {
         }
         start = null;
@@ -1000,7 +1052,7 @@ function robustJson(raw) {
   if (open !== -1) {
     const repaired = repairTruncated(raw.slice(open));
     try {
-      return JSON.parse(repaired);
+      return { data: JSON.parse(repaired), repaired: true };
     } catch {
     }
   }
@@ -1238,16 +1290,84 @@ ${content || "(no diff available)"}
 Please review the above and respond with the JSON object as instructed.
 `;
 }
+var COMMIT_MESSAGE_SYSTEM_PROMPT = `# Git Commit Message Generation Prompt
+
+Construct a commit message consisting of a title and a body
+
+## Title Rules
+- Limit title to 50 characters
+- Capitalize the first letter
+- Avoid periods and special characters
+- Start with a base verb
+- Exclude past tense
+- Use format: [{type}] {title_text}
+- Select one type from the list below:
+  - Feature: Add new functionality
+  - Improve: Refine business logic or performance
+  - Fix: Resolve bugs or issues
+  - Doc: Update documentation
+  - Refactor: Restructure code without changing behavior
+  - Test: Add or update test cases
+  - Chore: Update build tasks or package managers
+
+## Body Rules
+- Limit total text to 300 characters
+- Keep each bullet point under 50 characters
+- Focus on what and why instead of how
+- Provide clear reasons for code changes
+- Write in concise bullet points
+- Capitalize the first letter of each line
+- Avoid periods and special characters
+- Exclude past tense
+- Start each line with a base verb
+
+## Output Example
+[Improve] Refine user authentication logic
+
+- Validate session tokens before database access
+- Enhance security by rotating encryption keys
+- Reduce latency in login process
+
+## Output Format
+Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
+{
+  "commit_message": "<title>\\n\\n<body>"
+}
+`;
 
 // src/ai/providers.ts
 var import_child_process3 = require("child_process");
 var import_promises = require("fs/promises");
 var import_os = require("os");
-var path4 = __toESM(require("path"));
+var path5 = __toESM(require("path"));
 var DEFAULT_OPENAI = "https://api.openai.com/v1";
 var DEFAULT_ANTHROPIC = "https://api.anthropic.com/v1";
 var DEFAULT_GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 async function callProvider(req) {
+  const controller = new AbortController();
+  const relay = () => controller.abort(req.signal?.reason);
+  if (req.signal?.aborted) relay();
+  else req.signal?.addEventListener("abort", relay, { once: true });
+  const timer = req.timeoutMs && req.timeoutMs > 0 ? setTimeout(() => controller.abort("timeout"), req.timeoutMs) : void 0;
+  const interruption = () => {
+    if (controller.signal.reason === "timeout" || controller.signal.reason?.name === "TimeoutError") {
+      return { raw: "", error: "AI request timed out.", errorKind: "timeout" };
+    }
+    throw abortError();
+  };
+  try {
+    if (controller.signal.aborted) return interruption();
+    const response = await dispatchProvider({ ...req, signal: controller.signal, timeoutMs: 0 });
+    return controller.signal.aborted ? interruption() : response;
+  } catch (error) {
+    if (controller.signal.aborted) return interruption();
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+    req.signal?.removeEventListener("abort", relay);
+  }
+}
+async function dispatchProvider(req) {
   switch (req.provider) {
     case "aoai":
       return callAzureOpenAI(req);
@@ -1488,9 +1608,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path4.join(dir, "review-request.md");
-  const schemaFile = path4.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path5.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path5.join(dir, "review-request.md");
+  const schemaFile = path5.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises.writeFile)(promptFile, `${req.systemPrompt}
@@ -1537,8 +1657,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises.mkdtemp)(path4.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path4.join(dir, "output-schema.json");
+  const dir = await (0, import_promises.mkdtemp)(path5.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path5.join(dir, "output-schema.json");
   try {
     await (0, import_promises.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -1786,7 +1906,7 @@ async function parseOpenAIResp(req, resp) {
   if (typeof raw !== "string") {
     return err(req, `Empty or malformed response: ${JSON.stringify(data).slice(0, 300)}`);
   }
-  return { raw: raw.trim() };
+  return { raw: raw.trim(), incomplete: data?.choices?.[0]?.finish_reason !== "stop" };
 }
 function openaiHttpError(req, resp, body) {
   const detail = body.slice(0, 600);
@@ -1848,7 +1968,7 @@ async function callAnthropic(req) {
     if (typeof raw !== "string") {
       return err(req, `Empty or malformed Anthropic response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: !["end_turn", "stop_sequence"].includes(data?.stop_reason) };
   });
 }
 async function callGemini(req) {
@@ -1902,7 +2022,7 @@ async function callGemini(req) {
     if (typeof raw !== "string" || !raw.trim()) {
       return err(req, `Empty or malformed Gemini response: ${JSON.stringify(data).slice(0, 300)}`);
     }
-    return { raw: raw.trim() };
+    return { raw: raw.trim(), incomplete: data?.candidates?.[0]?.finishReason !== "STOP" };
   });
 }
 
@@ -1939,9 +2059,357 @@ var REVIEW_OUTPUT_SCHEMA = {
   required: ["summary", "blocking", "grade", "file_comments"],
   additionalProperties: false
 };
+var COMMIT_MESSAGE_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    commit_message: { type: "string" }
+  },
+  required: ["commit_message"],
+  additionalProperties: false
+};
+
+// src/ai/reviewer.ts
+var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2, P3: 3 };
+var GRADE_RANK = {
+  exceptional: 5,
+  proficient: 4,
+  adequate: 3,
+  insufficient: 2,
+  critical: 1
+};
+var Reviewer = class {
+  constructor(cfg) {
+    this.cfg = cfg;
+  }
+  /** Pre-commit / staged scope: send the combined diff in a single call. */
+  async reviewDiff(repoRoot, stagedFiles, signal) {
+    const start = Date.now();
+    let source = {};
+    try {
+      if (signal?.aborted) return this.interrupted(stagedFiles, start, signal);
+      const snapshot = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      stagedFiles = stagedFiles.filter((file) => snapshot.files.includes(file));
+      source = {
+        source_exclusions: snapshot.excluded,
+        source_snapshot: { kind: "index", base_commit: snapshot.baseCommit, base_tree: snapshot.baseTree, source_tree: snapshot.sourceTree }
+      };
+      if (!stagedFiles.length) throw new Error("No permitted staged source files. Review was not run.");
+      const diff = snapshot.diff(stagedFiles);
+      if (!diff.trim()) throw new Error("No permitted staged source content. Review was not run.");
+      const sources = new Map(stagedFiles.map((file) => [file, snapshot.readSelected(file)]));
+      const review = await this.singleCall({
+        repoRoot,
+        mode: "diff",
+        body: truncate(diff),
+        sourceTruncated: diff.length > MAX_CONTENT_CHARS,
+        signal
+      });
+      review.file_comments = applyMarkers(review.file_comments, sources);
+      const report = { ...this.assembleReport(stagedFiles, review, Date.now() - start), ...source };
+      return this.runResult(report);
+    } catch (error) {
+      if (error.name === "AbortError" || signal?.aborted) {
+        const result = this.interrupted(stagedFiles, start, signal);
+        Object.assign(result.report, source);
+        return result;
+      }
+      return this.runResult({ ...this.assembleReport(stagedFiles, this.errorResult(error.message, "source-error"), Date.now() - start), ...source });
+    }
+  }
+  /** On-demand scope: freeze source first, then preserve each file's actual outcome. */
+  async reviewFilesSeparately(repoRoot, relPaths, signal, onProgress) {
+    const start = Date.now();
+    if (signal?.aborted) return this.interrupted(relPaths, start, signal);
+    let exclusions;
+    try {
+      const selection = selectReviewInputs(repoRoot, relPaths, this.cfg.excludePatterns);
+      relPaths = selection.files;
+      exclusions = selection.excluded;
+    } catch (error) {
+      return this.runResult(this.assembleReport(relPaths, this.errorResult(error.message, "source-error"), Date.now() - start));
+    }
+    if (!relPaths.length) {
+      const report2 = this.assembleReport([], this.errorResult("No permitted source files. Review was not run.", "source-error"), Date.now() - start);
+      report2.source_exclusions = exclusions;
+      return this.runResult(report2);
+    }
+    const sources = /* @__PURE__ */ new Map();
+    const readErrors = /* @__PURE__ */ new Map();
+    for (const file of relPaths) {
+      try {
+        sources.set(file, readReviewFile(repoRoot, file, this.cfg.excludePatterns));
+      } catch (error) {
+        readErrors.set(file, error);
+      }
+    }
+    const allComments = [];
+    const perFile = [];
+    const grades = [];
+    const reasons = /* @__PURE__ */ new Set();
+    let blocking = false;
+    let cancelled = false;
+    for (let i = 0; i < relPaths.length; i++) {
+      if (signal?.aborted) {
+        cancelled = signal.reason !== "timeout" && signal.reason?.name !== "TimeoutError";
+        reasons.add(cancelled ? "cancelled" : "timeout");
+        break;
+      }
+      const file = relPaths[i];
+      let result;
+      try {
+        onProgress?.(i + 1, relPaths.length, file);
+        if (readErrors.has(file)) {
+          result = this.errorResult(readErrors.get(file).message, "source-error");
+        } else {
+          const content = formatFileContent(file, sources.get(file));
+          result = await this.singleCall({ repoRoot, mode: "file", body: truncate(content), sourceTruncated: content.length > MAX_CONTENT_CHARS, signal });
+        }
+      } catch (error) {
+        if (error.name === "AbortError") {
+          result = this.cancelledResult();
+          cancelled = true;
+        } else {
+          result = this.errorResult(error.message);
+        }
+      }
+      const status2 = reviewStatus(result);
+      result.file_comments = applyMarkers(result.file_comments.map((comment) => ({ ...comment, file })), sources);
+      for (const reason of result.incomplete_reasons ?? []) reasons.add(reason);
+      const usable2 = status2 === "completed" || status2 === "partial";
+      if (usable2) {
+        allComments.push(...result.file_comments);
+        blocking ||= result.blocking;
+        grades.push(result.grade);
+      }
+      perFile.push({
+        file,
+        summary: result.summary,
+        status: status2,
+        priority: usable2 && (result.file_comments.length || result.blocking) ? pickFilePriority(result) : void 0,
+        blocking: usable2 && result.blocking,
+        grade: usable2 ? result.grade : ""
+      });
+      if (cancelled) break;
+    }
+    for (const file of relPaths.slice(perFile.length)) {
+      perFile.push({ file, summary: "Review was not run.", status: "not-run", blocking: false, grade: "" });
+    }
+    const usable = perFile.filter((entry) => entry.status === "completed" || entry.status === "partial").length;
+    const status = cancelled ? "cancelled" : usable === 0 ? "failed" : perFile.every((entry) => entry.status === "completed") ? "completed" : "partial";
+    const review = {
+      summary: perFile.map((entry) => `**\`${entry.file}\`** \u2014 ${entry.status}
+
+${entry.summary}`).join("\n\n---\n\n"),
+      status,
+      blocking,
+      is_error: status === "failed",
+      file_comments: allComments,
+      grade: status === "completed" ? worstGrade(grades) : "",
+      incomplete_reasons: [...reasons],
+      per_file_summaries: perFile
+    };
+    const report = this.assembleReport(relPaths, review, Date.now() - start);
+    report.source_exclusions = exclusions;
+    report.source_snapshot = { kind: "working-tree", content_sha256: Object.fromEntries(
+      [...sources].map(([file, text]) => [file, (0, import_crypto.createHash)("sha256").update(text).digest("hex")])
+    ) };
+    return this.runResult(report);
+  }
+  /** Generate a conventional commit message from the current staged diff. */
+  async generateCommitMessage(repoRoot, signal) {
+    let diff;
+    try {
+      const selection = captureStagedSnapshot(repoRoot, this.cfg.excludePatterns);
+      if (selection.excluded.length) {
+        return {
+          commit_message: "",
+          is_error: true,
+          error: `Commit message was not generated: ${selection.excluded.length} staged path(s) are excluded by source policy.`
+        };
+      }
+      diff = truncate(selection.diff()).trim();
+    } catch (e) {
+      return { commit_message: "", is_error: true, error: `git diff failed: ${e.message}` };
+    }
+    if (!diff) {
+      return { commit_message: "", is_error: true, error: "No staged changes found." };
+    }
+    const req = this.buildProviderRequest(
+      repoRoot,
+      COMMIT_MESSAGE_SYSTEM_PROMPT,
+      `Generate a commit message for the following staged diff:
+
+\`\`\`diff
+${diff}
+\`\`\``,
+      Math.min(this.cfg.maxTokens, 512),
+      signal,
+      COMMIT_MESSAGE_OUTPUT_SCHEMA
+    );
+    const resp = await callProvider(req);
+    if (resp.error) {
+      return { commit_message: "", is_error: true, error: resp.error };
+    }
+    let parsed;
+    try {
+      const stripped = resp.raw.trim().replace(/^```(?:json)?\s*/m, "").replace(/```\s*$/m, "").trim();
+      parsed = JSON.parse(stripped);
+    } catch (e) {
+      return { commit_message: "", is_error: true, error: `Failed to parse model response: ${e.message}` };
+    }
+    const msg = String(parsed?.commit_message ?? "").trim();
+    if (!msg) {
+      return { commit_message: "", is_error: true, error: "Model returned an empty commit_message." };
+    }
+    return { commit_message: msg, is_error: false, error: "" };
+  }
+  // ── Internals ─────────────────────────────────────────────────────────────
+  async singleCall(opts) {
+    const skillsText = loadSkills(opts.repoRoot, this.cfg.excludePatterns);
+    const systemPrompt = buildSystemPrompt({
+      mode: opts.mode,
+      severity: this.cfg.severityLevel,
+      richness: this.cfg.richnessLevel,
+      locale: this.cfg.locale,
+      skillsText
+    });
+    const userMessage = buildUserMessage(opts.mode, opts.body);
+    const req = this.buildProviderRequest(
+      opts.repoRoot,
+      systemPrompt,
+      userMessage,
+      this.cfg.maxTokens,
+      opts.signal,
+      REVIEW_OUTPUT_SCHEMA
+    );
+    const resp = await callProvider(req);
+    if (resp.error) {
+      return this.errorResult(resp.error, resp.errorKind === "timeout" ? "timeout" : "provider-error");
+    }
+    let parsed;
+    try {
+      parsed = parseReviewJson(resp.raw);
+    } catch (e) {
+      return this.errorResult(
+        `Could not parse AI response as JSON (max_tokens=${this.cfg.maxTokens}). Provider output did not contain a usable review.`
+      );
+    }
+    const minRank = SEVERITY_MIN_RANK[this.cfg.severityLevel] ?? 1;
+    let comments = parsed.file_comments.map((fc) => ({
+      ...fc,
+      priority: enforceP3(fc.priority, fc.comment)
+    })).filter((fc) => (PRIORITY_RANK[fc.priority] ?? 1) >= minRank);
+    if (this.cfg.severityLevel === "moderate") {
+      const counts = /* @__PURE__ */ new Map();
+      comments = comments.filter((fc) => {
+        if (fc.priority !== "P1") {
+          return true;
+        }
+        const n = (counts.get(fc.file) ?? 0) + 1;
+        counts.set(fc.file, n);
+        return n <= 2;
+      });
+    }
+    let summary = parsed.summary;
+    if (parsed.truncated || resp.incomplete) {
+      summary = `Provider response is incomplete; findings may be missing.
+
+${summary}`;
+    }
+    const reasons = [];
+    if (opts.sourceTruncated) reasons.push("source-truncated");
+    if (parsed.truncated) reasons.push("response-truncated");
+    else if (resp.incomplete) reasons.push("response-incomplete");
+    if (opts.sourceTruncated) summary = `Source exceeded the input limit; only part of it was reviewed.
+
+${summary}`;
+    return {
+      summary,
+      status: reasons.length ? "partial" : "completed",
+      incomplete_reasons: reasons,
+      blocking: parsed.blocking,
+      is_error: false,
+      file_comments: comments,
+      grade: reasons.length ? "" : parsed.grade
+    };
+  }
+  buildProviderRequest(repoRoot, systemPrompt, userMessage, maxTokens, signal, responseSchema = REVIEW_OUTPUT_SCHEMA) {
+    const executablePath = this.cfg.aiProvider === "codex" ? this.cfg.codexPath : this.cfg.aiProvider === "claudecode" ? this.cfg.claudeCodePath : this.cfg.aiProvider === "geminicli" ? this.cfg.geminiCliPath : this.cfg.aiProvider === "antigravity" ? this.cfg.antigravityPath : "";
+    return {
+      provider: this.cfg.aiProvider,
+      apiKey: this.cfg.apiKey,
+      endpoint: this.cfg.endpoint,
+      apiVersion: this.cfg.apiVersion,
+      model: this.cfg.model,
+      maxTokens,
+      systemPrompt,
+      userMessage,
+      workingDirectory: repoRoot,
+      executablePath,
+      responseSchema,
+      signal
+    };
+  }
+  assembleReport(stagedFiles, review, durationMs) {
+    const report = {
+      schema_version: 1,
+      staged_files: stagedFiles,
+      duration_ms: durationMs,
+      exit_code: 0,
+      lint_findings: [],
+      review
+    };
+    report.exit_code = resolveExitCode(report);
+    return report;
+  }
+  runResult(report) {
+    return { report, stderr: "", timedOut: report.review.incomplete_reasons?.includes("timeout") ?? false, cancelled: reviewStatus(report.review) === "cancelled" };
+  }
+  interrupted(files, start, signal) {
+    const timedOut = signal?.reason === "timeout" || signal?.reason?.name === "TimeoutError";
+    const review = timedOut ? this.errorResult("AI request timed out.", "timeout") : this.cancelledResult();
+    return this.runResult(this.assembleReport(files, review, Date.now() - start));
+  }
+  cancelledResult() {
+    return { summary: "Review was cancelled.", status: "cancelled", incomplete_reasons: ["cancelled"], blocking: false, is_error: false, file_comments: [], grade: "" };
+  }
+  errorResult(message, reason = "provider-error") {
+    return { summary: `AI review unavailable: ${message}`, status: "failed", incomplete_reasons: [reason], blocking: false, is_error: true, file_comments: [], grade: "" };
+  }
+};
+function pickFilePriority(result) {
+  if (result.file_comments.length > 0) {
+    let worst = "P0";
+    for (const fc of result.file_comments) {
+      if ((PRIORITY_RANK[fc.priority] ?? 1) > (PRIORITY_RANK[worst] ?? 1)) {
+        worst = fc.priority;
+      }
+    }
+    return worst;
+  }
+  if (result.blocking) {
+    return "P3";
+  }
+  if (result.grade === "critical" || result.grade === "insufficient") {
+    return "P2";
+  }
+  return "P1";
+}
+function worstGrade(grades) {
+  let worst = "";
+  let worstRank = Number.POSITIVE_INFINITY;
+  for (const g of grades) {
+    const rank = GRADE_RANK[g];
+    if (rank !== void 0 && rank < worstRank) {
+      worstRank = rank;
+      worst = g;
+    }
+  }
+  return worst;
+}
 
 // src/hook/cli.ts
-var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2, P3: 3 };
+var PRIORITY_RANK2 = { P0: 0, P1: 1, P2: 2, P3: 3 };
 async function main() {
   const repoRoot = process.argv[2] || process.cwd();
   const cfg = readConfig(repoRoot);
@@ -1950,82 +2418,29 @@ async function main() {
     eprintln('  Re-install the hook from VS Code: command "Commit Defender: Install Pre-commit Hook".');
     process.exit(0);
   }
-  const selection = captureStagedSnapshot(repoRoot, cfg.excludePatterns);
-  const staged = selection.files;
-  for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
-  if (staged.length === 0) {
+  const selection = getStagedSelection(repoRoot, cfg.excludePatterns);
+  if (selection.files.length === 0) {
+    for (const entry of selection.excluded) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
+    eprintln("commit-defender: review NOT RUN \u2014 no permitted staged source. Commit not blocked.");
     process.exit(0);
   }
-  const diff = truncate(selection.diff());
-  if (!diff.trim()) {
-    process.exit(0);
-  }
-  const sources = new Map(staged.map((file) => [file, selection.readSelected(file)]));
   eprintln(`
-\u{1F6E1}  commit-defender \u2014 reviewing ${staged.length} staged file(s)\u2026`);
-  const skillsText = loadSkills(repoRoot, cfg.excludePatterns);
-  const systemPrompt = buildSystemPrompt({
-    mode: "diff",
-    severity: cfg.severityLevel,
-    richness: cfg.richnessLevel,
-    locale: cfg.locale,
-    skillsText
-  });
-  const userMessage = buildUserMessage("diff", diff);
-  const resp = await callProvider({
-    provider: cfg.aiProvider,
-    apiKey: cfg.apiKey,
-    endpoint: cfg.endpoint,
-    apiVersion: cfg.apiVersion,
-    model: cfg.model,
-    maxTokens: cfg.maxTokens,
-    systemPrompt,
-    userMessage,
-    workingDirectory: repoRoot,
-    executablePath: cfg.aiProvider === "codex" ? cfg.codexPath : cfg.aiProvider === "claudecode" ? cfg.claudeCodePath : cfg.aiProvider === "geminicli" ? cfg.geminiCliPath : cfg.aiProvider === "antigravity" ? cfg.antigravityPath : "",
-    responseSchema: REVIEW_OUTPUT_SCHEMA,
-    timeoutMs: 12e4
-  });
-  if (resp.error) {
-    eprintln(`
-\u26A0 AI review unavailable \u2014 commit not blocked.
-  ${indent(resp.error, "  ")}`);
-    process.exit(0);
-  }
-  let parsed;
+commit-defender \u2014 reviewing ${selection.files.length} staged file(s)\u2026`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("timeout"), 12e4);
+  let report;
   try {
-    parsed = parseReviewJson(resp.raw);
-  } catch (e) {
-    eprintln(`
-\u26A0 Could not parse AI response \u2014 commit not blocked.
-  ${e.message}`);
-    process.exit(0);
+    report = (await new Reviewer(cfg).reviewDiff(repoRoot, selection.files, controller.signal)).report;
+  } finally {
+    clearTimeout(timer);
   }
-  const minRank = SEVERITY_MIN_RANK[cfg.severityLevel] ?? 1;
-  let comments = parsed.file_comments.map((fc) => ({ ...fc, priority: enforceP3(fc.priority, fc.comment) })).filter((fc) => (PRIORITY_RANK[fc.priority] ?? 1) >= minRank);
-  comments = applyMarkers(comments, sources);
-  const report = {
-    schema_version: 1,
-    staged_files: staged,
-    duration_ms: 0,
-    exit_code: 0,
-    lint_findings: [],
-    source_exclusions: selection.excluded,
-    source_snapshot: { kind: "index", base_commit: selection.baseCommit, base_tree: selection.baseTree, source_tree: selection.sourceTree },
-    review: {
-      summary: parsed.summary,
-      blocking: parsed.blocking,
-      is_error: false,
-      file_comments: comments,
-      grade: parsed.grade
-    }
-  };
-  const exitCode = resolveExitCode(report);
+  for (const entry of report.source_exclusions ?? []) eprintln(`Excluded ${JSON.stringify(entry.path)}: ${entry.reason}`);
+  const exitCode = resolveExitCode(report, "legacy-hook");
   printReport(report, exitCode === 1);
   process.exit(exitCode);
 }
 function readConfig(repoRoot) {
-  const file = path5.join(repoRoot, ".commit-defender", "hook.json");
+  const file = path6.join(repoRoot, ".commit-defender", "hook.json");
   let text;
   try {
     text = fs4.readFileSync(file, "utf8");
@@ -2073,8 +2488,10 @@ function printReport(report, blocked) {
   const r = report.review;
   eprintln("");
   eprintln("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501");
-  eprintln(blocked ? "  \u{1F6E1}  commit-defender \u2014 BLOCKED" : "  \u{1F6E1}  commit-defender \u2014 PASS");
-  if (r.grade) {
+  eprintln(`  Review: ${OUTCOME_META[reviewStatus(r)].label.toUpperCase()}`);
+  eprintln(`  Legacy hook: ${blocked ? "BLOCKED" : "ALLOWED"}`);
+  eprintln(`  ${reviewCoverage(report)}`);
+  if (r.grade && reviewStatus(r) === "completed") {
     eprintln(`  Grade: ${r.grade}`);
   }
   eprintln("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501");
@@ -2093,7 +2510,7 @@ function printReport(report, blocked) {
     for (const [file, list] of byFile) {
       eprintln(`
   ${file}`);
-      list.sort((a, b) => (PRIORITY_RANK[b.priority] ?? 1) - (PRIORITY_RANK[a.priority] ?? 1) || a.line - b.line);
+      list.sort((a, b) => (PRIORITY_RANK2[b.priority] ?? 1) - (PRIORITY_RANK2[a.priority] ?? 1) || a.line - b.line);
       for (const c of list) {
         const label = PRIORITY_LABEL[c.priority] ?? c.priority;
         const where = c.line > 0 ? `:${c.line}` : " (file-level)";
@@ -2104,7 +2521,7 @@ function printReport(report, blocked) {
     }
   }
   if (blocked) {
-    eprintln("\nThis commit was blocked because at least one P3 Critical finding was raised.");
+    eprintln("\nThis commit was blocked by a P3 Critical finding or the model blocking flag.");
     eprintln("Fix the issues above and try again, or use `git commit --no-verify` to skip the check.");
   }
   eprintln("");
@@ -2116,6 +2533,6 @@ function indent(text, prefix) {
   return text.split("\n").map((l) => prefix + l).join("\n");
 }
 main().catch((e) => {
-  eprintln(`commit-defender: unexpected error \u2014 ${e.stack ?? e}`);
+  eprintln(`commit-defender: review FAILED; commit not blocked \u2014 ${e.message}`);
   process.exit(0);
 });

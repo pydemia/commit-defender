@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
 import { ExtensionConfig } from './config.js';
+import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
       id: Date.now().toString(),
       timestamp: new Date(),
       report, repoRoot,
-      label: `${count} file${count !== 1 ? 's' : ''} · ${grade}`,
+      label: `${OUTCOME_META[reviewStatus(report.review)].label} · ${count} file${count !== 1 ? 's' : ''}${reviewStatus(report.review) === 'completed' ? ` · ${grade}` : ''}`,
       scope,
       scopeTarget,
     };
@@ -206,29 +207,22 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
 
   private _buildFindings(): TreeNode {
     const children: TreeNode[] = [];
+    if (!this._isRunning && this._lastReport) {
+      const outcome = OUTCOME_META[reviewStatus(this._lastReport.review)];
+      children.push({ kind: 'status', id: 'findings-outcome', label: outcome.label,
+        value: reviewCoverage(this._lastReport), icon: outcome.icon, command: 'commitDefender.showSummary' });
+    }
 
     if (this._isRunning) {
       children.push({ kind: 'empty', id: 'findings-running', label: 'Analyzing…', icon: 'loading~spin' });
     } else if (this._blocks.length === 0) {
-      children.push({ kind: 'empty', id: 'findings-empty', label: 'No findings', icon: 'check' });
+      children.push({ kind: 'empty', id: 'findings-empty', label: 'No findings recorded', icon: 'list-flat' });
     } else {
       // Count by priority
       const counts: Partial<Record<CommentPriority, number>> = {};
       for (const b of this._blocks) {
         counts[b.priority] = (counts[b.priority] ?? 0) + 1;
       }
-
-      const passed = this._lastReport?.exit_code === 0;
-      const verdict: TreeNode = {
-        kind: 'status',
-        id: 'findings-verdict',
-        label: passed ? 'PASS' : 'BLOCKED',
-        value: `${this._blocks.length} finding${this._blocks.length !== 1 ? 's' : ''}`,
-        icon: passed ? 'pass' : 'error',
-        command: 'commitDefender.showSummary',
-        tooltip: passed ? 'All findings are advisory — commit is allowed' : 'P3 Critical finding blocks the commit',
-      };
-      children.push(verdict);
 
       for (const p of ['P3', 'P2', 'P1', 'P0'] as CommentPriority[]) {
         const n = counts[p];

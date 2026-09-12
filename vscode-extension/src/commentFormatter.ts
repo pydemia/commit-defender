@@ -134,6 +134,7 @@ export function normalizeReport(report: AnalysisReport): CommentBlock[] {
   // or any other case where file_comments is empty but a real review ran.
   if (
     blocks.length === 0 &&
+    !report.review.status && // Preserve summary projection only for legacy reports.
     !report.review.is_error &&
     report.review.summary &&
     report.staged_files.length > 0
