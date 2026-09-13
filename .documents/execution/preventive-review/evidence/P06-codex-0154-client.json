@@ -1,0 +1,54 @@
+{
+  "checkpoint": "Commit Defender consumes verified Codex 0.154 client executor",
+  "status": "passed",
+  "verifiedAt": "2026-09-13T20:26:27.726689+00:00",
+  "baseCommit": "71d2b2126ee62c094b1082f8a1f39a42e99586a6",
+  "vendor": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "a81d2c29897bc5d4c8df11182e78435b5dcf442d",
+    "packageVersion": "0.1.0-alpha.14",
+    "manifestSha256": "ced9f99be33eb4f0bca54f1ace55f59bf4d6d7934f6f8d4292250daf5252ab19"
+  },
+  "checks": {
+    "build": true,
+    "typecheckTests": true,
+    "contractTestsPassed": 20,
+    "standaloneTestsPassed": 10
+  },
+  "vsix": {
+    "version": "2.3.0",
+    "clientVersion": "0.1.0-alpha.14",
+    "vsixSha256": "f119e453efca6d55b3c73f4fbf91200b3d2b4d4064eaba9bceecaa73e0ced172",
+    "bundles": {
+      "extension.js": "a76565ef4a830751693c61ff6dd20a53a7001dedb9aa42ed50417a3cbb6065f3",
+      "hook-cli.js": "722d1237f9b09d8789d2554bb0f5bdb34127708ecf5875406dd0b8b562c90d33",
+      "standalone-review-worker.js": "16dcfb61fa1af06fb8917a8684ddf3fc879990336ecf0410aaad6160cbedf2d6"
+    },
+    "sourceAndVendorExcluded": true,
+    "status": "passed"
+  },
+  "reports": {
+    "vscode-extension/test-results/P06-codex-0154-build.log": "7c167e1f373a98c239d05de960a50c378f3d8cddc0fc7550ea64635912590b7c",
+    "vscode-extension/test-results/P06-codex-0154-typecheck.log": "324e87368feba75d13b1c466e1a20829e1e6d4f59231fee535989bf7c29746d5",
+    "vscode-extension/test-results/P06-codex-0154-standalone.log": "e045189ace4101182fd4be542092bbd21c3f8d328fbfa5ffdc01f3e30aca9a69",
+    "vscode-extension/test-results/P06-codex-0154-contract.log": "70ce20572f736aec8a8a984c0486c94aa4d235b85313457277b0602125d624d5",
+    "vscode-extension/test-results/P06-codex-0154-vsix.log": "3cc856bdf6ecef1ec63fab3d5a22f4f689fafe8228690b6ee39fbec4b4134be7",
+    "vscode-extension/test-results/P06-codex-0154-vsix.json": "b9996623325143f96de4718e57ef53c0d0dfd8aa380afb9260ea60b20a4ba1f6"
+  },
+  "sourceHashes": {
+    ".documents/execution/preventive-review/P02.md": "36e7449b256b9bdb6a796b5329595046f0924e2657e52f77aea409692c84172b",
+    "vscode-extension/out/extension.js": "a76565ef4a830751693c61ff6dd20a53a7001dedb9aa42ed50417a3cbb6065f3",
+    "vscode-extension/out/hook-cli.js": "722d1237f9b09d8789d2554bb0f5bdb34127708ecf5875406dd0b8b562c90d33",
+    "vscode-extension/out/standalone-review-worker.js": "16dcfb61fa1af06fb8917a8684ddf3fc879990336ecf0410aaad6160cbedf2d6",
+    "vscode-extension/package-lock.json": "7cacf35334a6d0c2ed5e68700ba42d6c1bb8c2ce701efc1e9c80348560a1e138",
+    "vscode-extension/package.json": "796b4a2b395e97d210e4cd8869d11a699e5e12bd0b49ae9d477ae38005850d61",
+    "vscode-extension/test/client-contract.test.ts": "3052d1e4a1d10670f600bad8ec294e2f037b64582103ed6507f7324ad2baa0e4"
+  },
+  "limitations": [
+    "No Marketplace publication or user VS Code installation change",
+    "CD central connection UI/worker not implemented",
+    "Actual account-backed central review evidence belongs to GCR installed CLI, not CD host",
+    "VSIX retains development version 2.3.0"
+  ]
+}

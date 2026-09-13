@@ -624,8 +624,8 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
     }
     const parts = file.split("/");
     const name = parts[parts.length - 1].toLowerCase();
-    const skill = options.purpose === "skill" && /^\.commit-defender\/[^/]+\/SKILL\.md$/.test(file);
-    if (parts.some((part) => PRIVATE_DIRS.has(part.toLowerCase()) && !(skill && part === ".commit-defender") || part.toLowerCase().startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name)) {
+    const skill2 = options.purpose === "skill" && /^\.commit-defender\/[^/]+\/SKILL\.md$/.test(file);
+    if (parts.some((part) => PRIVATE_DIRS.has(part.toLowerCase()) && !(skill2 && part === ".commit-defender") || part.toLowerCase().startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name)) {
       deny("private-data");
       continue;
     }
@@ -14527,11 +14527,283 @@ var localReviewResponse = object({
   questions: list4(object({ prompt: text5(2e4, 1), required: boolean }), 50)
 });
 
+// node_modules/@gcr/client-contract/dist/central-knowledge.js
+var KNOWLEDGE_BUNDLE_MAX_BYTES = 2 * 1024 * 1024;
+var nullableId = union(id, literal(null));
+var nullableTime = union(timestamp, literal(null));
+var terms = list4(text5(500, 1), 100);
+var centralAppliesTo = object({
+  languages: terms,
+  filePaths: terms,
+  symbols: terms,
+  contracts: terms,
+  branches: terms
+});
+var centralCriterionDocument = object({
+  title: text5(300, 1),
+  topicKey: text5(200, 1),
+  requirement: text5(4e3, 1),
+  rationale: text5(4e3, 1),
+  counterEvidence: list4(text5(2e3, 1), 30, 1),
+  reviewSteps: list4(text5(2e3, 1), 30, 1),
+  appliesTo: centralAppliesTo,
+  severity: choice(["P0", "P1", "P2", "P3"]),
+  enforcement: literal("advisory"),
+  reviewAfter: nullableTime
+});
+var sourceReference = object({
+  kind: choice(["memory", "github-pr-message", "manual"]),
+  id: nullableId,
+  contentHash: sha256
+});
+var centralMemoryContent = object({
+  summary: text5(500, 1),
+  detail: text5(4e3),
+  recommendation: text5(2e3),
+  categories: terms,
+  appliesTo: centralAppliesTo,
+  counterEvidence: list4(text5(2e3, 1), 30),
+  expiresAt: nullableTime
+});
+var memory = object({
+  id,
+  aggregationKey: optional(sha256),
+  revision: integer(1),
+  contentHash: sha256,
+  sourceRevision: integer(1),
+  sourceContentHash: sha256,
+  kind: choice(["recurring-finding", "decision", "false-positive", "open-question"]),
+  content: centralMemoryContent,
+  sources: list4(sourceReference, 1, 1),
+  sourceBaseSha: union(gitOid, literal(null)),
+  sourceHeadSha: union(gitOid, literal(null)),
+  supersedesId: nullableId
+});
+var criterion = object({
+  id,
+  revision: integer(1),
+  contentHash: sha256,
+  sourceContentHash: sha256,
+  document: centralCriterionDocument,
+  decision: object({
+    id,
+    outcome: choice(["defect", "false-positive", "accepted-exception", "design-decision"]),
+    sources: list4(sourceReference, 12, 1)
+  }),
+  exceptions: list4(object({
+    id,
+    appliesTo: centralAppliesTo,
+    reason: text5(4e3, 1),
+    startsAt: timestamp,
+    expiresAt: timestamp
+  }), 1e3)
+});
+var skill = object({
+  name: text5(64, 1),
+  title: text5(120, 1),
+  kind: choice(["perspective", "form"]),
+  unit: choice(["code-segment", "file", "analysis"]),
+  version: integer(1),
+  enabled: boolean,
+  instructions: text5(16e3, 1),
+  markdown: text5(2e4, 1),
+  contentHash: sha256
+});
+var common = { schemaVersion: union(literal(1), literal(2)), tenantId: id, repositoryId: id };
+var centralKnowledgeBundle = refined(union(object({
+  ...common,
+  component: literal("policy"),
+  ownerUserId: literal(null),
+  skills: object({ schemaVersion: literal(1), hash: sha256, skills: list4(skill, 32, 4) }),
+  criteria: list4(criterion, 1e4)
+}), object({
+  ...common,
+  component: literal("collective"),
+  ownerUserId: literal(null),
+  memories: list4(memory, 1e4)
+}), object({
+  ...common,
+  component: literal("personal"),
+  ownerUserId: id,
+  memories: list4(memory, 1e4)
+})), (value, at) => {
+  if (value.component === "policy") {
+    unique(value.criteria.map((x) => x.id), at);
+    for (const criterion2 of value.criteria) {
+      unique(criterion2.exceptions.map((x) => x.id), at);
+      for (const exception of criterion2.exceptions)
+        if (exception.startsAt >= exception.expiresAt)
+          fail(at, "invalid exception interval");
+    }
+    unique(value.skills.skills.map((x) => x.name), at);
+  } else {
+    unique(value.memories.map((x) => x.id), at);
+    for (const memory2 of value.memories) {
+      if (value.schemaVersion === 2 && !memory2.aggregationKey)
+        fail(at, "v2 memory requires aggregation identity");
+      if (value.schemaVersion === 1 && memory2.aggregationKey)
+        fail(at, "v1 memory cannot contain v2 metadata");
+    }
+  }
+});
+
+// node_modules/@gcr/client-contract/dist/knowledge-manifest.js
+var knowledgeAudience = object({
+  serverId: id,
+  tenantId: id,
+  repositoryId: id,
+  userId: id
+});
+var component = object({
+  bundleId: id,
+  releaseSequence: integer(1),
+  contentHash: sha256,
+  sizeBytes: integer(1, KNOWLEDGE_BUNDLE_MAX_BYTES)
+});
+var knowledgeManifestPayload = refined(object({
+  schemaVersion: literal(1),
+  audience: knowledgeAudience,
+  snapshotId: id,
+  authorizationRevision: integer(1),
+  components: object({ policy: component, collective: component, personal: component }),
+  revocations: object({
+    policyMinimumSequence: integer(1),
+    collectiveMinimumSequence: integer(1),
+    personalMinimumSequence: integer(1)
+  }),
+  compatibleClientContracts: object({ minimum: integer(1), maximum: integer(1) }),
+  issuedAt: timestamp,
+  refreshAfter: timestamp,
+  offlineValidUntil: timestamp,
+  signingKeyId: id
+}), (value, at) => {
+  if (value.compatibleClientContracts.minimum > value.compatibleClientContracts.maximum)
+    fail(at, "invalid client compatibility range");
+  const issued = Date.parse(value.issuedAt), refresh = Date.parse(value.refreshAfter), offline = Date.parse(value.offlineValidUntil);
+  if (refresh <= issued || refresh > issued + 3e5 || offline < issued || offline > issued + 864e5)
+    fail(at, "invalid manifest lifetime");
+  for (const part of ["policy", "collective", "personal"]) {
+    if (value.revocations[`${part}MinimumSequence`] > value.components[part].releaseSequence)
+      fail(at, "manifest contains revoked component");
+  }
+});
+var signedKnowledgeManifest = object({
+  payload: knowledgeManifestPayload,
+  manifestHash: sha256,
+  signature: text5(86, 86, /^[A-Za-z0-9_-]+$/)
+});
+
+// node_modules/@gcr/client-contract/dist/knowledge-management.js
+var nullableId2 = union(id, literal(null));
+var nullableTime2 = union(timestamp, literal(null));
+var knowledgePublicationStatus = object({
+  schemaVersion: literal(1),
+  enabled: boolean,
+  compatibleClientContracts: object({ minimum: integer(1), maximum: integer(1) }),
+  syncObservation: literal("unknown"),
+  components: list4(object({
+    component: choice(["policy", "collective", "personal"]),
+    state: choice(["disabled", "unpublished", "pending", "failed", "published", "unavailable"]),
+    requestedRevision: union(text5(20, 1, /^\d+$/), literal(null)),
+    publishedRevision: union(text5(20, 1, /^\d+$/), literal(null)),
+    releaseSequence: integer(),
+    bundleId: nullableId2,
+    contentHash: union(sha256, literal(null)),
+    sizeBytes: union(integer(), literal(null)),
+    updatedAt: nullableTime2,
+    lastError: union(text5(128), literal(null)),
+    excludedCount: integer()
+  }), 3, 3)
+});
+var knowledgeMemoryList = object({
+  schemaVersion: literal(1),
+  items: list4(object({
+    id,
+    summary: text5(500, 1),
+    scope: choice(["collective", "personal"]),
+    reviewed: boolean,
+    projectionRevision: union(integer(1), literal(null))
+  }), 100),
+  nextCursor: nullableId2
+});
+var knowledgeMemoryProjection = object({
+  schemaVersion: literal(1),
+  memoryId: id,
+  scope: choice(["collective", "personal"]),
+  state: choice(["candidate", "active", "rejected", "superseded", "retired"]),
+  reviewed: boolean,
+  fingerprint: union(sha256, literal(null)),
+  projection: union(object({
+    revision: integer(1),
+    sourceFingerprint: sha256,
+    content: centralMemoryContent,
+    approvedAt: timestamp
+  }), literal(null))
+});
+
+// node_modules/@gcr/client-contract/dist/central-cache.js
+var knowledgeSequences = object({
+  policy: integer(),
+  collective: integer(),
+  personal: integer()
+});
+var centralCacheIndex = object({
+  formatVersion: literal(1),
+  bindingHash: sha256,
+  generation: integer(),
+  observedAt: integer(),
+  status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
+  minimumAuthorizationRevision: integer(),
+  minimumSequences: knowledgeSequences,
+  revocationMinimumSequences: optional(knowledgeSequences),
+  claim: union(object({ id, deadline: integer() }), literal(null)),
+  active: union(object({
+    manifest: signedKnowledgeManifest,
+    records: object({ policy: id, collective: id, personal: id })
+  }), literal(null))
+});
+
+// node_modules/@gcr/client-contract/dist/central-connection.js
+var keys = list4(object({ id, pem: text5(4096, 1) }), 16, 1);
+var centralConnectionInput = object({
+  serverUrl: text5(4096, 1),
+  serverId: id,
+  tenantId: id,
+  repositoryId: id,
+  trustedKeys: keys,
+  ca: union(text5(65536, 1), literal(null))
+});
+var centralCredentialIdentity = object({
+  schemaVersion: literal(1),
+  serverId: id,
+  userId: id,
+  displayName: text5(1e3),
+  tenantId: id,
+  repositoryIds: list4(id, 100),
+  scopes: list4(choice(["knowledge:read"]), 1, 1),
+  clientId: choice(["gcr-cli", "commit-defender"]),
+  keyId: id,
+  expiresAt: timestamp
+});
+var centralConnectionRecord = object({
+  formatVersion: literal(1),
+  id: sha256,
+  status: choice(["pending", "connected", "disconnected"]),
+  serverUrl: text5(4096, 1),
+  audience: knowledgeAudience,
+  trustedKeys: keys,
+  ca: union(text5(65536, 1), literal(null)),
+  credentialReference: id,
+  keyId: id,
+  clientId: choice(["gcr-cli", "commit-defender"]),
+  expiresAt: timestamp
+});
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.12",
+  version: "0.1.0-alpha.14",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -14618,15 +14890,15 @@ function discoverLocalIdentity(cwd, profileId) {
   }).trim();
   try {
     const root2 = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--show-toplevel"]));
-    const common = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--git-common-dir"]));
+    const common2 = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--git-common-dir"]));
     const directory = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--git-dir"]));
     return clientIdentity({
       mode: "standalone",
       profileId,
-      repositoryKey: contentHash({ version: 1, commonDirectory: common }),
+      repositoryKey: contentHash({ version: 1, commonDirectory: common2 }),
       worktreeKey: contentHash({
         version: 1,
-        commonDirectory: common,
+        commonDirectory: common2,
         gitDirectory: directory,
         root: root2
       })
@@ -14904,7 +15176,7 @@ function binary(value, size) {
     throw corrupt();
   return bytes;
 }
-async function profileKey(directory, profileId, keys) {
+async function profileKey(directory, profileId, keys2) {
   const referenceFile = import_node_path3.default.join(directory, "key-ref.json");
   const read = async () => {
     const bytes = await readPrivateFile(referenceFile, 1024);
@@ -14914,7 +15186,7 @@ async function profileKey(directory, profileId, keys) {
     onlyFields(reference2, ["formatVersion", "profileId", "id"]);
     if (reference2.formatVersion !== 1 || reference2.profileId !== profileId || typeof reference2.id !== "string" || !/^[a-f0-9-]{36}$/.test(reference2.id))
       throw corrupt();
-    const key = await keys.read(`${profileId}.${reference2.id}`);
+    const key = await keys2.read(`${profileId}.${reference2.id}`);
     if (!key || key.length !== 32)
       throw new LocalStoreError("credential-unavailable", "The OS key for existing local data is unavailable.");
     return key;
@@ -14933,7 +15205,7 @@ async function profileKey(directory, profileId, keys) {
   const candidate = (0, import_node_crypto3.randomBytes)(32);
   let preserve = false;
   try {
-    await keys.write(reference, candidate);
+    await keys2.write(reference, candidate);
     preserve = await publishImmutable(referenceFile, Buffer.from(canonicalJson({ formatVersion: 1, profileId, id: id3 })));
     if (preserve)
       return candidate;
@@ -14948,7 +15220,7 @@ async function profileKey(directory, profileId, keys) {
   } finally {
     if (!preserve) {
       candidate.fill(0);
-      await keys.remove(reference).catch(() => void 0);
+      await keys2.remove(reference).catch(() => void 0);
     }
   }
 }
@@ -15333,11 +15605,11 @@ var DEFAULT_HISTORY_RETENTION = Object.freeze({
   chats: Object.freeze({ maxAgeDays: 90, maxEntries: 1e3 })
 });
 var invalid2 = () => new LocalStoreError("corrupt-storage", "Local history data or retention policy is invalid.");
-function record(value, keys) {
+function record(value, keys2) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw invalid2();
   const result = value;
-  if (Object.keys(result).length !== keys.length || keys.some((key) => !Object.hasOwn(result, key)))
+  if (Object.keys(result).length !== keys2.length || keys2.some((key) => !Object.hasOwn(result, key)))
     throw invalid2();
   return result;
 }
@@ -15410,9 +15682,12 @@ function localChatArchive(value) {
 var LocalHistoryStore = class {
   records;
   now;
-  constructor(records, now = () => /* @__PURE__ */ new Date()) {
+  audience;
+  constructor(records, now = () => /* @__PURE__ */ new Date(), audience) {
     this.records = records;
     this.now = now;
+    if (audience)
+      this.audience = Object.freeze(knowledgeAudience(audience));
   }
   async getRetention() {
     const stored = await this.records.read("settings", "history-retention");
@@ -15433,7 +15708,7 @@ var LocalHistoryStore = class {
     const report = clientReviewReport(value);
     const scope = this.records.scope;
     const client = report.identity.client;
-    if (scope.kind !== "repository" || client.mode !== "standalone" || client.profileId !== scope.profileId || client.repositoryKey !== scope.repositoryKey || client.worktreeKey !== scope.worktreeKey || ["queued", "running"].includes(report.status))
+    if (scope.kind !== "repository" || (this.audience ? client.mode !== "centralized" || canonicalJson(client.audience) !== canonicalJson(this.audience) : client.mode !== "standalone") || client.profileId !== scope.profileId || client.repositoryKey !== scope.repositoryKey || client.worktreeKey !== scope.worktreeKey || ["queued", "running"].includes(report.status))
       throw invalid2();
     return report;
   }
@@ -15566,7 +15841,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.12",
+  version: "0.1.0-alpha.14",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -15585,7 +15860,7 @@ var emptyAppliesTo = { paths: [], languages: [], symbols: [], branches: [] };
 function knowledgeEditorValues(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw Error("Invalid editor message.");
-  const keys = [
+  const keys2 = [
     "title",
     "body",
     "paths",
@@ -15597,7 +15872,7 @@ function knowledgeEditorValues(value) {
     "expiresAt"
   ];
   const data = value;
-  if (Object.keys(data).length !== keys.length || keys.some((key) => typeof data[key] !== "string") || JSON.stringify(value).length > 1e6)
+  if (Object.keys(data).length !== keys2.length || keys2.some((key) => typeof data[key] !== "string") || JSON.stringify(value).length > 1e6)
     throw Error("Invalid editor message.");
   if (!data.title.trim()) throw Error("Enter a title.");
   if (!data.body.trim()) throw Error("Enter the knowledge body.");
@@ -15693,7 +15968,7 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
       ports
     );
   }
-  const common = {
+  const common2 = {
     title: update.title,
     body: update.body,
     appliesTo: update.appliesTo,
@@ -15701,11 +15976,11 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
     ...update.expiresAt ? { expiresAt: update.expiresAt } : {}
   };
   const draft = kind === "memory" ? {
-    ...common,
+    ...common2,
     kind,
     rationale: update.rationale ?? "",
     counterEvidence: update.counterEvidence ?? []
-  } : { ...common, kind, reviewOnly: true, origin: "user-authored" };
+  } : { ...common2, kind, reviewOnly: true, origin: "user-authored" };
   return withLocalKnowledge(scope, (store) => store.create(draft), ports);
 }
 async function readLocalHistory(location, ports = {}) {

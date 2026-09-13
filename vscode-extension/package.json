@@ -186,7 +186,7 @@
                         "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
-                    "description": "Account selection in User Settings. This build supports fixed-source standalone review with Codex on macOS (CLI 0.153.4, gpt-6-astra, xhigh). Other provider adapters remain available for account login and commit-message generation. Standalone findings are advisory."
+                    "description": "Account selection in User Settings. This build supports fixed-source standalone review with Codex on macOS (CLI 0.153.4 or 0.154.0, gpt-6-astra, xhigh). Other provider adapters remain available for account login and commit-message generation. Standalone findings are advisory."
                 },
                 "commitDefender.model": {
                     "type": "string",
@@ -217,7 +217,7 @@
                     "type": "string",
                     "scope": "application",
                     "default": "codex",
-                    "description": "User-selected Codex executable. Standalone review verifies the binary and capabilities before execution; this build supports Codex 0.153.4 on macOS. A blank/default command uses discovery without changing your saved login."
+                    "description": "User-selected Codex executable. Standalone review verifies the binary and capabilities before execution; this build supports Codex 0.153.4 or 0.154.0 on macOS. A blank/default command uses discovery without changing your saved login."
                 },
                 "commitDefender.claudeCodePath": {
                     "type": "string",
@@ -613,9 +613,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.12/gcr-client-contract-0.1.0-alpha.12.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.12/gcr-client-core-0.1.0-alpha.12.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.12/gcr-client-executors-0.1.0-alpha.12.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.14/gcr-client-contract-0.1.0-alpha.14.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.14/gcr-client-core-0.1.0-alpha.14.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.14/gcr-client-executors-0.1.0-alpha.14.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
