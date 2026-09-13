@@ -13534,6 +13534,8 @@ function standaloneErrorMessage(code3) {
     case "revoked":
     case "disabled":
       return "The central connection is expired, disconnected or revoked. Reconnect before using its knowledge.";
+    case "identity-unavailable":
+      return "The central server could not verify your identity. Cached knowledge is paused until an authenticated synchronization succeeds.";
     case "unavailable":
       return "The central service is unavailable. Retry, or explicitly select signed offline knowledge if its lease is valid.";
     case "busy":
@@ -13571,6 +13573,7 @@ var safeCodes = /* @__PURE__ */ new Set([
   "revoked",
   "disabled",
   "unavailable",
+  "identity-unavailable",
   "busy",
   "superseded",
   "invalid-binding",
@@ -14832,6 +14835,8 @@ var centralCacheIndex = object({
   generation: integer(),
   observedAt: integer(),
   status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
+  identityUnavailable: optional(boolean),
+  lastSynchronizedAt: optional(integer()),
   minimumAuthorizationRevision: integer(),
   minimumSequences: knowledgeSequences,
   revocationMinimumSequences: optional(knowledgeSequences),
@@ -14883,7 +14888,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.15",
+  version: "0.1.0-alpha.16",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -16091,6 +16096,7 @@ var error = (code3) => new KnowledgeSyncError(code3, {
   "authentication-required": "Central authentication is required.",
   revoked: "Central access has been revoked.",
   unavailable: "Central synchronization is unavailable.",
+  "identity-unavailable": "Central identity must be verified before using cached knowledge.",
   incompatible: "The central contract requires a client upgrade.",
   "invalid-manifest": "Central manifest verification failed.",
   "invalid-bundle": "Central bundle verification failed.",
@@ -16103,6 +16109,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
   records;
   binding;
   now;
+  identityUnavailableGeneration;
   denied;
   constructor(records, binding, now) {
     this.records = records;
@@ -16181,10 +16188,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("invalid-bundle");
     }
   }
-  async readActive(state, mode) {
+  async readActive(state, mode, identityConfirmed = false) {
     this.checkEnabled();
     if (state.value.status !== "enabled")
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    if (!identityConfirmed && (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable))
+      throw error("identity-unavailable");
     const active = state.value.active;
     if (!active)
       throw error("cache-unavailable");
@@ -16201,7 +16210,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("superseded");
     this.checkEnabled();
     this.verify(manifest, current.value, mode);
-    return { generation: state.value.generation, manifest, bundles };
+    return {
+      generation: state.value.generation,
+      lastSynchronizedAt: state.value.lastSynchronizedAt ?? null,
+      manifest,
+      bundles
+    };
   }
   checkEnabled() {
     if (this.denied)
@@ -16221,6 +16235,8 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     this.checkEnabled();
     if (state.value.status !== "enabled")
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    if (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable)
+      throw error("identity-unavailable");
     this.verify(manifest, {
       ...state.value,
       minimumSequences: state.value.revocationMinimumSequences ?? state.value.minimumSequences
@@ -16305,9 +16321,16 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         this.response(response.status);
       state = await this.owned(token2, generation);
       if (response.status === 304) {
-        await this.readActive(state, "online");
+        await this.readActive(state, "online", true);
         this.check(controller.signal);
-        state = await this.put(state, { ...state.value, observedAt: this.time(), claim: null });
+        state = await this.put(state, {
+          ...state.value,
+          identityUnavailable: false,
+          lastSynchronizedAt: this.time(),
+          observedAt: this.time(),
+          claim: null
+        });
+        this.identityUnavailableGeneration = void 0;
         return this.readActive(state, "online");
       }
       const manifest = this.verify(response.manifest, state.value, "online");
@@ -16394,9 +16417,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         ...state.value,
         observedAt: this.time(),
         minimumSequences,
+        identityUnavailable: false,
+        lastSynchronizedAt: this.time(),
         active: { manifest, records: refs },
         claim: null
       });
+      this.identityUnavailableGeneration = void 0;
       await this.purge(inventory.filter((id3) => !Object.values(refs).includes(id3)));
       return this.readActive(state, "online");
     } catch (cause) {
@@ -16422,6 +16448,14 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
             });
             if (inventory)
               await this.purge(inventory);
+          } else if (cause instanceof KnowledgeSyncError && cause.code === "identity-unavailable") {
+            this.identityUnavailableGeneration = generation;
+            await this.put(state, {
+              ...state.value,
+              identityUnavailable: true,
+              observedAt: this.time(),
+              claim: null
+            });
           } else if (!authorizationUncertain)
             await this.put(state, { ...state.value, claim: null });
         } catch {
@@ -16555,9 +16589,30 @@ var KnowledgeHttpTransport = class {
       req.end();
     });
   }
-  failure(response) {
+  async failure(response) {
     const status = response.statusCode ?? 503;
-    response.destroy();
+    if (status === 503) {
+      let identityUnavailable = false;
+      try {
+        const chunks = [];
+        let size = 0;
+        for await (const chunk of response) {
+          const bytes = Buffer.from(chunk);
+          size += bytes.length;
+          if (size > 32768)
+            throw unavailable2();
+          chunks.push(bytes);
+        }
+        const body2 = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+        identityUnavailable = body2?.error?.code === "IDENTITY_UNAVAILABLE";
+      } catch {
+      } finally {
+        response.destroy();
+      }
+      if (identityUnavailable)
+        throw new KnowledgeSyncError("identity-unavailable", "Central identity could not be verified.");
+    } else
+      response.destroy();
     if (status === 401 || status === 403 || status === 404 || status === 409 || status === 426 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504)
       return { status };
     return { status: 503 };
@@ -16578,7 +16633,7 @@ var KnowledgeHttpTransport = class {
     const route = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`;
     let response = await this.get(route, signal, etag);
     for (let attempt = 0; response.statusCode === 503 && attempt < retries; attempt++) {
-      response.destroy();
+      await this.failure(response);
       const milliseconds = Math.round(Math.min(4e3, 1e3 * 2 ** attempt) * (0.75 + Math.random() * 0.5));
       await (0, import_promises4.setTimeout)(milliseconds, void 0, { signal });
       response = await this.get(route, signal, etag);
@@ -16613,7 +16668,7 @@ var KnowledgeHttpTransport = class {
   async identity(signal) {
     const response = await this.get("api/v1/client-auth/me", signal);
     if (response.statusCode !== 200) {
-      const failure2 = this.failure(response);
+      const failure2 = await this.failure(response);
       throw new KnowledgeSyncError(failure2.status === 401 ? "authentication-required" : failure2.status === 403 ? "revoked" : "unavailable", "Central identity could not be verified.");
     }
     try {
@@ -16853,12 +16908,19 @@ var CentralConnections = class _CentralConnections {
           status: "ready",
           snapshotId: snapshot.manifest.payload.snapshotId,
           components: snapshot.manifest.payload.components,
+          lastSynchronizedAt: snapshot.lastSynchronizedAt,
           refreshAfter: snapshot.manifest.payload.refreshAfter,
           offlineValidUntil: snapshot.manifest.payload.offlineValidUntil
         }
       };
-    } catch {
-      return { ...summary, cache: { status: "unavailable" } };
+    } catch (cause) {
+      return {
+        ...summary,
+        cache: {
+          status: "unavailable",
+          reason: cause instanceof KnowledgeSyncError ? cause.code : "local-storage"
+        }
+      };
     }
   }
   async list() {
@@ -16947,10 +17009,104 @@ var CentralConnections = class _CentralConnections {
   }
 };
 
+// node_modules/@gcr/client-core/dist/knowledge-sync-loop.js
+var KnowledgeSyncLoop = class {
+  options;
+  timer;
+  controller;
+  running = Promise.resolve();
+  active = false;
+  failures = 0;
+  lastStarted = -Infinity;
+  interval;
+  constructor(options) {
+    this.options = options;
+    this.interval = options.intervalMs ?? 3e5;
+    if (!Number.isInteger(this.interval) || this.interval < 1e3 || this.interval > 864e5)
+      throw new KnowledgeSyncError("invalid-binding", "Invalid synchronization interval.");
+  }
+  start() {
+    if (this.active)
+      return;
+    this.active = true;
+    this.failures = 0;
+    if (!this.controller)
+      this.schedule(0);
+  }
+  /** Window focus after sleep or network recovery may bring synchronization
+   * forward, but focus storms cannot overlap or bypass the retry backoff. */
+  wake() {
+    if (!this.active || this.controller || this.failures > 0)
+      return;
+    if (Date.now() - this.lastStarted >= 3e4)
+      this.schedule(0);
+  }
+  stop() {
+    this.active = false;
+    clearTimeout(this.timer);
+    this.timer = void 0;
+    this.controller?.abort();
+  }
+  async settled() {
+    await this.running;
+  }
+  emit(state) {
+    try {
+      this.options.onState?.(state);
+    } catch {
+    }
+  }
+  jitter(milliseconds) {
+    const random = this.options.random?.() ?? Math.random();
+    const fraction = Number.isFinite(random) ? Math.min(1, Math.max(0, random)) : 0.5;
+    return Math.round(milliseconds * (0.75 + fraction * 0.5));
+  }
+  schedule(milliseconds) {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      this.timer = void 0;
+      this.running = this.run();
+    }, milliseconds);
+    this.timer.unref?.();
+  }
+  async run() {
+    if (!this.active || this.controller)
+      return;
+    const controller = new AbortController();
+    this.controller = controller;
+    this.lastStarted = Date.now();
+    this.emit({ phase: "syncing" });
+    try {
+      await this.options.synchronize(controller.signal);
+      if (!this.active || controller.signal.aborted)
+        return;
+      this.failures = 0;
+      this.emit({ phase: "ready" });
+      this.schedule(this.jitter(this.interval));
+    } catch (cause) {
+      if (!this.active || controller.signal.aborted)
+        return;
+      const reason = cause instanceof KnowledgeSyncError ? cause.code : "local-storage";
+      if (["unavailable", "identity-unavailable", "timeout", "busy", "superseded"].includes(reason)) {
+        const milliseconds = this.jitter(Math.min(6e4, 1e3 * 2 ** Math.min(this.failures++, 6)));
+        this.emit({ phase: "waiting", reason, retryAt: Date.now() + milliseconds });
+        this.schedule(milliseconds);
+      } else {
+        this.active = false;
+        this.emit({ phase: "stopped", reason });
+      }
+    } finally {
+      this.controller = void 0;
+      if (this.active && controller.signal.aborted)
+        this.schedule(0);
+    }
+  }
+};
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.15",
+  version: "0.1.0-alpha.16",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -17235,6 +17391,75 @@ async function readCentralHistory(location, selection, ports = {}) {
   );
 }
 
+// src/centralSynchronization.ts
+var CentralSynchronization = class {
+  constructor(options = {}) {
+    this.options = options;
+  }
+  loops = /* @__PURE__ */ new Map();
+  retiring = /* @__PURE__ */ new Set();
+  reconcile(targets) {
+    const wanted = /* @__PURE__ */ new Map();
+    for (const { scope, selection } of targets) {
+      if (!selection) continue;
+      const selected = centralSelection(selection);
+      if (selected.mode !== "centralized" || selected.freshness !== "online")
+        continue;
+      wanted.set(`${selectionKey(scope)}:${selected.connectionId}`, {
+        scope,
+        id: selected.connectionId
+      });
+    }
+    for (const [key, loop] of this.loops) {
+      if (wanted.has(key)) continue;
+      this.retire(loop);
+      this.loops.delete(key);
+    }
+    for (const [key, { scope, id: id3 }] of wanted) {
+      if (this.loops.has(key)) continue;
+      const loop = new KnowledgeSyncLoop({
+        synchronize: async (signal) => {
+          if (this.options.synchronize)
+            return this.options.synchronize(scope, id3, signal);
+          return withCentralConnection(
+            scope,
+            async (manager) => {
+              if (signal.aborted) return;
+              const status = await manager.status(id3);
+              if (status.clientId !== "commit-defender")
+                throw new StandaloneReviewError("authentication-required");
+              if (!signal.aborted) return manager.synchronize(id3, signal);
+            },
+            this.options.ports
+          );
+        },
+        onState: (state) => this.options.onState?.(key, state)
+      });
+      this.loops.set(key, loop);
+      loop.start();
+    }
+  }
+  wake() {
+    for (const loop of this.loops.values()) loop.wake();
+  }
+  stop() {
+    for (const loop of this.loops.values()) this.retire(loop);
+    this.loops.clear();
+  }
+  async settled() {
+    await Promise.all([
+      ...this.retiring,
+      ...[...this.loops.values()].map((loop) => loop.settled())
+    ]);
+  }
+  retire(loop) {
+    loop.stop();
+    const done = loop.settled();
+    this.retiring.add(done);
+    void done.finally(() => this.retiring.delete(done));
+  }
+};
+
 // src/centralConnectionView.ts
 var vscode2 = __toESM(require("vscode"));
 var import_node_fs3 = require("node:fs");
@@ -17251,7 +17476,7 @@ function centralStatusHtml(value) {
     ["Review mode", v.requestedMode],
     [
       "Knowledge source",
-      v.freshness === "offline" ? "Signed offline cache" : "Online (refresh when needed)"
+      v.freshness === "offline" ? "Signed offline cache" : "Online (startup, periodic and review freshness sync)"
     ],
     ["Local profile", v.profileId],
     ["Server", v.serverUrl],
@@ -17262,6 +17487,11 @@ function centralStatusHtml(value) {
     ["Connection", v.status],
     ["API key expires", v.expiresAt],
     ["Verified cache", cache.status],
+    ["Cache problem", cache.reason ?? "None"],
+    [
+      "Last successful sync",
+      typeof cache.lastSynchronizedAt === "number" ? new Date(cache.lastSynchronizedAt).toISOString() : "Unavailable"
+    ],
     ["Snapshot", cache.snapshotId ?? "Unavailable"],
     ["Online refresh due", cache.refreshAfter ?? "Unavailable"],
     ["Offline lease expires", cache.offlineValidUntil ?? "Unavailable"]
@@ -19828,6 +20058,44 @@ function activate(context) {
   const historyProvider = new HistoryProvider(cfg);
   const panelProvider = new PanelProvider();
   const localProfile = () => vscode15.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
+  const centralSynchronization = new CentralSynchronization({
+    onState: (_key, state) => {
+      if (state.phase === "ready") void refreshVisibleContext();
+      if (state.phase === "stopped" || state.phase === "waiting" && state.reason === "identity-unavailable")
+        getOutputChannel().appendLine(`[Commit Defender] Central knowledge synchronization: ${state.reason}. Open Central Review Connection to inspect or reconnect.`);
+    }
+  });
+  let syncDiscovery = 0;
+  let syncManagement = 0;
+  async function refreshCentralSynchronization() {
+    const generation = ++syncDiscovery;
+    if (syncManagement > 0) return;
+    if (!vscode15.workspace.isTrusted) {
+      centralSynchronization.stop();
+      return;
+    }
+    const profileId = localProfile();
+    try {
+      const roots = await Promise.all((vscode15.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
+      if (generation !== syncDiscovery || !vscode15.workspace.isTrusted || localProfile() !== profileId) return;
+      centralSynchronization.reconcile([...new Set(roots.filter((root2) => !!root2))].map((repoRoot) => {
+        const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
+        return { scope, selection: readSelection(context.globalState, scope) };
+      }));
+    } catch {
+      if (generation === syncDiscovery) centralSynchronization.stop();
+    }
+  }
+  const settleReviews = settleExecutions;
+  settleExecutions = async () => {
+    syncDiscovery++;
+    centralSynchronization.stop();
+    await Promise.all([settleReviews?.(), centralSynchronization.settled()]);
+  };
+  context.subscriptions.push({ dispose: () => {
+    syncDiscovery++;
+    centralSynchronization.stop();
+  } });
   let historyLoad = 0;
   async function refreshLocalHistory() {
     const generation = ++historyLoad;
@@ -19868,20 +20136,31 @@ function activate(context) {
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
       if (scope.kind !== "repository") return;
-      await manageCentralConnection(context, scope, {
-        assertCurrent() {
-          if (!vscode15.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
-            throw Error("Connection selection changed.");
-        },
-        async invalidate() {
-          historyLoad++;
-          reviewIntent++;
-          execution.invalidate();
-          await execution.settled();
-          await vscode15.commands.executeCommand("commitDefender.clearFindings");
-        },
-        refresh: refreshLocalHistory
-      });
+      syncManagement++;
+      syncDiscovery++;
+      centralSynchronization.stop();
+      await centralSynchronization.settled();
+      try {
+        await manageCentralConnection(context, scope, {
+          assertCurrent() {
+            if (!vscode15.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
+              throw Error("Connection selection changed.");
+          },
+          async invalidate() {
+            syncDiscovery++;
+            centralSynchronization.stop();
+            historyLoad++;
+            reviewIntent++;
+            execution.invalidate();
+            await execution.settled();
+            await vscode15.commands.executeCommand("commitDefender.clearFindings");
+          },
+          refresh: refreshLocalHistory
+        });
+      } finally {
+        syncManagement--;
+        await refreshCentralSynchronization();
+      }
     }),
     vscode15.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
     vscode15.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
@@ -19901,10 +20180,24 @@ function activate(context) {
       }
     }),
     vscode15.window.onDidChangeWindowState((event) => {
-      if (event.focused) void refreshVisibleContext();
+      if (event.focused) {
+        void refreshVisibleContext();
+        void refreshCentralSynchronization().then(() => centralSynchronization.wake());
+      }
+    }),
+    vscode15.workspace.onDidChangeWorkspaceFolders(() => {
+      syncDiscovery++;
+      centralSynchronization.stop();
+      void refreshCentralSynchronization();
+    }),
+    vscode15.workspace.onDidGrantWorkspaceTrust(() => {
+      void refreshCentralSynchronization();
     }),
     vscode15.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("commitDefender.localProfile") || event.affectsConfiguration("commitDefender.reviewMode")) {
+        syncDiscovery++;
+        centralSynchronization.stop();
+        void refreshCentralSynchronization();
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
@@ -19913,6 +20206,7 @@ function activate(context) {
     })
   );
   void refreshLocalHistory();
+  void refreshCentralSynchronization();
   const historyView = vscode15.window.createTreeView("commitDefender.history", {
     treeDataProvider: historyProvider,
     showCollapseAll: false

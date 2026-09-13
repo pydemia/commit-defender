@@ -38,6 +38,8 @@ export function standaloneErrorMessage(code: string): string {
     case "revoked":
     case "disabled":
       return "The central connection is expired, disconnected or revoked. Reconnect before using its knowledge.";
+    case "identity-unavailable":
+      return "The central server could not verify your identity. Cached knowledge is paused until an authenticated synchronization succeeds.";
     case "unavailable":
       return "The central service is unavailable. Retry, or explicitly select signed offline knowledge if its lease is valid.";
     case "busy":
@@ -76,6 +78,7 @@ const safeCodes = new Set([
   "revoked",
   "disabled",
   "unavailable",
+  "identity-unavailable",
   "busy",
   "superseded",
   "invalid-binding",

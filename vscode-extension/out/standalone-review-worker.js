@@ -954,6 +954,8 @@ var centralCacheIndex = object({
   generation: integer(),
   observedAt: integer(),
   status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
+  identityUnavailable: optional(boolean),
+  lastSynchronizedAt: optional(integer()),
   minimumAuthorizationRevision: integer(),
   minimumSequences: knowledgeSequences,
   revocationMinimumSequences: optional(knowledgeSequences),
@@ -1005,7 +1007,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.15",
+  version: "0.1.0-alpha.16",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -3191,6 +3193,7 @@ var error = (code) => new KnowledgeSyncError(code, {
   "authentication-required": "Central authentication is required.",
   revoked: "Central access has been revoked.",
   unavailable: "Central synchronization is unavailable.",
+  "identity-unavailable": "Central identity must be verified before using cached knowledge.",
   incompatible: "The central contract requires a client upgrade.",
   "invalid-manifest": "Central manifest verification failed.",
   "invalid-bundle": "Central bundle verification failed.",
@@ -3203,6 +3206,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
   records;
   binding;
   now;
+  identityUnavailableGeneration;
   denied;
   constructor(records, binding, now) {
     this.records = records;
@@ -3281,10 +3285,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("invalid-bundle");
     }
   }
-  async readActive(state, mode) {
+  async readActive(state, mode, identityConfirmed = false) {
     this.checkEnabled();
     if (state.value.status !== "enabled")
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    if (!identityConfirmed && (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable))
+      throw error("identity-unavailable");
     const active = state.value.active;
     if (!active)
       throw error("cache-unavailable");
@@ -3301,7 +3307,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("superseded");
     this.checkEnabled();
     this.verify(manifest, current.value, mode);
-    return { generation: state.value.generation, manifest, bundles };
+    return {
+      generation: state.value.generation,
+      lastSynchronizedAt: state.value.lastSynchronizedAt ?? null,
+      manifest,
+      bundles
+    };
   }
   checkEnabled() {
     if (this.denied)
@@ -3321,6 +3332,8 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     this.checkEnabled();
     if (state.value.status !== "enabled")
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    if (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable)
+      throw error("identity-unavailable");
     this.verify(manifest, {
       ...state.value,
       minimumSequences: state.value.revocationMinimumSequences ?? state.value.minimumSequences
@@ -3405,9 +3418,16 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         this.response(response.status);
       state = await this.owned(token2, generation);
       if (response.status === 304) {
-        await this.readActive(state, "online");
+        await this.readActive(state, "online", true);
         this.check(controller2.signal);
-        state = await this.put(state, { ...state.value, observedAt: this.time(), claim: null });
+        state = await this.put(state, {
+          ...state.value,
+          identityUnavailable: false,
+          lastSynchronizedAt: this.time(),
+          observedAt: this.time(),
+          claim: null
+        });
+        this.identityUnavailableGeneration = void 0;
         return this.readActive(state, "online");
       }
       const manifest = this.verify(response.manifest, state.value, "online");
@@ -3494,9 +3514,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         ...state.value,
         observedAt: this.time(),
         minimumSequences,
+        identityUnavailable: false,
+        lastSynchronizedAt: this.time(),
         active: { manifest, records: refs },
         claim: null
       });
+      this.identityUnavailableGeneration = void 0;
       await this.purge(inventory.filter((id3) => !Object.values(refs).includes(id3)));
       return this.readActive(state, "online");
     } catch (cause) {
@@ -3522,6 +3545,14 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
             });
             if (inventory)
               await this.purge(inventory);
+          } else if (cause instanceof KnowledgeSyncError && cause.code === "identity-unavailable") {
+            this.identityUnavailableGeneration = generation;
+            await this.put(state, {
+              ...state.value,
+              identityUnavailable: true,
+              observedAt: this.time(),
+              claim: null
+            });
           } else if (!authorizationUncertain)
             await this.put(state, { ...state.value, claim: null });
         } catch {
@@ -5035,9 +5066,30 @@ var KnowledgeHttpTransport = class {
       req.end();
     });
   }
-  failure(response) {
+  async failure(response) {
     const status = response.statusCode ?? 503;
-    response.destroy();
+    if (status === 503) {
+      let identityUnavailable = false;
+      try {
+        const chunks = [];
+        let size = 0;
+        for await (const chunk of response) {
+          const bytes = Buffer.from(chunk);
+          size += bytes.length;
+          if (size > 32768)
+            throw unavailable3();
+          chunks.push(bytes);
+        }
+        const body2 = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+        identityUnavailable = body2?.error?.code === "IDENTITY_UNAVAILABLE";
+      } catch {
+      } finally {
+        response.destroy();
+      }
+      if (identityUnavailable)
+        throw new KnowledgeSyncError("identity-unavailable", "Central identity could not be verified.");
+    } else
+      response.destroy();
     if (status === 401 || status === 403 || status === 404 || status === 409 || status === 426 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504)
       return { status };
     return { status: 503 };
@@ -5058,7 +5110,7 @@ var KnowledgeHttpTransport = class {
     const route = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`;
     let response = await this.get(route, signal, etag);
     for (let attempt = 0; response.statusCode === 503 && attempt < retries; attempt++) {
-      response.destroy();
+      await this.failure(response);
       const milliseconds = Math.round(Math.min(4e3, 1e3 * 2 ** attempt) * (0.75 + Math.random() * 0.5));
       await (0, import_promises3.setTimeout)(milliseconds, void 0, { signal });
       response = await this.get(route, signal, etag);
@@ -5093,7 +5145,7 @@ var KnowledgeHttpTransport = class {
   async identity(signal) {
     const response = await this.get("api/v1/client-auth/me", signal);
     if (response.statusCode !== 200) {
-      const failure = this.failure(response);
+      const failure = await this.failure(response);
       throw new KnowledgeSyncError(failure.status === 401 ? "authentication-required" : failure.status === 403 ? "revoked" : "unavailable", "Central identity could not be verified.");
     }
     try {
@@ -5333,12 +5385,19 @@ var CentralConnections = class _CentralConnections {
           status: "ready",
           snapshotId: snapshot.manifest.payload.snapshotId,
           components: snapshot.manifest.payload.components,
+          lastSynchronizedAt: snapshot.lastSynchronizedAt,
           refreshAfter: snapshot.manifest.payload.refreshAfter,
           offlineValidUntil: snapshot.manifest.payload.offlineValidUntil
         }
       };
-    } catch {
-      return { ...summary, cache: { status: "unavailable" } };
+    } catch (cause) {
+      return {
+        ...summary,
+        cache: {
+          status: "unavailable",
+          reason: cause instanceof KnowledgeSyncError ? cause.code : "local-storage"
+        }
+      };
     }
   }
   async list() {
@@ -5430,7 +5489,7 @@ var CentralConnections = class _CentralConnections {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.15",
+  version: "0.1.0-alpha.16",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6253,7 +6312,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.15",
+  version: "0.1.0-alpha.16",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6281,6 +6340,8 @@ function standaloneErrorMessage(code) {
     case "revoked":
     case "disabled":
       return "The central connection is expired, disconnected or revoked. Reconnect before using its knowledge.";
+    case "identity-unavailable":
+      return "The central server could not verify your identity. Cached knowledge is paused until an authenticated synchronization succeeds.";
     case "unavailable":
       return "The central service is unavailable. Retry, or explicitly select signed offline knowledge if its lease is valid.";
     case "busy":
@@ -6318,6 +6379,7 @@ var safeCodes = /* @__PURE__ */ new Set([
   "revoked",
   "disabled",
   "unavailable",
+  "identity-unavailable",
   "busy",
   "superseded",
   "invalid-binding",
@@ -6438,6 +6500,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
         settings.freshness,
         signal
       );
+      await central.cache.read(central.freshness);
       client = central.client;
     }
     const context = central ? await resolveCentralContext({ ...query, ...central }) : await resolveLocalContext(query);

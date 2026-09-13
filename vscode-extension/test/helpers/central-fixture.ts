@@ -149,6 +149,7 @@ export async function centralFixture(
     ],
     { stdio: "ignore", timeout: 15000 },
   );
+  let errorCode: string | undefined;
   let status = 200,
     calls = 0,
     clientId = "commit-defender";
@@ -168,7 +169,9 @@ export async function centralFixture(
       }
       if (status !== 200) {
         res.writeHead(status);
-        res.end("{}");
+        res.end(
+          JSON.stringify(errorCode ? { error: { code: errorCode } } : {}),
+        );
         return;
       }
       if (req.url === "/base/api/v1/client-auth/me") {
@@ -256,8 +259,9 @@ export async function centralFixture(
     get calls() {
       return calls;
     },
-    setStatus(value: number) {
+    setStatus(value: number, code?: string) {
       status = value;
+      errorCode = code;
     },
     setClientId(value: string) {
       clientId = value;

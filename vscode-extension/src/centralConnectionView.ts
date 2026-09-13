@@ -42,7 +42,7 @@ export function centralStatusHtml(value: unknown): string {
       "Knowledge source",
       v.freshness === "offline"
         ? "Signed offline cache"
-        : "Online (refresh when needed)",
+        : "Online (startup, periodic and review freshness sync)",
     ],
     ["Local profile", v.profileId],
     ["Server", v.serverUrl],
@@ -53,6 +53,13 @@ export function centralStatusHtml(value: unknown): string {
     ["Connection", v.status],
     ["API key expires", v.expiresAt],
     ["Verified cache", cache.status],
+    ["Cache problem", cache.reason ?? "None"],
+    [
+      "Last successful sync",
+      typeof cache.lastSynchronizedAt === "number"
+        ? new Date(cache.lastSynchronizedAt).toISOString()
+        : "Unavailable",
+    ],
     ["Snapshot", cache.snapshotId ?? "Unavailable"],
     ["Online refresh due", cache.refreshAfter ?? "Unavailable"],
     ["Offline lease expires", cache.offlineValidUntil ?? "Unavailable"],

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "checkpoint": "P06-C03/C05 periodic synchronization",
+  "gcr": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "b98ef49d36d44013dc087bc9b5450bcdf5d41e19",
+    "packageVersion": "0.1.0-alpha.16",
+    "manifestSha256": "4124c749e9ccf399c61a770d6efbd7b6c7ef406c628230352e80323ac0c019be"
+  },
+  "validation": {
+    "fullRegressionPassed": 138,
+    "fullRegressionFailed": 0,
+    "focusedCentralReviewPassed": 8,
+    "focusedCentralReviewIncludesSevenRepeatedCases": true,
+    "typecheck": true,
+    "testTypecheck": true,
+    "nativeHosts": [
+      {
+        "status": "passed",
+        "vscode": "1.90.2",
+        "node": "20.9.0",
+        "electron": "29.4.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "extensionVersion": "2.3.0",
+        "delivery": "packaged-extension",
+        "commandCount": 22,
+        "activation": true,
+        "hookDefault": "disable",
+        "modelCalled": false,
+        "checks": [
+          "activation",
+          "command registration",
+          "clear findings",
+          "cancel without run",
+          "no hook installed",
+          "standalone defaults and user profile",
+          "empty history refresh creates no local store or OS key"
+        ]
+      },
+      {
+        "status": "passed",
+        "vscode": "1.137.0",
+        "node": "24.18.1",
+        "electron": "42.10.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "extensionVersion": "2.3.0",
+        "delivery": "packaged-extension",
+        "commandCount": 22,
+        "activation": true,
+        "hookDefault": "disable",
+        "modelCalled": false,
+        "checks": [
+          "activation",
+          "command registration",
+          "clear findings",
+          "cancel without run",
+          "no hook installed",
+          "standalone defaults and user profile",
+          "empty history refresh creates no local store or OS key"
+        ]
+      }
+    ]
+  },
+  "artifact": {
+    "file": "vscode-extension/test-results/commit-defender-2.3.0-periodic-sync.vsix",
+    "sha256": "bf4094d2bfcb4bd6db886194cc14d6973bc136bacb63ef695aaf7e1500da1dd3",
+    "bundleBytesMatchExtractedVsix": true,
+    "bundles": {
+      "extension.js": "6c38953c7637e409ce20f17b79a5a8d1364ca820126a622b5d97f75e84433d5c",
+      "standalone-review-worker.js": "50c4f780facb93facb4830895ed7540e84a389fff1349c55d6013912e5aca01e",
+      "hook-cli.js": "90e0458fc755232251f5aa5f7d485670efe251c8eb635d244e7628a0f3e90a39"
+    }
+  },
+  "sourceFiles": {
+    "vscode-extension/src/centralSynchronization.ts": "08edbc082e6575eb0eae18226a0035212786e5cd2c023d0aea3fd1d0d105eadf",
+    "vscode-extension/src/extension.ts": "cb9003d405baba4aeb12433a5d8d1767e7b62302c7ed6a802546b49bc30b73a2",
+    "vscode-extension/src/standaloneReview.ts": "51efc84c88f3efac3a970ea120c88a58091d7bccbc82eddc6b0b3cf6103ff3b5",
+    "vscode-extension/src/standaloneReviewProtocol.ts": "0d7812b14dceb99019c4db0aab6ff5df49b7e8756e7a326a75f032c037225b0a",
+    "vscode-extension/src/centralConnectionView.ts": "aecb9b322ae5b260f1f2aa0923aeb069b226477f09a7014f7e782881bbe4fb8b"
+  },
+  "prismInstalledCoreVerification": {
+    "requestId": "9ad884b6-0cb2-4686-8c62-8d723181e11e",
+    "status": "passed",
+    "version": "0.8.0-alpha.42",
+    "cliVersion": "0.1.0-alpha.10",
+    "cliSha256": "c4c85576ec1306ca3750fec232d0b66b1641ccdc9df2fdadafe16289e6773f43",
+    "checks": [
+      "trusted-https-session-login",
+      "downloaded-public-configuration-matches-independent-CA-and-key",
+      "installed-cli-api-key-connect-with-macos-keychain",
+      "installed-core-startup-and-two-periodic-authenticated-syncs",
+      "last-successful-sync-persisted",
+      "actual-worker-v2-three-component-sync",
+      "installed-cli-central-context-exact-audience",
+      "explicit-offline-signed-cache",
+      "web-revocation-denies-cli-synchronization",
+      "explicit-disconnect-blocks-offline-cache"
+    ],
+    "externalModelCalls": 0,
+    "syntheticOnly": true,
+    "initialConnectMilliseconds": 14573,
+    "connectInvocations": 1,
+    "explicitPublicationPolling": false,
+    "periodicSyncCalls": 3,
+    "periodicTestIntervalMs": 1000,
+    "ownedKeychainEntriesRemoved": true,
+    "ownedServerRowsRemoved": true,
+    "ownedLocalFilesRemoved": true,
+    "verifiedAt": "2026-09-13T22:13:12.246Z"
+  },
+  "limitations": [
+    "Native activation is not visual connection-dialog verification",
+    "PRISM periodic smoke used installed CLI/core, not an interactive VS Code review",
+    "No new actual-model review for this checkpoint",
+    "Automatic fallback, remote mapping and remaining phases are incomplete",
+    "No Marketplace publication or replacement of user VS Code installation"
+  ]
+}

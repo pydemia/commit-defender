@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import path from "node:path";
+import { CentralSynchronization } from "../src/centralSynchronization.js";
 import { contentHash, type LocalReviewExecutor } from "@gcr/client-core";
 import { prepareStandaloneReview } from "../src/standaloneReview.js";
 import {
@@ -414,4 +415,116 @@ test("a foreign profile or a CLI-only key cannot prepare a connected CD executor
     { code: "authentication-required" },
   );
   assert.equal(calls, 0);
+});
+
+// Exercise the scheduler with the shipped manager, credential port, HTTPS
+// transport and encrypted cache, without substituting a model executor.
+test("background startup refreshes the bound HTTPS publisher and stops in standalone", async (t) => {
+  const { central, scope, ports, selection } = await setup(t);
+  let ready!: () => void;
+  const completed = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  const host = new CentralSynchronization({
+    ports,
+    onState: (_key, state) => {
+      if (state.phase === "ready") ready();
+    },
+  });
+  t.after(async () => {
+    host.stop();
+    await host.settled();
+  });
+  const before = central.calls;
+  host.reconcile([{ scope, selection }]);
+  await Promise.race([
+    completed,
+    new Promise<never>((_, reject) => {
+      const timer = setTimeout(
+        () => reject(Error("Background sync timed out")),
+        5000,
+      );
+      timer.unref();
+    }),
+  ]);
+  assert(central.calls > before);
+  host.reconcile([{ scope, selection: { version: 1, mode: "standalone" } }]);
+  await host.settled();
+  const after = central.calls;
+  host.wake();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(central.calls, after);
+});
+
+test("background identity failure blocks offline review without erasing the key and recovers after authenticated sync", async (t) => {
+  const f = await setup(t);
+  let modelCalls = 0;
+  const ports = {
+    ...f.ports,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        modelCalls++;
+        return response(input);
+      },
+    }),
+  };
+  const credentialsBefore = [...f.central.credentialValues.entries()];
+  f.central.setStatus(503, "IDENTITY_UNAVAILABLE");
+  let observed!: () => void;
+  let rejectObservation!: (error: Error) => void;
+  const failed = new Promise<void>((resolve, reject) => {
+    observed = resolve;
+    rejectObservation = reject;
+  });
+  const host = new CentralSynchronization({
+    ports,
+    onState: (_key, state) => {
+      if (state.phase === "waiting" && state.reason === "identity-unavailable")
+        observed();
+    },
+  });
+  const timeout = setTimeout(
+    () => rejectObservation(Error("Identity failure was not observed")),
+    5000,
+  );
+  try {
+    host.reconcile([{ scope: f.scope, selection: f.selection }]);
+    await failed;
+  } finally {
+    clearTimeout(timeout);
+    host.stop();
+    await host.settled();
+  }
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...f.settings, freshness: "offline" },
+      signal(),
+      ports,
+    ),
+    { code: "identity-unavailable" },
+  );
+  assert.equal(modelCalls, 0);
+  assert.deepEqual(
+    [...f.central.credentialValues.entries()],
+    credentialsBefore,
+  );
+  f.central.setStatus(200);
+  await withCentralConnection(
+    f.scope,
+    (manager) => manager.synchronize(f.selection.connectionId),
+    f.ports,
+  );
+  const job = await prepareStandaloneReview(
+    f.request,
+    { ...f.settings, freshness: "offline" },
+    signal(),
+    ports,
+  );
+  assert.equal(
+    (await job.run(signal())).report.gcr!.report.status,
+    "completed",
+  );
+  assert.equal(modelCalls, 1);
 });

@@ -145,6 +145,9 @@ export async function prepareStandaloneReview(
         settings.freshness!,
         signal,
       );
+      // Preserve authorization diagnostics before the context resolver reports
+      // an unavailable context. The resolver still revalidates its pinned snapshot.
+      await central.cache.read(central.freshness);
       client = central.client;
     }
     const context = central

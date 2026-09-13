@@ -9,6 +9,7 @@ import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.
 import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope, readLocalHistory } from './localKnowledge.js';
 import { readCentralHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
+import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
@@ -343,6 +344,39 @@ export function activate(context: vscode.ExtensionContext): void {
   const historyProvider  = new HistoryProvider(cfg);
   const panelProvider    = new PanelProvider();
   const localProfile = () => vscode.workspace.getConfiguration('commitDefender').inspect<string>('localProfile')?.globalValue ?? 'default';
+  const centralSynchronization = new CentralSynchronization({
+    onState: (_key, state) => {
+      if (state.phase === 'ready') void refreshVisibleContext();
+      if (state.phase === 'stopped' || (state.phase === 'waiting' && state.reason === 'identity-unavailable'))
+        getOutputChannel().appendLine(`[Commit Defender] Central knowledge synchronization: ${state.reason}. Open Central Review Connection to inspect or reconnect.`);
+    },
+  });
+  let syncDiscovery = 0;
+  let syncManagement = 0;
+  async function refreshCentralSynchronization(): Promise<void> {
+    const generation = ++syncDiscovery;
+    if (syncManagement > 0) return;
+    if (!vscode.workspace.isTrusted) { centralSynchronization.stop(); return; }
+    const profileId = localProfile();
+    try {
+      const roots = await Promise.all((vscode.workspace.workspaceFolders ?? [])
+        .filter(folder => folder.uri.scheme === 'file')
+        .map(folder => getRepoRoot(folder.uri.fsPath).catch(() => undefined)));
+      if (generation !== syncDiscovery || !vscode.workspace.isTrusted || localProfile() !== profileId) return;
+      centralSynchronization.reconcile([...new Set(roots.filter((root): root is string => !!root))].map(repoRoot => {
+        const scope = knowledgeScope({ profileId, repoRoot, scope: 'repository' });
+        return { scope, selection: readSelection(context.globalState, scope) };
+      }));
+    } catch {
+      if (generation === syncDiscovery) centralSynchronization.stop();
+    }
+  }
+  const settleReviews = settleExecutions;
+  settleExecutions = async () => {
+    syncDiscovery++; centralSynchronization.stop();
+    await Promise.all([settleReviews?.(), centralSynchronization.settled()]);
+  };
+  context.subscriptions.push({ dispose: () => { syncDiscovery++; centralSynchronization.stop(); } });
   let historyLoad = 0;
   async function refreshLocalHistory(): Promise<void> {
     const generation = ++historyLoad;
@@ -383,17 +417,20 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: 'repository' });
       if (scope.kind !== 'repository') return;
-      await manageCentralConnection(context, scope, {
+      syncManagement++; syncDiscovery++; centralSynchronization.stop();
+      await centralSynchronization.settled();
+      try { await manageCentralConnection(context, scope, {
         assertCurrent() {
           if (!vscode.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: 'repository' })) !== selectionKey(scope))
             throw Error('Connection selection changed.');
         },
         async invalidate() {
+          syncDiscovery++; centralSynchronization.stop();
           historyLoad++; reviewIntent++; execution.invalidate(); await execution.settled();
           await vscode.commands.executeCommand('commitDefender.clearFindings');
         },
         refresh: refreshLocalHistory,
-      });
+      }); } finally { syncManagement--; await refreshCentralSynchronization(); }
     }),
     vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => manageModelCredential(await resolveRepoRoot())),
     vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
@@ -410,9 +447,12 @@ export function activate(context: vscode.ExtensionContext): void {
         await showLocalKnowledge(context, scope, refreshVisibleContext);
       } catch { void vscode.window.showErrorMessage('Local knowledge could not be opened. Check the profile and OS credential store.'); }
     }),
-    vscode.window.onDidChangeWindowState(event => { if (event.focused) void refreshVisibleContext(); }),
+    vscode.window.onDidChangeWindowState(event => { if (event.focused) { void refreshVisibleContext(); void refreshCentralSynchronization().then(() => centralSynchronization.wake()); } }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => { syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization(); }),
+    vscode.workspace.onDidGrantWorkspaceTrust(() => { void refreshCentralSynchronization(); }),
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('commitDefender.localProfile') || event.affectsConfiguration('commitDefender.reviewMode')) {
+        syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization();
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
@@ -421,6 +461,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
   void refreshLocalHistory();
+  void refreshCentralSynchronization();
 
   const historyView = vscode.window.createTreeView('commitDefender.history', {
     treeDataProvider: historyProvider,

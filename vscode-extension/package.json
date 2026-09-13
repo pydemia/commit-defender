@@ -588,7 +588,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -611,6 +611,7 @@
         "test:model-credentials": "esbuild test/model-credentials.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/model-credentials.test.cjs && node --test out-test/model-credentials.test.cjs",
         "bundle:credential-smoke": "esbuild test/model-credential-smoke.ts --bundle --platform=node --target=node22 --format=cjs --external:@vscode/test-electron --outfile=out-test/model-credential-smoke.cjs && esbuild test/model-credential-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/model-credential-host.cjs",
         "test:central-review": "esbuild test/central-review.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/central-review.test.cjs && node --test out-test/central-review.test.cjs",
+        "test:central-sync": "esbuild test/central-sync.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/central-sync.test.cjs && node --test out-test/central-sync.test.cjs",
         "test:central-view": "esbuild test/central-view.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-view.test.cjs && node --test out-test/central-view.test.cjs"
     },
     "dependencies": {
@@ -620,9 +621,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.15/gcr-client-contract-0.1.0-alpha.15.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.15/gcr-client-core-0.1.0-alpha.15.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.15/gcr-client-executors-0.1.0-alpha.15.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.16/gcr-client-contract-0.1.0-alpha.16.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.16/gcr-client-core-0.1.0-alpha.16.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.16/gcr-client-executors-0.1.0-alpha.16.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
