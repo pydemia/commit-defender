@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-09-13T12:55:32.840987+00:00",
+  "status": "packaged; installation-and-native-VSIX-validation-pending",
+  "sourceCommit": "ebd6b28",
+  "version": "2.3.0",
+  "clientVersion": "0.1.0-alpha.11",
+  "vsixSha256": "6a1ab0e7607b107d2a9d529669e666ca19e13f4741a491ce8b89d5c266fa490f",
+  "bundles": {
+    "extension.js": "2bb9e17724deda6c0d4ed3b8e7e3aa7c43d122732c3a748f7b039d0b9187f733",
+    "hook-cli.js": "15f3198658bb8845532b41a22bf1fe9c2653965497a2a5cbd9fec4521e806597",
+    "standalone-review-worker.js": "8c7df3910d229a2756bba50081ddeaa7f4dea622ada24be9ad11bb3d276148fe"
+  },
+  "files": 29,
+  "bundleHashesUnchangedByPrepublish": true,
+  "sameWorkerAsSixRealCases": true,
+  "sourceTestsVendorExcluded": true,
+  "gcrNoticesIncluded": true,
+  "installed": false,
+  "nativeGuiVerified": false,
+  "published": false,
+  "localArtifact": "artifacts/operations/P02-C07-diagnostics/commit-defender-2.3.0-alpha11.vsix",
+  "artifactRepository": "git-code-reviewer"
+}

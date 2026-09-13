@@ -1,0 +1,86 @@
+{
+  "recordedAt": "2026-09-13T13:01:42.064390+00:00",
+  "status": "native-development-incomplete; terminal-report-and-visible-progress-disagree",
+  "sourceCommit": "ebd6b28",
+  "runtime": {
+    "executable": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P02-C07-diagnostics/native-insiders/vscode-darwin-arm64-insiders/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
+    "downloadedAt": "2026-09-13T12:41:16.796Z",
+    "source": "https://code.visualstudio.com/insiders/",
+    "tlsVerification": true,
+    "app": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P02-C07-diagnostics/native-insiders/vscode-darwin-arm64-insiders/Visual Studio Code - Insiders.app",
+    "bundleId": "com.microsoft.VSCodeInsiders",
+    "version": "1.138.0-insider",
+    "commit": "60ac69b364809ee6976d6dc3ed74cc7628f637da",
+    "quality": "insider",
+    "signatureVerified": true
+  },
+  "fixture": {
+    "workspace": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P02-C07-diagnostics/native-gui/workspace",
+    "profileId": "cd-native-a1e3c31a-13cb-4904-a337-d3fbac7b423f",
+    "userData": "/tmp/cd-native-sqft0co0/user-data",
+    "extensions": "/tmp/cd-native-sqft0co0/extensions",
+    "synthetic": true,
+    "initialLaunchFailure": "macOS IPC socket path exceeded the 103-character limit; process exited 1"
+  },
+  "bundles": {
+    "out/extension.js": "2bb9e17724deda6c0d4ed3b8e7e3aa7c43d122732c3a748f7b039d0b9187f733",
+    "out/hook-cli.js": "15f3198658bb8845532b41a22bf1fe9c2653965497a2a5cbd9fec4521e806597",
+    "out/standalone-review-worker.js": "8c7df3910d229a2756bba50081ddeaa7f4dea622ada24be9ad11bb3d276148fe"
+  },
+  "observations": [
+    {
+      "surface": "native AX tree and screenshot",
+      "result": "Extension Development Host with Commit Defender activity/status controls and the synthetic workspace was visible."
+    },
+    {
+      "surface": "native review command",
+      "result": "Two attempts in Restricted Mode displayed Trust this workspace before starting a local review."
+    },
+    {
+      "surface": "native Workspace Trust",
+      "result": "Only the exact synthetic workspace path was added to trusted folders; the setting was not globally disabled."
+    },
+    {
+      "surface": "native command palette",
+      "result": "Commit Defender: Analyze Staged Files was selected and executed after trusting the fixture."
+    },
+    {
+      "surface": "native AX tree and screenshot",
+      "result": "The status remained CD: 0/1 — Captured source and local context after the terminal report was already saved."
+    },
+    {
+      "surface": "same-profile installed CLI history/result",
+      "result": "The actual native-run report was readable as cancelled with code cancelled, duration 180350 ms and exit 2."
+    }
+  ],
+  "terminalReport": {
+    "runId": "e1a58b89-f500-4d24-875d-b5bbec655584",
+    "status": "cancelled",
+    "startedAt": "2026-09-13T12:53:13.303Z",
+    "finishedAt": "2026-09-13T12:56:13.655Z",
+    "durationMs": 180350,
+    "problems": [
+      {
+        "code": "cancelled",
+        "message": "No complete review is available; inspect the problem code before retrying."
+      }
+    ],
+    "model": "gpt-6-astra",
+    "sha256": "6f949bb4a30a939ebc6745c5e2ef69b9040d37e18582bb3ad1544badf179f483"
+  },
+  "analysis": {
+    "known": "The core report was persisted before the UI returned to an idle/terminal view. The bridge resolves a run only on the worker exit event.",
+    "hypothesis": "Worker cleanup/exit acknowledgement may be holding the result; this is not yet confirmed by worker resource instrumentation.",
+    "timeoutClassification": "The 180-second configured run finished as cancelled; distinguish deadline cancellation from explicit user cancellation in follow-up verification.",
+    "notProven": [
+      "Native completed-result rendering",
+      "Finding navigation",
+      "Native VSIX installation",
+      "Model request failure cause",
+      "Stable/minimum VS Code GUI support"
+    ]
+  },
+  "cleanup": "Owned native process, short user-data directory and synthetic profile are retained for diagnosis; not marked cleaned.",
+  "published": false,
+  "relatedArtifact": "P02-C07-output-scope-vsix.json"
+}
