@@ -8,6 +8,7 @@ import {
   LocalHistoryStore,
   LocalKnowledgeStore,
   LocalRecordStore,
+  ReviewRequests,
   type LocalKeyStore,
   type LocalReviewExecutor,
 } from "@gcr/client-core";
@@ -600,5 +601,118 @@ test("the packaged worker fails unsupported configuration without freezing the h
     assert(ticks > 0);
   } finally {
     clearInterval(timer);
+  }
+});
+
+test("independent preparations share one model review and encrypted history for identical input", async (t) => {
+  const f = setup(t);
+  let calls = 0;
+  const ports = {
+    dataDirectory: f.dataDirectory,
+    keys: f.keyStore,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        calls++;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return {
+          raw: JSON.stringify((await answer(input)).response),
+          model: descriptor.model,
+        };
+      },
+    }),
+  };
+  const first = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  const second = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  assert.equal(first.key, second.key);
+  const results = await Promise.all([first.run(abort()), second.run(abort())]);
+  assert.equal(calls, 1);
+  assert.deepEqual(results[0].report, results[1].report);
+  assert(
+    results.some((result) => result.stderr.includes("Reused the saved review")),
+  );
+  assert.deepEqual(results[0].capturedSources, results[1].capturedSources);
+  const third = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  const reused = await third.run(abort());
+  assert.equal(calls, 1);
+  assert.deepEqual(reused.report, results[0].report);
+});
+
+test("a cancelled follower saves its own attempt without completing the owner's request", async (t) => {
+  const f = setup(t);
+  let started!: () => void, release!: () => void;
+  const running = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  t.after(() => release());
+  let calls = 0;
+  const ports = {
+    dataDirectory: f.dataDirectory,
+    keys: f.keyStore,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        calls++;
+        started();
+        await pending;
+        assert.equal(input.signal?.aborted, false);
+        return {
+          raw: JSON.stringify((await answer(input)).response),
+          model: descriptor.model,
+        };
+      },
+    }),
+  };
+  const owner = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  const follower = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  const first = owner.run(abort());
+  await running;
+  const controller = new AbortController();
+  const second = follower.run(controller.signal);
+  controller.abort("user");
+  assert.equal((await second).report.review.status, "cancelled");
+  const queue = await ReviewRequests.open({ ...ports, scope: f.scope });
+  try {
+    assert.equal((await queue.get(owner.key))?.state, "running");
+    release();
+    const result = await first;
+    assert.equal(result.report.review.status, "completed");
+    assert.equal(
+      (await queue.get(owner.key))?.resultId,
+      result.report.gcr?.report.runId,
+    );
+    assert.equal(calls, 1);
+  } finally {
+    release();
+    await first;
+    queue.close();
   }
 });

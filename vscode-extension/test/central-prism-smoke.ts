@@ -196,6 +196,7 @@ async function main() {
     const base = defaultLocalDataDirectory();
     const directories = [
       path.join(base, "profiles", profileId),
+      path.join(base, "review-requests", "profiles", profileId),
       path.join(base, "central-connections", "profiles", profileId),
       ...(id
         ? [

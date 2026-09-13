@@ -1277,11 +1277,46 @@ var centralConnectionRecord = object({
   expiresAt: timestamp
 });
 
+// node_modules/@gcr/client-contract/dist/review-request.js
+var reviewTrigger = choice([
+  "manual",
+  "work_completed",
+  "save",
+  "stage",
+  "commit",
+  "push"
+]);
+var reviewRequestRecord = refined(object({
+  formatVersion: literal(1),
+  key: sha256,
+  identity: executionIdentity,
+  reasons: list(reviewTrigger, 6, 1),
+  state: choice(["queued", "claimed", "running", "finished", "interrupted"]),
+  generation: integer(),
+  createdAt: integer(),
+  updatedAt: integer(),
+  owner: union(object({ token: id, deadline: integer() }), literal(null)),
+  resultId: union(id, literal(null))
+}), (value, at) => {
+  unique(value.reasons, at);
+  if ((value.state === "claimed" || value.state === "running") !== (value.owner !== null))
+    fail(at, "request ownership does not match state");
+  if (value.state === "finished" !== (value.resultId !== null))
+    fail(at, "request result does not match state");
+  if (value.updatedAt < value.createdAt)
+    fail(at, "request time moved backwards");
+});
+var reviewStartLedger = object({
+  formatVersion: literal(1),
+  observedAt: integer(),
+  reservations: list(object({ key: sha256, generation: integer(), at: integer(), reason: reviewTrigger }), 1e3)
+});
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.17",
+  version: "0.1.0-alpha.18",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1924,7 +1959,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.17",
+  version: "0.1.0-alpha.18",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

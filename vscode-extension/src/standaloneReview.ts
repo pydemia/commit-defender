@@ -3,6 +3,7 @@ import {
   projectCommitDefender,
   centralConnectionReference,
   type LocalScope,
+  type ClientReviewReport,
 } from "@gcr/client-contract";
 import {
   CentralConnections,
@@ -11,7 +12,9 @@ import {
   resolveCentralContext,
   type CentralCredentialStore,
   captureLocalSource,
-  contentHash,
+  reviewRequestKey,
+  executeReviewRequest,
+  ReviewRequestError,
   discoverLocalIdentity,
   LocalHistoryStore,
   LocalKnowledgeStore,
@@ -219,7 +222,7 @@ export async function prepareStandaloneReview(
     }
     return {
       backendId: client.mode,
-      key: contentHash({ identity: policy.identity, scope: request.scope }),
+      key: reviewRequestKey(policy.identity),
       dispose,
       async run(runSignal, progress) {
         if (disposed || running) throw new StandaloneReviewError("disposed");
@@ -234,22 +237,65 @@ export async function prepareStandaloneReview(
                 ? `Standalone fallback: ${resolved.execution.fallbackReason}`
                 : "Captured source and local context",
           );
-          const report = await runLocalReview({
-            snapshot: fixedSnapshot,
-            context: context.context,
-            policy,
-            executor,
-            signal: runSignal,
-          });
           let diagnostic = "";
-          try {
+          const runReview = (signal: AbortSignal) =>
+            runLocalReview({
+              snapshot: fixedSnapshot,
+              context: context.context,
+              policy,
+              executor,
+              signal,
+            });
+          const saveReport = async (report: ClientReviewReport) => {
             const saved = await history.saveReview(report);
             if (saved.retentionPending)
               diagnostic =
                 "Review saved; encrypted history retention cleanup remains pending.";
-          } catch {
-            diagnostic =
-              "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
+          };
+          let report: ClientReviewReport;
+          try {
+            const result = await executeReviewRequest({
+              storage: {
+                scope: repositoryScope,
+                ...(ports.dataDirectory
+                  ? { dataDirectory: ports.dataDirectory }
+                  : {}),
+                ...(ports.keys ? { keys: ports.keys } : {}),
+              },
+              identity: policy.identity,
+              signal: runSignal,
+              assertValid: async () => {
+                if (
+                  (await context.context.observeCentralSnapshot()) !== "current"
+                )
+                  throw new ReviewRequestError("request-invalid");
+              },
+              loadReport: (id) => history.getReview(id),
+              saveReport,
+              run: runReview,
+            });
+            report = result.report;
+            if (!result.persisted)
+              diagnostic =
+                "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
+            else if (!result.recorded)
+              diagnostic =
+                "The report was saved, but request completion could not be confirmed. Inspect the saved report and request state before retrying.";
+            else if (result.reused)
+              diagnostic =
+                "Reused the saved review for identical source, context and executor settings. No model review was started.";
+          } catch (error) {
+            if (!runSignal.aborted) throw error;
+            // A cancelled caller owns no shared execution. The runner creates a
+            // terminal cancellation/timeout report without invoking the model;
+            // saving that attempt must not finish another caller's request.
+            report = await runReview(runSignal);
+            try {
+              await saveReport(report);
+            } catch {
+              diagnostic =
+                "The cancelled attempt could not be confirmed in encrypted history.";
+            }
           }
           return {
             report: projectCommitDefender(report),

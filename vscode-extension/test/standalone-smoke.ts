@@ -439,6 +439,52 @@ async function main(): Promise<void> {
         resolvesExactCapturedBytesAfterWorkingTreeEdit: true,
         guiVerified: false,
       };
+      if (process.env.CD_SMOKE_DEDUP === "1") {
+        liveJob = await prepareStandaloneWorker(
+          workerFile,
+          { repoRoot: repo, files: [file], scope: "staged" },
+          {
+            mode: "standalone",
+            profileId,
+            provider: "codex",
+            model: "gpt-6-astra",
+            reasoningEffort: "xhigh",
+            executablePath,
+            workspaceTrusted: true,
+            durationMs,
+            excludePatterns: [],
+          },
+          signal(),
+        );
+        assert.equal(liveJob.key, record.executionKey);
+        const second = await liveJob.run(signal());
+        liveJob = undefined;
+        assert.deepEqual(second.report.gcr?.report, report);
+        assert(second.stderr.includes("Reused the saved review"));
+        const repeated = await cli(repo, [
+          "review",
+          "--path",
+          file,
+          "--executor-path",
+          executablePath,
+          "--timeout-ms",
+          String(durationMs),
+        ]);
+        assert.deepEqual(repeated.value, report);
+        assert(repeated.stderr.includes("review-reused"));
+        const requests = await cli(repo, ["requests"]);
+        assert.equal(requests.value.length, 1);
+        assert.equal(requests.value[0].generation, 1);
+        assert.equal(requests.value[0].state, "finished");
+        assert.equal(requests.value[0].resultId, report.runId);
+        record.deduplication = {
+          freshWorkerReused: true,
+          installedCliReused: true,
+          requestGeneration: 1,
+          modelReviewInvocations: 1,
+        };
+        checkpoint();
+      }
       const deactivated = await cli(repo, [
         "memory",
         "deactivate",
@@ -528,31 +574,55 @@ async function main(): Promise<void> {
     else process.env.GCR_SERVER_URL = previousServer;
     if (previousToken === undefined) delete process.env.GCR_TOKEN;
     else process.env.GCR_TOKEN = previousToken;
-    const referenceFile = path.join(profileDirectory, "local/key-ref.json");
-    if (fs.existsSync(referenceFile)) {
-      const reference = JSON.parse(fs.readFileSync(referenceFile, "utf8"));
-      assert.equal(reference.profileId, profileId);
-      assert.match(reference.id, /^[a-f0-9-]{36}$/);
-      const args = [
-        "-a",
-        `${profileId}.${reference.id}`,
-        "-s",
-        "com.commitdefender.local-knowledge.v1",
-      ];
-      execFileSync("/usr/bin/security", ["delete-generic-password", ...args], {
-        stdio: "pipe",
-      });
-      let absent = false;
-      try {
-        execFileSync("/usr/bin/security", ["find-generic-password", ...args], {
-          stdio: "pipe",
-        });
-      } catch (error) {
-        absent = (error as { status: number }).status === 44;
+    for (const ownedProfileDirectory of [
+      profileDirectory,
+      path.join(
+        defaultLocalDataDirectory(),
+        "review-requests",
+        "profiles",
+        profileId,
+      ),
+    ]) {
+      const referenceFile = path.join(
+        ownedProfileDirectory,
+        "local/key-ref.json",
+      );
+      if (fs.existsSync(referenceFile)) {
+        const reference = JSON.parse(fs.readFileSync(referenceFile, "utf8"));
+        assert.equal(reference.profileId, profileId);
+        assert.match(reference.id, /^[a-f0-9-]{36}$/);
+        const args = [
+          "-a",
+          `${profileId}.${reference.id}`,
+          "-s",
+          "com.commitdefender.local-knowledge.v1",
+        ];
+        execFileSync(
+          "/usr/bin/security",
+          ["delete-generic-password", ...args],
+          {
+            stdio: "pipe",
+          },
+        );
+        let absent = false;
+        try {
+          execFileSync(
+            "/usr/bin/security",
+            ["find-generic-password", ...args],
+            {
+              stdio: "pipe",
+            },
+          );
+        } catch (error) {
+          absent = (error as { status: number }).status === 44;
+        }
+        assert(
+          absent,
+          "Synthetic OS credential cleanup could not be confirmed.",
+        );
       }
-      assert(absent, "Synthetic OS credential cleanup could not be confirmed.");
+      fs.rmSync(ownedProfileDirectory, { recursive: true, force: true });
     }
-    fs.rmSync(profileDirectory, { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
     evidence.cleanup = "completed";
     evidence.finishedAt = new Date().toISOString();

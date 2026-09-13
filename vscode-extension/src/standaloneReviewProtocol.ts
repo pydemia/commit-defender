@@ -27,6 +27,15 @@ export class StandaloneReviewError extends Error {
 /** Only these generic diagnostics may cross the worker boundary; never raw provider output. */
 export function standaloneErrorMessage(code: string): string {
   switch (code) {
+    case "request-interrupted":
+      return "A previous process may have started this review. Check its outcome before another execution.";
+    case "request-busy":
+    case "request-deferred":
+      return "The shared review request is busy or waiting for its review budget.";
+    case "request-lost":
+      return "This process no longer owns the review request.";
+    case "request-invalid":
+      return "The saved request, source or authorization changed. Refresh before reviewing.";
     case "cancelled":
       return "Review preparation was cancelled.";
     case "timeout":
@@ -76,6 +85,11 @@ export function standaloneErrorMessage(code: string): string {
 }
 
 const safeCodes = new Set([
+  "request-interrupted",
+  "request-busy",
+  "request-deferred",
+  "request-lost",
+  "request-invalid",
   "central-connection-required",
   "authentication-required",
   "revoked",

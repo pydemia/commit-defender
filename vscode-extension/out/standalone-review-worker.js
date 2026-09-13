@@ -26,7 +26,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var import_node_worker_threads = require("node:worker_threads");
 
 // src/standaloneReview.ts
-var import_node_path14 = __toESM(require("node:path"));
+var import_node_path15 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -1049,11 +1049,46 @@ var centralConnectionRecord = object({
 });
 var centralConnectionReference = sha256;
 
+// node_modules/@gcr/client-contract/dist/review-request.js
+var reviewTrigger = choice([
+  "manual",
+  "work_completed",
+  "save",
+  "stage",
+  "commit",
+  "push"
+]);
+var reviewRequestRecord = refined(object({
+  formatVersion: literal(1),
+  key: sha256,
+  identity: executionIdentity,
+  reasons: list(reviewTrigger, 6, 1),
+  state: choice(["queued", "claimed", "running", "finished", "interrupted"]),
+  generation: integer(),
+  createdAt: integer(),
+  updatedAt: integer(),
+  owner: union(object({ token: id, deadline: integer() }), literal(null)),
+  resultId: union(id, literal(null))
+}), (value, at) => {
+  unique(value.reasons, at);
+  if ((value.state === "claimed" || value.state === "running") !== (value.owner !== null))
+    fail(at, "request ownership does not match state");
+  if (value.state === "finished" !== (value.resultId !== null))
+    fail(at, "request result does not match state");
+  if (value.updatedAt < value.createdAt)
+    fail(at, "request time moved backwards");
+});
+var reviewStartLedger = object({
+  formatVersion: literal(1),
+  observedAt: integer(),
+  reservations: list(object({ key: sha256, generation: integer(), at: integer(), reason: reviewTrigger }), 1e3)
+});
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.17",
+  version: "0.1.0-alpha.18",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -4814,9 +4849,9 @@ async function runLocalReview(input2) {
       return read;
     });
   };
-  const requirements = (path15) => {
-    const change = selected.find((change2) => change2.path === path15);
-    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path15) : source2.path === path15);
+  const requirements = (path16) => {
+    const change = selected.find((change2) => change2.path === path16);
+    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path16) : source2.path === path16);
   };
   let portFailure;
   const source = {
@@ -5641,22 +5676,362 @@ async function resolveReviewExecution(input2) {
   }
 }
 
+// node_modules/@gcr/client-core/dist/review-requests.js
+var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_crypto12 = require("node:crypto");
+var import_promises4 = require("node:timers/promises");
+var ReviewRequestError = class extends Error {
+  code;
+  retryAt;
+  constructor(code, retryAt) {
+    super({
+      "request-busy": "Another process is updating this review request.",
+      "request-interrupted": "A previous process may have started this review. Its outcome must be checked before another execution.",
+      "request-deferred": "The automatic review budget or minimum interval defers this request.",
+      "request-lost": "This process no longer owns the review request.",
+      "request-invalid": "The review request does not match its profile, worktree or saved result."
+    }[code]);
+    this.code = code;
+    this.retryAt = retryAt;
+    this.name = "ReviewRequestError";
+  }
+};
+function reviewRequestKey(input2) {
+  const identity = executionIdentity(input2);
+  if (identity.client.execution)
+    delete identity.client.execution.lastSynchronizedAt;
+  return contentHash(identity);
+}
+var ReviewRequests = class _ReviewRequests {
+  records;
+  now;
+  constructor(records, now) {
+    this.records = records;
+    this.now = now;
+  }
+  static async open(options) {
+    if (options.scope.kind !== "repository")
+      throw new ReviewRequestError("request-invalid");
+    const records = await LocalRecordStore.open({
+      ...options,
+      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
+    });
+    return new _ReviewRequests(records, options.now ?? Date.now);
+  }
+  close() {
+    this.records.close();
+  }
+  time(previous = 0) {
+    const now = this.now();
+    if (!Number.isSafeInteger(now) || now < 0 || now < previous)
+      throw new ReviewRequestError("request-invalid");
+    return now;
+  }
+  checkIdentity(identity) {
+    const scope = this.records.scope, client = identity.client;
+    if (scope.kind !== "repository" || scope.profileId !== client.profileId || scope.repositoryKey !== client.repositoryKey || scope.worktreeKey !== client.worktreeKey)
+      throw new ReviewRequestError("request-invalid");
+  }
+  async state(key4) {
+    if (!/^[a-f0-9]{64}$/.test(key4))
+      throw new ReviewRequestError("request-invalid");
+    const row = await this.records.read("settings", key4);
+    if (!row || row.deleted)
+      return void 0;
+    const value = reviewRequestRecord(row.value);
+    this.checkIdentity(value.identity);
+    this.time(value.updatedAt);
+    if (value.key !== key4 || reviewRequestKey(value.identity) !== key4)
+      throw new ReviewRequestError("request-invalid");
+    return { revision: row.revision, value };
+  }
+  async put(state, value) {
+    await this.records.write("settings", value.key, reviewRequestRecord(value), state?.revision ?? 0);
+    return value;
+  }
+  async retry(work) {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      try {
+        return await work();
+      } catch (cause) {
+        if (!(cause instanceof LocalStoreError) || cause.code !== "revision-conflict")
+          throw cause;
+      }
+    }
+    throw new ReviewRequestError("request-busy");
+  }
+  async enqueue(input2, reason) {
+    const identity = executionIdentity(input2);
+    this.checkIdentity(identity);
+    reviewTrigger(reason);
+    const key4 = reviewRequestKey(identity);
+    return this.retry(async () => {
+      const state = await this.state(key4);
+      if (state) {
+        if (state.value.reasons.includes(reason))
+          return state.value;
+        return this.put(state, {
+          ...state.value,
+          reasons: [...state.value.reasons, reason].sort(),
+          updatedAt: this.time(state.value.updatedAt)
+        });
+      }
+      const now = this.time();
+      return this.put(void 0, {
+        formatVersion: 1,
+        key: key4,
+        identity,
+        reasons: [reason],
+        state: "queued",
+        generation: 0,
+        createdAt: now,
+        updatedAt: now,
+        owner: null,
+        resultId: null
+      });
+    });
+  }
+  async get(key4) {
+    return (await this.state(key4))?.value;
+  }
+  async list() {
+    const rows = [];
+    for (const id3 of await this.records.listIds("settings")) {
+      if (id3 === "budget")
+        continue;
+      const row = await this.get(id3);
+      if (row)
+        rows.push(row);
+    }
+    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+  async claim(key4, options = {}) {
+    const leaseMs = options.leaseMs ?? 3e4;
+    if (!Number.isInteger(leaseMs) || leaseMs < 1e3 || leaseMs > 12e4)
+      throw new ReviewRequestError("request-invalid");
+    return this.retry(async () => {
+      const state = await this.state(key4);
+      if (!state)
+        throw new ReviewRequestError("request-invalid");
+      const now = this.time(state.value.updatedAt);
+      if (state.value.owner && state.value.owner.deadline > now)
+        return { kind: "waiting", request: state.value };
+      if (state.value.state === "running") {
+        const request2 = await this.put(state, {
+          ...state.value,
+          state: "interrupted",
+          generation: state.value.generation + 1,
+          owner: null,
+          updatedAt: now
+        });
+        return { kind: "interrupted", request: request2 };
+      }
+      if (state.value.state === "interrupted")
+        return { kind: "interrupted", request: state.value };
+      if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
+        return { kind: "finished", request: state.value };
+      const token2 = (0, import_node_crypto12.randomUUID)(), generation = state.value.generation + 1;
+      const request = await this.put(state, {
+        ...state.value,
+        state: "claimed",
+        generation,
+        updatedAt: now,
+        owner: { token: token2, deadline: now + leaseMs },
+        resultId: null
+      });
+      return { kind: "acquired", request, lease: { key: key4, token: token2, generation } };
+    });
+  }
+  async owned(lease) {
+    const state = await this.state(lease.key);
+    if (!state || state.value.generation !== lease.generation || state.value.owner?.token !== lease.token || state.value.owner.deadline <= this.time())
+      throw new ReviewRequestError("request-lost");
+    return state;
+  }
+  async heartbeat(lease, leaseMs = 3e4) {
+    if (!Number.isInteger(leaseMs) || leaseMs < 1e3 || leaseMs > 12e4)
+      throw new ReviewRequestError("request-invalid");
+    await this.retry(async () => {
+      const state = await this.owned(lease), now = this.time(state.value.updatedAt);
+      await this.put(state, {
+        ...state.value,
+        updatedAt: now,
+        owner: { token: lease.token, deadline: now + leaseMs }
+      });
+    });
+  }
+  async begin(lease, reason, limits = {}) {
+    reviewTrigger(reason);
+    const minimum = limits.minimumIntervalMs ?? 0, maximum = limits.maximumReviewsPerHour ?? 1e3;
+    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum) || maximum < 1 || maximum > 1e3)
+      throw new ReviewRequestError("request-invalid");
+    const owned = await this.owned(lease);
+    if (owned.value.state !== "claimed")
+      throw new ReviewRequestError("request-lost");
+    await this.retry(async () => {
+      await this.owned(lease);
+      const row = await this.records.read("settings", "budget");
+      if (row?.deleted)
+        throw new ReviewRequestError("request-invalid");
+      const ledger = row ? reviewStartLedger(row.value) : { formatVersion: 1, observedAt: 0, reservations: [] };
+      const now = this.time(ledger.observedAt);
+      const reservations = ledger.reservations.filter((r) => r.at > now - 36e5);
+      if (reservations.some((r) => r.key === lease.key && r.generation === lease.generation))
+        return;
+      const last = reservations.filter((r) => r.reason === reason).at(-1);
+      const retryAt = Math.max(reservations.length >= maximum ? reservations[reservations.length - maximum].at + 36e5 : 0, last ? last.at + minimum : 0);
+      if (retryAt > now)
+        throw new ReviewRequestError("request-deferred", retryAt);
+      reservations.push({ key: lease.key, generation: lease.generation, at: now, reason });
+      await this.records.write("settings", "budget", reviewStartLedger({ formatVersion: 1, observedAt: now, reservations }), row?.revision ?? 0);
+    });
+    await this.retry(async () => {
+      const state = await this.owned(lease);
+      if (state.value.state !== "claimed")
+        throw new ReviewRequestError("request-lost");
+      await this.put(state, {
+        ...state.value,
+        state: "running",
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+  async finish(lease, report) {
+    const parsed = clientReviewReport(report);
+    if (reviewRequestKey(parsed.identity) !== lease.key || !parsed.finishedAt)
+      throw new ReviewRequestError("request-invalid");
+    return this.retry(async () => {
+      const state = await this.owned(lease);
+      if (state.value.state !== "running")
+        throw new ReviewRequestError("request-lost");
+      return this.put(state, {
+        ...state.value,
+        state: "finished",
+        owner: null,
+        resultId: parsed.runId,
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+  async release(lease) {
+    await this.retry(async () => {
+      const state = await this.owned(lease);
+      await this.put(state, {
+        ...state.value,
+        state: state.value.state === "running" ? "interrupted" : "queued",
+        owner: null,
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+};
+async function executeReviewRequest(input2) {
+  const queue = await ReviewRequests.open(input2.storage);
+  const controller2 = new AbortController(), cancel = () => controller2.abort(input2.signal?.reason);
+  input2.signal?.addEventListener("abort", cancel, { once: true });
+  if (input2.signal?.aborted)
+    cancel();
+  let lease;
+  let timer;
+  let heartbeat = Promise.resolve();
+  let lost = false;
+  const check = () => {
+    if (controller2.signal.aborted)
+      throw new ReviewRequestError("request-lost");
+  };
+  const beat = () => {
+    timer = setTimeout(() => {
+      heartbeat = queue.heartbeat(lease).then(() => {
+        if (!controller2.signal.aborted)
+          beat();
+      }, () => {
+        lost = true;
+        controller2.abort();
+      });
+    }, 1e4);
+    timer.unref?.();
+  };
+  try {
+    check();
+    const request = await queue.enqueue(input2.identity, input2.reason ?? "manual");
+    while (true) {
+      check();
+      const claimed = await queue.claim(request.key, request.state === "finished" && input2.retryFinished ? { retryFinishedGeneration: request.generation } : {});
+      if (claimed.kind === "interrupted")
+        throw new ReviewRequestError("request-interrupted");
+      if (claimed.kind === "waiting") {
+        await (0, import_promises4.setTimeout)(250, void 0, { signal: controller2.signal });
+        continue;
+      }
+      if (claimed.kind === "finished") {
+        const report2 = await input2.loadReport(claimed.request.resultId);
+        if (!report2 || reviewRequestKey(clientReviewReport(report2).identity) !== request.key)
+          throw new ReviewRequestError("request-invalid");
+        await input2.assertValid?.();
+        check();
+        return { report: report2, reused: true, persisted: true, recorded: true, requestKey: request.key };
+      }
+      lease = claimed.lease;
+      break;
+    }
+    beat();
+    await input2.assertValid?.();
+    check();
+    await queue.begin(lease, input2.reason ?? "manual", input2.limits);
+    check();
+    const report = clientReviewReport(await input2.run(controller2.signal));
+    if (reviewRequestKey(report.identity) !== request.key || !report.finishedAt)
+      throw new ReviewRequestError("request-invalid");
+    if (lost)
+      throw new ReviewRequestError("request-lost");
+    let persisted = false;
+    try {
+      await input2.saveReport(report);
+      persisted = true;
+    } catch {
+    }
+    clearTimeout(timer);
+    await heartbeat;
+    clearTimeout(timer);
+    let recorded = false;
+    if (persisted && !lost) {
+      try {
+        await queue.finish(lease, report);
+        recorded = true;
+      } catch {
+      }
+    }
+    if (!recorded)
+      await queue.release(lease).catch(() => void 0);
+    lease = void 0;
+    return { report, reused: false, persisted, recorded, requestKey: request.key };
+  } finally {
+    clearTimeout(timer);
+    controller2.abort();
+    await heartbeat;
+    if (lease)
+      await queue.release(lease).catch(() => void 0);
+    input2.signal?.removeEventListener("abort", cancel);
+    queue.close();
+  }
+}
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.17",
+  version: "0.1.0-alpha.18",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var import_node_crypto14 = require("node:crypto");
+var import_node_crypto15 = require("node:crypto");
 var import_node_fs5 = require("node:fs");
-var import_promises6 = require("node:fs/promises");
+var import_promises7 = require("node:fs/promises");
 var import_node_os4 = __toESM(require("node:os"), 1);
-var import_node_path13 = __toESM(require("node:path"), 1);
+var import_node_path14 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/codex-config.js
-var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_path11 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/process.js
 var import_node_child_process4 = require("node:child_process");
@@ -5827,7 +6202,7 @@ function codexReviewArgs(root, sourceUrl) {
     instructions: CODEX_REVIEW_INSTRUCTIONS,
     developer_instructions: "",
     model_reasoning_effort: CODEX_REVIEW_EFFORT,
-    model_catalog_json: import_node_path10.default.join(root, "models.json"),
+    model_catalog_json: import_node_path11.default.join(root, "models.json"),
     project_doc_max_bytes: 0,
     web_search: "disabled",
     "agents.enabled": false,
@@ -5840,8 +6215,8 @@ function codexReviewArgs(root, sourceUrl) {
     "history.persistence": "none",
     "analytics.enabled": false,
     "feedback.enabled": false,
-    sqlite_home: import_node_path10.default.join(root, "state"),
-    log_dir: import_node_path10.default.join(root, "logs"),
+    sqlite_home: import_node_path11.default.join(root, "state"),
+    log_dir: import_node_path11.default.join(root, "logs"),
     "otel.exporter": "none",
     "otel.trace_exporter": "none",
     "otel.metrics_exporter": "none",
@@ -5928,23 +6303,23 @@ function codexAccountEnvironment() {
 
 // node_modules/@gcr/client-executors/dist/catalog-probe.js
 var import_node_http3 = require("node:http");
-var import_promises5 = require("node:fs/promises");
-var import_node_path12 = __toESM(require("node:path"), 1);
-var import_node_crypto13 = require("node:crypto");
+var import_promises6 = require("node:fs/promises");
+var import_node_path13 = __toESM(require("node:path"), 1);
+var import_node_crypto14 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
-var import_promises4 = require("node:fs/promises");
+var import_promises5 = require("node:fs/promises");
 var import_node_os3 = __toESM(require("node:os"), 1);
-var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_path12 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input2) {
   if (process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
-  const authHome = await (0, import_promises4.realpath)(input2.env.CODEX_HOME ?? import_node_path11.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  const authHome = await (0, import_promises5.realpath)(input2.env.CODEX_HOME ?? import_node_path12.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
   const denied2 = [];
   for (const name of ["AGENTS.md", "AGENTS.override.md"]) {
-    const file = import_node_path11.default.join(authHome, name);
+    const file = import_node_path12.default.join(authHome, name);
     try {
-      const info = await (0, import_promises4.lstat)(file);
+      const info = await (0, import_promises5.lstat)(file);
       if (!info.isFile() || info.isSymbolicLink())
         throw new ExecutorError("executor-unavailable");
     } catch (error2) {
@@ -5965,7 +6340,7 @@ async function runIsolatedCodex(input2) {
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
-var import_node_crypto12 = require("node:crypto");
+var import_node_crypto13 = require("node:crypto");
 var import_node_http2 = require("node:http");
 var fixedSourceTools = [
   {
@@ -6028,14 +6403,14 @@ var fixedSourceTools = [
   }
 ];
 async function startSourceBridge(port2) {
-  const token2 = (0, import_node_crypto12.randomBytes)(32).toString("hex");
+  const token2 = (0, import_node_crypto13.randomBytes)(32).toString("hex");
   const authorization = Buffer.from(`Bearer ${token2}`);
   const sockets = /* @__PURE__ */ new Set();
   let host = "";
   let requestCount = 0;
   const server = (0, import_node_http2.createServer)(async (req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
-    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto12.timingSafeEqual)(supplied, authorization)) {
+    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto13.timingSafeEqual)(supplied, authorization)) {
       res.writeHead(403).end();
       return;
     }
@@ -6175,11 +6550,11 @@ function catalogNames(request) {
   return tools.flatMap((tool) => tool.type === "namespace" && Array.isArray(tool.tools) ? tool.tools.map((child) => `${String(tool.name)}.${String(child.name)}`) : [`${String(tool.type)}.${String(tool.name)}`]).sort();
 }
 async function probeCodexCatalog(command, root, observe) {
-  const canary = `DO_NOT_LOAD_${(0, import_node_crypto13.randomBytes)(16).toString("hex")}`;
+  const canary = `DO_NOT_LOAD_${(0, import_node_crypto14.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
-    await (0, import_promises5.mkdir)(import_node_path12.default.join(root, name), { mode: 448 });
-  await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
-  await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+    await (0, import_promises6.mkdir)(import_node_path13.default.join(root, name), { mode: 448 });
+  await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
+  await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
   const bridge = await startSourceBridge({
     async execute() {
       throw Error("Probe never provides source.");
@@ -6225,7 +6600,7 @@ async function probeCodexCatalog(command, root, observe) {
     const address = server.address();
     if (!address || typeof address === "string")
       throw new ExecutorError("executor-unavailable");
-    await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
+    await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
 [mcp_servers.unexpected]
 url = "http://127.0.0.1:${address.port}/unexpected"
 `, { mode: 384 });
@@ -6243,11 +6618,11 @@ url = "http://127.0.0.1:${address.port}/unexpected"
     const processResult = await runIsolatedCodex({
       command,
       args,
-      cwd: import_node_path12.default.join(root, "cwd"),
+      cwd: import_node_path13.default.join(root, "cwd"),
       env: {
         PATH: "/usr/bin:/bin",
-        HOME: import_node_path12.default.join(root, "auth"),
-        CODEX_HOME: import_node_path12.default.join(root, "auth"),
+        HOME: import_node_path13.default.join(root, "auth"),
+        CODEX_HOME: import_node_path13.default.join(root, "auth"),
         LANG: "en_US.UTF-8",
         GCR_FIXED_SOURCE_TOKEN: bridge.token
       },
@@ -6281,22 +6656,22 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 }
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var hash3 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
-  const info = await (0, import_promises6.stat)(command);
+  const info = await (0, import_promises7.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
-  const digest2 = (0, import_node_crypto14.createHash)("sha256");
+  const digest2 = (0, import_node_crypto15.createHash)("sha256");
   for await (const bytes of (0, import_node_fs5.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
 }
 async function executablePath(value) {
-  const candidates = value.includes(import_node_path13.default.sep) ? [import_node_path13.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path13.default.delimiter).filter(Boolean).map((directory) => import_node_path13.default.join(directory, value));
+  const candidates = value.includes(import_node_path14.default.sep) ? [import_node_path14.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path14.default.delimiter).filter(Boolean).map((directory) => import_node_path14.default.join(directory, value));
   for (const candidate of candidates) {
     try {
-      await (0, import_promises6.access)(candidate, import_node_fs5.constants.X_OK);
-      return await (0, import_promises6.realpath)(candidate);
+      await (0, import_promises7.access)(candidate, import_node_fs5.constants.X_OK);
+      return await (0, import_promises7.realpath)(candidate);
     } catch {
     }
   }
@@ -6338,21 +6713,21 @@ var CodexAccountExecutor = class {
       throw new ExecutorError("cancelled");
     if (await binaryHash(this.command) !== this.fingerprint)
       throw new ExecutorError("executor-unavailable");
-    const root = await (0, import_promises6.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
+    const root = await (0, import_promises7.mkdtemp)(import_node_path14.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
     const started = performance.now();
     let bridge;
     try {
-      const cwd = import_node_path13.default.join(root, "cwd");
-      await (0, import_promises6.mkdir)(cwd, { mode: 448 });
-      await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "models.json"), this.catalog, { mode: 384 });
+      const cwd = import_node_path14.default.join(root, "cwd");
+      await (0, import_promises7.mkdir)(cwd, { mode: 448 });
+      await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "models.json"), this.catalog, { mode: 384 });
       bridge = await startSourceBridge(input2.source);
       const args = codexReviewArgs(root, bridge.url);
       if (input2.responseSchema) {
         const schema = JSON.stringify(input2.responseSchema);
         if (Buffer.byteLength(schema) > 65536)
           throw new ExecutorError("executor-unavailable");
-        const file = import_node_path13.default.join(root, "response-schema.json");
-        await (0, import_promises6.writeFile)(file, schema, { mode: 384 });
+        const file = import_node_path14.default.join(root, "response-schema.json");
+        await (0, import_promises7.writeFile)(file, schema, { mode: 384 });
         args.push("--output-schema", file);
       }
       args.push("-");
@@ -6398,7 +6773,7 @@ var CodexAccountExecutor = class {
       try {
         await bridge?.close();
       } finally {
-        await (0, import_promises6.rm)(root, { recursive: true, force: true });
+        await (0, import_promises7.rm)(root, { recursive: true, force: true });
       }
     }
   }
@@ -6407,7 +6782,7 @@ async function prepareCodexAccountExecutor(options) {
   if (options.model !== CODEX_REVIEW_MODEL || options.reasoningEffort !== CODEX_REVIEW_EFFORT || process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
-  const root = await (0, import_promises6.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
+  const root = await (0, import_promises7.mkdtemp)(import_node_path14.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
   try {
     const fingerprint = await binaryHash(command);
     const env = { PATH: "/usr/bin:/bin", HOME: root, CODEX_HOME: root };
@@ -6435,7 +6810,7 @@ async function prepareCodexAccountExecutor(options) {
     if (bundled.code !== 0)
       throw new ExecutorError("executor-unavailable");
     const catalog = reviewModelCatalog(bundled.stdout);
-    await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "models.json"), catalog, { mode: 384 });
     const tools = await probeCodexCatalog(command, root);
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
@@ -6452,7 +6827,7 @@ async function prepareCodexAccountExecutor(options) {
       toolDefinitions: fixedSourceTools,
       settings: codexReviewArgs("/gcr/run", "http://127.0.0.1/source"),
       isolation: "macos-global-instruction-deny-v1",
-      authHome: environment.CODEX_HOME ?? import_node_path13.default.join(import_node_os4.default.homedir(), ".codex")
+      authHome: environment.CODEX_HOME ?? import_node_path14.default.join(import_node_os4.default.homedir(), ".codex")
     }));
     return new CodexAccountExecutor(command, fingerprint, catalog, configHash, environment, cliVersion);
   } catch (error2) {
@@ -6460,14 +6835,14 @@ async function prepareCodexAccountExecutor(options) {
       throw error2;
     throw new ExecutorError("executor-unavailable");
   } finally {
-    await (0, import_promises6.rm)(root, { recursive: true, force: true });
+    await (0, import_promises7.rm)(root, { recursive: true, force: true });
   }
 }
 
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.17",
+  version: "0.1.0-alpha.18",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6481,6 +6856,15 @@ var StandaloneReviewError = class extends Error {
 };
 function standaloneErrorMessage(code) {
   switch (code) {
+    case "request-interrupted":
+      return "A previous process may have started this review. Check its outcome before another execution.";
+    case "request-busy":
+    case "request-deferred":
+      return "The shared review request is busy or waiting for its review budget.";
+    case "request-lost":
+      return "This process no longer owns the review request.";
+    case "request-invalid":
+      return "The saved request, source or authorization changed. Refresh before reviewing.";
     case "cancelled":
       return "Review preparation was cancelled.";
     case "timeout":
@@ -6529,6 +6913,11 @@ function standaloneErrorMessage(code) {
   }
 }
 var safeCodes = /* @__PURE__ */ new Set([
+  "request-interrupted",
+  "request-busy",
+  "request-deferred",
+  "request-lost",
+  "request-invalid",
   "central-connection-required",
   "authentication-required",
   "revoked",
@@ -6713,7 +7102,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       const records = await LocalRecordStore.open({
         scope: repositoryScope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path14.default.join(
+        dataDirectory: import_node_path15.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id
@@ -6724,7 +7113,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     }
     return {
       backendId: client.mode,
-      key: contentHash({ identity: policy.identity, scope: request.scope }),
+      key: reviewRequestKey(policy.identity),
       dispose,
       async run(runSignal, progress) {
         if (disposed || running2) throw new StandaloneReviewError("disposed");
@@ -6735,20 +7124,52 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
             fixedSnapshot.selected.length,
             central ? "Captured source and verified central/local context" : resolved.execution.fallbackReason ? `Standalone fallback: ${resolved.execution.fallbackReason}` : "Captured source and local context"
           );
-          const report = await runLocalReview({
+          let diagnostic = "";
+          const runReview = (signal2) => runLocalReview({
             snapshot: fixedSnapshot,
             context: context.context,
             policy,
             executor,
-            signal: runSignal
+            signal: signal2
           });
-          let diagnostic = "";
-          try {
-            const saved = await history.saveReview(report);
+          const saveReport = async (report2) => {
+            const saved = await history.saveReview(report2);
             if (saved.retentionPending)
               diagnostic = "Review saved; encrypted history retention cleanup remains pending.";
-          } catch {
-            diagnostic = "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
+          };
+          let report;
+          try {
+            const result = await executeReviewRequest({
+              storage: {
+                scope: repositoryScope,
+                ...ports.dataDirectory ? { dataDirectory: ports.dataDirectory } : {},
+                ...ports.keys ? { keys: ports.keys } : {}
+              },
+              identity: policy.identity,
+              signal: runSignal,
+              assertValid: async () => {
+                if (await context.context.observeCentralSnapshot() !== "current")
+                  throw new ReviewRequestError("request-invalid");
+              },
+              loadReport: (id3) => history.getReview(id3),
+              saveReport,
+              run: runReview
+            });
+            report = result.report;
+            if (!result.persisted)
+              diagnostic = "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
+            else if (!result.recorded)
+              diagnostic = "The report was saved, but request completion could not be confirmed. Inspect the saved report and request state before retrying.";
+            else if (result.reused)
+              diagnostic = "Reused the saved review for identical source, context and executor settings. No model review was started.";
+          } catch (error2) {
+            if (!runSignal.aborted) throw error2;
+            report = await runReview(runSignal);
+            try {
+              await saveReport(report);
+            } catch {
+              diagnostic = "The cancelled attempt could not be confirmed in encrypted history.";
+            }
           }
           return {
             report: projectCommitDefender(report),
