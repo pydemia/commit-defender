@@ -513,21 +513,65 @@ function unique(values, at) {
     fail(at, "duplicate identity");
 }
 
+// node_modules/@gcr/client-contract/dist/review-execution.js
+var offlineBehavior = choice([
+  "cache-then-standalone",
+  "cache-only",
+  "standalone",
+  "pause"
+]);
+var fallbackReason = choice([
+  "unavailable",
+  "timeout",
+  "authentication-required",
+  "revoked",
+  "disabled",
+  "identity-unavailable",
+  "incompatible",
+  "invalid-manifest",
+  "invalid-bundle",
+  "cache-unavailable"
+]);
+var reviewExecution = refined(object({
+  configuredMode: choice(["standalone", "centralized"]),
+  effectiveMode: choice(["standalone", "centralized"]),
+  knowledgeSource: choice(["local", "central-online", "central-cache"]),
+  fallbackReason: union(fallbackReason, literal(null)),
+  connectionId: optional(sha256),
+  lastSynchronizedAt: optional(union(timestamp, literal(null)))
+}), (value, at) => {
+  if (value.configuredMode === "standalone") {
+    if (value.effectiveMode !== "standalone" || value.knowledgeSource !== "local" || value.fallbackReason !== null || value.connectionId !== void 0)
+      fail(at, "standalone configuration contains a central execution");
+  } else if (!value.connectionId)
+    fail(at, "central execution requires its confirmed connection");
+  if (value.effectiveMode === "standalone") {
+    if (value.knowledgeSource !== "local" || value.lastSynchronizedAt !== void 0 || value.configuredMode === "centralized" && value.fallbackReason === null)
+      fail(at, "local fallback provenance is inconsistent");
+  } else if (value.knowledgeSource === "local" || value.knowledgeSource === "central-online" && value.fallbackReason !== null)
+    fail(at, "central execution provenance is inconsistent");
+});
+
 // node_modules/@gcr/client-contract/dist/identity.js
 var clientMode = choice(["standalone", "centralized"]);
 var centralAudience = object({ serverId: id, tenantId: id, userId: id, repositoryId: id });
-var clientIdentity = union(object({
+var clientIdentity = refined(union(object({
   mode: literal("standalone"),
   profileId: id,
   repositoryKey: sha256,
-  worktreeKey: sha256
+  worktreeKey: sha256,
+  execution: optional(reviewExecution)
 }), object({
   mode: literal("centralized"),
   profileId: id,
   repositoryKey: sha256,
   worktreeKey: sha256,
-  audience: centralAudience
-}));
+  audience: centralAudience,
+  execution: optional(reviewExecution)
+})), (value, at) => {
+  if (value.execution && value.mode !== value.execution.effectiveMode)
+    fail(at, "client mode differs from effective execution mode");
+});
 var repositoryRemote = object({
   name: id,
   transport: choice(["https", "ssh"]),
@@ -1185,6 +1229,7 @@ var centralCacheIndex = object({
   status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
   identityUnavailable: optional(boolean),
   lastSynchronizedAt: optional(integer()),
+  lastSyncFailure: optional(union(choice(["unavailable", "timeout"]), literal(null))),
   minimumAuthorizationRevision: integer(),
   minimumSequences: knowledgeSequences,
   revocationMinimumSequences: optional(knowledgeSequences),
@@ -1225,6 +1270,7 @@ var centralConnectionRecord = object({
   audience: knowledgeAudience,
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
+  offlineBehavior: optional(offlineBehavior),
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
@@ -1235,7 +1281,7 @@ var centralConnectionRecord = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1878,7 +1924,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

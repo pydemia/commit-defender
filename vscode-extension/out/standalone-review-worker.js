@@ -114,21 +114,65 @@ function unique(values, at) {
     fail(at, "duplicate identity");
 }
 
+// node_modules/@gcr/client-contract/dist/review-execution.js
+var offlineBehavior = choice([
+  "cache-then-standalone",
+  "cache-only",
+  "standalone",
+  "pause"
+]);
+var fallbackReason = choice([
+  "unavailable",
+  "timeout",
+  "authentication-required",
+  "revoked",
+  "disabled",
+  "identity-unavailable",
+  "incompatible",
+  "invalid-manifest",
+  "invalid-bundle",
+  "cache-unavailable"
+]);
+var reviewExecution = refined(object({
+  configuredMode: choice(["standalone", "centralized"]),
+  effectiveMode: choice(["standalone", "centralized"]),
+  knowledgeSource: choice(["local", "central-online", "central-cache"]),
+  fallbackReason: union(fallbackReason, literal(null)),
+  connectionId: optional(sha256),
+  lastSynchronizedAt: optional(union(timestamp, literal(null)))
+}), (value, at) => {
+  if (value.configuredMode === "standalone") {
+    if (value.effectiveMode !== "standalone" || value.knowledgeSource !== "local" || value.fallbackReason !== null || value.connectionId !== void 0)
+      fail(at, "standalone configuration contains a central execution");
+  } else if (!value.connectionId)
+    fail(at, "central execution requires its confirmed connection");
+  if (value.effectiveMode === "standalone") {
+    if (value.knowledgeSource !== "local" || value.lastSynchronizedAt !== void 0 || value.configuredMode === "centralized" && value.fallbackReason === null)
+      fail(at, "local fallback provenance is inconsistent");
+  } else if (value.knowledgeSource === "local" || value.knowledgeSource === "central-online" && value.fallbackReason !== null)
+    fail(at, "central execution provenance is inconsistent");
+});
+
 // node_modules/@gcr/client-contract/dist/identity.js
 var clientMode = choice(["standalone", "centralized"]);
 var centralAudience = object({ serverId: id, tenantId: id, userId: id, repositoryId: id });
-var clientIdentity = union(object({
+var clientIdentity = refined(union(object({
   mode: literal("standalone"),
   profileId: id,
   repositoryKey: sha256,
-  worktreeKey: sha256
+  worktreeKey: sha256,
+  execution: optional(reviewExecution)
 }), object({
   mode: literal("centralized"),
   profileId: id,
   repositoryKey: sha256,
   worktreeKey: sha256,
-  audience: centralAudience
-}));
+  audience: centralAudience,
+  execution: optional(reviewExecution)
+})), (value, at) => {
+  if (value.execution && value.mode !== value.execution.effectiveMode)
+    fail(at, "client mode differs from effective execution mode");
+});
 var repositoryRemote = object({
   name: id,
   transport: choice(["https", "ssh"]),
@@ -956,6 +1000,7 @@ var centralCacheIndex = object({
   status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
   identityUnavailable: optional(boolean),
   lastSynchronizedAt: optional(integer()),
+  lastSyncFailure: optional(union(choice(["unavailable", "timeout"]), literal(null))),
   minimumAuthorizationRevision: integer(),
   minimumSequences: knowledgeSequences,
   revocationMinimumSequences: optional(knowledgeSequences),
@@ -996,6 +1041,7 @@ var centralConnectionRecord = object({
   audience: knowledgeAudience,
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
+  offlineBehavior: optional(offlineBehavior),
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
@@ -1007,7 +1053,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -3291,6 +3337,8 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
     if (!identityConfirmed && (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable))
       throw error("identity-unavailable");
+    if (mode === "online" && !identityConfirmed && state.value.lastSyncFailure)
+      throw error(state.value.lastSyncFailure);
     const active = state.value.active;
     if (!active)
       throw error("cache-unavailable");
@@ -3423,6 +3471,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         state = await this.put(state, {
           ...state.value,
           identityUnavailable: false,
+          lastSyncFailure: null,
           lastSynchronizedAt: this.time(),
           observedAt: this.time(),
           claim: null
@@ -3515,6 +3564,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         observedAt: this.time(),
         minimumSequences,
         identityUnavailable: false,
+        lastSyncFailure: null,
         lastSynchronizedAt: this.time(),
         active: { manifest, records: refs },
         claim: null
@@ -3554,7 +3604,11 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
               claim: null
             });
           } else if (!authorizationUncertain)
-            await this.put(state, { ...state.value, claim: null });
+            await this.put(state, {
+              ...state.value,
+              ...cause instanceof KnowledgeSyncError && (cause.code === "unavailable" || cause.code === "timeout") ? { lastSyncFailure: cause.code } : {},
+              claim: null
+            });
         } catch {
         }
       }
@@ -5189,6 +5243,13 @@ var KnowledgeHttpTransport = class {
 var import_node_path9 = __toESM(require("node:path"), 1);
 var import_node_crypto11 = require("node:crypto");
 var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
+var CentralConnectionSetupError = class extends KnowledgeSyncError {
+  connectionId;
+  constructor(code, connectionId) {
+    super(code, "The authenticated connection could not activate its first knowledge snapshot.");
+    this.connectionId = connectionId;
+  }
+};
 var CentralConnections = class _CentralConnections {
   records;
   options;
@@ -5280,7 +5341,8 @@ var CentralConnections = class _CentralConnections {
       controller2.signal.removeEventListener("abort", rejectAbort);
     }
   }
-  async connect(input2, apiKey, clientId, signal) {
+  async connect(input2, apiKey, clientId, signal, options = {}) {
+    const behavior = offlineBehavior(options.offlineBehavior ?? "pause");
     const config = centralConnectionInput(input2);
     validateCentralApiKey(apiKey);
     if (new Set(config.trustedKeys.map((k) => k.id)).size !== config.trustedKeys.length || [...config.trustedKeys.map((k) => k.pem), config.ca ?? ""].some((s) => s.includes("PRIVATE KEY")))
@@ -5319,6 +5381,7 @@ var CentralConnections = class _CentralConnections {
         pem: key4.export({ type: "spki", format: "pem" }).toString()
       })),
       ca: config.ca,
+      offlineBehavior: behavior,
       credentialReference: "gcr-" + (0, import_node_crypto11.randomUUID)(),
       keyId: identity.keyId,
       clientId,
@@ -5350,6 +5413,14 @@ var CentralConnections = class _CentralConnections {
         await this.credentials.remove(value.credentialReference);
       } catch {
       }
+      if (error2 instanceof KnowledgeSyncError && !signal?.aborted) {
+        try {
+          fallbackReason(error2.code);
+        } catch {
+          throw error2;
+        }
+        throw new CentralConnectionSetupError(error2.code, value.id);
+      }
       throw error2;
     }
   }
@@ -5361,6 +5432,7 @@ var CentralConnections = class _CentralConnections {
       status: value.status,
       serverUrl: value.serverUrl,
       audience: value.audience,
+      offlineBehavior: value.offlineBehavior ?? "pause",
       keyId: value.keyId,
       clientId: value.clientId,
       expiresAt: value.expiresAt
@@ -5486,10 +5558,93 @@ var CentralConnections = class _CentralConnections {
   }
 };
 
+// node_modules/@gcr/client-core/dist/review-execution.js
+async function resolveReviewExecution(input2) {
+  const mode = clientMode(input2.configuredMode);
+  const local = clientIdentity(input2.client);
+  if (local.mode !== "standalone")
+    throw new KnowledgeSyncError("invalid-binding", "Expected local client identity.");
+  const behavior = offlineBehavior(input2.offlineBehavior ?? "pause");
+  const check = () => {
+    if (input2.signal?.aborted)
+      throw new KnowledgeSyncError("cancelled", "Review preparation was cancelled.");
+  };
+  const result = (identity, execution, central) => {
+    check();
+    const client = clientIdentity({ ...identity, execution: reviewExecution(execution) });
+    return {
+      client,
+      execution,
+      ...central ? { central: { ...central, client } } : {}
+    };
+  };
+  check();
+  if (mode === "standalone")
+    return result(local, {
+      configuredMode: "standalone",
+      effectiveMode: "standalone",
+      knowledgeSource: "local",
+      fallbackReason: null
+    });
+  if (!input2.connectionId || !input2.central)
+    throw new KnowledgeSyncError("invalid-binding", "An explicitly confirmed central connection is required.");
+  const connectionId = input2.connectionId;
+  const base = { configuredMode: "centralized", connectionId };
+  const access2 = async (freshness, reason) => {
+    check();
+    const central = await input2.central(freshness);
+    if (central.freshness !== freshness || central.client.mode !== "centralized" || Object.entries(central.cache.binding.audience).some(([key4, value]) => central.client.audience[key4] !== value) || central.cache.binding.id !== connectionId || central.client.profileId !== local.profileId || central.client.repositoryKey !== local.repositoryKey || central.client.worktreeKey !== local.worktreeKey)
+      throw new KnowledgeSyncError("invalid-binding", "The central connection does not match this worktree and profile.");
+    await central.assertConnection();
+    const snapshot = await central.cache.read(freshness);
+    return result(central.client, {
+      ...base,
+      effectiveMode: "centralized",
+      knowledgeSource: freshness === "online" ? "central-online" : "central-cache",
+      fallbackReason: reason,
+      lastSynchronizedAt: snapshot.lastSynchronizedAt === null ? null : new Date(snapshot.lastSynchronizedAt).toISOString()
+    }, central);
+  };
+  const eligible = (cause) => {
+    check();
+    if (!(cause instanceof KnowledgeSyncError))
+      throw cause;
+    try {
+      return fallbackReason(cause.code);
+    } catch {
+      throw cause;
+    }
+  };
+  try {
+    return await access2(input2.freshness ?? "online", null);
+  } catch (cause) {
+    let reason = eligible(cause);
+    if (behavior === "pause")
+      throw cause;
+    if (input2.freshness !== "offline" && behavior !== "standalone" && (reason === "unavailable" || reason === "timeout")) {
+      try {
+        return await access2("offline", reason);
+      } catch (cacheError) {
+        reason = eligible(cacheError);
+        if (behavior === "cache-only")
+          throw cacheError;
+      }
+    }
+    if (behavior === "cache-only")
+      throw cause;
+    return result(local, {
+      ...base,
+      effectiveMode: "standalone",
+      knowledgeSource: "local",
+      fallbackReason: reason
+    });
+  }
+}
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6312,7 +6467,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6486,24 +6641,33 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       snapshot,
       stores: opened.map((records) => new LocalKnowledgeStore(records))
     };
-    let central;
-    if (settings.mode === "centralized") {
-      connections = await CentralConnections.open({
-        scope: repositoryScope,
-        ...ports
-      });
-      const status = await connections.status(settings.connectionId);
-      if (status.clientId !== "commit-defender")
-        throw new StandaloneReviewError("authentication-required");
-      central = await connections.review(
-        settings.connectionId,
-        settings.freshness,
-        signal
-      );
-      await central.cache.read(central.freshness);
-      client = central.client;
-    }
-    const context = central ? await resolveCentralContext({ ...query, ...central }) : await resolveLocalContext(query);
+    const resolved = await resolveReviewExecution({
+      client: localClient,
+      configuredMode: settings.mode,
+      offlineBehavior: settings.offlineBehavior ?? "pause",
+      ...settings.mode === "centralized" ? {
+        connectionId: settings.connectionId,
+        freshness: settings.freshness,
+        central: async (freshness) => {
+          connections ??= await CentralConnections.open({
+            scope: repositoryScope,
+            ...ports
+          });
+          const status = await connections.status(settings.connectionId);
+          if (status.clientId !== "commit-defender")
+            throw new StandaloneReviewError("authentication-required");
+          return connections.review(
+            settings.connectionId,
+            freshness,
+            signal
+          );
+        }
+      } : {},
+      signal
+    });
+    const central = resolved.central;
+    client = resolved.client;
+    const context = central ? await resolveCentralContext({ ...query, ...central }) : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
     if (context.status !== "ready")
       throw new StandaloneReviewError("needs-context");
@@ -6559,7 +6723,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       history = new LocalHistoryStore(records, void 0, identity.audience);
     }
     return {
-      backendId: settings.mode,
+      backendId: client.mode,
       key: contentHash({ identity: policy.identity, scope: request.scope }),
       dispose,
       async run(runSignal, progress) {
@@ -6569,7 +6733,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
           progress?.(
             0,
             fixedSnapshot.selected.length,
-            central ? "Captured source and verified central/local context" : "Captured source and local context"
+            central ? "Captured source and verified central/local context" : resolved.execution.fallbackReason ? `Standalone fallback: ${resolved.execution.fallbackReason}` : "Captured source and local context"
           );
           const report = await runLocalReview({
             snapshot: fixedSnapshot,

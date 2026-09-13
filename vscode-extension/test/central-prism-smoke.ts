@@ -12,6 +12,7 @@ import { prepareStandaloneWorker } from "../src/standaloneWorkerClient.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import {
   readCentralHistory,
+  readSelectedHistory,
   withCentralConnection,
 } from "../src/centralConnection.js";
 import { fixture } from "./helpers/review-fixture.js";
@@ -23,11 +24,18 @@ async function main() {
     "Select the current account's Codex executable explicitly.",
   );
   assert(process.env.CD_CENTRAL_EVIDENCE, "Select an evidence file.");
+  const fallback = process.env.CD_CENTRAL_FALLBACK_SMOKE === "1";
   const input = JSON.parse(fs.readFileSync(0, "utf8"));
   assert.equal(input.config.serverUrl, "https://pr-review.prism.ai");
   assert.equal(typeof input.witness, "string");
-  const f = fixture(), profileId = `cd-prism-${randomUUID()}`, witness = input.witness;
-  const central = { config: input.config, secret: input.token, close: async () => {} };
+  const f = fixture(),
+    profileId = `cd-prism-${randomUUID()}`,
+    witness = input.witness;
+  const central = {
+    config: input.config,
+    secret: input.token,
+    close: async () => {},
+  };
   const location = {
     repoRoot: f.repo,
     profileId,
@@ -40,9 +48,13 @@ async function main() {
   let running = false;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("timeout"), 300000);
-  const workerFile = path.resolve(process.env.CD_CENTRAL_WORKER ?? "out/standalone-review-worker.js");
+  const workerFile = path.resolve(
+    process.env.CD_CENTRAL_WORKER ?? "out/standalone-review-worker.js",
+  );
   const proof: Record<string, unknown> = {
-    workerSha256: createHash("sha256").update(fs.readFileSync(workerFile)).digest("hex"),
+    workerSha256: createHash("sha256")
+      .update(fs.readFileSync(workerFile))
+      .digest("hex"),
     status: "running",
     syntheticSource: true,
     centralServer: "https://pr-review.prism.ai",
@@ -51,6 +63,7 @@ async function main() {
     model: "gpt-6-astra",
     reasoningEffort: "xhigh",
     nativeWorker: true,
+    fallbackSmoke: fallback,
     extensionHostUi: false,
   };
   const checkpoint = () =>
@@ -92,11 +105,16 @@ async function main() {
       connectionId: id,
       freshness: "online" as const,
     };
+    if (fallback) {
+      await withCentralConnection(scope, (manager) => manager.disconnect(id!));
+      proof.fallbackTrigger = "explicit-disconnect-after-authenticated-sync";
+    }
     job = await prepareStandaloneWorker(
       workerFile,
       { repoRoot: f.repo, files: ["sum.ts"], scope: "staged" },
       {
         ...selection,
+        offlineBehavior: fallback ? "cache-then-standalone" : "pause",
         profileId,
         provider: "codex",
         model: "gpt-6-astra",
@@ -108,7 +126,7 @@ async function main() {
       },
       controller.signal,
     );
-    assert.equal(job.backendId, "centralized");
+    assert.equal(job.backendId, fallback ? "standalone" : "centralized");
     running = true;
     const result = await job.run(controller.signal);
     running = false;
@@ -118,9 +136,27 @@ async function main() {
     checkpoint();
     assert.equal(report.status, "completed");
     assert.equal(reviewExitCode(report), 1);
-    assert.equal(report.identity.client.mode, "centralized");
+    assert.equal(
+      report.identity.client.mode,
+      fallback ? "standalone" : "centralized",
+    );
+    proof.execution = report.identity.client.execution;
+    if (fallback) {
+      assert.equal(
+        report.identity.client.execution?.configuredMode,
+        "centralized",
+      );
+      assert.equal(report.identity.client.execution?.knowledgeSource, "local");
+      assert.equal(report.identity.context.centralSnapshot, undefined);
+      assert(
+        report.identity.context.entries.every(
+          (entry) => entry.origin !== "central",
+        ),
+      );
+      assert(!JSON.stringify(report).includes(witness));
+    }
     assert.equal(result.report.review.blocking, false);
-    assert(JSON.stringify(report.findings).includes(witness));
+    if (!fallback) assert(JSON.stringify(report.findings).includes(witness));
     assert(
       report.findings.some(
         (f) =>
@@ -135,7 +171,9 @@ async function main() {
           (e) => e.kind === "source-read" && e.location.path === name,
         ),
       );
-    const history = await readCentralHistory(location, selection);
+    const history = fallback
+      ? await readSelectedHistory(location, selection)
+      : await readCentralHistory(location, selection);
     assert.deepEqual(history.reports, [report]);
     proof.exactHistoryRestored = true;
     const disconnected = await withCentralConnection(scope, (c) =>

@@ -7,8 +7,8 @@ import { reviewNavigation } from './reviewNavigation.js';
 import { liveBlocks, liveSource, retainCapturedSources } from './reviewSource.js';
 import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.js';
 import { ReviewExecutionOwner } from './reviewExecution.js';
-import { checkLocalContextFreshness, knowledgeScope, readLocalHistory } from './localKnowledge.js';
-import { readCentralHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
+import { checkLocalContextFreshness, knowledgeScope } from './localKnowledge.js';
+import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
@@ -390,11 +390,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === 'centralized' && selection?.mode !== 'centralized')
         throw new StandaloneReviewError('central-connection-required');
       const selected = JSON.stringify(selection);
-      const central = selection?.mode === 'centralized'
-        ? await readCentralHistory({ profileId, repoRoot, scope: 'repository' }, selection) : undefined;
-      const reports = central?.reports ?? await readLocalHistory({ profileId, repoRoot, scope: 'repository' });
+      const selectedHistory = await readSelectedHistory({ profileId, repoRoot, scope: 'repository' }, selection);
       if (generation === historyLoad && localProfile() === profileId && JSON.stringify(readSelection(context.globalState, scope)) === selected)
-        historyProvider.restore(reports, repoRoot, scope, central?.audience);
+        historyProvider.restore(selectedHistory.reports, repoRoot, scope, selectedHistory.audience, selectedHistory.fallbackConnectionId);
     } catch {
       if (generation === historyLoad) historyProvider.clear();
       getOutputChannel().appendLine('[Commit Defender] Encrypted local history could not be loaded. Check the OS credential store and refresh local history.');

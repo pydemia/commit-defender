@@ -1,6 +1,8 @@
 import path from "node:path";
 import {
   centralConnectionReference,
+  offlineBehavior,
+  type OfflineBehavior,
   type LocalScope,
 } from "@gcr/client-contract";
 import {
@@ -13,6 +15,7 @@ import {
 } from "@gcr/client-core";
 import {
   knowledgeScope,
+  readLocalHistory,
   type KnowledgeLocation,
   type LocalStoragePorts,
 } from "./localKnowledge.js";
@@ -28,6 +31,7 @@ export type CentralSelection =
       mode: "centralized";
       connectionId: string;
       freshness: "online" | "offline";
+      offlineBehavior?: OfflineBehavior;
     };
 export interface SelectionStore {
   get<T>(key: string): T | undefined;
@@ -45,7 +49,7 @@ export function centralSelection(value: unknown): CentralSelection {
   const fields =
     v.mode === "standalone"
       ? ["version", "mode"]
-      : ["version", "mode", "connectionId", "freshness"];
+      : ["version", "mode", "connectionId", "freshness", "offlineBehavior"];
   if (v.version !== 1 || Object.keys(v).some((k) => !fields.includes(k)))
     throw new StandaloneReviewError("central-connection-required");
   if (v.mode === "standalone") return { version: 1, mode: "standalone" };
@@ -59,6 +63,9 @@ export function centralSelection(value: unknown): CentralSelection {
     mode: "centralized",
     connectionId: centralConnectionReference(v.connectionId),
     freshness: v.freshness as "online" | "offline",
+    ...(v.offlineBehavior === undefined
+      ? {}
+      : { offlineBehavior: offlineBehavior(v.offlineBehavior) }),
   };
 }
 export function readSelection(
@@ -80,12 +87,14 @@ export function selectedReviewSettings(
         mode: "standalone",
         connectionId: undefined,
         freshness: undefined,
+        offlineBehavior: undefined,
       }
     : {
         ...settings,
         mode: "centralized",
         connectionId: checked.connectionId,
         freshness: checked.freshness,
+        offlineBehavior: checked.offlineBehavior ?? "pause",
       };
 }
 export type CentralPorts = LocalStoragePorts & {
@@ -140,4 +149,32 @@ export async function readCentralHistory(
     },
     ports,
   );
+}
+
+/** Local fallback reports retain local ownership even after central access expires. */
+export async function readSelectedHistory(
+  location: KnowledgeLocation,
+  selection?: CentralSelection,
+  ports: CentralPorts = {},
+) {
+  const local = await readLocalHistory(location, ports);
+  if (selection?.mode !== "centralized") return { reports: local };
+  let central: Awaited<ReturnType<typeof readCentralHistory>> | undefined;
+  try {
+    central = await readCentralHistory(location, selection, ports);
+  } catch {
+    /* Show only owned local fallback history while central history is unavailable. */
+  }
+  return {
+    reports: [
+      ...(central?.reports ?? []),
+      ...local.filter(
+        (report) =>
+          report.identity.client.execution?.connectionId ===
+          selection.connectionId,
+      ),
+    ],
+    audience: central?.audience,
+    fallbackConnectionId: selection.connectionId,
+  };
 }

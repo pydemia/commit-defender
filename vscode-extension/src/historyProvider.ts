@@ -1,3 +1,4 @@
+import { reviewExecutionLabel } from './reviewExecutionLabel.js';
 import * as vscode from 'vscode';
 import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './types.js';
 import { ExtensionConfig } from './config.js';
@@ -54,7 +55,7 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
       id: report.gcr?.report.runId ?? Date.now().toString(),
       timestamp: new Date(report.gcr?.report.finishedAt ?? Date.now()),
       report, repoRoot,
-      label: `${OUTCOME_META[reviewStatus(report.review)].label} · ${count} file${count !== 1 ? 's' : ''}${reviewStatus(report.review) === 'completed' ? ` · ${grade}` : ''}`,
+      label: `${report.gcr ? reviewExecutionLabel(report.gcr.report.identity.client) + " · " : ""}${OUTCOME_META[reviewStatus(report.review)].label} · ${count} file${count !== 1 ? 's' : ''}${reviewStatus(report.review) === 'completed' ? ` · ${grade}` : ''}`,
       scope,
       scopeTarget,
     };
@@ -65,8 +66,8 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
   }
 
   /** Reload only history; a saved report never becomes fresh editor diagnostics automatically. */
-  restore(reports: ClientReviewReport[], repoRoot: string, scope: Extract<LocalScope, { kind: 'repository' }>, audience?: KnowledgeAudience): void {
-    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope, audience);
+  restore(reports: ClientReviewReport[], repoRoot: string, scope: Extract<LocalScope, { kind: 'repository' }>, audience?: KnowledgeAudience, fallbackConnectionId?: string): void {
+    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope, audience, fallbackConnectionId);
     this._emitter.fire(undefined);
   }
 

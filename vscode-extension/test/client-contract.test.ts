@@ -28,7 +28,7 @@ const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
-const deliveryVersion = "0.1.0-alpha.16";
+const deliveryVersion = "0.1.0-alpha.17";
 const corpus = JSON.parse(bytes.toString("utf8")) as {
   synthetic: boolean;
   sourceText: Record<string, string>;
@@ -304,4 +304,36 @@ test("evaluations omitted from legacy comments never become summary-generated fi
   assert.equal(normalizeReport(projected).length, 0);
   assert.equal(projected.gcr.projectionOmissions.length, 1);
   assert.equal(projected.gcr.report.findings[0].outcome, "not-applicable");
+});
+
+test("fallback reports show configured and effective modes without claiming central policy compliance", () => {
+  const original = reportFor("source-evidence");
+  const core = clientReviewReport({
+    ...original,
+    identity: {
+      ...original.identity,
+      client: {
+        ...original.identity.client,
+        execution: {
+          configuredMode: "centralized",
+          effectiveMode: "standalone",
+          knowledgeSource: "local",
+          fallbackReason: "unavailable",
+          connectionId: "c".repeat(64),
+        },
+      },
+    },
+  });
+  const view = new SummaryView(
+    projectCommitDefender(core),
+    "/synthetic",
+    new ReviewLinks(),
+  );
+  assert(view.html.includes("Standalone · fallback: unavailable"));
+  assert(view.html.includes("Configured mode: centralized"));
+  assert(view.html.includes("Effective mode: standalone"));
+  assert(
+    view.html.includes("does not establish compliance with central policy"),
+  );
+  assert(!view.html.includes("<h2>Central knowledge used</h2>"));
 });

@@ -1,8 +1,14 @@
+import { CentralConnectionSetupError } from "@gcr/client-core";
 import * as vscode from "vscode";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { centralConnectionInput, type LocalScope } from "@gcr/client-contract";
+import {
+  centralConnectionInput,
+  offlineBehavior,
+  type OfflineBehavior,
+  type LocalScope,
+} from "@gcr/client-contract";
 import {
   normalizeCentralServerUrl,
   validateCentralApiKey,
@@ -38,6 +44,7 @@ export function centralStatusHtml(value: unknown): string {
     audience = v.audience ?? {};
   const rows = [
     ["Review mode", v.requestedMode],
+    ["Offline behavior", v.offlineBehavior ?? "pause"],
     [
       "Knowledge source",
       v.freshness === "offline"
@@ -177,6 +184,12 @@ export async function manageCentralConnection(
           description: "Use local knowledge; retain the central connection",
         },
         {
+          label: "Offline and fallback behavior…",
+          action: "fallback",
+          description:
+            "Choose cache, local fallback or pause for this worktree",
+        },
+        {
           label: "Disconnect selected connection",
           action: "disconnect",
           description: "Remove its local key and disable its central cache",
@@ -207,11 +220,15 @@ export async function manageCentralConnection(
           (k) => `${k.id}: ${createHash("sha256").update(k.pem).digest("hex")}`,
         )
         .join(" · ");
+      const behavior: OfflineBehavior =
+        selection?.mode === "centralized"
+          ? (selection.offlineBehavior ?? "pause")
+          : "cache-then-standalone";
       const confirmed = await vscode.window.showInformationMessage(
         `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
         {
           modal: true,
-          detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins}`,
+          detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`,
         },
         "Connect",
       );
@@ -241,6 +258,7 @@ export async function manageCentralConnection(
                 secret!.trim(),
                 "commit-defender",
                 signal,
+                { offlineBehavior: behavior },
               ),
             ),
         );
@@ -249,7 +267,26 @@ export async function manageCentralConnection(
           mode: "centralized",
           connectionId: connected.id,
           freshness: "online",
+          offlineBehavior: behavior,
         });
+      } catch (cause) {
+        // Identity was authenticated and the first publication failed. Keep the
+        // confirmed selection for local fallback; the failed key was removed.
+        if (
+          cause instanceof CentralConnectionSetupError &&
+          (behavior === "cache-then-standalone" || behavior === "standalone")
+        ) {
+          await select({
+            version: 1,
+            mode: "centralized",
+            connectionId: cause.connectionId,
+            freshness: "online",
+            offlineBehavior: behavior,
+          });
+          void vscode.window.showInformationMessage(
+            "Central knowledge could not be activated. The confirmed local fallback policy is available; reconnect to use central knowledge.",
+          );
+        } else throw cause;
       } finally {
         secret = undefined;
       }
@@ -275,6 +312,12 @@ export async function manageCentralConnection(
           mode: "centralized",
           connectionId: picked.id,
           freshness: "online",
+          offlineBehavior:
+            selection?.mode === "centralized" &&
+            selection.connectionId === picked.id
+              ? (selection.offlineBehavior ?? "pause")
+              : (connections.find((c) => c.id === picked.id)?.offlineBehavior ??
+                "pause"),
         });
       else if (!entries.length)
         void vscode.window.showInformationMessage(
@@ -285,6 +328,42 @@ export async function manageCentralConnection(
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const id = selection.connectionId;
+    if (choice.action === "fallback") {
+      const picked = await vscode.window.showQuickPick(
+        [
+          {
+            label: "Cache, then standalone",
+            behavior: "cache-then-standalone",
+            description:
+              "Use valid signed cache; otherwise review local/built-in knowledge with the same model account",
+          },
+          {
+            label: "Cache only",
+            behavior: "cache-only",
+            description: "Pause if authorized signed cache is unavailable",
+          },
+          {
+            label: "Standalone on failure",
+            behavior: "standalone",
+            description:
+              "Use only local/built-in knowledge when central access fails",
+          },
+          {
+            label: "Pause",
+            behavior: "pause",
+            description:
+              "Require the requested central knowledge source; do not fall back",
+          },
+        ],
+        { title: "Confirm this worktree's offline and fallback behavior" },
+      );
+      if (picked)
+        await select({
+          ...selection,
+          offlineBehavior: offlineBehavior(picked.behavior),
+        });
+      return;
+    }
     if (choice.action === "offline") {
       await withManager(async (manager) => {
         const ready = await manager.review(id, "offline");
@@ -302,7 +381,7 @@ export async function manageCentralConnection(
       void vscode.window.showInformationMessage(
         result.credentialCleanupPending || result.cacheCleanupPending
           ? "Connection disabled. Some local cleanup remains pending; retry disconnect."
-          : "Connection disconnected. Select standalone review or reconnect before reviewing.",
+          : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`,
       );
       return;
     }
@@ -324,6 +403,7 @@ export async function manageCentralConnection(
       freshness: selection.freshness,
       profileId: scope.profileId,
       ...status,
+      offlineBehavior: selection.offlineBehavior ?? "pause",
     });
     context.subscriptions.push(panel);
   } catch (error) {

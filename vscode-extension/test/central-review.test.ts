@@ -7,6 +7,7 @@ import { prepareStandaloneReview } from "../src/standaloneReview.js";
 import {
   centralSelection,
   readCentralHistory,
+  readSelectedHistory,
   readSelection,
   selectedReviewSettings,
   selectionKey,
@@ -527,4 +528,138 @@ test("background identity failure blocks offline review without erasing the key 
     "completed",
   );
   assert.equal(modelCalls, 1);
+});
+
+test("confirmed fallback uses signed cache during outage or local-only knowledge without changing the selection", async (t) => {
+  const f = await setup(t);
+  f.central.setStatus(503);
+  await assert.rejects(
+    withCentralConnection(
+      f.scope,
+      (manager) => manager.synchronize(f.selection.connectionId),
+      f.ports,
+    ),
+  );
+  let modelCalls = 0;
+  const cachedPorts = {
+    ...f.ports,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        modelCalls++;
+        assert(input.prompt.includes("CD_CENTRAL_POLICY"));
+        return response(input);
+      },
+    }),
+  };
+  const cached = await prepareStandaloneReview(
+    f.request,
+    { ...f.settings, offlineBehavior: "cache-then-standalone" },
+    signal(),
+    cachedPorts,
+  );
+  const cachedReport = (await cached.run(signal())).report.gcr!.report;
+  assert.equal(
+    cachedReport.identity.client.execution?.knowledgeSource,
+    "central-cache",
+  );
+  assert(cachedReport.identity.context.centralSnapshot);
+  const settings = { ...f.settings, offlineBehavior: "standalone" as const };
+  const localPorts = {
+    ...f.ports,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        modelCalls++;
+        assert(!input.prompt.includes("CD_CENTRAL_POLICY"));
+        return response(input);
+      },
+    }),
+  };
+  const fallback = await prepareStandaloneReview(
+    f.request,
+    settings,
+    signal(),
+    localPorts,
+  );
+  assert.equal(fallback.backendId, "standalone");
+  assert.notEqual(fallback.key, cached.key);
+  const report = (await fallback.run(signal())).report.gcr!.report;
+  assert.equal(report.identity.client.mode, "standalone");
+  assert.equal(report.identity.client.execution?.configuredMode, "centralized");
+  assert.equal(report.identity.client.execution?.fallbackReason, "unavailable");
+  assert.equal(report.identity.context.centralSnapshot, undefined);
+  assert(
+    report.identity.context.entries.every(
+      (entry) => entry.origin !== "central",
+    ),
+  );
+  assert.equal(settings.mode, "centralized");
+  assert.equal(modelCalls, 2);
+  const selectedHistory = await readSelectedHistory(
+    f.location,
+    f.selection,
+    f.ports,
+  );
+  assert(selectedHistory.reports.some((r) => r.runId === report.runId));
+  const merged = mergeLocalHistory(
+    [],
+    selectedHistory.reports,
+    f.repo,
+    f.scope,
+    selectedHistory.audience,
+    selectedHistory.fallbackConnectionId,
+  );
+  assert.equal(merged.length, 2);
+  assert(merged.some((r) => r.label.includes("Standalone · fallback")));
+  assert.equal(
+    (
+      await readSelectedHistory(
+        f.location,
+        { ...f.selection, connectionId: "d".repeat(64) },
+        f.ports,
+      )
+    ).reports.length,
+    0,
+  );
+});
+
+test("identity failure permits only confirmed local fallback and never switches model providers", async (t) => {
+  const f = await setup(t);
+  f.central.setStatus(503, "IDENTITY_UNAVAILABLE");
+  let attempts = 0;
+  const ports = {
+    ...f.ports,
+    prepareExecutor: async () => {
+      attempts++;
+      throw Error("Account executor unavailable");
+    },
+  };
+  await assert.rejects(
+    withCentralConnection(
+      f.scope,
+      (manager) => manager.synchronize(f.selection.connectionId),
+      f.ports,
+    ),
+  );
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...f.settings, offlineBehavior: "cache-only" },
+      signal(),
+      ports,
+    ),
+    { code: "identity-unavailable" },
+  );
+  assert.equal(attempts, 0);
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...f.settings, offlineBehavior: "cache-then-standalone" },
+      signal(),
+      ports,
+    ),
+    { code: "executor-unavailable" },
+  );
+  assert.equal(attempts, 1);
 });

@@ -460,6 +460,18 @@ function reviewCoverage(report) {
   ].join("; ");
 }
 
+// src/reviewExecutionLabel.ts
+function reviewExecutionLabel(client) {
+  const execution = client.execution;
+  if (!execution)
+    return client.mode === "centralized" ? "Centralized" : "Standalone";
+  if (execution.knowledgeSource === "central-online")
+    return "Centralized \xB7 online";
+  if (execution.knowledgeSource === "central-cache")
+    return "Centralized \xB7 cached";
+  return execution.configuredMode === "centralized" ? `Standalone \xB7 fallback: ${execution.fallbackReason}` : "Standalone";
+}
+
 // src/summaryView.ts
 var import_crypto3 = require("crypto");
 
@@ -11585,7 +11597,7 @@ function buildSummaryHtml(report, view, palette) {
   const metaParts = [
     reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
-    report.gcr ? `${report.gcr.report.identity.client.mode === "centralized" ? "Centralized" : "Standalone"} \xB7 advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
+    report.gcr ? `${reviewExecutionLabel(report.gcr.report.identity.client)} \xB7 advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`
   ].filter(Boolean);
   let body2 = `
@@ -11601,6 +11613,10 @@ function buildSummaryHtml(report, view, palette) {
     if (core.problems.length) {
       body2 += `<section><h2>Review problems</h2><ul>${core.problems.map((problem) => `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
+    const execution = core.identity.client.execution;
+    if (execution) body2 += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} \xB7 Effective mode: ${esc(execution.effectiveMode)} \xB7 Knowledge: ${esc(execution.knowledgeSource)}</p>
+      ${execution.fallbackReason ? `<p>Fallback reason: ${esc(execution.fallbackReason)}. ${execution.effectiveMode === "standalone" ? "This review used local/built-in knowledge only and does not establish compliance with central policy." : "This review used the authorized signed cache."}</p>` : ""}
+      ${execution.lastSynchronizedAt ? `<p>Last successful knowledge sync: ${esc(execution.lastSynchronizedAt)}</p>` : ""}</section>`;
     const central = core.identity.context.centralSnapshot;
     if (central) body2 += `<section><h2>Central knowledge used</h2>
       <p>Server ${esc(central.audience.serverId)} \xB7 Tenant ${esc(central.audience.tenantId)} \xB7 Repository ${esc(central.audience.repositoryId)} \xB7 User ${esc(central.audience.userId)}</p>
@@ -14044,21 +14060,65 @@ function unique(values, at) {
     fail(at, "duplicate identity");
 }
 
+// node_modules/@gcr/client-contract/dist/review-execution.js
+var offlineBehavior = choice([
+  "cache-then-standalone",
+  "cache-only",
+  "standalone",
+  "pause"
+]);
+var fallbackReason = choice([
+  "unavailable",
+  "timeout",
+  "authentication-required",
+  "revoked",
+  "disabled",
+  "identity-unavailable",
+  "incompatible",
+  "invalid-manifest",
+  "invalid-bundle",
+  "cache-unavailable"
+]);
+var reviewExecution = refined(object({
+  configuredMode: choice(["standalone", "centralized"]),
+  effectiveMode: choice(["standalone", "centralized"]),
+  knowledgeSource: choice(["local", "central-online", "central-cache"]),
+  fallbackReason: union(fallbackReason, literal(null)),
+  connectionId: optional(sha256),
+  lastSynchronizedAt: optional(union(timestamp, literal(null)))
+}), (value, at) => {
+  if (value.configuredMode === "standalone") {
+    if (value.effectiveMode !== "standalone" || value.knowledgeSource !== "local" || value.fallbackReason !== null || value.connectionId !== void 0)
+      fail(at, "standalone configuration contains a central execution");
+  } else if (!value.connectionId)
+    fail(at, "central execution requires its confirmed connection");
+  if (value.effectiveMode === "standalone") {
+    if (value.knowledgeSource !== "local" || value.lastSynchronizedAt !== void 0 || value.configuredMode === "centralized" && value.fallbackReason === null)
+      fail(at, "local fallback provenance is inconsistent");
+  } else if (value.knowledgeSource === "local" || value.knowledgeSource === "central-online" && value.fallbackReason !== null)
+    fail(at, "central execution provenance is inconsistent");
+});
+
 // node_modules/@gcr/client-contract/dist/identity.js
 var clientMode = choice(["standalone", "centralized"]);
 var centralAudience = object({ serverId: id, tenantId: id, userId: id, repositoryId: id });
-var clientIdentity = union(object({
+var clientIdentity = refined(union(object({
   mode: literal("standalone"),
   profileId: id,
   repositoryKey: sha256,
-  worktreeKey: sha256
+  worktreeKey: sha256,
+  execution: optional(reviewExecution)
 }), object({
   mode: literal("centralized"),
   profileId: id,
   repositoryKey: sha256,
   worktreeKey: sha256,
-  audience: centralAudience
-}));
+  audience: centralAudience,
+  execution: optional(reviewExecution)
+})), (value, at) => {
+  if (value.execution && value.mode !== value.execution.effectiveMode)
+    fail(at, "client mode differs from effective execution mode");
+});
 var repositoryRemote = object({
   name: id,
   transport: choice(["https", "ssh"]),
@@ -14837,6 +14897,7 @@ var centralCacheIndex = object({
   status: choice(["enabled", "disconnected", "authentication-required", "revoked"]),
   identityUnavailable: optional(boolean),
   lastSynchronizedAt: optional(integer()),
+  lastSyncFailure: optional(union(choice(["unavailable", "timeout"]), literal(null))),
   minimumAuthorizationRevision: integer(),
   minimumSequences: knowledgeSequences,
   revocationMinimumSequences: optional(knowledgeSequences),
@@ -14877,6 +14938,7 @@ var centralConnectionRecord = object({
   audience: knowledgeAudience,
   trustedKeys: keys,
   ca: union(text5(65536, 1), literal(null)),
+  offlineBehavior: optional(offlineBehavior),
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
@@ -14888,7 +14950,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -16194,6 +16256,8 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
     if (!identityConfirmed && (this.identityUnavailableGeneration === state.value.generation || state.value.identityUnavailable))
       throw error("identity-unavailable");
+    if (mode === "online" && !identityConfirmed && state.value.lastSyncFailure)
+      throw error(state.value.lastSyncFailure);
     const active = state.value.active;
     if (!active)
       throw error("cache-unavailable");
@@ -16326,6 +16390,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         state = await this.put(state, {
           ...state.value,
           identityUnavailable: false,
+          lastSyncFailure: null,
           lastSynchronizedAt: this.time(),
           observedAt: this.time(),
           claim: null
@@ -16418,6 +16483,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         observedAt: this.time(),
         minimumSequences,
         identityUnavailable: false,
+        lastSyncFailure: null,
         lastSynchronizedAt: this.time(),
         active: { manifest, records: refs },
         claim: null
@@ -16457,7 +16523,11 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
               claim: null
             });
           } else if (!authorizationUncertain)
-            await this.put(state, { ...state.value, claim: null });
+            await this.put(state, {
+              ...state.value,
+              ...cause instanceof KnowledgeSyncError && (cause.code === "unavailable" || cause.code === "timeout") ? { lastSyncFailure: cause.code } : {},
+              claim: null
+            });
         } catch {
         }
       }
@@ -16712,6 +16782,13 @@ var KnowledgeHttpTransport = class {
 var import_node_path5 = __toESM(require("node:path"), 1);
 var import_node_crypto8 = require("node:crypto");
 var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
+var CentralConnectionSetupError = class extends KnowledgeSyncError {
+  connectionId;
+  constructor(code3, connectionId) {
+    super(code3, "The authenticated connection could not activate its first knowledge snapshot.");
+    this.connectionId = connectionId;
+  }
+};
 var CentralConnections = class _CentralConnections {
   records;
   options;
@@ -16803,7 +16880,8 @@ var CentralConnections = class _CentralConnections {
       controller.signal.removeEventListener("abort", rejectAbort);
     }
   }
-  async connect(input, apiKey, clientId, signal) {
+  async connect(input, apiKey, clientId, signal, options = {}) {
+    const behavior = offlineBehavior(options.offlineBehavior ?? "pause");
     const config = centralConnectionInput(input);
     validateCentralApiKey(apiKey);
     if (new Set(config.trustedKeys.map((k) => k.id)).size !== config.trustedKeys.length || [...config.trustedKeys.map((k) => k.pem), config.ca ?? ""].some((s) => s.includes("PRIVATE KEY")))
@@ -16842,6 +16920,7 @@ var CentralConnections = class _CentralConnections {
         pem: key.export({ type: "spki", format: "pem" }).toString()
       })),
       ca: config.ca,
+      offlineBehavior: behavior,
       credentialReference: "gcr-" + (0, import_node_crypto8.randomUUID)(),
       keyId: identity.keyId,
       clientId,
@@ -16873,6 +16952,14 @@ var CentralConnections = class _CentralConnections {
         await this.credentials.remove(value.credentialReference);
       } catch {
       }
+      if (error2 instanceof KnowledgeSyncError && !signal?.aborted) {
+        try {
+          fallbackReason(error2.code);
+        } catch {
+          throw error2;
+        }
+        throw new CentralConnectionSetupError(error2.code, value.id);
+      }
       throw error2;
     }
   }
@@ -16884,6 +16971,7 @@ var CentralConnections = class _CentralConnections {
       status: value.status,
       serverUrl: value.serverUrl,
       audience: value.audience,
+      offlineBehavior: value.offlineBehavior ?? "pause",
       keyId: value.keyId,
       clientId: value.clientId,
       expiresAt: value.expiresAt
@@ -17106,7 +17194,7 @@ var KnowledgeSyncLoop = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.16",
+  version: "0.1.0-alpha.17",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -17316,7 +17404,7 @@ function centralSelection(value) {
   if (!value || typeof value !== "object")
     throw new StandaloneReviewError("central-connection-required");
   const v = value;
-  const fields = v.mode === "standalone" ? ["version", "mode"] : ["version", "mode", "connectionId", "freshness"];
+  const fields = v.mode === "standalone" ? ["version", "mode"] : ["version", "mode", "connectionId", "freshness", "offlineBehavior"];
   if (v.version !== 1 || Object.keys(v).some((k) => !fields.includes(k)))
     throw new StandaloneReviewError("central-connection-required");
   if (v.mode === "standalone") return { version: 1, mode: "standalone" };
@@ -17326,7 +17414,8 @@ function centralSelection(value) {
     version: 1,
     mode: "centralized",
     connectionId: centralConnectionReference(v.connectionId),
-    freshness: v.freshness
+    freshness: v.freshness,
+    ...v.offlineBehavior === void 0 ? {} : { offlineBehavior: offlineBehavior(v.offlineBehavior) }
   };
 }
 function readSelection(store, scope) {
@@ -17340,12 +17429,14 @@ function selectedReviewSettings(settings, selection) {
     ...settings,
     mode: "standalone",
     connectionId: void 0,
-    freshness: void 0
+    freshness: void 0,
+    offlineBehavior: void 0
   } : {
     ...settings,
     mode: "centralized",
     connectionId: checked.connectionId,
-    freshness: checked.freshness
+    freshness: checked.freshness,
+    offlineBehavior: checked.offlineBehavior ?? "pause"
   };
 }
 async function withCentralConnection(scope, work, ports = {}) {
@@ -17389,6 +17480,25 @@ async function readCentralHistory(location, selection, ports = {}) {
     },
     ports
   );
+}
+async function readSelectedHistory(location, selection, ports = {}) {
+  const local = await readLocalHistory(location, ports);
+  if (selection?.mode !== "centralized") return { reports: local };
+  let central;
+  try {
+    central = await readCentralHistory(location, selection, ports);
+  } catch {
+  }
+  return {
+    reports: [
+      ...central?.reports ?? [],
+      ...local.filter(
+        (report) => report.identity.client.execution?.connectionId === selection.connectionId
+      )
+    ],
+    audience: central?.audience,
+    fallbackConnectionId: selection.connectionId
+  };
 }
 
 // src/centralSynchronization.ts
@@ -17474,6 +17584,7 @@ function centralStatusHtml(value) {
   const cache = v.cache ?? {}, audience = v.audience ?? {};
   const rows = [
     ["Review mode", v.requestedMode],
+    ["Offline behavior", v.offlineBehavior ?? "pause"],
     [
       "Knowledge source",
       v.freshness === "offline" ? "Signed offline cache" : "Online (startup, periodic and review freshness sync)"
@@ -17591,6 +17702,11 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           description: "Use local knowledge; retain the central connection"
         },
         {
+          label: "Offline and fallback behavior\u2026",
+          action: "fallback",
+          description: "Choose cache, local fallback or pause for this worktree"
+        },
+        {
           label: "Disconnect selected connection",
           action: "disconnect",
           description: "Remove its local key and disable its central cache"
@@ -17619,11 +17735,12 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const pins = config.trustedKeys.map(
         (k) => `${k.id}: ${(0, import_node_crypto10.createHash)("sha256").update(k.pem).digest("hex")}`
       ).join(" \xB7 ");
+      const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       const confirmed = await vscode2.window.showInformationMessage(
         `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
         {
           modal: true,
-          detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins}`
+          detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`
         },
         "Connect"
       );
@@ -17651,7 +17768,8 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
               config,
               secret.trim(),
               "commit-defender",
-              signal
+              signal,
+              { offlineBehavior: behavior }
             )
           )
         );
@@ -17659,8 +17777,22 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           version: 1,
           mode: "centralized",
           connectionId: connected.id,
-          freshness: "online"
+          freshness: "online",
+          offlineBehavior: behavior
         });
+      } catch (cause) {
+        if (cause instanceof CentralConnectionSetupError && (behavior === "cache-then-standalone" || behavior === "standalone")) {
+          await select({
+            version: 1,
+            mode: "centralized",
+            connectionId: cause.connectionId,
+            freshness: "online",
+            offlineBehavior: behavior
+          });
+          void vscode2.window.showInformationMessage(
+            "Central knowledge could not be activated. The confirmed local fallback policy is available; reconnect to use central knowledge."
+          );
+        } else throw cause;
       } finally {
         secret = void 0;
       }
@@ -17685,7 +17817,8 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           version: 1,
           mode: "centralized",
           connectionId: picked.id,
-          freshness: "online"
+          freshness: "online",
+          offlineBehavior: selection?.mode === "centralized" && selection.connectionId === picked.id ? selection.offlineBehavior ?? "pause" : connections.find((c) => c.id === picked.id)?.offlineBehavior ?? "pause"
         });
       else if (!entries.length)
         void vscode2.window.showInformationMessage(
@@ -17696,6 +17829,39 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const id3 = selection.connectionId;
+    if (choice2.action === "fallback") {
+      const picked = await vscode2.window.showQuickPick(
+        [
+          {
+            label: "Cache, then standalone",
+            behavior: "cache-then-standalone",
+            description: "Use valid signed cache; otherwise review local/built-in knowledge with the same model account"
+          },
+          {
+            label: "Cache only",
+            behavior: "cache-only",
+            description: "Pause if authorized signed cache is unavailable"
+          },
+          {
+            label: "Standalone on failure",
+            behavior: "standalone",
+            description: "Use only local/built-in knowledge when central access fails"
+          },
+          {
+            label: "Pause",
+            behavior: "pause",
+            description: "Require the requested central knowledge source; do not fall back"
+          }
+        ],
+        { title: "Confirm this worktree's offline and fallback behavior" }
+      );
+      if (picked)
+        await select({
+          ...selection,
+          offlineBehavior: offlineBehavior(picked.behavior)
+        });
+      return;
+    }
     if (choice2.action === "offline") {
       await withManager(async (manager) => {
         const ready = await manager.review(id3, "offline");
@@ -17710,7 +17876,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const result = await withManager((manager) => manager.disconnect(id3));
       await actions.refresh();
       void vscode2.window.showInformationMessage(
-        result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : "Connection disconnected. Select standalone review or reconnect before reviewing."
+        result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`
       );
       return;
     }
@@ -17732,7 +17898,8 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       requestedMode: selection.mode,
       freshness: selection.freshness,
       profileId: scope.profileId,
-      ...status
+      ...status,
+      offlineBehavior: selection.offlineBehavior ?? "pause"
     });
     context.subscriptions.push(panel);
   } catch (error2) {
@@ -18941,12 +19108,12 @@ async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
 var vscode10 = __toESM(require("vscode"));
 
 // src/historyEntries.ts
-function mergeLocalHistory(current, reports, repoRoot, scope, audience) {
+function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallbackConnectionId) {
   const belongs = (report) => {
     const client = report.identity.client;
-    return (audience ? client.mode === "centralized" && Object.entries(audience).every(
+    return (client.mode === "centralized" && audience && Object.entries(audience).every(
       ([key, value]) => client.audience[key] === value
-    ) : client.mode === "standalone") && client.profileId === scope.profileId && client.repositoryKey === scope.repositoryKey && client.worktreeKey === scope.worktreeKey;
+    ) || client.mode === "standalone" && (fallbackConnectionId ? client.execution?.connectionId === fallbackConnectionId : !audience)) && client.profileId === scope.profileId && client.repositoryKey === scope.repositoryKey && client.worktreeKey === scope.worktreeKey;
   };
   const merged = /* @__PURE__ */ new Map();
   for (const core of reports) {
@@ -18957,7 +19124,7 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience) {
       timestamp: new Date(core.finishedAt),
       report,
       repoRoot,
-      label: `${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${report.staged_files.length} file(s)`,
+      label: `${reviewExecutionLabel(core.identity.client)} \xB7 ${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${report.staged_files.length} file(s)`,
       scope: core.identity.source.kind === "index" ? "staged" : "selection"
     });
   }
@@ -18989,7 +19156,7 @@ var HistoryProvider = class {
       timestamp: new Date(report.gcr?.report.finishedAt ?? Date.now()),
       report,
       repoRoot,
-      label: `${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${count} file${count !== 1 ? "s" : ""}${reviewStatus(report.review) === "completed" ? ` \xB7 ${grade2}` : ""}`,
+      label: `${report.gcr ? reviewExecutionLabel(report.gcr.report.identity.client) + " \xB7 " : ""}${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${count} file${count !== 1 ? "s" : ""}${reviewStatus(report.review) === "completed" ? ` \xB7 ${grade2}` : ""}`,
       scope,
       scopeTarget
     };
@@ -19001,8 +19168,8 @@ var HistoryProvider = class {
     this._emitter.fire(void 0);
   }
   /** Reload only history; a saved report never becomes fresh editor diagnostics automatically. */
-  restore(reports, repoRoot, scope, audience) {
-    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope, audience);
+  restore(reports, repoRoot, scope, audience, fallbackConnectionId) {
+    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope, audience, fallbackConnectionId);
     this._emitter.fire(void 0);
   }
   updateFindings(blocks) {
@@ -20109,10 +20276,9 @@ function activate(context) {
       if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === "centralized" && selection?.mode !== "centralized")
         throw new StandaloneReviewError("central-connection-required");
       const selected = JSON.stringify(selection);
-      const central = selection?.mode === "centralized" ? await readCentralHistory({ profileId, repoRoot, scope: "repository" }, selection) : void 0;
-      const reports = central?.reports ?? await readLocalHistory({ profileId, repoRoot, scope: "repository" });
+      const selectedHistory = await readSelectedHistory({ profileId, repoRoot, scope: "repository" }, selection);
       if (generation === historyLoad && localProfile() === profileId && JSON.stringify(readSelection(context.globalState, scope)) === selected)
-        historyProvider.restore(reports, repoRoot, scope, central?.audience);
+        historyProvider.restore(selectedHistory.reports, repoRoot, scope, selectedHistory.audience, selectedHistory.fallbackConnectionId);
     } catch {
       if (generation === historyLoad) historyProvider.clear();
       getOutputChannel().appendLine("[Commit Defender] Encrypted local history could not be loaded. Check the OS credential store and refresh local history.");

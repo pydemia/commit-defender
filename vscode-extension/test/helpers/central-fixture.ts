@@ -149,6 +149,7 @@ export async function centralFixture(
     ],
     { stdio: "ignore", timeout: 15000 },
   );
+  let firstManifestFailure = false;
   let errorCode: string | undefined;
   let status = 200,
     calls = 0,
@@ -192,6 +193,12 @@ export async function centralFixture(
         return;
       }
       if (req.url?.endsWith("/manifest?clientContractVersion=2")) {
+        if (firstManifestFailure) {
+          firstManifestFailure = false;
+          res.writeHead(403);
+          res.end("{}");
+          return;
+        }
         res.end(JSON.stringify(manifest));
         return;
       }
@@ -262,6 +269,9 @@ export async function centralFixture(
     setStatus(value: number, code?: string) {
       status = value;
       errorCode = code;
+    },
+    failFirstManifest() {
+      firstManifestFailure = true;
     },
     setClientId(value: string) {
       clientId = value;

@@ -1,3 +1,4 @@
+import { reviewExecutionLabel } from "./reviewExecutionLabel.js";
 import {
   projectCommitDefender,
   type ClientReviewReport,
@@ -14,17 +15,21 @@ export function mergeLocalHistory(
   repoRoot: string,
   scope: Extract<LocalScope, { kind: "repository" }>,
   audience?: KnowledgeAudience,
+  fallbackConnectionId?: string,
 ): HistoryEntry[] {
   const belongs = (report: ClientReviewReport) => {
     const client = report.identity.client;
     return (
-      (audience
-        ? client.mode === "centralized" &&
-          Object.entries(audience).every(
-            ([key, value]) =>
-              client.audience[key as keyof KnowledgeAudience] === value,
-          )
-        : client.mode === "standalone") &&
+      ((client.mode === "centralized" &&
+        audience &&
+        Object.entries(audience).every(
+          ([key, value]) =>
+            client.audience[key as keyof KnowledgeAudience] === value,
+        )) ||
+        (client.mode === "standalone" &&
+          (fallbackConnectionId
+            ? client.execution?.connectionId === fallbackConnectionId
+            : !audience))) &&
       client.profileId === scope.profileId &&
       client.repositoryKey === scope.repositoryKey &&
       client.worktreeKey === scope.worktreeKey
@@ -39,7 +44,7 @@ export function mergeLocalHistory(
       timestamp: new Date(core.finishedAt),
       report,
       repoRoot,
-      label: `${OUTCOME_META[reviewStatus(report.review)].label} · ${report.staged_files.length} file(s)`,
+      label: `${reviewExecutionLabel(core.identity.client)} · ${OUTCOME_META[reviewStatus(report.review)].label} · ${report.staged_files.length} file(s)`,
       scope: (core.identity.source.kind === "index"
         ? "staged"
         : "selection") as AnalysisScope,

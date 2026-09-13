@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "checkpoint": "P06-C03/C05 confirmed automatic fallback",
+  "gcr": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "f1145a6a03783c71f7b893f58e82187a7a00b044",
+    "packageVersion": "0.1.0-alpha.17",
+    "manifestSha256": "f532a2c776ed4cbabf2b08fbd46b3dfda639796872cb06dbe22e6731b82ab48f"
+  },
+  "validation": {
+    "fullRegressionPassed": 143,
+    "fullRegressionFailed": 0,
+    "sourceAndTestTypecheck": true,
+    "nativeHosts": [
+      {
+        "status": "passed",
+        "vscode": "1.90.2",
+        "node": "20.9.0",
+        "electron": "29.4.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "extensionVersion": "2.3.0",
+        "delivery": "packaged-extension",
+        "commandCount": 22,
+        "activation": true,
+        "hookDefault": "disable",
+        "modelCalled": false,
+        "checks": [
+          "activation",
+          "command registration",
+          "clear findings",
+          "cancel without run",
+          "no hook installed",
+          "standalone defaults and user profile",
+          "empty history refresh creates no local store or OS key"
+        ]
+      },
+      {
+        "status": "passed",
+        "vscode": "1.137.0",
+        "node": "24.18.1",
+        "electron": "42.10.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "extensionVersion": "2.3.0",
+        "delivery": "packaged-extension",
+        "commandCount": 22,
+        "activation": true,
+        "hookDefault": "disable",
+        "modelCalled": false,
+        "checks": [
+          "activation",
+          "command registration",
+          "clear findings",
+          "cancel without run",
+          "no hook installed",
+          "standalone defaults and user profile",
+          "empty history refresh creates no local store or OS key"
+        ]
+      }
+    ]
+  },
+  "artifact": {
+    "file": "vscode-extension/test-results/commit-defender-2.3.0-fallback.vsix",
+    "sha256": "67eef4264c402cdc5cebb08b4cc0f821e9bac0e09f3ae2aad2937ab02bcce9fc",
+    "bundleBytesMatch": true,
+    "bundles": {
+      "extension.js": "f715d672eb3f8337ea3ffa3ef93979969c94eb70259ab1fd39068ff699c95110",
+      "standalone-review-worker.js": "ee014fec2a4099f8e59a82525530bfafcc7cae70c78c79f7a367934ee30ff6e3",
+      "hook-cli.js": "9351bad3e310e386fefe295aedf21447178da644f3e75b054f56bb6c77c82afe"
+    }
+  },
+  "nativeModelFallback": {
+    "workerSha256": "ee014fec2a4099f8e59a82525530bfafcc7cae70c78c79f7a367934ee30ff6e3",
+    "status": "passed",
+    "syntheticSource": true,
+    "centralServer": "https://pr-review.prism.ai",
+    "centralServerIsFixture": false,
+    "realAccount": true,
+    "model": "gpt-6-astra",
+    "reasoningEffort": "xhigh",
+    "nativeWorker": true,
+    "fallbackSmoke": true,
+    "extensionHostUi": false,
+    "initialConnectMilliseconds": 13522,
+    "connectInvocations": 1,
+    "explicitPublicationPolling": false,
+    "fallbackTrigger": "explicit-disconnect-after-authenticated-sync",
+    "execution": {
+      "configuredMode": "centralized",
+      "effectiveMode": "standalone",
+      "knowledgeSource": "local",
+      "fallbackReason": "authentication-required",
+      "connectionId": "7d3bcb23e94c3b78615f12b5dedee8e795e86860455e9d321cb659931dd00efd"
+    },
+    "exactHistoryRestored": true,
+    "disconnected": true,
+    "testKeysRemoved": true
+  },
+  "nativeReport": {
+    "status": "completed",
+    "runId": "5a926e4b-ca79-46f5-b747-e10b74858147",
+    "executor": {
+      "id": "codex-account",
+      "version": "0.154.0/gcr-fixed-source-v1",
+      "model": "gpt-6-astra",
+      "configHash": "dbaff6bfb1f2e5f39a9825601c3a861c99944d75204eb4ffe6450ec94ebeed77"
+    },
+    "execution": {
+      "configuredMode": "centralized",
+      "effectiveMode": "standalone",
+      "knowledgeSource": "local",
+      "fallbackReason": "authentication-required",
+      "connectionId": "7d3bcb23e94c3b78615f12b5dedee8e795e86860455e9d321cb659931dd00efd"
+    },
+    "findingCount": 1,
+    "sourceReadCount": 6,
+    "sourceReadPaths": [
+      "caller.ts",
+      "sum.test.ts",
+      "sum.ts"
+    ],
+    "contextOrigins": [
+      "builtin"
+    ],
+    "centralSnapshotAbsent": true,
+    "rawProofFile": "vscode-extension/test-results/P06-prism-fallback-vsix.json",
+    "rawProofSha256": "690e0b5106d99042eb82df65b7d5f30491bab724b9b669f35da76f7ccd00dbff"
+  },
+  "livePrismOwnedFixture": {
+    "requestId": "a149301a-a7e0-4139-b74d-9eb7f9dafeaf",
+    "status": "passed",
+    "version": "0.8.0-alpha.42",
+    "checks": [
+      "trusted-https-session-login",
+      "downloaded-public-configuration-matches-independent-CA-and-key",
+      "real-server-curated-personal-memory-approved",
+      "packaged-cd-single-connect-first-publication",
+      "actual-astra-xhigh-local-fallback-without-central-memory",
+      "exact-owned-local-fallback-history-restored",
+      "owned-cd-os-keys-cleaned"
+    ],
+    "externalModelReviewRuns": 1,
+    "syntheticOnly": true,
+    "cdEvidence": "vscode-extension/test-results/P06-prism-fallback-vsix.json",
+    "cdWorkerSha256": "ee014fec2a4099f8e59a82525530bfafcc7cae70c78c79f7a367934ee30ff6e3",
+    "ownedKeychainEntriesRemoved": true,
+    "ownedServerRowsRemoved": true,
+    "ownedLocalFilesRemoved": true,
+    "verifiedAt": "2026-09-13T22:46:22.524Z"
+  },
+  "liveInstalledCli": {
+    "requestId": "6695e8d1-3183-4b85-bed2-7ebb3887395c",
+    "status": "passed",
+    "version": "0.8.0-alpha.42",
+    "cliVersion": "0.1.0-alpha.11",
+    "cliSha256": "a59e026141af9724898712fd2174d281f4d6e19265a5a98c0da2459a6595c425",
+    "checks": [
+      "trusted-https-session-login",
+      "downloaded-public-configuration-matches-independent-CA-and-key",
+      "installed-cli-api-key-connect-with-macos-keychain",
+      "installed-core-startup-and-two-periodic-authenticated-syncs",
+      "last-successful-sync-persisted",
+      "actual-worker-v2-three-component-sync",
+      "installed-cli-central-context-exact-audience",
+      "explicit-offline-signed-cache",
+      "web-revocation-denies-cli-synchronization",
+      "installed-cli-confirmed-local-fallback-after-revocation",
+      "no-central-snapshot-or-entries-in-local-fallback",
+      "explicit-disconnect-blocks-offline-cache"
+    ],
+    "externalModelCalls": 0,
+    "syntheticOnly": true,
+    "initialConnectMilliseconds": 14261,
+    "connectInvocations": 1,
+    "explicitPublicationPolling": false,
+    "periodicSyncCalls": 3,
+    "periodicTestIntervalMs": 1000,
+    "fallbackExecution": {
+      "configuredMode": "centralized",
+      "effectiveMode": "standalone",
+      "knowledgeSource": "local",
+      "fallbackReason": "authentication-required",
+      "connectionId": "907a1c12b444e2bb2dd56c1c19c9893966c00ab065442046ef9b45f648a2dee3"
+    },
+    "ownedKeychainEntriesRemoved": true,
+    "ownedServerRowsRemoved": true,
+    "ownedLocalFilesRemoved": true,
+    "verifiedAt": "2026-09-13T22:50:34.649Z"
+  },
+  "limitations": [
+    "Native verification used extracted VSIX worker, not visual dialog interaction",
+    "Real fallback trigger was client disconnect; HTTPS outage/cache cases used synthetic fixtures",
+    "No Marketplace publication or replacement of user VS Code installation",
+    "401 credential renewal, remote mapping, Linux and remaining phases are incomplete"
+  ]
+}

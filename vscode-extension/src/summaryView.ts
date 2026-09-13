@@ -1,3 +1,4 @@
+import { reviewExecutionLabel } from "./reviewExecutionLabel.js";
 import { randomBytes } from "crypto";
 import {
   AnalysisReport,
@@ -163,7 +164,7 @@ function buildSummaryHtml(
   const metaParts: string[] = [
     reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
-    report.gcr ? `${report.gcr.report.identity.client.mode === "centralized" ? "Centralized" : "Standalone"} · advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
+    report.gcr ? `${reviewExecutionLabel(report.gcr.report.identity.client)} · advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`,
   ].filter(Boolean);
 
@@ -182,6 +183,10 @@ function buildSummaryHtml(
       body += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
         `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
+    const execution = core.identity.client.execution;
+    if (execution) body += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} · Effective mode: ${esc(execution.effectiveMode)} · Knowledge: ${esc(execution.knowledgeSource)}</p>
+      ${execution.fallbackReason ? `<p>Fallback reason: ${esc(execution.fallbackReason)}. ${execution.effectiveMode === "standalone" ? "This review used local/built-in knowledge only and does not establish compliance with central policy." : "This review used the authorized signed cache."}</p>` : ""}
+      ${execution.lastSynchronizedAt ? `<p>Last successful knowledge sync: ${esc(execution.lastSynchronizedAt)}</p>` : ""}</section>`;
     const central = core.identity.context.centralSnapshot;
     if (central) body += `<section><h2>Central knowledge used</h2>
       <p>Server ${esc(central.audience.serverId)} · Tenant ${esc(central.audience.tenantId)} · Repository ${esc(central.audience.repositoryId)} · User ${esc(central.audience.userId)}</p>

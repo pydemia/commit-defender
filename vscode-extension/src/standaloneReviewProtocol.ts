@@ -1,9 +1,12 @@
+import type { OfflineBehavior } from "@gcr/client-contract";
+
 /** Supplied by the extension's user settings and command handler, never a repository file. */
 export interface StandaloneReviewSettings {
   mode: string;
   /** Explicit extension-owned selection, scoped to the local profile and worktree. */
   connectionId?: string;
   freshness?: "online" | "offline";
+  offlineBehavior?: OfflineBehavior;
   profileId: string;
   provider: string;
   model: string;

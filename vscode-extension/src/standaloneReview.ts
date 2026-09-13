@@ -6,6 +6,7 @@ import {
 } from "@gcr/client-contract";
 import {
   CentralConnections,
+  resolveReviewExecution,
   defaultLocalDataDirectory,
   resolveCentralContext,
   type CentralCredentialStore,
@@ -131,28 +132,37 @@ export async function prepareStandaloneReview(
       snapshot,
       stores: opened.map((records) => new LocalKnowledgeStore(records)),
     };
-    let central: Awaited<ReturnType<CentralConnections["review"]>> | undefined;
-    if (settings.mode === "centralized") {
-      connections = await CentralConnections.open({
-        scope: repositoryScope,
-        ...ports,
-      });
-      const status = await connections.status(settings.connectionId!);
-      if (status.clientId !== "commit-defender")
-        throw new StandaloneReviewError("authentication-required");
-      central = await connections.review(
-        settings.connectionId!,
-        settings.freshness!,
-        signal,
-      );
-      // Preserve authorization diagnostics before the context resolver reports
-      // an unavailable context. The resolver still revalidates its pinned snapshot.
-      await central.cache.read(central.freshness);
-      client = central.client;
-    }
+    const resolved = await resolveReviewExecution({
+      client: localClient,
+      configuredMode: settings.mode as "standalone" | "centralized",
+      offlineBehavior: settings.offlineBehavior ?? "pause",
+      ...(settings.mode === "centralized"
+        ? {
+            connectionId: settings.connectionId!,
+            freshness: settings.freshness!,
+            central: async (freshness) => {
+              connections ??= await CentralConnections.open({
+                scope: repositoryScope,
+                ...ports,
+              });
+              const status = await connections.status(settings.connectionId!);
+              if (status.clientId !== "commit-defender")
+                throw new StandaloneReviewError("authentication-required");
+              return connections.review(
+                settings.connectionId!,
+                freshness,
+                signal,
+              );
+            },
+          }
+        : {}),
+      signal,
+    });
+    const central = resolved.central;
+    client = resolved.client;
     const context = central
       ? await resolveCentralContext({ ...query, ...central })
-      : await resolveLocalContext(query);
+      : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
     if (context.status !== "ready")
       throw new StandaloneReviewError("needs-context");
@@ -208,7 +218,7 @@ export async function prepareStandaloneReview(
       history = new LocalHistoryStore(records, undefined, identity.audience);
     }
     return {
-      backendId: settings.mode,
+      backendId: client.mode,
       key: contentHash({ identity: policy.identity, scope: request.scope }),
       dispose,
       async run(runSignal, progress) {
@@ -220,7 +230,9 @@ export async function prepareStandaloneReview(
             fixedSnapshot.selected.length,
             central
               ? "Captured source and verified central/local context"
-              : "Captured source and local context",
+              : resolved.execution.fallbackReason
+                ? `Standalone fallback: ${resolved.execution.fallbackReason}`
+                : "Captured source and local context",
           );
           const report = await runLocalReview({
             snapshot: fixedSnapshot,

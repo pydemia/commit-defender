@@ -66,6 +66,10 @@ test("connection UI scopes selection, masks the API key, shows signed status and
   await run("connect");
   const selected = readSelection(context.globalState, scope);
   assert.equal(selected?.mode, "centralized");
+  assert(
+    selected?.mode === "centralized" &&
+      selected.offlineBehavior === "cache-then-standalone",
+  );
   assert.equal(ui.inputs[0]?.password, true);
   assert.equal(server.credentialValues.size, 1);
   assert.equal(invalidations, 1);
@@ -85,14 +89,13 @@ test("connection UI scopes selection, masks the API key, shows signed status and
   assert.equal(server.calls, before);
   assert.equal(readSelection(context.globalState, scope)?.mode, "standalone");
   await run("select", 0);
+  await run("fallback", 3);
+  const paused = readSelection(context.globalState, scope);
+  assert(paused?.mode === "centralized" && paused.offlineBehavior === "pause");
   await run("disconnect");
   assert.equal(readSelection(context.globalState, scope)?.mode, "centralized");
   assert.equal(server.credentialValues.size, 0);
-  assert(
-    ui.messages.some((m) =>
-      m.includes("Select standalone review or reconnect"),
-    ),
-  );
+  assert(ui.messages.some((m) => m.includes("offline behavior is pause")));
   assert(!JSON.stringify(ui.messages).includes(server.secret));
 });
 
@@ -151,4 +154,57 @@ test("read-only status escapes server metadata and omits unexpected secret field
   assert(html.includes("&lt;script&gt;"));
   assert(!html.includes("DO_NOT_RENDER"));
   assert(html.includes("default-src 'none'"));
+});
+
+test("confirmed first-publication failure retains local fallback selection without its key", async (t) => {
+  ui.reset();
+  const f = fixture(),
+    server = await centralFixture(f.root);
+  t.after(async () => {
+    await server.close();
+    f.cleanup();
+  });
+  const scope = knowledgeScope({
+    profileId: "initial-fallback",
+    repoRoot: f.repo,
+    scope: "repository",
+  });
+  if (scope.kind !== "repository") throw Error("scope");
+  const state = new Map<string, unknown>();
+  const context = {
+    subscriptions: [],
+    globalState: {
+      get<T>(key: string) {
+        return state.get(key) as T | undefined;
+      },
+      async update(key: string, value: unknown) {
+        state.set(key, value);
+      },
+    },
+  } as unknown as ExtensionContext;
+  ui.file = path.join(f.root, "config.json");
+  fs.writeFileSync(ui.file, JSON.stringify(server.config));
+  ui.secret = server.secret;
+  ui.choices = ["connect"];
+  server.failFirstManifest();
+  await manageCentralConnection(
+    context,
+    scope,
+    { assertCurrent() {}, async invalidate() {}, async refresh() {} },
+    {
+      dataDirectory: path.join(f.root, "data"),
+      keys: server.keys,
+      credentials: server.credentials,
+    },
+  );
+  const selection = readSelection(context.globalState, scope);
+  assert(
+    selection?.mode === "centralized" &&
+      selection.offlineBehavior === "cache-then-standalone",
+  );
+  assert.equal(server.credentialValues.size, 0);
+  assert.equal(ui.errors.length, 0);
+  assert(
+    ui.messages.some((m) => m.includes("confirmed local fallback policy")),
+  );
 });
