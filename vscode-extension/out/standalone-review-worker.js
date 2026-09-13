@@ -704,7 +704,7 @@ function localReviewResponseSchema() {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.11",
+  version: "0.1.0-alpha.12",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -3591,8 +3591,8 @@ async function runLocalReview(input2) {
     }
     decode(response);
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? error.code : error instanceof Error ? error.message : void 0;
-    const problem = input2.signal?.aborted || code === "cancelled" ? "cancelled" : code === "timeout" ? "timeout" : code === "quota-exceeded" ? "quota-exceeded" : code === "missing-context" ? "missing-context" : code === "invalid-output" || code === "invalid-response" ? "invalid-output" : code === "executor-unavailable" ? "executor-unavailable" : "provider-error";
+    const code = input2.signal?.aborted ? input2.signal.reason === "timeout" ? "timeout" : "cancelled" : error && typeof error === "object" && "code" in error ? error.code : error instanceof Error ? error.message : void 0;
+    const problem = code === "cancelled" ? "cancelled" : code === "timeout" ? "timeout" : code === "quota-exceeded" ? "quota-exceeded" : code === "missing-context" ? "missing-context" : code === "invalid-output" || code === "invalid-response" ? "invalid-output" : code === "executor-unavailable" ? "executor-unavailable" : "provider-error";
     report.status = problem === "cancelled" ? "cancelled" : problem === "missing-context" ? "needs-context" : problem === "executor-unavailable" ? "unavailable" : "failed";
     report.summary = "Review did not complete.";
     report.problems = [
@@ -3633,7 +3633,7 @@ async function runLocalReview(input2) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.11",
+  version: "0.1.0-alpha.12",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -4452,7 +4452,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.11",
+  version: "0.1.0-alpha.12",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

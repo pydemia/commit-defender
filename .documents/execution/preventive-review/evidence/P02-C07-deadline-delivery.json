@@ -1,0 +1,48 @@
+{
+  "recordedAt": "2026-09-13T13:26:20.898411+00:00",
+  "status": "deadline-classification-delivered-and-verified; native-completed-review-and-publication-pending",
+  "source": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "bb98c1e51527523a3c1ca369523e3da3f7723883",
+    "packageVersion": "0.1.0-alpha.12",
+    "manifestSha256": "187c48ff409e45db56dcf556513754c4a7994585b480d04ffbf82b7db82d41d7"
+  },
+  "validation": {
+    "runtime": "22.23.2",
+    "build": true,
+    "testTypecheck": true,
+    "clientContractTests": 20,
+    "standaloneTests": 10,
+    "failed": 0,
+    "deadlineProjection": {
+      "timedOut": true,
+      "cancelled": false,
+      "status": "failed",
+      "problemCode": "timeout"
+    },
+    "history": "Exact timed-out and invalid-output reports restored by runId alongside a distinct cancelled report. No extra executor call for pre-aborted runs."
+  },
+  "bundles": {
+    "extension.js": "2d9f60777da9d063908c0b56da1268bd914de52e83343fa0aaf4381204c94c33",
+    "hook-cli.js": "b7c16ab2539ecff3130e0e0b77e4b1fcfab86b96c1ebee6f324e131dab497aa6",
+    "standalone-review-worker.js": "e92bf41705f1eebaef0f2295a1932992ad274f8acce3305c52110f3ffc85cdf1"
+  },
+  "native": {
+    "diagnosedBundleRelease": "0.1.0-alpha.11",
+    "evidence": "P02-C07-native-output-scope.json",
+    "currentBuildReloaded": false,
+    "currentBuildCompletedRealReview": false,
+    "reason": "Native AX eventually showed the earlier cancelled terminal report. Screenshot freshness and command input were inconsistent; do not claim a completed GUI gate."
+  },
+  "packaging": {
+    "newVsixCreated": false,
+    "previousVsix": "P02-C07-output-scope-vsix.json",
+    "previousVsixContainsCurrentFix": false,
+    "published": false
+  },
+  "limitations": [
+    "The six actual model cases recorded for alpha.11 were not rerun for alpha.12; the change affects terminal abort classification, not the model prompt or successful decoding.",
+    "Native development and same-final-VSIX GUI checks, publisher authorization and Marketplace smoke remain pending."
+  ]
+}

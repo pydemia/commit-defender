@@ -1,6 +1,6 @@
 {
   "recordedAt": "2026-09-13T13:01:42.064390+00:00",
-  "status": "native-development-incomplete; terminal-report-and-visible-progress-disagree",
+  "status": "native-cancelled-result-observed; successful-review-and-release-gates-incomplete",
   "sourceCommit": "ebd6b28",
   "runtime": {
     "executable": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P02-C07-diagnostics/native-insiders/vscode-darwin-arm64-insiders/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
@@ -70,7 +70,7 @@
   },
   "analysis": {
     "known": "The core report was persisted before the UI returned to an idle/terminal view. The bridge resolves a run only on the worker exit event.",
-    "hypothesis": "Worker cleanup/exit acknowledgement may be holding the result; this is not yet confirmed by worker resource instrumentation.",
+    "hypothesis": "Superseded by live inspection: no worker target, no active or pending execution, host status Cancelled and matching native AX after interaction. No worker lifecycle modification is justified.",
     "timeoutClassification": "The 180-second configured run finished as cancelled; distinguish deadline cancellation from explicit user cancellation in follow-up verification.",
     "notProven": [
       "Native completed-result rendering",
@@ -82,5 +82,32 @@
   },
   "cleanup": "Owned native process, short user-data directory and synthetic profile are retained for diagnosis; not marked cleaned.",
   "published": false,
-  "relatedArtifact": "P02-C07-output-scope-vsix.json"
+  "relatedArtifact": "P02-C07-output-scope-vsix.json",
+  "previousStatus": "native-development-incomplete; terminal-report-and-visible-progress-disagree",
+  "followUp": {
+    "runId": "e1a58b89-f500-4d24-875d-b5bbec655584",
+    "extensionHostPid": 27179,
+    "runtime": "24.18.1",
+    "observedAt": "2026-09-13T13:13:02.969Z",
+    "activeWorkerTargets": 0,
+    "executionOwners": [
+      {
+        "isRunning": false,
+        "isPreparing": false,
+        "pending": 0,
+        "active": null
+      },
+      {
+        "isRunning": false,
+        "isPreparing": false,
+        "pending": 0,
+        "active": null
+      }
+    ],
+    "hostStatusBar": "CD: Cancelled",
+    "nativeAX": "After native interaction, the status bar, findings tree and history showed the same cancelled report. The previously observed in-progress UI does not prove a worker lifecycle defect.",
+    "inspector": "Only the owned development host was inspected via a random loopback port. Inspector closed and no TCP listener remained.",
+    "workerLifecycleChanged": false,
+    "recordedAt": "2026-09-13T13:22:58.955303+00:00"
+  }
 }

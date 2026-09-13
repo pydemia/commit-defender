@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.0-alpha.12",
+  "packages": [
+    {
+      "name": "@gcr/client-contract",
+      "version": "0.1.0-alpha.12",
+      "file": "gcr-client-contract-0.1.0-alpha.12.tgz",
+      "sha256": "8baae192704cdc4521979cf53ba15d6f43f8070a8e2b942dec4155e1210e0b29"
+    },
+    {
+      "name": "@gcr/client-core",
+      "version": "0.1.0-alpha.12",
+      "file": "gcr-client-core-0.1.0-alpha.12.tgz",
+      "sha256": "6e7d77c0b484c7a56553e531d88faa5cd28d748a64aa76fa3a77a9fab6ec5c4b"
+    },
+    {
+      "name": "@gcr/client-executors",
+      "version": "0.1.0-alpha.12",
+      "file": "gcr-client-executors-0.1.0-alpha.12.tgz",
+      "sha256": "d6ec8ee862f0e2d9adafa4c2347f25c4c0c55a141ad8c4acf9b00a84c2585400"
+    }
+  ]
+}

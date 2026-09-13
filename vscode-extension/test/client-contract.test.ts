@@ -28,7 +28,7 @@ const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
-const deliveryVersion = "0.1.0-alpha.11";
+const deliveryVersion = "0.1.0-alpha.12";
 const corpus = JSON.parse(bytes.toString("utf8")) as {
   synthetic: boolean;
   sourceText: Record<string, string>;
@@ -72,10 +72,13 @@ test("standalone summary distinguishes pinned evidence and a later local-context
 test("failed standalone summary exposes the stored problem and escapes message markup", () => {
   const core = clientReviewReport({
     ...reportFor("failed"),
-    problems: [{
-      code: "invalid-output",
-      message: 'Review response rejected (invalid-json): <img src=x onerror="alert(1)">',
-    }],
+    problems: [
+      {
+        code: "invalid-output",
+        message:
+          'Review response rejected (invalid-json): <img src=x onerror="alert(1)">',
+      },
+    ],
   });
   const projected: AnalysisReport = projectCommitDefender(core);
   const view = new SummaryView(projected, "/synthetic", new ReviewLinks());

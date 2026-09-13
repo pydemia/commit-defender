@@ -455,7 +455,7 @@ test("worker results resolve only after cleanup exit; disposing an unused prepar
   await assert.rejects(idle.run(abort()), /released/);
 });
 
-test("cancelled and invalid model output remain terminal reports in history without a provider fallback", async (t) => {
+test("cancelled, timed-out and invalid model output remain distinct terminal reports in history without a provider fallback", async (t) => {
   const f = setup(t);
   let calls = 0;
   const ports = {
@@ -496,6 +496,20 @@ test("cancelled and invalid model output remain terminal reports in history with
   const cancelled = await pending.run(controller.signal);
   assert.equal(cancelled.report.review.status, "cancelled");
   assert.equal(calls, 1);
+  const expired = await prepareStandaloneReview(
+    f.request,
+    settings,
+    abort(),
+    ports,
+  );
+  const deadline = new AbortController();
+  deadline.abort("timeout");
+  const timedOut = await expired.run(deadline.signal);
+  assert.equal(timedOut.timedOut, true);
+  assert.equal(timedOut.cancelled, false);
+  assert.equal(timedOut.report.review.status, "failed");
+  assert.equal(timedOut.report.gcr?.report.problems[0]?.code, "timeout");
+  assert.equal(calls, 1);
   const records = await LocalRecordStore.open({
     scope: f.scope,
     dataDirectory: f.dataDirectory,
@@ -503,10 +517,17 @@ test("cancelled and invalid model output remain terminal reports in history with
   });
   try {
     const history = await new LocalHistoryStore(records).listReviews();
-    assert.equal(history.length, 2);
+    assert.equal(history.length, 3);
     assert.deepEqual(
-      history.find((report) => report.status === "failed")?.problems,
+      history.find((report) => report.runId === failed.report.gcr?.report.runId)
+        ?.problems,
       failed.report.gcr?.report.problems,
+    );
+    assert.deepEqual(
+      history.find(
+        (report) => report.runId === timedOut.report.gcr?.report.runId,
+      )?.problems,
+      timedOut.report.gcr?.report.problems,
     );
     assert(!JSON.stringify(history).includes("PRIVATE PROVIDER TEXT"));
   } finally {
