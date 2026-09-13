@@ -226,7 +226,7 @@ export async function manageCentralConnection(
       if (!secret) return;
       try {
         const connected = await progress(
-          "Connecting to central review",
+          "Connecting and waiting for central review knowledge",
           (signal) =>
             withManager((manager) =>
               manager.connect(

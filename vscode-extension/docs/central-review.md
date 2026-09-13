@@ -8,6 +8,8 @@ The current executor supports macOS, Codex CLI `0.153.4` or `0.154.0`, `gpt-6-as
 
 Open **Commit Defender: Central Review Connection**, then **Connect with API key…**. Select the public connection JSON supplied by your server administrator, check its server/tenant/repository and public signing-key fingerprints, and enter a key issued for the `commit-defender` client. The key must permit `knowledge:read` for that repository. A `gcr-cli` key cannot authorize this client.
 
+You can download this public JSON and issue the key from the server's profile page. The connection notification remains cancellable while the server publishes the repository's first knowledge bundles. Initial synchronization waits up to 60 seconds and retries HTTP 503 responses with increasing delays. The connection becomes active only after all signed components are verified. Authentication rejection or invalid content ends the attempt; cancellation and failure remove the pending credential.
+
 The configuration file has this shape; the IDs, public key and optional CA must come from the trusted server configuration:
 
 ```json

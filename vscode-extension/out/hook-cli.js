@@ -1233,7 +1233,7 @@ var centralConnectionRecord = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1876,7 +1876,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

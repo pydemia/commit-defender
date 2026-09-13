@@ -13952,7 +13952,7 @@ var ReviewExecutionOwner = class {
 
 // src/localKnowledge.ts
 var import_node_crypto9 = require("node:crypto");
-var import_promises4 = require("node:fs/promises");
+var import_promises5 = require("node:fs/promises");
 var import_node_path6 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
@@ -14883,7 +14883,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -16504,6 +16504,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/knowledge-http.js
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
+var import_promises4 = require("node:timers/promises");
 var unavailable2 = () => new KnowledgeSyncError("unavailable", "Central HTTP request failed.");
 var KnowledgeHttpTransport = class {
   binding;
@@ -16561,8 +16562,27 @@ var KnowledgeHttpTransport = class {
       return { status };
     return { status: 503 };
   }
-  async manifest({ etag, signal }) {
-    const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`, signal, etag);
+  /** Initial publication can take a worker cycle. Retry only an actual HTTP 503,
+   * never redirects, network/TLS errors, rejected credentials or malformed data.
+   * The cache supplies the overall abort deadline and keeps its claim throughout. */
+  initialPublication() {
+    return {
+      manifest: (request) => this.readManifest(request, 15),
+      bundle: (request) => this.bundle(request)
+    };
+  }
+  manifest(request) {
+    return this.readManifest(request, 0);
+  }
+  async readManifest({ etag, signal }, retries) {
+    const route = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`;
+    let response = await this.get(route, signal, etag);
+    for (let attempt = 0; response.statusCode === 503 && attempt < retries; attempt++) {
+      response.destroy();
+      const milliseconds = Math.round(Math.min(4e3, 1e3 * 2 ** attempt) * (0.75 + Math.random() * 0.5));
+      await (0, import_promises4.setTimeout)(milliseconds, void 0, { signal });
+      response = await this.get(route, signal, etag);
+    }
     if (response.statusCode === 304) {
       response.destroy();
       return { status: 304 };
@@ -16781,7 +16801,10 @@ var CentralConnections = class _CentralConnections {
       const current = await cache.connectionState();
       if (current.status !== "enabled")
         await cache.resume(current.generation);
-      await cache.synchronize(this.transport(state, true), signal ? { signal } : {});
+      await cache.synchronize(this.transport(state, true).initialPublication(), {
+        ...signal ? { signal } : {},
+        timeoutMs: 6e4
+      });
       await this.assert(state, true);
       await this.records.write("settings", value.id, { ...value, status: "connected" }, state.revision);
       return this.status(value.id);
@@ -16927,7 +16950,7 @@ var CentralConnections = class _CentralConnections {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -17073,7 +17096,7 @@ async function readLocalHistory(location, ports = {}) {
   const scope = knowledgeScope(location);
   const dataDirectory = ports.dataDirectory ?? defaultLocalDataDirectory();
   try {
-    await (0, import_promises4.lstat)(import_node_path6.default.join(dataDirectory, "profiles", scope.profileId));
+    await (0, import_promises5.lstat)(import_node_path6.default.join(dataDirectory, "profiles", scope.profileId));
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "code" in error2 && error2.code === "ENOENT")
       return [];
@@ -17215,7 +17238,7 @@ async function readCentralHistory(location, selection, ports = {}) {
 // src/centralConnectionView.ts
 var vscode2 = __toESM(require("vscode"));
 var import_node_fs3 = require("node:fs");
-var import_promises5 = require("node:fs/promises");
+var import_promises6 = require("node:fs/promises");
 var import_node_crypto10 = require("node:crypto");
 var esc2 = (value) => String(value).replace(
   /[&<>"']/g,
@@ -17250,7 +17273,7 @@ function centralStatusHtml(value) {
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>Online reviews refresh expired knowledge. Offline reviews require an unexpired signed lease and active connection. Model availability is checked separately when a review starts.</p><table>${rows.map(([label, item]) => `<tr><th>${esc2(label)}</th><td>${esc2(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. Local Memory and Skills remain editable in their own view.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function readConfig(file) {
-  const handle2 = await (0, import_promises5.open)(
+  const handle2 = await (0, import_promises6.open)(
     file,
     import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NONBLOCK | import_node_fs3.constants.O_NOFOLLOW
   );
@@ -17392,7 +17415,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       if (!secret) return;
       try {
         const connected = await progress(
-          "Connecting to central review",
+          "Connecting and waiting for central review knowledge",
           (signal) => withManager(
             (manager) => manager.connect(
               config,
@@ -17657,7 +17680,7 @@ async function showLocalKnowledge(context, scope, changed) {
 }
 
 // src/modelCredentials.ts
-var import_promises6 = require("node:fs/promises");
+var import_promises7 = require("node:fs/promises");
 var import_node_path8 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
@@ -17749,7 +17772,7 @@ async function openStore(reference, create, ports) {
       "key-ref.json"
     );
     try {
-      await (0, import_promises6.lstat)(file);
+      await (0, import_promises7.lstat)(file);
     } catch {
       throw unavailable3();
     }

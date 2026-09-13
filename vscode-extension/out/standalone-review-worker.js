@@ -1005,7 +1005,7 @@ var centralConnectionReference = sha256;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -4984,6 +4984,7 @@ async function runLocalReview(input2) {
 // node_modules/@gcr/client-core/dist/knowledge-http.js
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
+var import_promises3 = require("node:timers/promises");
 var unavailable3 = () => new KnowledgeSyncError("unavailable", "Central HTTP request failed.");
 var KnowledgeHttpTransport = class {
   binding;
@@ -5041,8 +5042,27 @@ var KnowledgeHttpTransport = class {
       return { status };
     return { status: 503 };
   }
-  async manifest({ etag, signal }) {
-    const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`, signal, etag);
+  /** Initial publication can take a worker cycle. Retry only an actual HTTP 503,
+   * never redirects, network/TLS errors, rejected credentials or malformed data.
+   * The cache supplies the overall abort deadline and keeps its claim throughout. */
+  initialPublication() {
+    return {
+      manifest: (request) => this.readManifest(request, 15),
+      bundle: (request) => this.bundle(request)
+    };
+  }
+  manifest(request) {
+    return this.readManifest(request, 0);
+  }
+  async readManifest({ etag, signal }, retries) {
+    const route = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`;
+    let response = await this.get(route, signal, etag);
+    for (let attempt = 0; response.statusCode === 503 && attempt < retries; attempt++) {
+      response.destroy();
+      const milliseconds = Math.round(Math.min(4e3, 1e3 * 2 ** attempt) * (0.75 + Math.random() * 0.5));
+      await (0, import_promises3.setTimeout)(milliseconds, void 0, { signal });
+      response = await this.get(route, signal, etag);
+    }
     if (response.statusCode === 304) {
       response.destroy();
       return { status: 304 };
@@ -5261,7 +5281,10 @@ var CentralConnections = class _CentralConnections {
       const current = await cache.connectionState();
       if (current.status !== "enabled")
         await cache.resume(current.generation);
-      await cache.synchronize(this.transport(state, true), signal ? { signal } : {});
+      await cache.synchronize(this.transport(state, true).initialPublication(), {
+        ...signal ? { signal } : {},
+        timeoutMs: 6e4
+      });
       await this.assert(state, true);
       await this.records.write("settings", value.id, { ...value, status: "connected" }, state.revision);
       return this.status(value.id);
@@ -5407,14 +5430,14 @@ var CentralConnections = class _CentralConnections {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
 var import_node_crypto14 = require("node:crypto");
 var import_node_fs5 = require("node:fs");
-var import_promises5 = require("node:fs/promises");
+var import_promises6 = require("node:fs/promises");
 var import_node_os4 = __toESM(require("node:os"), 1);
 var import_node_path13 = __toESM(require("node:path"), 1);
 
@@ -5691,23 +5714,23 @@ function codexAccountEnvironment() {
 
 // node_modules/@gcr/client-executors/dist/catalog-probe.js
 var import_node_http3 = require("node:http");
-var import_promises4 = require("node:fs/promises");
+var import_promises5 = require("node:fs/promises");
 var import_node_path12 = __toESM(require("node:path"), 1);
 var import_node_crypto13 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
-var import_promises3 = require("node:fs/promises");
+var import_promises4 = require("node:fs/promises");
 var import_node_os3 = __toESM(require("node:os"), 1);
 var import_node_path11 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input2) {
   if (process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
-  const authHome = await (0, import_promises3.realpath)(input2.env.CODEX_HOME ?? import_node_path11.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  const authHome = await (0, import_promises4.realpath)(input2.env.CODEX_HOME ?? import_node_path11.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
   const denied2 = [];
   for (const name of ["AGENTS.md", "AGENTS.override.md"]) {
     const file = import_node_path11.default.join(authHome, name);
     try {
-      const info = await (0, import_promises3.lstat)(file);
+      const info = await (0, import_promises4.lstat)(file);
       if (!info.isFile() || info.isSymbolicLink())
         throw new ExecutorError("executor-unavailable");
     } catch (error2) {
@@ -5940,9 +5963,9 @@ function catalogNames(request) {
 async function probeCodexCatalog(command, root, observe) {
   const canary = `DO_NOT_LOAD_${(0, import_node_crypto13.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
-    await (0, import_promises4.mkdir)(import_node_path12.default.join(root, name), { mode: 448 });
-  await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
-  await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+    await (0, import_promises5.mkdir)(import_node_path12.default.join(root, name), { mode: 448 });
+  await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
+  await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
   const bridge = await startSourceBridge({
     async execute() {
       throw Error("Probe never provides source.");
@@ -5988,7 +6011,7 @@ async function probeCodexCatalog(command, root, observe) {
     const address = server.address();
     if (!address || typeof address === "string")
       throw new ExecutorError("executor-unavailable");
-    await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
+    await (0, import_promises5.writeFile)(import_node_path12.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
 [mcp_servers.unexpected]
 url = "http://127.0.0.1:${address.port}/unexpected"
 `, { mode: 384 });
@@ -6046,7 +6069,7 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 // node_modules/@gcr/client-executors/dist/codex.js
 var hash3 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
-  const info = await (0, import_promises5.stat)(command);
+  const info = await (0, import_promises6.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
   const digest2 = (0, import_node_crypto14.createHash)("sha256");
@@ -6058,8 +6081,8 @@ async function executablePath(value) {
   const candidates = value.includes(import_node_path13.default.sep) ? [import_node_path13.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path13.default.delimiter).filter(Boolean).map((directory) => import_node_path13.default.join(directory, value));
   for (const candidate of candidates) {
     try {
-      await (0, import_promises5.access)(candidate, import_node_fs5.constants.X_OK);
-      return await (0, import_promises5.realpath)(candidate);
+      await (0, import_promises6.access)(candidate, import_node_fs5.constants.X_OK);
+      return await (0, import_promises6.realpath)(candidate);
     } catch {
     }
   }
@@ -6101,13 +6124,13 @@ var CodexAccountExecutor = class {
       throw new ExecutorError("cancelled");
     if (await binaryHash(this.command) !== this.fingerprint)
       throw new ExecutorError("executor-unavailable");
-    const root = await (0, import_promises5.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
+    const root = await (0, import_promises6.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
     const started = performance.now();
     let bridge;
     try {
       const cwd = import_node_path13.default.join(root, "cwd");
-      await (0, import_promises5.mkdir)(cwd, { mode: 448 });
-      await (0, import_promises5.writeFile)(import_node_path13.default.join(root, "models.json"), this.catalog, { mode: 384 });
+      await (0, import_promises6.mkdir)(cwd, { mode: 448 });
+      await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "models.json"), this.catalog, { mode: 384 });
       bridge = await startSourceBridge(input2.source);
       const args = codexReviewArgs(root, bridge.url);
       if (input2.responseSchema) {
@@ -6115,7 +6138,7 @@ var CodexAccountExecutor = class {
         if (Buffer.byteLength(schema) > 65536)
           throw new ExecutorError("executor-unavailable");
         const file = import_node_path13.default.join(root, "response-schema.json");
-        await (0, import_promises5.writeFile)(file, schema, { mode: 384 });
+        await (0, import_promises6.writeFile)(file, schema, { mode: 384 });
         args.push("--output-schema", file);
       }
       args.push("-");
@@ -6161,7 +6184,7 @@ var CodexAccountExecutor = class {
       try {
         await bridge?.close();
       } finally {
-        await (0, import_promises5.rm)(root, { recursive: true, force: true });
+        await (0, import_promises6.rm)(root, { recursive: true, force: true });
       }
     }
   }
@@ -6170,7 +6193,7 @@ async function prepareCodexAccountExecutor(options) {
   if (options.model !== CODEX_REVIEW_MODEL || options.reasoningEffort !== CODEX_REVIEW_EFFORT || process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
-  const root = await (0, import_promises5.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
+  const root = await (0, import_promises6.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
   try {
     const fingerprint = await binaryHash(command);
     const env = { PATH: "/usr/bin:/bin", HOME: root, CODEX_HOME: root };
@@ -6198,7 +6221,7 @@ async function prepareCodexAccountExecutor(options) {
     if (bundled.code !== 0)
       throw new ExecutorError("executor-unavailable");
     const catalog = reviewModelCatalog(bundled.stdout);
-    await (0, import_promises5.writeFile)(import_node_path13.default.join(root, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "models.json"), catalog, { mode: 384 });
     const tools = await probeCodexCatalog(command, root);
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
@@ -6223,14 +6246,14 @@ async function prepareCodexAccountExecutor(options) {
       throw error2;
     throw new ExecutorError("executor-unavailable");
   } finally {
-    await (0, import_promises5.rm)(root, { recursive: true, force: true });
+    await (0, import_promises6.rm)(root, { recursive: true, force: true });
   }
 }
 
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.14",
+  version: "0.1.0-alpha.15",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
