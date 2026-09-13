@@ -11598,6 +11598,9 @@ function buildSummaryHtml(report, view, palette) {
     </div>`;
   if (report.gcr) {
     const core = report.gcr.report;
+    if (core.problems.length) {
+      body2 += `<section><h2>Review problems</h2><ul>${core.problems.map((problem) => `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
+    }
     const freshness = report.local_context_freshness;
     const current = !freshness ? "Current local entries have not been checked." : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review." : freshness.status === "stale" ? "One or more local entries used by this review changed, expired or became inactive. Run another review to use current context." : "Current local entries could not be checked. The report retains the context captured when it ran.";
     body2 += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
@@ -14528,7 +14531,7 @@ var localReviewResponse = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.9",
+  version: "0.1.0-alpha.10",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -15563,7 +15566,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.9",
+  version: "0.1.0-alpha.10",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

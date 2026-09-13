@@ -28,7 +28,7 @@ const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
-const deliveryVersion = "0.1.0-alpha.9";
+const deliveryVersion = "0.1.0-alpha.10";
 const corpus = JSON.parse(bytes.toString("utf8")) as {
   synthetic: boolean;
   sourceText: Record<string, string>;
@@ -67,6 +67,26 @@ test("standalone summary distinguishes pinned evidence and a later local-context
   assert(view.html.includes(core.identity.context.hash));
   assert(view.html.includes("Raw JSON"));
   assert.deepEqual(projected.gcr?.report, original);
+});
+
+test("failed standalone summary exposes the stored problem and escapes message markup", () => {
+  const core = clientReviewReport({
+    ...reportFor("failed"),
+    problems: [{
+      code: "invalid-output",
+      message: 'Review response rejected (invalid-json): <img src=x onerror="alert(1)">',
+    }],
+  });
+  const projected: AnalysisReport = projectCommitDefender(core);
+  const view = new SummaryView(projected, "/synthetic", new ReviewLinks());
+  assert(view.html.includes("Review problems"));
+  assert(view.html.includes("invalid-output"));
+  assert(view.html.includes("(invalid-json)"));
+  assert(view.html.includes("&lt;img src=x onerror="));
+  assert(!view.html.includes('<img src=x onerror="alert(1)">'));
+  assert.deepEqual(projected.gcr?.report, core);
+  assert.equal(projected.review.status, "failed");
+  assert.equal(projected.review.blocking, false);
 });
 
 test("history reload preserves a concurrently completed review and excludes other profiles and worktrees", () => {

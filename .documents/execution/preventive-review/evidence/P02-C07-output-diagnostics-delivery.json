@@ -1,0 +1,94 @@
+{
+  "recordedAt": "2026-09-13T12:37:31.360398+00:00",
+  "status": "source-and-artifact-verified; real-model-unselected-file-reproduced; not-published",
+  "packageVersion": "0.1.0-alpha.10",
+  "source": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "55a264dc02ca85dc0b50fd3d8b506988673c848d",
+    "packageVersion": "0.1.0-alpha.10",
+    "manifestSha256": "511336eff06a61ffe0b8665db80cd1367bf6013db4751323b7b1ce21e85b834c"
+  },
+  "validation": {
+    "runtime": "22.23.2",
+    "testsPassed": 125,
+    "suites": {
+      "providers": 9,
+      "sourcePolicy": 10,
+      "gitSnapshot": 14,
+      "reviewOutcome": 23,
+      "reviewSecurity": 9,
+      "reviewBackend": 13,
+      "clientContract": 20,
+      "standaloneReview": 10,
+      "standaloneConfig": 4,
+      "modelCredentials": 13
+    },
+    "build": true,
+    "typecheckTest": true,
+    "initialFailures": [
+      "The delivery test still expected alpha.9; updated it to the delivered alpha.10.",
+      "The new vendor provenance record was missing; added the actual GCR source commit and manifest hash."
+    ],
+    "messageMarkupEscaped": true,
+    "problemPreservedInStoredReport": true,
+    "privateProviderTextAbsent": true
+  },
+  "artifact": {
+    "version": "2.3.0",
+    "vsixSha256": "b652909e67ee557f91dca808aa28cec7366af9a786c13f9ee28dc7e05e277a95",
+    "bundles": {
+      "extension.js": "7c0ecbe833be4ea0724a64d57de9c618a6611941a68a9cc16cdee7ee5b685b4d",
+      "hook-cli.js": "80bef3433869fc5d93926c6f665a6b0298f83b311ae7afd41e180f5778f7d730",
+      "standalone-review-worker.js": "fa35f3266186bd861d2149751303e2e843a517319404b139d48a54be6ff6746b"
+    },
+    "files": 29,
+    "sourceTestsVendorExcluded": true,
+    "bundledFilesMatchCurrentBuild": true,
+    "gcrNoticesPresent": true,
+    "path": "artifacts/operations/P02-C07-diagnostics/commit-defender-2.3.0.vsix",
+    "repository": "git-code-reviewer",
+    "installed": false,
+    "nativeGuiVerified": false,
+    "published": false
+  },
+  "realModel": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "xhigh",
+    "workerRunAttempts": 2,
+    "diagnosticWorker": false,
+    "centralRequests": 0,
+    "cleanup": "completed",
+    "cases": [
+      {
+        "case": "python/normal",
+        "status": "completed",
+        "problems": [],
+        "history": {
+          "cliExactMatch": true,
+          "freshExtensionProcessExactMatch": true
+        }
+      },
+      {
+        "case": "python/defect",
+        "status": "failed",
+        "problems": [
+          {
+            "code": "invalid-output",
+            "message": "Review response rejected (unselected-file): The response contains a file that was not selected for review."
+          }
+        ],
+        "history": {
+          "cliExactMatch": true,
+          "freshExtensionProcessExactMatch": true
+        }
+      }
+    ],
+    "evidenceSha256": "aec6e6f9cafc6ba10a98a76a4091eecf64a2c388a7a528197f58cfc59073b179",
+    "interpretation": "The production worker rejected an unselected path/side in the response file list. The privacy-safe report does not reveal which extra path/side was returned. This is a reproduced failure, not proof that all historical invalid-output attempts shared this cause."
+  },
+  "remaining": [
+    "Clarify selected output pairs separately from supporting source/base/callers, then rerun the real fixture.",
+    "Native development and packaged VSIX GUI gates remain. The earlier VSIX hashes do not validate this package."
+  ]
+}

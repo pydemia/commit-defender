@@ -178,6 +178,10 @@ function buildSummaryHtml(
 
   if (report.gcr) {
     const core = report.gcr.report;
+    if (core.problems.length) {
+      body += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
+        `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
+    }
     const freshness = report.local_context_freshness;
     const current = !freshness ? "Current local entries have not been checked."
       : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review."

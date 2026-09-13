@@ -480,6 +480,9 @@ test("cancelled and invalid model output remain terminal reports in history with
   );
   const failed = await invalid.run(abort());
   assert.equal(failed.report.review.status, "failed");
+  const problem = failed.report.gcr?.report.problems[0];
+  assert.equal(problem?.code, "invalid-output");
+  assert.match(problem?.message ?? "", /\(invalid-json\)/);
   assert.equal(calls, 1);
   assert(!JSON.stringify(failed).includes("PRIVATE PROVIDER TEXT"));
   const pending = await prepareStandaloneReview(
@@ -499,10 +502,13 @@ test("cancelled and invalid model output remain terminal reports in history with
     keys: f.keyStore,
   });
   try {
-    assert.equal(
-      (await new LocalHistoryStore(records).listReviews()).length,
-      2,
+    const history = await new LocalHistoryStore(records).listReviews();
+    assert.equal(history.length, 2);
+    assert.deepEqual(
+      history.find((report) => report.status === "failed")?.problems,
+      failed.report.gcr?.report.problems,
     );
+    assert(!JSON.stringify(history).includes("PRIVATE PROVIDER TEXT"));
   } finally {
     records.close();
   }
