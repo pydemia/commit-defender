@@ -147,6 +147,10 @@
             {
                 "command": "commitDefender.manageModelCredential",
                 "title": "Commit Defender: Manage Model API Credential"
+            },
+            {
+                "command": "commitDefender.manageCentralConnection",
+                "title": "Commit Defender: Central Review Connection"
             }
         ],
         "configuration": {
@@ -398,10 +402,11 @@
                     "type": "string",
                     "scope": "application",
                     "enum": [
-                        "standalone"
+                        "standalone",
+                        "centralized"
                     ],
                     "default": "standalone",
-                    "description": "Run with captured local source and encrypted personal knowledge. Standalone mode makes no requests to a GCR server."
+                    "description": "Default review mode from User Settings. Central review requires an explicit connection for the current profile and worktree. Use Central Review Connection to select a worktree override."
                 },
                 "commitDefender.localProfile": {
                     "type": "string",
@@ -583,7 +588,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -604,7 +609,9 @@
         "bundle:standalone-diagnostic": "esbuild test/standalone-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/standalone-diagnostic-worker.cjs",
         "bundle:knowledge-smoke": "esbuild test/knowledge-interop-smoke.ts --bundle --platform=node --target=node22 --format=cjs --outfile=out-test/knowledge-interop-smoke.cjs",
         "test:model-credentials": "esbuild test/model-credentials.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/model-credentials.test.cjs && node --test out-test/model-credentials.test.cjs",
-        "bundle:credential-smoke": "esbuild test/model-credential-smoke.ts --bundle --platform=node --target=node22 --format=cjs --external:@vscode/test-electron --outfile=out-test/model-credential-smoke.cjs && esbuild test/model-credential-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/model-credential-host.cjs"
+        "bundle:credential-smoke": "esbuild test/model-credential-smoke.ts --bundle --platform=node --target=node22 --format=cjs --external:@vscode/test-electron --outfile=out-test/model-credential-smoke.cjs && esbuild test/model-credential-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/model-credential-host.cjs",
+        "test:central-review": "esbuild test/central-review.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/central-review.test.cjs && node --test out-test/central-review.test.cjs",
+        "test:central-view": "esbuild test/central-view.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-view.test.cjs && node --test out-test/central-view.test.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",

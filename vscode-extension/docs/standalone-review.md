@@ -6,7 +6,7 @@ This integration is under validation and has not been published to Marketplace. 
 
 Run **Commit Defender: Select Account Provider and Model**, choose Codex, then `gpt-6-astra`. The selection is saved in User Settings with `xhigh` reasoning effort. Set `commitDefender.codexPath` in User Settings if the supported executable is not found on PATH. Use **Commit Defender: Sign in with Codex** to open the existing CLI login flow.
 
-The current fixed-source executor supports macOS and Codex CLI `0.153.4`. It checks the executable and capabilities before a model call. Other providers and models remain available to their existing login and commit-message adapters; they cannot run this standalone review yet. An unsupported selection produces an error without switching providers.
+The current fixed-source executor supports macOS and Codex CLI `0.153.4` or `0.154.0`. It checks the executable and capabilities before a model call. Other providers and models remain available to their existing login and commit-message adapters; they cannot run this standalone review yet. An unsupported selection produces an error without switching providers.
 
 Repository account settings do not authorize an executable, model or profile. Existing values are preserved. Select the account again in User Settings when migrating a workspace that previously kept these choices in `.vscode/settings.json`.
 

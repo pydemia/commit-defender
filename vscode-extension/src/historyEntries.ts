@@ -2,6 +2,7 @@ import {
   projectCommitDefender,
   type ClientReviewReport,
   type LocalScope,
+  type KnowledgeAudience,
 } from "@gcr/client-contract";
 import type { HistoryEntry, AnalysisScope } from "./historyProvider.js";
 import { OUTCOME_META, reviewStatus } from "./reviewOutcome.js";
@@ -12,11 +13,18 @@ export function mergeLocalHistory(
   reports: readonly ClientReviewReport[],
   repoRoot: string,
   scope: Extract<LocalScope, { kind: "repository" }>,
+  audience?: KnowledgeAudience,
 ): HistoryEntry[] {
   const belongs = (report: ClientReviewReport) => {
     const client = report.identity.client;
     return (
-      client.mode === "standalone" &&
+      (audience
+        ? client.mode === "centralized" &&
+          Object.entries(audience).every(
+            ([key, value]) =>
+              client.audience[key as keyof KnowledgeAudience] === value,
+          )
+        : client.mode === "standalone") &&
       client.profileId === scope.profileId &&
       client.repositoryKey === scope.repositoryKey &&
       client.worktreeKey === scope.worktreeKey

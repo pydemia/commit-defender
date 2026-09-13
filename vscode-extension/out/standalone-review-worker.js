@@ -7,9 +7,9 @@ var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key3 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key3) && key3 !== except)
-        __defProp(to, key3, { get: () => from[key3], enumerable: !(desc = __getOwnPropDesc(from, key3)) || desc.enumerable });
+    for (let key4 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key4) && key4 !== except)
+        __defProp(to, key4, { get: () => from[key4], enumerable: !(desc = __getOwnPropDesc(from, key4)) || desc.enumerable });
   }
   return to;
 };
@@ -24,6 +24,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // src/standaloneReviewWorker.ts
 var import_node_worker_threads = require("node:worker_threads");
+
+// src/standaloneReview.ts
+var import_node_path14 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -60,9 +63,9 @@ var union = (...decoders) => (value, at = "$") => {
   for (const decode of decoders) {
     try {
       return decode(value, at);
-    } catch (error) {
-      if (!(error instanceof ContractError))
-        throw error;
+    } catch (error2) {
+      if (!(error2 instanceof ContractError))
+        throw error2;
     }
   }
   return fail(at, "unsupported object variant");
@@ -71,14 +74,14 @@ var object = (shape2) => (value, at = "$") => {
   if (!value || typeof value !== "object" || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
     return fail(at, "expected JSON object");
   const record2 = value;
-  for (const key3 of Object.keys(record2))
-    if (!Object.hasOwn(shape2, key3))
-      fail(`${at}.${key3}`, "unknown field");
+  for (const key4 of Object.keys(record2))
+    if (!Object.hasOwn(shape2, key4))
+      fail(`${at}.${key4}`, "unknown field");
   const result = {};
-  for (const [key3, decode] of Object.entries(shape2)) {
-    const parsed = decode(Object.hasOwn(record2, key3) ? record2[key3] : void 0, `${at}.${key3}`);
+  for (const [key4, decode] of Object.entries(shape2)) {
+    const parsed = decode(Object.hasOwn(record2, key4) ? record2[key4] : void 0, `${at}.${key4}`);
     if (parsed !== void 0)
-      Object.defineProperty(result, key3, {
+      Object.defineProperty(result, key4, {
         value: parsed,
         enumerable: true,
         configurable: true,
@@ -230,8 +233,8 @@ var executionIdentity = refined(object({
   if (client.mode === "standalone" && (context.centralSnapshot || context.entries.some((entry) => entry.origin === "central")))
     fail(at, "standalone identity contains central context");
   if (client.mode === "centralized" && context.centralSnapshot) {
-    for (const key3 of ["serverId", "tenantId", "userId", "repositoryId"])
-      if (client.audience[key3] !== context.centralSnapshot.audience[key3])
+    for (const key4 of ["serverId", "tenantId", "userId", "repositoryId"])
+      if (client.audience[key4] !== context.centralSnapshot.audience[key4])
         fail(at, "central audience mismatch");
   }
   for (const entry of context.entries)
@@ -782,6 +785,7 @@ var skill = object({
   markdown: text(2e4, 1),
   contentHash: sha256
 });
+var KNOWLEDGE_CLIENT_CONTRACT_VERSION = 2;
 var common = { schemaVersion: union(literal(1), literal(2)), tenantId: id, repositoryId: id };
 var centralKnowledgeBundle = refined(union(object({
   ...common,
@@ -819,6 +823,29 @@ var centralKnowledgeBundle = refined(union(object({
     }
   }
 });
+function canonicalKnowledgeJson(value) {
+  const visit = (item) => {
+    if (item === null || typeof item === "string" || typeof item === "boolean")
+      return JSON.stringify(item);
+    if (typeof item === "number" && Number.isFinite(item))
+      return JSON.stringify(item);
+    if (Array.isArray(item))
+      return "[" + Array.from(item, visit).join(",") + "]";
+    if (item && typeof item === "object" && [Object.prototype, null].includes(Object.getPrototypeOf(item)))
+      return "{" + Object.keys(item).sort().map((key4) => JSON.stringify(key4) + ":" + visit(item[key4])).join(",") + "}";
+    return fail("$", "expected finite JSON data");
+  };
+  return visit(value);
+}
+function encodeKnowledgeBundle(value) {
+  const encoded = canonicalKnowledgeJson(centralKnowledgeBundle(value));
+  if ([...encoded].reduce((bytes, char) => {
+    const code = char.codePointAt(0);
+    return bytes + (code < 128 ? 1 : code < 2048 ? 2 : code < 65536 ? 3 : 4);
+  }, 0) > KNOWLEDGE_BUNDLE_MAX_BYTES)
+    fail("$", "bundle exceeds byte limit");
+  return encoded;
+}
 
 // node_modules/@gcr/client-contract/dist/knowledge-manifest.js
 var knowledgeAudience = object({
@@ -865,6 +892,7 @@ var signedKnowledgeManifest = object({
   manifestHash: sha256,
   signature: text(86, 86, /^[A-Za-z0-9_-]+$/)
 });
+var KNOWLEDGE_SIGNATURE_CONTEXT = "git-code-reviewer/knowledge-manifest/v1\n";
 
 // node_modules/@gcr/client-contract/dist/knowledge-management.js
 var nullableId2 = union(id, literal(null));
@@ -971,6 +999,7 @@ var centralConnectionRecord = object({
   clientId: choice(["gcr-cli", "commit-defender"]),
   expiresAt: timestamp
 });
+var centralConnectionReference = sha256;
 
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
@@ -989,7 +1018,7 @@ var LocalStoreError = class extends Error {
     this.name = "LocalStoreError";
   }
 };
-var errorCode = (error) => error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : void 0;
+var errorCode = (error2) => error2 && typeof error2 === "object" && "code" in error2 && typeof error2.code === "string" ? error2.code : void 0;
 
 // node_modules/@gcr/client-core/dist/local-identity.js
 var import_node_child_process = require("node:child_process");
@@ -1029,10 +1058,10 @@ function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
         throw new LocalStoreError("corrupt-storage", "Expected a plain JSON object.");
       add("{");
       add("}");
-      const entries = Object.keys(entry).sort().map((key3) => {
-        add(JSON.stringify(key3));
+      const entries = Object.keys(entry).sort().map((key4) => {
+        add(JSON.stringify(key4));
         add(":");
-        return `${JSON.stringify(key3)}:${visit(entry[key3], depth + 1)}`;
+        return `${JSON.stringify(key4)}:${visit(entry[key4], depth + 1)}`;
       });
       if (entries.length > 1)
         add(",".repeat(entries.length - 1));
@@ -1138,31 +1167,31 @@ var PlatformLocalKeyStore = class {
     if (!["darwin", "linux"].includes(platform))
       throw new LocalStoreError("unsupported-platform", "No supported OS credential store adapter.");
   }
-  async invoke(operation, reference, key3) {
-    token(reference);
+  async invoke(operation, reference2, key4) {
+    token(reference2);
     if (this.platform === "darwin") {
       if (operation === "write") {
-        if (key3?.byteLength !== 32)
+        if (key4?.byteLength !== 32)
           throw unavailable();
-        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference} -s ${this.service} -w ${Buffer.from(key3).toString("base64")}
+        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference2} -s ${this.service} -w ${Buffer.from(key4).toString("base64")}
 `);
       }
       return this.command("/usr/bin/security", [
         operation === "read" ? "find-generic-password" : "delete-generic-password",
         "-a",
-        reference,
+        reference2,
         "-s",
         this.service,
         ...operation === "read" ? ["-w"] : []
       ]);
     }
     const args = operation === "read" ? ["lookup"] : operation === "remove" ? ["clear"] : ["store", "--label=Commit Defender local data key"];
-    if (operation === "write" && key3?.byteLength !== 32)
+    if (operation === "write" && key4?.byteLength !== 32)
       throw unavailable();
-    return this.command("/usr/bin/secret-tool", [...args, "service", this.service, "account", reference], operation === "write" ? Buffer.from(key3).toString("base64") : void 0);
+    return this.command("/usr/bin/secret-tool", [...args, "service", this.service, "account", reference2], operation === "write" ? Buffer.from(key4).toString("base64") : void 0);
   }
-  async read(reference) {
-    const result = await this.invoke("read", reference);
+  async read(reference2) {
+    const result = await this.invoke("read", reference2);
     if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
@@ -1170,26 +1199,85 @@ var PlatformLocalKeyStore = class {
     const text3 = result.stdout.trim();
     if (!/^[A-Za-z0-9+/]{43}=$/.test(text3))
       throw unavailable();
-    const key3 = Buffer.from(text3, "base64");
-    if (key3.length !== 32 || key3.toString("base64") !== text3)
+    const key4 = Buffer.from(text3, "base64");
+    if (key4.length !== 32 || key4.toString("base64") !== text3)
       throw unavailable();
-    return key3;
+    return key4;
   }
-  async write(reference, key3) {
-    const result = await this.invoke("write", reference, key3);
+  async write(reference2, key4) {
+    const result = await this.invoke("write", reference2, key4);
     if (result.code !== 0)
       throw unavailable();
-    const stored = await this.read(reference);
+    const stored = await this.read(reference2);
     try {
-      if (!stored || !stored.equals(Buffer.from(key3)))
+      if (!stored || !stored.equals(Buffer.from(key4)))
         throw unavailable();
     } finally {
       stored?.fill(0);
     }
   }
-  async remove(reference) {
-    const result = await this.invoke("remove", reference);
+  async remove(reference2) {
+    const result = await this.invoke("remove", reference2);
     if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44))
+      throw unavailable();
+  }
+};
+function validateCentralApiKey(value) {
+  if (!/^gcr_key_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_[A-Za-z0-9_-]{43}$/.test(value))
+    throw unavailable();
+  return value;
+}
+var PlatformCentralCredentialStore = class {
+  platform;
+  command;
+  service = "com.commitdefender.central-auth.v1";
+  constructor(platform = process.platform, command = run) {
+    this.platform = platform;
+    this.command = command;
+    if (!["darwin", "linux"].includes(platform))
+      throw unavailable();
+  }
+  invoke(operation, reference2, secret) {
+    token(reference2);
+    if (secret !== void 0)
+      validateCentralApiKey(secret);
+    if (this.platform === "darwin") {
+      if (operation === "write")
+        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference2} -s ${this.service} -w ${secret}
+`);
+      return this.command("/usr/bin/security", [
+        operation === "read" ? "find-generic-password" : "delete-generic-password",
+        "-a",
+        reference2,
+        "-s",
+        this.service,
+        ...operation === "read" ? ["-w"] : []
+      ]);
+    }
+    return this.command("/usr/bin/secret-tool", [
+      operation === "read" ? "lookup" : operation === "remove" ? "clear" : "store",
+      ...operation === "write" ? ["--label=Commit Defender central API key"] : [],
+      "service",
+      this.service,
+      "account",
+      reference2
+    ], secret);
+  }
+  async read(reference2) {
+    const result = await this.invoke("read", reference2);
+    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+      return void 0;
+    if (result.code !== 0)
+      throw unavailable();
+    return validateCentralApiKey(result.stdout.trim());
+  }
+  async write(reference2, secret) {
+    if ((await this.invoke("write", reference2, secret)).code !== 0 || await this.read(reference2) !== secret)
+      throw unavailable();
+  }
+  async remove(reference2) {
+    const result = await this.invoke("remove", reference2);
+    if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44) && !(this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim()))
       throw unavailable();
   }
 };
@@ -1236,9 +1324,9 @@ async function privateDirectory(parent, name) {
   try {
     await (0, import_promises.mkdir)(target, { mode: 448 });
     created = true;
-  } catch (error) {
-    if (errorCode(error) !== "EEXIST")
-      throw error;
+  } catch (error2) {
+    if (errorCode(error2) !== "EEXIST")
+      throw error2;
   }
   const stat2 = await (0, import_promises.lstat)(target);
   if (!stat2.isDirectory() || stat2.isSymbolicLink())
@@ -1260,10 +1348,10 @@ async function readPrivateFile(file, maxBytes) {
   let handle;
   try {
     handle = await (0, import_promises.open)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
-  } catch (error) {
-    if (errorCode(error) === "ENOENT")
+  } catch (error2) {
+    if (errorCode(error2) === "ENOENT")
       return void 0;
-    throw error;
+    throw error2;
   }
   try {
     const stat2 = await handle.stat();
@@ -1297,10 +1385,10 @@ async function publishImmutable(file, bytes) {
     await handle.close();
     try {
       await (0, import_promises.link)(temporary, file);
-    } catch (error) {
-      if (errorCode(error) === "EEXIST")
+    } catch (error2) {
+      if (errorCode(error2) === "EEXIST")
         return false;
-      throw error;
+      throw error2;
     }
     try {
       await syncDirectory(directory);
@@ -1355,14 +1443,14 @@ async function profileKey(directory, profileId, keys2) {
     const bytes = await readPrivateFile(referenceFile, 1024);
     if (!bytes)
       return void 0;
-    const reference2 = parse(bytes);
-    onlyFields(reference2, ["formatVersion", "profileId", "id"]);
-    if (reference2.formatVersion !== 1 || reference2.profileId !== profileId || typeof reference2.id !== "string" || !/^[a-f0-9-]{36}$/.test(reference2.id))
+    const reference3 = parse(bytes);
+    onlyFields(reference3, ["formatVersion", "profileId", "id"]);
+    if (reference3.formatVersion !== 1 || reference3.profileId !== profileId || typeof reference3.id !== "string" || !/^[a-f0-9-]{36}$/.test(reference3.id))
       throw corrupt();
-    const key3 = await keys2.read(`${profileId}.${reference2.id}`);
-    if (!key3 || key3.length !== 32)
+    const key4 = await keys2.read(`${profileId}.${reference3.id}`);
+    if (!key4 || key4.length !== 32)
       throw new LocalStoreError("credential-unavailable", "The OS key for existing local data is unavailable.");
-    return key3;
+    return key4;
   };
   const existing = await read();
   if (existing)
@@ -1374,11 +1462,11 @@ async function profileKey(directory, profileId, keys2) {
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
   const id3 = (0, import_node_crypto3.randomUUID)();
-  const reference = `${profileId}.${id3}`;
+  const reference2 = `${profileId}.${id3}`;
   const candidate = (0, import_node_crypto3.randomBytes)(32);
   let preserve = false;
   try {
-    await keys2.write(reference, candidate);
+    await keys2.write(reference2, candidate);
     preserve = await publishImmutable(referenceFile, Buffer.from(canonicalJson({ formatVersion: 1, profileId, id: id3 })));
     if (preserve)
       return candidate;
@@ -1386,14 +1474,14 @@ async function profileKey(directory, profileId, keys2) {
     if (!winner)
       throw corrupt();
     return winner;
-  } catch (error) {
-    if (error instanceof LocalStoreError && error.code === "commit-unknown")
+  } catch (error2) {
+    if (error2 instanceof LocalStoreError && error2.code === "commit-unknown")
       preserve = true;
-    throw error;
+    throw error2;
   } finally {
     if (!preserve) {
       candidate.fill(0);
-      await keys2.remove(reference).catch(() => void 0);
+      await keys2.remove(reference2).catch(() => void 0);
     }
   }
 }
@@ -1402,10 +1490,10 @@ var LocalRecordStore = class _LocalRecordStore {
   directory;
   closed = false;
   #key;
-  constructor(scope, directory, key3) {
+  constructor(scope, directory, key4) {
     this.scope = scope;
     this.directory = directory;
-    this.#key = key3;
+    this.#key = key4;
   }
   static async open(options) {
     const scope = Object.freeze(localScope(options.scope));
@@ -1413,7 +1501,7 @@ var LocalRecordStore = class _LocalRecordStore {
     const profiles = await privateDirectory(root, "profiles");
     const profile = await privateDirectory(profiles, scope.profileId);
     const local = await privateDirectory(profile, "local");
-    const key3 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
+    const key4 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
     try {
       let directory = local;
       if (scope.kind === "repository") {
@@ -1422,10 +1510,10 @@ var LocalRecordStore = class _LocalRecordStore {
         directory = await privateDirectory(directory, scope.worktreeKey);
       } else
         directory = await privateDirectory(directory, "profile");
-      return new _LocalRecordStore(scope, directory, key3);
-    } catch (error) {
-      key3.fill(0);
-      throw error;
+      return new _LocalRecordStore(scope, directory, key4);
+    } catch (error2) {
+      key4.fill(0);
+      throw error2;
     }
   }
   close() {
@@ -1456,10 +1544,10 @@ var LocalRecordStore = class _LocalRecordStore {
     if (!create) {
       try {
         await (0, import_promises2.lstat)(import_node_path3.default.join(namespace, id3));
-      } catch (error) {
-        if (errorCode(error) === "ENOENT")
+      } catch (error2) {
+        if (errorCode(error2) === "ENOENT")
           return void 0;
-        throw error;
+        throw error2;
       }
     }
     return privateDirectory(namespace, id3);
@@ -1488,9 +1576,9 @@ var LocalRecordStore = class _LocalRecordStore {
         return void 0;
       try {
         return await this.readRevision(directory, kind, id3, marker);
-      } catch (error) {
-        if (!(error instanceof LocalStoreError) || error.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
-          throw error;
+      } catch (error2) {
+        if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
+          throw error2;
       }
     }
     throw conflict();
@@ -1521,9 +1609,9 @@ var LocalRecordStore = class _LocalRecordStore {
       if (payload.deleted !== false)
         throw corrupt();
       return { revision: marker.revision, deleted: false, value: payload.value };
-    } catch (error) {
-      if (error instanceof LocalStoreError)
-        throw error;
+    } catch (error2) {
+      if (error2 instanceof LocalStoreError)
+        throw error2;
       throw corrupt();
     } finally {
       plaintext?.fill(0);
@@ -1576,10 +1664,10 @@ var LocalRecordStore = class _LocalRecordStore {
       if (!preserve)
         throw conflict();
       return deleted ? { revision, deleted: true } : { revision, deleted: false, value: JSON.parse(snapshot).value };
-    } catch (error) {
-      if (error instanceof LocalStoreError && error.code === "commit-unknown")
+    } catch (error2) {
+      if (error2 instanceof LocalStoreError && error2.code === "commit-unknown")
         preserve = true;
-      throw error;
+      throw error2;
     } finally {
       if (!preserve)
         await (0, import_promises2.unlink)(blobPath).catch(() => void 0);
@@ -1611,8 +1699,8 @@ var LocalRecordStore = class _LocalRecordStore {
         continue;
       try {
         await (0, import_promises2.unlink)(import_node_path3.default.join(blobs, name));
-      } catch (error) {
-        if (errorCode(error) !== "ENOENT")
+      } catch (error2) {
+        if (errorCode(error2) !== "ENOENT")
           complete = false;
       }
     }
@@ -1632,8 +1720,8 @@ function withHash(value) {
 }
 function verify(value) {
   const item = localKnowledge(value);
-  const { hash: hash3, ...body2 } = item;
-  if (hash3 !== contentHash(body2))
+  const { hash: hash4, ...body2 } = item;
+  if (hash4 !== contentHash(body2))
     throw new LocalStoreError("corrupt-storage", "Local knowledge content does not match its hash.");
   return item;
 }
@@ -1710,7 +1798,7 @@ var LocalKnowledgeStore = class {
     return current;
   }
   async replace(current, changes) {
-    const body2 = Object.fromEntries(Object.entries(current).filter(([key3]) => key3 !== "hash"));
+    const body2 = Object.fromEntries(Object.entries(current).filter(([key4]) => key4 !== "hash"));
     const next = {
       ...body2,
       ...changes,
@@ -1734,7 +1822,7 @@ var LocalKnowledgeStore = class {
       "expiresAt",
       ...current.kind === "memory" ? ["rationale", "counterEvidence"] : []
     ]);
-    if (Object.keys(copied).some((key3) => immutable.has(key3) || !allowed.has(key3)))
+    if (Object.keys(copied).some((key4) => immutable.has(key4) || !allowed.has(key4)))
       throw new LocalStoreError("corrupt-storage", "Knowledge edit contains a field that cannot be changed.");
     return this.replace(current, copied);
   }
@@ -1763,7 +1851,7 @@ var LocalKnowledgeStore = class {
   }
   async importKnowledge(value) {
     const item = verify(value);
-    const draft = Object.fromEntries(Object.entries(item).filter(([key3]) => !["id", "scope", "revision", "hash", "state", "createdAt", "updatedAt"].includes(key3)));
+    const draft = Object.fromEntries(Object.entries(item).filter(([key4]) => !["id", "scope", "revision", "hash", "state", "createdAt", "updatedAt"].includes(key4)));
     draft.sources = [
       ...item.sources,
       { kind: "import", label: "Explicit local knowledge import", hash: contentHash(item) }
@@ -1782,7 +1870,7 @@ function record(value, keys2) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw invalid();
   const result = value;
-  if (Object.keys(result).length !== keys2.length || keys2.some((key3) => !Object.hasOwn(result, key3)))
+  if (Object.keys(result).length !== keys2.length || keys2.some((key4) => !Object.hasOwn(result, key4)))
     throw invalid();
   return result;
 }
@@ -1987,9 +2075,9 @@ var LocalHistoryStore = class {
           const result = await this.records.remove(kind, entry.id, entry.revision);
           deleted++;
           cleanupPending ||= result.cleanupPending;
-        } catch (error) {
-          if (!(error instanceof LocalStoreError) || error.code !== "revision-conflict")
-            throw error;
+        } catch (error2) {
+          if (!(error2 instanceof LocalStoreError) || error2.code !== "revision-conflict")
+            throw error2;
           cleanupPending = true;
         }
       }
@@ -2123,7 +2211,7 @@ function compilePathPatterns(patterns = []) {
     const pattern = raw.replace(/^\//, "").replace(/\/$/, "");
     if (!pattern || pattern.split("/").some((part) => !part || part === "." || part === ".."))
       throw new SourceCaptureError("invalid-source-request");
-    const parts = pattern.split("/").map((part) => {
+    const parts2 = pattern.split("/").map((part) => {
       if (part === "**")
         return part;
       if (part.includes("**"))
@@ -2148,11 +2236,11 @@ function compilePathPatterns(patterns = []) {
         return patternIndex === part.length;
       };
     });
-    const anchored = raw.startsWith("/") || parts.length > 1;
+    const anchored = raw.startsWith("/") || parts2.length > 1;
     return (file) => {
       const names = file.split("/");
       let positions = new Set(anchored ? [0] : names.map((_, index) => index));
-      for (const part of parts) {
+      for (const part of parts2) {
         const next = /* @__PURE__ */ new Set();
         for (const start of positions) {
           if (part === "**")
@@ -2169,22 +2257,22 @@ function compilePathPatterns(patterns = []) {
   return (file) => matchers.some((match) => match(file));
 }
 function sourcePathPolicy(patterns = []) {
-  const matches = compilePathPatterns(patterns);
+  const matches2 = compilePathPatterns(patterns);
   return (file) => {
     try {
       sourcePath(file);
     } catch {
       return "invalid-path";
     }
-    const parts = file.toLowerCase().split("/");
-    const name = parts.at(-1);
-    if (parts.some((part) => privateDirectories.has(part) || part.startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name))
+    const parts2 = file.toLowerCase().split("/");
+    const name = parts2.at(-1);
+    if (parts2.some((part) => privateDirectories.has(part) || part.startsWith(".codex")) || /^(?:\.env(?:\..*)?|\.envrc|\.npmrc|\.pypirc|\.netrc|auth\.json(?:\..*)?|credentials(?:\.json)?|id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?)$/.test(name) || /\.(?:env|pem|key|p12|pfx|keystore|code-workspace)$/.test(name))
       return "private-data";
-    if (parts.some((part) => generated.has(part)))
+    if (parts2.some((part) => generated.has(part)))
       return "generated";
     if (binary2.has(import_node_path4.default.posix.extname(name)))
       return "binary";
-    if (matches(file))
+    if (matches2(file))
       return "user-excluded";
     return void 0;
   };
@@ -2280,15 +2368,15 @@ var SourceGit = class {
         } finally {
           (0, import_node_fs3.closeSync)(fd);
         }
-      } catch (error) {
-        if (error.code !== "ENOENT")
-          throw error;
+      } catch (error2) {
+        if (error2.code !== "ENOENT")
+          throw error2;
         this.text(["read-tree", "--empty"]);
       }
-    } catch (error) {
+    } catch (error2) {
       this.close();
-      if (error instanceof SourceCaptureError)
-        throw error;
+      if (error2 instanceof SourceCaptureError)
+        throw error2;
       throw new SourceCaptureError("source-unavailable");
     }
   }
@@ -2330,8 +2418,8 @@ var SourceGit = class {
         timeout: Math.min(remaining, 1e4),
         stdio: ["pipe", "pipe", "pipe"]
       });
-    } catch (error) {
-      const failure = error;
+    } catch (error2) {
+      const failure = error2;
       if (accepted.includes(failure.status ?? -1))
         return failure.stdout ?? Buffer.alloc(0);
       throw new SourceCaptureError("source-unavailable");
@@ -2340,9 +2428,9 @@ var SourceGit = class {
   text(args, input2, maxBuffer, accepted) {
     try {
       return new TextDecoder("utf-8", { fatal: true }).decode(this.run(args, input2, maxBuffer, accepted));
-    } catch (error) {
-      if (error instanceof SourceCaptureError)
-        throw error;
+    } catch (error2) {
+      if (error2 instanceof SourceCaptureError)
+        throw error2;
       throw new SourceCaptureError("source-unavailable");
     }
   }
@@ -2522,18 +2610,18 @@ var LocalSourceSnapshot = class {
       throw new SourceCaptureError("invalid-source-request");
     if (prefix)
       paths([prefix]);
-    const matches = [];
+    const matches2 = [];
     let truncated = false;
     for (const file of this.#files.values()) {
       if (file.source.side !== side || prefix && file.source.path !== prefix && !file.source.path.startsWith(`${prefix}/`))
         continue;
       for (const [index, line] of file.text.split("\n").entries())
         if (line.includes(query)) {
-          if (matches.length === 100) {
+          if (matches2.length === 100) {
             truncated = true;
             break;
           }
-          matches.push({
+          matches2.push({
             source: structuredClone(file.source),
             line: index + 1,
             text: line.slice(0, 300),
@@ -2544,7 +2632,7 @@ var LocalSourceSnapshot = class {
         break;
     }
     return {
-      matches,
+      matches: matches2,
       truncated,
       omitted: this.#limitations.filter((item) => item.side === side).length,
       method: "literal-text",
@@ -2594,11 +2682,11 @@ function captureLocalSource(input2) {
     if (allPaths.length > entryLimit)
       throw new SourceCaptureError("capture-limit");
     const limitations = [];
-    const denied = /* @__PURE__ */ new Set();
+    const denied2 = /* @__PURE__ */ new Set();
     const exclude = (file, side, reason, detail = reason) => {
-      if (denied.has(key(side, file)))
+      if (denied2.has(key(side, file)))
         return;
-      denied.add(key(side, file));
+      denied2.add(key(side, file));
       limitations.push({ path: file, side, reason, detail });
     };
     const eligible = allPaths.filter((file) => {
@@ -2612,10 +2700,10 @@ function captureLocalSource(input2) {
       return false;
     });
     const ignoreInputs = eligible.filter((file) => {
-      const parts = file.split("/");
-      for (let index = 1; index < parts.length; index++) {
+      const parts2 = file.split("/");
+      for (let index = 1; index < parts2.length; index++) {
         try {
-          const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts.slice(0, index)));
+          const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts2.slice(0, index)));
           if (stat2.isSymbolicLink()) {
             for (const side of ["base", "source"])
               exclude(file, side, "symlink", "ignore-path-symlink");
@@ -2623,8 +2711,8 @@ function captureLocalSource(input2) {
           }
           if (!stat2.isDirectory())
             break;
-        } catch (error) {
-          if (!["ENOENT", "ENOTDIR"].includes(error.code ?? "")) {
+        } catch (error2) {
+          if (!["ENOENT", "ENOTDIR"].includes(error2.code ?? "")) {
             for (const side of ["base", "source"])
               exclude(file, side, "unreadable", "ignore-policy-unavailable");
             return false;
@@ -2702,7 +2790,7 @@ function captureLocalSource(input2) {
       if (Date.now() > deadline)
         throw new SourceCaptureError("capture-limit");
       for (const side of ["source", "base"]) {
-        if (denied.has(key(side, file)))
+        if (denied2.has(key(side, file)))
           continue;
         const tree = side === "base" ? base : source;
         const entry = tree.get(file);
@@ -2713,19 +2801,19 @@ function captureLocalSource(input2) {
         if (side === "source" && options.kind === "working-tree" && known.source.has(file)) {
           let fd;
           try {
-            const parts = file.split("/");
-            for (let index = 1; index <= parts.length; index++) {
-              const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts.slice(0, index)));
+            const parts2 = file.split("/");
+            for (let index = 1; index <= parts2.length; index++) {
+              const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts2.slice(0, index)));
               if (stat2.isSymbolicLink()) {
                 exclude(file, side, "symlink");
                 break;
               }
-              if (index < parts.length ? !stat2.isDirectory() : !stat2.isFile()) {
+              if (index < parts2.length ? !stat2.isDirectory() : !stat2.isFile()) {
                 exclude(file, side, "not-file");
                 break;
               }
             }
-            if (denied.has(key(side, file)))
+            if (denied2.has(key(side, file)))
               continue;
             const absolute = import_node_path6.default.join(git.root, file);
             fd = (0, import_node_fs4.openSync)(absolute, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
@@ -2755,10 +2843,10 @@ function captureLocalSource(input2) {
             add(file, side, body2, captured);
             if (files.has(key(side, file)))
               workingWrites.push({ file, body: body2, entry: captured });
-          } catch (error) {
-            if (error instanceof SourceCaptureError)
-              throw error;
-            if (["ENOENT", "ENOTDIR"].includes(error.code ?? "")) {
+          } catch (error2) {
+            if (error2 instanceof SourceCaptureError)
+              throw error2;
+            if (["ENOENT", "ENOTDIR"].includes(error2.code ?? "")) {
               if (skipWorktree.has(file))
                 exclude(file, side, "unsupported-source", "sparse-worktree");
               else if (untracked.includes(file))
@@ -2826,7 +2914,7 @@ function captureLocalSource(input2) {
       if (oids.length !== workingWrites.length || oids.some((oid, index) => oid !== workingWrites[index].entry.oid))
         throw new SourceCaptureError("source-unavailable");
     }
-    const comparable = new Set(eligible.filter((file) => ["base", "source"].every((side) => !denied.has(key(side, file)) && (!known[side].has(file) || files.has(key(side, file))))));
+    const comparable = new Set(eligible.filter((file) => ["base", "source"].every((side) => !denied2.has(key(side, file)) && (!known[side].has(file) || files.has(key(side, file))))));
     const filtered = (side) => new Map([...files.values()].filter((file) => file.source.side === side && comparable.has(file.source.path)).map((file) => [
       file.source.path,
       {
@@ -2986,6 +3074,754 @@ function sourceLanguage(file) {
   return languages[import_node_path7.default.posix.extname(file).toLowerCase()];
 }
 
+// node_modules/@gcr/client-core/dist/central-cache.js
+var import_node_crypto8 = require("node:crypto");
+var import_node_path8 = __toESM(require("node:path"), 1);
+
+// node_modules/@gcr/client-core/dist/central-binding.js
+var import_node_crypto6 = require("node:crypto");
+var KnowledgeSyncError = class extends Error {
+  code;
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+    this.name = "KnowledgeSyncError";
+  }
+};
+var invalid2 = () => new KnowledgeSyncError("invalid-binding", "Explicit trusted server, audience and Ed25519 keys are required.");
+function normalizeCentralServerUrl(input2, allowLoopbackHttp = false) {
+  try {
+    if (input2 !== input2.trim() || /[\\\s]/.test(input2))
+      throw invalid2();
+    const raw = /^(https?):\/\/[^/?#]+([^?#]*)$/.exec(input2);
+    if (!raw)
+      throw invalid2();
+    const url = new URL(input2);
+    if (url.username || url.password || url.search || url.hash)
+      throw invalid2();
+    if (url.protocol !== "https:" && !(allowLoopbackHttp && url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+      throw invalid2();
+    const segments = raw[2].split("/").slice(1);
+    if (segments.at(-1) === "")
+      segments.pop();
+    if (segments.some((segment) => !segment))
+      throw invalid2();
+    const decoded = segments.map((segment) => {
+      const value = decodeURIComponent(segment);
+      if (value === "." || value === ".." || /[\\/%]/.test(value) || [...value].some((char) => char.codePointAt(0) <= 32 || char.codePointAt(0) === 127))
+        throw invalid2();
+      return encodeURIComponent(value);
+    });
+    url.pathname = "/" + (decoded.length ? decoded.join("/") + "/" : "");
+    return url.toString();
+  } catch {
+    throw invalid2();
+  }
+}
+var TrustedCentralBinding = class {
+  serverUrl;
+  audience;
+  id;
+  #keys;
+  constructor(input2) {
+    this.serverUrl = normalizeCentralServerUrl(input2.serverUrl, input2.allowLoopbackHttp);
+    try {
+      this.audience = Object.freeze(knowledgeAudience(input2.audience));
+      this.#keys = /* @__PURE__ */ new Map();
+      if (!input2.trustedKeys.size || input2.trustedKeys.size > 16)
+        throw invalid2();
+      for (const [id3, value] of input2.trustedKeys) {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id3))
+          throw invalid2();
+        const key4 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
+        if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
+          throw invalid2();
+        this.#keys.set(id3, (0, import_node_crypto6.createPublicKey)(key4.export({ type: "spki", format: "pem" })));
+      }
+      this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
+      Object.freeze(this);
+    } catch {
+      throw invalid2();
+    }
+  }
+  verificationKeys() {
+    return new Map(this.#keys);
+  }
+};
+
+// node_modules/@gcr/client-core/dist/knowledge-signature.js
+var import_node_crypto7 = require("node:crypto");
+function verifyKnowledgeManifest(value, options) {
+  const manifest = signedKnowledgeManifest(value);
+  const payload = manifest.payload;
+  const version = options.clientContractVersion ?? KNOWLEDGE_CLIENT_CONTRACT_VERSION;
+  if (!Number.isSafeInteger(version) || version < payload.compatibleClientContracts.minimum || version > payload.compatibleClientContracts.maximum)
+    throw Error("Incompatible knowledge client contract");
+  if (canonicalKnowledgeJson(payload.audience) !== canonicalKnowledgeJson(knowledgeAudience(options.audience)))
+    throw Error("Knowledge manifest audience mismatch");
+  const trusted = options.trustedKeys.get(payload.signingKeyId);
+  if (!trusted)
+    throw Error("Untrusted knowledge signing key");
+  const key4 = typeof trusted === "string" ? (0, import_node_crypto7.createPublicKey)(trusted) : trusted;
+  if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
+    throw Error("Invalid knowledge verification key");
+  const bytes = canonicalKnowledgeJson(payload);
+  if ((0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto7.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key4, Buffer.from(manifest.signature, "base64url")))
+    throw Error("Invalid knowledge manifest signature");
+  const issued = Date.parse(payload.issuedAt), until = Date.parse(options.mode === "online" ? payload.refreshAfter : payload.offlineValidUntil);
+  if (!Number.isFinite(options.now) || issued > options.now + 3e4 || options.now >= until)
+    throw Error("Knowledge manifest expired or not yet valid");
+  if (payload.authorizationRevision < (options.minimumAuthorizationRevision ?? 0))
+    throw Error("Knowledge authorization revision replay");
+  for (const part of ["policy", "collective", "personal"]) {
+    const minimum = Math.max(payload.revocations[`${part}MinimumSequence`], options.minimumSequences?.[part] ?? 0);
+    if (payload.components[part].releaseSequence < minimum)
+      throw Error("Knowledge component sequence replay");
+  }
+  return manifest;
+}
+
+// node_modules/@gcr/client-core/dist/central-cache.js
+var parts = ["policy", "collective", "personal"];
+var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
+var error = (code) => new KnowledgeSyncError(code, {
+  "invalid-binding": "Invalid central binding.",
+  busy: "Another process owns the current synchronization.",
+  disabled: "Central connection is disabled.",
+  "authentication-required": "Central authentication is required.",
+  revoked: "Central access has been revoked.",
+  unavailable: "Central synchronization is unavailable.",
+  incompatible: "The central contract requires a client upgrade.",
+  "invalid-manifest": "Central manifest verification failed.",
+  "invalid-bundle": "Central bundle verification failed.",
+  "cache-unavailable": "A complete authorized central cache is unavailable.",
+  superseded: "A newer synchronization or connection change superseded this operation.",
+  cancelled: "Central synchronization was cancelled.",
+  timeout: "Central synchronization exceeded its deadline."
+}[code]);
+var CentralKnowledgeCache = class _CentralKnowledgeCache {
+  records;
+  binding;
+  now;
+  denied;
+  constructor(records, binding, now) {
+    this.records = records;
+    this.binding = binding;
+    this.now = now;
+  }
+  static async open(options) {
+    if (options.scope.kind !== "repository" || !(options.binding instanceof TrustedCentralBinding))
+      throw error("invalid-binding");
+    const records = await LocalRecordStore.open({
+      ...options,
+      dataDirectory: import_node_path8.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
+    });
+    return new _CentralKnowledgeCache(records, options.binding, options.now ?? Date.now);
+  }
+  get scope() {
+    return structuredClone(this.records.scope);
+  }
+  close() {
+    this.records.close();
+  }
+  time() {
+    const value = this.now();
+    if (!Number.isSafeInteger(value) || value < 0)
+      throw error("cache-unavailable");
+    return value;
+  }
+  async state() {
+    const record2 = await this.records.read("settings", "snapshot");
+    if (record2?.deleted)
+      throw error("cache-unavailable");
+    const value = record2 ? centralCacheIndex(record2.value) : centralCacheIndex({
+      formatVersion: 1,
+      bindingHash: this.binding.id,
+      generation: 0,
+      observedAt: 0,
+      status: "enabled",
+      minimumAuthorizationRevision: 0,
+      minimumSequences: { policy: 0, collective: 0, personal: 0 },
+      revocationMinimumSequences: { policy: 0, collective: 0, personal: 0 },
+      claim: null,
+      active: null
+    });
+    if (value.bindingHash !== this.binding.id || value.observedAt > this.time() + 3e4)
+      throw error("cache-unavailable");
+    return { revision: record2?.revision ?? 0, value };
+  }
+  async put(state, value) {
+    const result = await this.records.write("settings", "snapshot", centralCacheIndex(value), state.revision);
+    if (result.deleted)
+      throw error("cache-unavailable");
+    return { revision: result.revision, value: centralCacheIndex(result.value) };
+  }
+  verify(value, state, mode) {
+    try {
+      return verifyKnowledgeManifest(value, {
+        audience: this.binding.audience,
+        trustedKeys: this.binding.verificationKeys(),
+        now: this.time(),
+        mode,
+        minimumAuthorizationRevision: state.minimumAuthorizationRevision,
+        minimumSequences: state.minimumSequences
+      });
+    } catch {
+      throw error("invalid-manifest");
+    }
+  }
+  bundle(value, part, manifest) {
+    try {
+      const decoded = centralKnowledgeBundle(value), descriptor = manifest.payload.components[part];
+      const bytes = encodeKnowledgeBundle(decoded);
+      if (decoded.component !== part || decoded.tenantId !== this.binding.audience.tenantId || decoded.repositoryId !== this.binding.audience.repositoryId || decoded.ownerUserId !== (part === "personal" ? this.binding.audience.userId : null) || Buffer.byteLength(bytes) !== descriptor.sizeBytes || hash2(bytes) !== descriptor.contentHash)
+        throw error("invalid-bundle");
+      return decoded;
+    } catch {
+      throw error("invalid-bundle");
+    }
+  }
+  async readActive(state, mode) {
+    this.checkEnabled();
+    if (state.value.status !== "enabled")
+      throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    const active = state.value.active;
+    if (!active)
+      throw error("cache-unavailable");
+    const manifest = this.verify(active.manifest, state.value, mode);
+    const bundles = {};
+    for (const part of parts) {
+      const record2 = await this.records.read("knowledge", active.records[part]);
+      if (!record2 || record2.deleted)
+        throw error("cache-unavailable");
+      bundles[part] = this.bundle(record2.value, part, manifest);
+    }
+    const current = await this.state();
+    if (current.revision !== state.revision)
+      throw error("superseded");
+    this.checkEnabled();
+    this.verify(manifest, current.value, mode);
+    return { generation: state.value.generation, manifest, bundles };
+  }
+  checkEnabled() {
+    if (this.denied)
+      throw error(this.denied === "disconnected" ? "disabled" : this.denied);
+  }
+  async read(mode = "offline") {
+    this.checkEnabled();
+    const state = await this.state();
+    if (state.value.claim)
+      throw error("busy");
+    return this.readActive(state, mode);
+  }
+  /** Checks a pinned running review without replacing its bodies with a newer snapshot. */
+  async observeSnapshot(manifest, mode) {
+    this.checkEnabled();
+    const state = await this.state();
+    this.checkEnabled();
+    if (state.value.status !== "enabled")
+      throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+    this.verify(manifest, {
+      ...state.value,
+      minimumSequences: state.value.revocationMinimumSequences ?? state.value.minimumSequences
+    }, mode);
+    if (state.value.claim) {
+      if (state.value.claim.deadline <= this.time())
+        throw error("cache-unavailable");
+      return "pending";
+    }
+    if (!state.value.active)
+      throw error("cache-unavailable");
+    const latest = this.verify(state.value.active.manifest, state.value, mode);
+    return parts.some((part) => latest.payload.components[part].contentHash !== manifest.payload.components[part].contentHash) ? "updated" : "current";
+  }
+  async connectionState() {
+    const state = await this.state();
+    return { generation: state.value.generation, status: state.value.status };
+  }
+  async owned(token2, generation) {
+    const state = await this.state();
+    if (state.value.status !== "enabled" || state.value.generation !== generation || state.value.claim?.id !== token2 || state.value.claim.deadline <= this.time())
+      throw error("superseded");
+    return state;
+  }
+  check(signal) {
+    if (signal.aborted)
+      throw error(signal.reason === "timeout" ? "timeout" : "cancelled");
+  }
+  async request(work, signal) {
+    this.check(signal);
+    let abort;
+    const interrupted = new Promise((_, reject) => {
+      abort = () => reject(error(signal.reason === "timeout" ? "timeout" : "cancelled"));
+      signal.addEventListener("abort", abort, { once: true });
+      if (signal.aborted)
+        abort();
+    });
+    try {
+      return await Promise.race([work(), interrupted]);
+    } finally {
+      signal.removeEventListener("abort", abort);
+    }
+  }
+  response(status) {
+    throw error(status === 401 ? "authentication-required" : status === 403 ? "revoked" : status === 426 ? "incompatible" : "unavailable");
+  }
+  async synchronize(transport, options = {}) {
+    const timeout = options.timeoutMs ?? 12e4;
+    if (!Number.isInteger(timeout) || timeout < 1 || timeout > 12e4)
+      throw error("invalid-binding");
+    const controller2 = new AbortController();
+    const cancel = () => controller2.abort("cancelled");
+    options.signal?.addEventListener("abort", cancel, { once: true });
+    if (options.signal?.aborted)
+      cancel();
+    const timer = setTimeout(() => controller2.abort("timeout"), timeout);
+    const token2 = (0, import_node_crypto8.randomUUID)();
+    let generation;
+    let authorizationUncertain = false;
+    try {
+      this.checkEnabled();
+      this.check(controller2.signal);
+      let state = await this.state();
+      if (state.value.status !== "enabled")
+        throw error(state.value.status === "disconnected" ? "disabled" : state.value.status);
+      if (state.value.claim && state.value.claim.deadline > this.time())
+        throw error("busy");
+      state = await this.put(state, {
+        ...state.value,
+        generation: state.value.generation + 1,
+        observedAt: this.time(),
+        claim: { id: token2, deadline: this.time() + timeout }
+      });
+      generation = state.value.generation;
+      const inventory = await this.records.listIds("knowledge");
+      const response = await this.request(() => transport.manifest({
+        ...state.value.active ? { etag: `"${state.value.active.manifest.manifestHash}"` } : {},
+        signal: controller2.signal
+      }), controller2.signal);
+      this.check(controller2.signal);
+      if (response.status !== 200 && response.status !== 304)
+        this.response(response.status);
+      state = await this.owned(token2, generation);
+      if (response.status === 304) {
+        await this.readActive(state, "online");
+        this.check(controller2.signal);
+        state = await this.put(state, { ...state.value, observedAt: this.time(), claim: null });
+        return this.readActive(state, "online");
+      }
+      const manifest = this.verify(response.manifest, state.value, "online");
+      const floors = { ...state.value.minimumSequences };
+      const revocationFloors = {
+        ...state.value.revocationMinimumSequences ?? state.value.minimumSequences
+      };
+      for (const part of parts)
+        floors[part] = Math.max(floors[part], manifest.payload.revocations[`${part}MinimumSequence`]);
+      for (const part of parts)
+        revocationFloors[part] = Math.max(revocationFloors[part], manifest.payload.revocations[`${part}MinimumSequence`]);
+      authorizationUncertain = true;
+      state = await this.put(state, {
+        ...state.value,
+        observedAt: this.time(),
+        minimumAuthorizationRevision: manifest.payload.authorizationRevision,
+        minimumSequences: floors,
+        revocationMinimumSequences: revocationFloors
+      });
+      authorizationUncertain = false;
+      const refs = {};
+      for (const part of parts) {
+        this.check(controller2.signal);
+        const previous = state.value.active;
+        if (previous?.manifest.payload.components[part].contentHash === manifest.payload.components[part].contentHash) {
+          const cached = await this.records.read("knowledge", previous.records[part]);
+          if (!cached || cached.deleted)
+            throw error("cache-unavailable");
+          this.bundle(cached.value, part, manifest);
+          refs[part] = previous.records[part];
+          continue;
+        }
+        const downloaded = await this.request(() => transport.bundle({
+          snapshotId: manifest.payload.snapshotId,
+          bundleId: manifest.payload.components[part].bundleId,
+          component: part,
+          signal: controller2.signal
+        }), controller2.signal);
+        if (downloaded.status !== 200)
+          this.response(downloaded.status);
+        const chunks = [];
+        let size = 0;
+        const iterator = downloaded.body[Symbol.asyncIterator]();
+        try {
+          for (; ; ) {
+            const next = await this.request(() => iterator.next(), controller2.signal);
+            if (next.done)
+              break;
+            this.check(controller2.signal);
+            if (!(next.value instanceof Uint8Array))
+              throw error("invalid-bundle");
+            size += next.value.byteLength;
+            if (size > manifest.payload.components[part].sizeBytes || size > KNOWLEDGE_BUNDLE_MAX_BYTES)
+              throw error("invalid-bundle");
+            chunks.push(Buffer.from(next.value));
+          }
+        } finally {
+          void iterator.return?.().catch(() => void 0);
+        }
+        const bytes = Buffer.concat(chunks), text3 = bytes.toString("utf8");
+        if (size !== manifest.payload.components[part].sizeBytes || hash2(bytes) !== manifest.payload.components[part].contentHash || !Buffer.from(text3).equals(bytes))
+          throw error("invalid-bundle");
+        let parsed;
+        try {
+          parsed = JSON.parse(text3);
+        } catch {
+          throw error("invalid-bundle");
+        }
+        const bundle = this.bundle(parsed, part, manifest);
+        this.check(controller2.signal);
+        await this.owned(token2, generation);
+        const id3 = (0, import_node_crypto8.randomUUID)();
+        await this.records.write("knowledge", id3, bundle, 0);
+        refs[part] = id3;
+      }
+      this.check(controller2.signal);
+      state = await this.owned(token2, generation);
+      this.verify(manifest, state.value, "online");
+      const minimumSequences = { ...state.value.minimumSequences };
+      for (const part of parts)
+        minimumSequences[part] = Math.max(minimumSequences[part], manifest.payload.components[part].releaseSequence);
+      this.check(controller2.signal);
+      state = await this.put(state, {
+        ...state.value,
+        observedAt: this.time(),
+        minimumSequences,
+        active: { manifest, records: refs },
+        claim: null
+      });
+      await this.purge(inventory.filter((id3) => !Object.values(refs).includes(id3)));
+      return this.readActive(state, "online");
+    } catch (cause) {
+      if (generation !== void 0) {
+        try {
+          const state = await this.state();
+          if (state.value.generation !== generation || state.value.claim?.id !== token2)
+            throw error("superseded");
+          if (cause instanceof KnowledgeSyncError && ["revoked", "authentication-required"].includes(cause.code)) {
+            this.denied = cause.code;
+            let inventory;
+            try {
+              inventory = await this.records.listIds("knowledge");
+            } catch {
+            }
+            await this.put(state, {
+              ...state.value,
+              generation: state.value.generation + 1,
+              status: this.denied,
+              observedAt: this.time(),
+              claim: null,
+              active: null
+            });
+            if (inventory)
+              await this.purge(inventory);
+          } else if (!authorizationUncertain)
+            await this.put(state, { ...state.value, claim: null });
+        } catch {
+        }
+      }
+      if (cause instanceof KnowledgeSyncError || cause instanceof LocalStoreError)
+        throw cause;
+      throw error("unavailable");
+    } finally {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", cancel);
+    }
+  }
+  async purge(ids) {
+    let pending = false;
+    for (const id3 of ids) {
+      try {
+        const record2 = await this.records.read("knowledge", id3);
+        if (!record2)
+          continue;
+        if (record2.deleted) {
+          if (!await this.records.purgeDeleted("knowledge", id3))
+            pending = true;
+        } else if ((await this.records.remove("knowledge", id3, record2.revision)).cleanupPending)
+          pending = true;
+      } catch {
+        pending = true;
+      }
+    }
+    return pending;
+  }
+  async disable(reason = "disconnected") {
+    this.denied = reason;
+    let inventory;
+    try {
+      inventory = await this.records.listIds("knowledge");
+    } catch {
+    }
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const state = await this.state();
+      try {
+        const next = await this.put(state, {
+          ...state.value,
+          generation: state.value.generation + 1,
+          status: reason,
+          observedAt: this.time(),
+          claim: null,
+          active: null
+        });
+        const cleanupPending = inventory ? await this.purge(inventory) : true;
+        return { generation: next.value.generation, cleanupPending };
+      } catch (cause) {
+        if (!(cause instanceof LocalStoreError) || cause.code !== "revision-conflict")
+          throw cause;
+      }
+    }
+    throw error("superseded");
+  }
+  /** Host calls only after a new explicit authorization for the same server/audience. Floors survive reconnection. */
+  async resume(expectedGeneration) {
+    const state = await this.state();
+    if (state.value.generation !== expectedGeneration || state.value.status === "enabled")
+      throw error("superseded");
+    const next = await this.put(state, {
+      ...state.value,
+      generation: state.value.generation + 1,
+      status: "enabled",
+      observedAt: this.time(),
+      claim: null,
+      active: null
+    });
+    this.denied = void 0;
+    return next.value.generation;
+  }
+};
+
+// node_modules/@gcr/client-core/dist/central-selection.js
+var reference = (item) => `central:${item.component}:${item.kind}:${item.id}`;
+var key2 = (target) => `${target.side}:${target.path}`;
+var compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+function matches(scope, file, branch) {
+  if (scope.branches.length && (!branch || !compilePathPatterns(scope.branches)(branch)))
+    return false;
+  return (!scope.filePaths.length || compilePathPatterns(scope.filePaths)(file.source.path)) && (!scope.languages.length || scope.languages.some((language) => language.toLowerCase() === sourceLanguage(file.source.path))) && (!scope.symbols.length || scope.symbols.some((symbol) => file.text.includes(symbol))) && (!scope.contracts.length || scope.contracts.some((contract) => file.text.includes(contract)));
+}
+function selectCentralKnowledge(input2) {
+  const policy = centralKnowledgeBundle(input2.bundles.policy), collective = centralKnowledgeBundle(input2.bundles.collective), personal = centralKnowledgeBundle(input2.bundles.personal);
+  if (policy.component !== "policy" || collective.component !== "collective" || personal.component !== "personal" || [policy, collective, personal].some((b) => b.schemaVersion !== 2))
+    throw Error("central-precedence-contract-required");
+  if (!Number.isSafeInteger(input2.byteLimit) || input2.byteLimit < 0 || input2.byteLimit > 1048576 || !Number.isFinite(Date.parse(input2.now)) || new Date(input2.now).toISOString() !== input2.now)
+    throw Error("invalid-central-selection");
+  if ([collective, personal].some((b) => b.tenantId !== policy.tenantId || b.repositoryId !== policy.repositoryId))
+    throw Error("central-scope-mismatch");
+  const result = {
+    items: [],
+    entries: [],
+    omissions: [],
+    precedence: [],
+    required: [],
+    bytes: 0,
+    validUntil: null
+  };
+  const boundaries = [];
+  const targets = input2.selected.map(({ source }) => ({
+    path: source.path,
+    side: source.side,
+    hash: source.hash
+  }));
+  const candidates = [];
+  const requiredFailures = /* @__PURE__ */ new Set();
+  const applicability = (scope) => input2.selected.filter((file) => matches(scope, file, input2.branch)).map(({ source }) => ({ path: source.path, side: source.side, hash: source.hash }));
+  for (const skill2 of policy.skills.skills) {
+    const item = {
+      component: "policy",
+      kind: "skill",
+      id: skill2.name,
+      revision: skill2.version,
+      hash: skill2.contentHash,
+      targets,
+      required: true,
+      role: "authoritative",
+      value: skill2
+    };
+    if (skill2.enabled)
+      candidates.push(item);
+    else
+      result.omissions.push({ reference: reference(item), reason: "disabled", targets });
+  }
+  for (const criterion2 of policy.criteria) {
+    const item = {
+      component: "policy",
+      kind: "policy",
+      id: criterion2.id,
+      revision: criterion2.revision,
+      hash: criterion2.contentHash,
+      targets: [],
+      required: true,
+      role: "authoritative",
+      value: criterion2
+    };
+    try {
+      item.targets = applicability(criterion2.document.appliesTo);
+      if (!item.targets.length) {
+        result.omissions.push({
+          reference: reference(item),
+          reason: "not-applicable",
+          targets: []
+        });
+        continue;
+      }
+      for (const exception of criterion2.exceptions) {
+        const affected = applicability(exception.appliesTo);
+        if (!affected.some((t) => item.targets.some((c) => key2(c) === key2(t))))
+          continue;
+        if (exception.startsAt > input2.now)
+          boundaries.push(exception.startsAt);
+        else if (exception.expiresAt > input2.now) {
+          boundaries.push(exception.expiresAt);
+          const excluded = item.targets.filter((t) => affected.some((a) => key2(a) === key2(t)));
+          item.targets = item.targets.filter((t) => !affected.some((a) => key2(a) === key2(t)));
+          result.omissions.push({
+            reference: `${reference(item)}:exception:${exception.id}`,
+            reason: "exception",
+            targets: excluded
+          });
+        }
+      }
+      if (item.targets.length)
+        candidates.push(item);
+    } catch {
+      requiredFailures.add(reference(item));
+      result.omissions.push({
+        reference: reference(item),
+        reason: "unsupported-scope",
+        targets: []
+      });
+    }
+  }
+  const relevant = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const bundle of [collective, personal])
+    for (const memory2 of bundle.memories) {
+      if (seen.has(memory2.id))
+        throw Error("duplicate-central-memory");
+      seen.add(memory2.id);
+      const ref = reference({ component: bundle.component, kind: "memory", id: memory2.id });
+      if (memory2.content.expiresAt && memory2.content.expiresAt <= input2.now) {
+        result.omissions.push({ reference: ref, reason: "expired", targets: [] });
+        continue;
+      }
+      try {
+        const applicable2 = applicability(memory2.content.appliesTo);
+        if (!applicable2.length) {
+          result.omissions.push({ reference: ref, reason: "not-applicable", targets: [] });
+          continue;
+        }
+        relevant.push({ component: bundle.component, memory: memory2, targets: applicable2 });
+      } catch {
+        result.omissions.push({ reference: ref, reason: "unsupported-scope", targets: [] });
+      }
+    }
+  const shared = relevant.filter((item) => item.component === "collective");
+  for (const item of relevant) {
+    let selected = item.targets;
+    const supplements = [];
+    if (item.component === "personal") {
+      selected = [];
+      for (const target of item.targets) {
+        const overrides = shared.filter((other) => other.memory.aggregationKey === item.memory.aggregationKey && other.targets.some((t) => key2(t) === key2(target))).map((other) => other.memory.id).sort(compare);
+        if (!overrides.length)
+          selected.push(target);
+        else {
+          result.precedence.push({
+            personalId: item.memory.id,
+            collectiveIds: overrides,
+            target,
+            retained: "sources-and-counter-evidence"
+          });
+          supplements.push({
+            target,
+            collectiveIds: overrides,
+            sources: item.memory.sources,
+            counterEvidence: item.memory.content.counterEvidence
+          });
+        }
+      }
+    }
+    candidates.push({
+      component: item.component,
+      kind: "memory",
+      id: item.memory.id,
+      revision: item.memory.revision,
+      hash: item.memory.contentHash,
+      targets: selected,
+      required: false,
+      role: item.component === "collective" ? "authoritative" : "supplement",
+      value: {
+        ...selected.length ? { memory: item.memory } : {},
+        ...supplements.length ? { supplements } : {}
+      }
+    });
+  }
+  candidates.sort((a, b) => Number(b.required) - Number(a.required) || compare(a.component, b.component) || compare(a.kind, b.kind) || compare(a.id, b.id));
+  const selectedIds = /* @__PURE__ */ new Set();
+  for (const item of candidates) {
+    const size = Buffer.byteLength(canonicalKnowledgeJson(item));
+    if (result.bytes + size > input2.byteLimit) {
+      result.omissions.push({
+        reference: reference(item),
+        reason: "budget",
+        targets: item.targets
+      });
+      if (item.required)
+        requiredFailures.add(reference(item));
+      continue;
+    }
+    if (item.component === "personal" && result.precedence.some((p) => p.personalId === item.id && p.collectiveIds.some((id3) => !selectedIds.has(id3)))) {
+      result.omissions.push({
+        reference: reference(item),
+        reason: "budget",
+        targets: item.targets
+      });
+      continue;
+    }
+    result.items.push(item);
+    result.bytes += size;
+    selectedIds.add(item.id);
+    result.entries.push({
+      origin: "central",
+      kind: item.kind,
+      id: item.id,
+      revision: item.revision,
+      hash: item.hash,
+      component: item.component
+    });
+    const memory2 = relevant.find((m) => m.memory.id === item.id)?.memory;
+    if (memory2?.content.expiresAt)
+      boundaries.push(memory2.content.expiresAt);
+  }
+  for (const item of candidates.filter((item2) => item2.required))
+    result.required.push({
+      kind: "policy",
+      reference: reference(item),
+      available: !requiredFailures.has(reference(item)),
+      reason: requiredFailures.has(reference(item)) ? "Required central instructions exceed the context budget." : ""
+    });
+  for (const ref of requiredFailures)
+    if (!result.required.some((item) => item.reference === ref))
+      result.required.push({
+        kind: "policy",
+        reference: ref,
+        available: false,
+        reason: "Required central scope could not be interpreted."
+      });
+  result.omissions.sort((a, b) => compare(a.reference, b.reference));
+  result.precedence.sort((a, b) => compare(a.personalId, b.personalId) || compare(key2(a.target), key2(b.target)));
+  result.validUntil = boundaries.sort()[0] ?? null;
+  return result;
+}
+
 // node_modules/@gcr/client-core/dist/review-context.js
 var LocalReviewContext = class {
   authority;
@@ -3040,7 +3876,7 @@ var bounded = (value, fallback, maximum) => {
     throw Error("invalid-context-budget");
   return value;
 };
-var compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+var compare2 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 function inScope(item, client) {
   return item.scope.profileId === client.profileId && (item.scope.kind === "profile" || item.scope.repositoryKey === client.repositoryKey && item.scope.worktreeKey === client.worktreeKey);
 }
@@ -3086,7 +3922,7 @@ async function resolveLocalContext(input2) {
     const byteLimit = bounded(input2.knowledgeBytes, 65536, 1048576);
     const scanLimit = bounded(input2.scanBytes, 16777216, 67108864);
     const itemLimit = bounded(input2.scanItems, 5e3, 1e4);
-    const requiredIds = [...new Set(Array.from(input2.requiredKnowledgeIds ?? []))].sort(compare);
+    const requiredIds = [...new Set(Array.from(input2.requiredKnowledgeIds ?? []))].sort(compare2);
     if (requiredIds.length > 1e3 || requiredIds.some((id3) => typeof id3 !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(id3)))
       throw Error("invalid-required-knowledge");
     const requiredSet = new Set(requiredIds);
@@ -3111,18 +3947,18 @@ async function resolveLocalContext(input2) {
       sourcePath(request.path);
       if (request.side !== "base" && request.side !== "source")
         throw Error("invalid-required-source");
-      const reference = `source:${contentHash(request)}`;
-      if (sources.some((source) => source.reference === reference))
+      const reference2 = `source:${contentHash(request)}`;
+      if (sources.some((source) => source.reference === reference2))
         continue;
       const read = input2.snapshot.readFile(request.path, request.side);
       sources.push({
         ...request,
-        reference,
+        reference: reference2,
         available: read.status === "available",
         reason: read.status === "available" ? "" : read.status === "absent" ? "Source is absent from the captured view." : `Source is unavailable: ${read.reason}.`
       });
     }
-    sources.sort((a, b) => compare(a.reference, b.reference));
+    sources.sort((a, b) => compare2(a.reference, b.reference));
     const omissions = [];
     const candidates = /* @__PURE__ */ new Map();
     const seen = /* @__PURE__ */ new Set();
@@ -3143,8 +3979,8 @@ async function resolveLocalContext(input2) {
         if (!inScope(item, client) || seen.has(item.id))
           throw Error("knowledge-scope-mismatch");
         seen.add(item.id);
-        const { hash: hash3, ...body2 } = item;
-        if (hash3 !== contentHash(body2))
+        const { hash: hash4, ...body2 } = item;
+        if (hash4 !== contentHash(body2))
           throw Error("knowledge-hash-mismatch");
         const bytes2 = Buffer.byteLength(canonicalJson(item));
         scannedBytes += bytes2;
@@ -3180,7 +4016,7 @@ async function resolveLocalContext(input2) {
     const builtin = builtinBytes <= byteLimit ? builtinReviewSkill : null;
     let bytes = builtin ? builtinBytes : 0;
     const knowledge = [];
-    const ordered = [...candidates.values()].sort((a, b) => Number(requiredSet.has(b.item.id)) - Number(requiredSet.has(a.item.id)) || Number(b.item.scope.kind === "repository") - Number(a.item.scope.kind === "repository") || compare(a.item.id, b.item.id));
+    const ordered = [...candidates.values()].sort((a, b) => Number(requiredSet.has(b.item.id)) - Number(requiredSet.has(a.item.id)) || Number(b.item.scope.kind === "repository") - Number(a.item.scope.kind === "repository") || compare2(a.item.id, b.item.id));
     for (const candidate of ordered) {
       if (bytes + candidate.bytes > byteLimit) {
         omissions.push({ id: candidate.item.id, reason: "budget" });
@@ -3189,7 +4025,7 @@ async function resolveLocalContext(input2) {
       bytes += candidate.bytes;
       knowledge.push(candidate.item);
     }
-    omissions.sort((a, b) => compare(a.id, b.id));
+    omissions.sort((a, b) => compare2(a.id, b.id));
     const required = [
       {
         kind: "knowledge",
@@ -3281,6 +4117,143 @@ async function resolveLocalContext(input2) {
     };
   }
 }
+async function resolveCentralContext(input2) {
+  try {
+    const client = clientIdentity(input2.client);
+    if (client.mode !== "centralized" || !(input2.cache instanceof CentralKnowledgeCache) || !["online", "offline"].includes(input2.freshness))
+      throw Error("invalid-central-context");
+    const scope = input2.cache.scope;
+    if (scope.kind !== "repository" || scope.profileId !== client.profileId || scope.repositoryKey !== client.repositoryKey || scope.worktreeKey !== client.worktreeKey || canonicalJson(client.audience) !== canonicalJson(input2.cache.binding.audience))
+      throw Error("central-context-scope");
+    await input2.assertConnection?.();
+    const pinned = await input2.cache.read(input2.freshness);
+    const local = await resolveLocalContext({
+      ...input2,
+      client: {
+        mode: "standalone",
+        profileId: client.profileId,
+        repositoryKey: client.repositoryKey,
+        worktreeKey: client.worktreeKey
+      }
+    });
+    if (local.status === "unavailable")
+      return local;
+    const ctx = local.context;
+    const limit2 = bounded(input2.knowledgeBytes, 65536, 1048576);
+    const builtinBytes = ctx.builtin ? Buffer.byteLength(canonicalJson(ctx.builtin)) : 0;
+    const requiredIds = new Set(input2.requiredKnowledgeIds ?? []);
+    const localItems = ctx.knowledge;
+    const requiredLocalBytes = localItems.filter((item) => requiredIds.has(item.id)).reduce((sum, item) => sum + Buffer.byteLength(canonicalJson(item)), 0);
+    const selected = input2.snapshot.selected.flatMap((file) => {
+      const read = input2.snapshot.readFile(file.path, file.side);
+      return read.status === "available" ? [read] : [];
+    });
+    const central = selectCentralKnowledge({
+      bundles: pinned.bundles,
+      selected,
+      branch: input2.snapshot.branchName,
+      now: (input2.now ?? /* @__PURE__ */ new Date()).toISOString(),
+      byteLimit: Math.max(0, limit2 - builtinBytes - requiredLocalBytes)
+    });
+    let bytes = builtinBytes + central.bytes;
+    const knowledge = [];
+    const omissions = ctx.omissions;
+    for (const item of localItems) {
+      const size = Buffer.byteLength(canonicalJson(item));
+      if (bytes + size > limit2)
+        omissions.push({ id: item.id, reason: "budget" });
+      else {
+        knowledge.push(item);
+        bytes += size;
+      }
+    }
+    omissions.sort((a, b) => compare2(a.id, b.id));
+    const required = [
+      ...ctx.identity.required.map((item) => {
+        if (item.kind !== "knowledge" || !item.reference.startsWith("knowledge:"))
+          return item;
+        const available = knowledge.some((k) => knowledgeReference(k.id) === item.reference);
+        return {
+          ...item,
+          available,
+          reason: available ? "" : item.reason || "Required local knowledge exceeds the context budget."
+        };
+      }),
+      ...central.required
+    ];
+    const centralSnapshot = {
+      id: pinned.manifest.payload.snapshotId,
+      hash: pinned.manifest.manifestHash,
+      audience: client.audience,
+      authorizationRevision: String(pinned.manifest.payload.authorizationRevision),
+      offlineValidUntil: pinned.manifest.payload.offlineValidUntil
+    };
+    const entries = [
+      ...ctx.identity.entries.filter((e) => e.origin !== "local" || knowledge.some((k) => k.id === e.id)),
+      ...central.entries
+    ];
+    const identity = contextIdentity({
+      entries,
+      required,
+      centralSnapshot,
+      hash: contentHash({
+        version: 2,
+        client,
+        sourceHash: ctx.sourceHash,
+        localContextHash: ctx.identity.hash,
+        entries,
+        required,
+        centralSnapshot,
+        central,
+        omissions
+      })
+    });
+    const problems = [...local.problems];
+    if (central.required.some((item) => !item.available))
+      problems.push({
+        code: "missing-context",
+        message: "Required central review instructions are unavailable or exceed the context budget."
+      });
+    const validUntil = [
+      ctx.validUntil,
+      central.validUntil,
+      input2.freshness === "online" ? pinned.manifest.payload.refreshAfter : pinned.manifest.payload.offlineValidUntil
+    ].filter((v) => v !== null).sort()[0];
+    if (await input2.cache.observeSnapshot(pinned.manifest, input2.freshness) !== "current")
+      throw Error("central-context-changed");
+    return {
+      status: problems.length ? "needs-context" : "ready",
+      problems,
+      context: new LocalReviewContext({
+        client,
+        sourceHash: ctx.sourceHash,
+        identity,
+        knowledge,
+        builtin: ctx.builtin,
+        bytes,
+        omissions,
+        sources: ctx.sources,
+        validUntil,
+        central
+      }, {
+        cache: input2.cache,
+        manifest: pinned.manifest,
+        mode: input2.freshness,
+        ...input2.assertConnection ? { assertConnection: input2.assertConnection } : {}
+      })
+    };
+  } catch {
+    return {
+      status: "unavailable",
+      problems: [
+        {
+          code: "missing-context",
+          message: "A complete authorized central review context could not be validated or loaded."
+        }
+      ]
+    };
+  }
+}
 
 // node_modules/@gcr/client-core/dist/review-policy.js
 var import_node_perf_hooks = require("node:perf_hooks");
@@ -3300,7 +4273,7 @@ var integer2 = (value, fallback, maximum) => {
   return value;
 };
 function reviewBudgetLimits(input2 = {}) {
-  if (!input2 || typeof input2 !== "object" || ![Object.prototype, null].includes(Object.getPrototypeOf(input2)) || Object.keys(input2).some((key3) => !["modelCalls", "durationMs", "sourceBytes", "toolCalls", "outputTokensPerCall"].includes(key3)))
+  if (!input2 || typeof input2 !== "object" || ![Object.prototype, null].includes(Object.getPrototypeOf(input2)) || Object.keys(input2).some((key4) => !["modelCalls", "durationMs", "sourceBytes", "toolCalls", "outputTokensPerCall"].includes(key4)))
     throw new ReviewPolicyError("policy-unavailable");
   return {
     modelCalls: integer2(input2.modelCalls, 2, 10),
@@ -3435,12 +4408,12 @@ function resolveLocalExecutionPolicy(input2) {
       return unavailable2("missing-context", "Selected review context expired before execution. Resolve context again.");
     if ((context.knowledge.length || context.central?.items.length) && approval.allowKnowledge !== true)
       return unavailable2("policy-unavailable", "Sending the selected local knowledge to this executor is not approved.");
-    const matches = compilePathPatterns(approval.paths);
+    const matches2 = compilePathPatterns(approval.paths);
     const selectedPaths = new Set(input2.snapshot.selected.flatMap((file) => [
       file.path,
       ...file.oldPath ? [file.oldPath] : []
     ]));
-    const sources = input2.snapshot.sourceFiles.filter((source) => matches(source.path) && (source.side !== "base" || approval.allowBase === true) && (approval.allowRelated === true || selectedPaths.has(source.path)));
+    const sources = input2.snapshot.sourceFiles.filter((source) => matches2(source.path) && (source.side !== "base" || approval.allowBase === true) && (approval.allowRelated === true || selectedPaths.has(source.path)));
     const required = context.sources.filter((source) => source.available);
     if (required.some((source) => !sources.some((file) => source.side === file.side && source.path === file.path)))
       return {
@@ -3493,7 +4466,7 @@ function resolveLocalExecutionPolicy(input2) {
 }
 
 // node_modules/@gcr/client-core/dist/review-source-port.js
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto9 = require("node:crypto");
 var LocalReviewSourcePort = class {
   snapshot;
   policy;
@@ -3522,7 +4495,7 @@ var LocalReviewSourcePort = class {
       throw new ReviewPolicyError("policy-unavailable");
     const args = structuredClone(argumentsValue);
     const allowed = name === "list_files" ? ["offset", "limit"] : name === "read_file" ? ["path", "side", "startLine", "endLine"] : ["query", "side"];
-    if (Object.keys(args).some((key3) => !allowed.includes(key3)))
+    if (Object.keys(args).some((key4) => !allowed.includes(key4)))
       throw new ReviewPolicyError("policy-unavailable");
     let response;
     let read;
@@ -3555,7 +4528,7 @@ var LocalReviewSourcePort = class {
         if (result.status !== "available" || !this.policy.allowSource(result.source))
           throw new ReviewPolicyError("policy-unavailable");
         read = {
-          id: (0, import_node_crypto6.randomUUID)(),
+          id: (0, import_node_crypto9.randomUUID)(),
           location: {
             path: file,
             side,
@@ -3571,7 +4544,7 @@ var LocalReviewSourcePort = class {
       } else {
         if (typeof args.query !== "string" || !args.query || args.query.length > 300)
           throw new ReviewPolicyError("policy-unavailable");
-        const matches = [];
+        const matches2 = [];
         let truncated = false;
         outer: for (const file of this.policy.sources.filter((s) => s.side === side)) {
           this.budget.assertActive();
@@ -3581,11 +4554,11 @@ var LocalReviewSourcePort = class {
           for (const [line, text4] of result.text.split("\n").entries()) {
             if (!text4.includes(args.query))
               continue;
-            if (matches.length === 100) {
+            if (matches2.length === 100) {
               truncated = true;
               break outer;
             }
-            matches.push({
+            matches2.push({
               path: file.path,
               side,
               contentHash: file.hash,
@@ -3596,7 +4569,7 @@ var LocalReviewSourcePort = class {
           }
         }
         response = {
-          matches,
+          matches: matches2,
           truncated,
           scope: "authorized-fixed-source-only",
           method: "literal-text",
@@ -3621,9 +4594,9 @@ var LocalReviewSourcePort = class {
 };
 
 // node_modules/@gcr/client-core/dist/review-runner.js
-var import_node_crypto7 = require("node:crypto");
+var import_node_crypto10 = require("node:crypto");
 var import_node_perf_hooks2 = require("node:perf_hooks");
-var key2 = (source) => `${source.side}:${source.path}`;
+var key3 = (source) => `${source.side}:${source.path}`;
 var outputRejections = {
   "duplicate-read-id": "The response repeats a source read ID in the same list.",
   "unknown-read-id": "The response references a source read that this review did not perform.",
@@ -3644,10 +4617,10 @@ var LocalReviewOutputError = class extends Error {
     this.reason = reason;
   }
 };
-var invalid2 = (reason) => new LocalReviewOutputError(reason);
+var invalid3 = (reason) => new LocalReviewOutputError(reason);
 function coverage(file, reads) {
   let next = 1;
-  for (const read of reads.filter((read2) => !read2.truncated && key2(read2.location) === key2(file) && read2.location.hash === file.hash).sort((a, b) => a.location.startLine - b.location.startLine)) {
+  for (const read of reads.filter((read2) => !read2.truncated && key3(read2.location) === key3(file) && read2.location.hash === file.hash).sort((a, b) => a.location.startLine - b.location.startLine)) {
     if (read.location.startLine > next)
       break;
     next = Math.max(next, read.location.endLine + 1);
@@ -3723,7 +4696,7 @@ async function runLocalReview(input2) {
   const started = import_node_perf_hooks2.performance.now();
   const report = {
     contractVersion: 1,
-    runId: (0, import_node_crypto7.randomUUID)(),
+    runId: (0, import_node_crypto10.randomUUID)(),
     identity,
     status: "failed",
     trigger: input2.trigger ?? "manual",
@@ -3732,7 +4705,7 @@ async function runLocalReview(input2) {
     summary: "",
     sourceFiles: sources,
     files: selected.flatMap((change) => {
-      const source2 = sources.find((file) => key2(file) === key2(change));
+      const source2 = sources.find((file) => key3(file) === key3(change));
       return source2 ? [{ source: source2, status: "not-run", summary: "Review has not run." }] : [];
     }),
     excluded: [
@@ -3748,17 +4721,17 @@ async function runLocalReview(input2) {
   };
   const resolveReads = (ids) => {
     if (new Set(ids).size !== ids.length)
-      throw invalid2("duplicate-read-id");
+      throw invalid3("duplicate-read-id");
     return ids.map((id3) => {
       const read = port2.reads.find((read2) => read2.id === id3);
       if (!read)
-        throw invalid2("unknown-read-id");
+        throw invalid3("unknown-read-id");
       return read;
     });
   };
-  const requirements = (path12) => {
-    const change = selected.find((change2) => change2.path === path12);
-    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path12) : source2.path === path12);
+  const requirements = (path15) => {
+    const change = selected.find((change2) => change2.path === path15);
+    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path15) : source2.path === path15);
   };
   let portFailure;
   const source = {
@@ -3766,51 +4739,51 @@ async function runLocalReview(input2) {
       await assertContext();
       try {
         return await port2.execute(name, args);
-      } catch (error) {
-        if (error instanceof ReviewPolicyError && ["quota-exceeded", "timeout"].includes(error.code))
-          portFailure = error.code;
-        throw error;
+      } catch (error2) {
+        if (error2 instanceof ReviewPolicyError && ["quota-exceeded", "timeout"].includes(error2.code))
+          portFailure = error2.code;
+        throw error2;
       }
     }
   };
   const decode = (response) => {
     const seen = /* @__PURE__ */ new Set();
     for (const file of response.files) {
-      if (seen.has(key2(file)))
-        throw invalid2("duplicate-file");
-      if (!report.files.some((entry) => key2(entry.source) === key2(file)))
-        throw invalid2("unselected-file");
-      seen.add(key2(file));
+      if (seen.has(key3(file)))
+        throw invalid3("duplicate-file");
+      if (!report.files.some((entry) => key3(entry.source) === key3(file)))
+        throw invalid3("unselected-file");
+      seen.add(key3(file));
       resolveReads(file.readIds);
     }
     const acknowledged = resolveReads([...new Set(response.files.flatMap((file) => file.readIds))]);
     report.files = report.files.map((file) => {
-      const result = response.files.find((entry) => key2(entry) === key2(file.source));
+      const result = response.files.find((entry) => key3(entry) === key3(file.source));
       const reads = resolveReads(result?.readIds ?? []);
       const covered = requirements(file.source.path).every((source2) => coverage(source2, reads));
       const complete = result?.complete && covered;
       return {
         source: file.source,
-        status: complete ? "completed" : reads.some((read) => key2(read.location) === key2(file.source)) ? "partial" : "not-run",
+        status: complete ? "completed" : reads.some((read) => key3(read.location) === key3(file.source)) ? "partial" : "not-run",
         summary: covered && result ? result.summary : `${result?.summary ?? "Model did not review this file."} Fixed source/base coverage is incomplete.`
       };
     });
     report.findings = response.findings.map((finding) => {
       const [anchorRead] = resolveReads([finding.anchor.readId]);
       if (!anchorRead)
-        throw invalid2("unknown-read-id");
+        throw invalid3("unknown-read-id");
       if (anchorRead.truncated)
-        throw invalid2("truncated-anchor-read");
-      if (!report.files.some((file) => key2(file.source) === key2(anchorRead.location)))
-        throw invalid2("anchor-not-selected");
+        throw invalid3("truncated-anchor-read");
+      if (!report.files.some((file) => key3(file.source) === key3(anchorRead.location)))
+        throw invalid3("anchor-not-selected");
       if (finding.anchor.startLine < anchorRead.location.startLine || finding.anchor.endLine > anchorRead.location.endLine || finding.anchor.startLine > finding.anchor.endLine)
-        throw invalid2("anchor-outside-read");
+        throw invalid3("anchor-outside-read");
       const readIds = [.../* @__PURE__ */ new Set([finding.anchor.readId, ...finding.readIds])];
       resolveReads(finding.readIds);
       resolveReads(finding.counterEvidence.readIds);
       const confirmed = finding.counterEvidence.status === "reviewed" && !!finding.counterEvidence.summary && finding.counterEvidence.readIds.length > 0 && !!finding.rationale && finding.conditions.length > 0 && requirements(anchorRead.location.path).every((source2) => coverage(source2, resolveReads(readIds)));
       return {
-        id: (0, import_node_crypto7.randomUUID)(),
+        id: (0, import_node_crypto10.randomUUID)(),
         title: finding.title,
         problem: finding.problem,
         impact: finding.impact,
@@ -3844,7 +4817,7 @@ async function runLocalReview(input2) {
         policy: { enforcement: "advisory" }
       };
     });
-    report.questions = response.questions.map((question) => ({ id: (0, import_node_crypto7.randomUUID)(), ...question }));
+    report.questions = response.questions.map((question) => ({ id: (0, import_node_crypto10.randomUUID)(), ...question }));
     report.summary = response.summary;
     if (report.files.some((file) => file.status !== "completed"))
       report.problems.push({
@@ -3852,7 +4825,7 @@ async function runLocalReview(input2) {
         message: "One or more selected file reviews are incomplete."
       });
     if (context.sources.some((required) => {
-      const file = sources.find((source2) => key2(source2) === key2(required));
+      const file = sources.find((source2) => key3(source2) === key3(required));
       return !file || !coverage(file, acknowledged);
     }))
       report.problems.push({
@@ -3937,20 +4910,20 @@ async function runLocalReview(input2) {
     await assertContext();
     budget.assertActive();
     if (result.model !== identity.executor.model)
-      throw invalid2("model-mismatch");
+      throw invalid3("model-mismatch");
     if (Buffer.byteLength(result.raw) > 2e6)
-      throw invalid2("response-too-large");
+      throw invalid3("response-too-large");
     let parsed;
     try {
       parsed = JSON.parse(result.raw);
     } catch {
-      throw invalid2("invalid-json");
+      throw invalid3("invalid-json");
     }
     let response;
     try {
       response = localReviewResponse(parsed);
     } catch {
-      throw invalid2("invalid-schema");
+      throw invalid3("invalid-schema");
     }
     decode(response);
     if (updated) {
@@ -3960,8 +4933,8 @@ async function runLocalReview(input2) {
         message: "Central review knowledge changed during this run. Findings belong to the pinned snapshot."
       });
     }
-  } catch (error) {
-    const code = signal?.aborted ? signal.reason === "timeout" ? "timeout" : "cancelled" : error && typeof error === "object" && "code" in error ? error.code : error instanceof Error ? error.message : void 0;
+  } catch (error2) {
+    const code = signal?.aborted ? signal.reason === "timeout" ? "timeout" : "cancelled" : error2 && typeof error2 === "object" && "code" in error2 ? error2.code : error2 instanceof Error ? error2.message : void 0;
     const problem = code === "superseded" ? "superseded" : code === "cancelled" ? "cancelled" : code === "timeout" ? "timeout" : code === "quota-exceeded" ? "quota-exceeded" : code === "missing-context" ? "missing-context" : code === "invalid-output" || code === "invalid-response" ? "invalid-output" : code === "executor-unavailable" ? "executor-unavailable" : "provider-error";
     report.status = problem === "superseded" ? "superseded" : problem === "cancelled" ? "cancelled" : problem === "missing-context" ? "needs-context" : problem === "executor-unavailable" ? "unavailable" : "failed";
     report.summary = "Review did not complete.";
@@ -3970,7 +4943,7 @@ async function runLocalReview(input2) {
         code: problem,
         // Use fixed diagnostics only. Provider bodies, parser errors, IDs, paths,
         // model names and credentials must not be copied into a failed report.
-        message: error instanceof LocalReviewOutputError && problem === "invalid-output" ? `Review response rejected (${error.reason}): ${outputRejections[error.reason]}` : "No complete review is available; inspect the problem code before retrying."
+        message: error2 instanceof LocalReviewOutputError && problem === "invalid-output" ? `Review response rejected (${error2.reason}): ${outputRejections[error2.reason]}` : "No complete review is available; inspect the problem code before retrying."
       }
     ];
     report.files = report.files.map((file) => ({
@@ -4008,6 +4981,429 @@ async function runLocalReview(input2) {
   return clientReviewReport(report);
 }
 
+// node_modules/@gcr/client-core/dist/knowledge-http.js
+var import_node_http = require("node:http");
+var import_node_https = require("node:https");
+var unavailable3 = () => new KnowledgeSyncError("unavailable", "Central HTTP request failed.");
+var KnowledgeHttpTransport = class {
+  binding;
+  credential;
+  ca;
+  constructor(binding, credential, ca) {
+    this.binding = binding;
+    this.credential = credential;
+    this.ca = ca;
+    if (!(binding instanceof TrustedCentralBinding) || credential.bindingId !== binding.id)
+      throw new KnowledgeSyncError("invalid-binding", "Credential binding does not match the selected server and audience.");
+  }
+  async get(relative, signal, etag) {
+    if (signal.aborted)
+      throw unavailable3();
+    if (this.credential.bindingId !== this.binding.id)
+      throw new KnowledgeSyncError("invalid-binding", "Credential binding changed.");
+    let token2;
+    try {
+      token2 = await this.credential.readToken();
+    } catch {
+      throw unavailable3();
+    }
+    if (signal.aborted)
+      throw unavailable3();
+    if (this.credential.bindingId !== this.binding.id)
+      throw new KnowledgeSyncError("invalid-binding", "Credential binding changed.");
+    if (!token2 || !/^gcr_key_[0-9a-f-]{36}_[A-Za-z0-9_-]{43}$/.test(token2))
+      throw new KnowledgeSyncError("authentication-required", "A central API key is required.");
+    const target = new URL(relative, this.binding.serverUrl);
+    const base = new URL(this.binding.serverUrl);
+    if (target.origin !== base.origin || !target.pathname.startsWith(base.pathname))
+      throw unavailable3();
+    return new Promise((resolve, reject) => {
+      const request = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
+      const req = request(target, {
+        method: "GET",
+        signal,
+        ...target.protocol === "https:" ? { rejectUnauthorized: true, ...this.ca ? { ca: this.ca } : {} } : {},
+        headers: {
+          authorization: `Bearer ${token2}`,
+          "x-gcr-server-id": this.binding.audience.serverId,
+          accept: "application/json",
+          ...etag ? { "if-none-match": etag } : {}
+        }
+      }, resolve);
+      req.on("error", () => reject(unavailable3()));
+      req.end();
+    });
+  }
+  failure(response) {
+    const status = response.statusCode ?? 503;
+    response.destroy();
+    if (status === 401 || status === 403 || status === 404 || status === 409 || status === 426 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504)
+      return { status };
+    return { status: 503 };
+  }
+  async manifest({ etag, signal }) {
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`, signal, etag);
+    if (response.statusCode === 304) {
+      response.destroy();
+      return { status: 304 };
+    }
+    if (response.statusCode !== 200)
+      return this.failure(response);
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of response) {
+        const bytes2 = Buffer.from(chunk);
+        size += bytes2.length;
+        if (size > 65536)
+          throw unavailable3();
+        chunks.push(bytes2);
+      }
+      const bytes = Buffer.concat(chunks);
+      const text3 = bytes.toString("utf8");
+      if (!Buffer.from(text3).equals(bytes))
+        throw unavailable3();
+      return { status: 200, manifest: JSON.parse(text3) };
+    } catch {
+      throw unavailable3();
+    } finally {
+      response.destroy();
+    }
+  }
+  async identity(signal) {
+    const response = await this.get("api/v1/client-auth/me", signal);
+    if (response.statusCode !== 200) {
+      const failure = this.failure(response);
+      throw new KnowledgeSyncError(failure.status === 401 ? "authentication-required" : failure.status === 403 ? "revoked" : "unavailable", "Central identity could not be verified.");
+    }
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of response) {
+        const bytes = Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 32768)
+          throw unavailable3();
+        chunks.push(bytes);
+      }
+      return centralCredentialIdentity(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks))));
+    } catch {
+      throw unavailable3();
+    } finally {
+      response.destroy();
+    }
+  }
+  async bundle({ snapshotId, bundleId, signal }) {
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/bundles/${encodeURIComponent(bundleId)}?snapshotId=${encodeURIComponent(snapshotId)}`, signal);
+    if (response.statusCode !== 200)
+      return this.failure(response);
+    return {
+      status: 200,
+      body: async function* () {
+        try {
+          for await (const chunk of response)
+            yield Buffer.from(chunk);
+        } catch {
+          throw unavailable3();
+        } finally {
+          response.destroy();
+        }
+      }()
+    };
+  }
+};
+
+// node_modules/@gcr/client-core/dist/central-connection.js
+var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_crypto11 = require("node:crypto");
+var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
+var CentralConnections = class _CentralConnections {
+  records;
+  options;
+  credentials;
+  caches = /* @__PURE__ */ new Map();
+  invalid = /* @__PURE__ */ new Set();
+  constructor(records, options, credentials) {
+    this.records = records;
+    this.options = options;
+    this.credentials = credentials;
+  }
+  static async open(options) {
+    if (options.scope.kind !== "repository")
+      throw denied();
+    const records = await LocalRecordStore.open({
+      ...options,
+      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
+    });
+    return new _CentralConnections(records, options, options.credentials ?? new PlatformCentralCredentialStore());
+  }
+  close() {
+    for (const cache of this.caches.values())
+      cache.close();
+    this.records.close();
+  }
+  binding(value) {
+    const binding = new TrustedCentralBinding({
+      serverUrl: value.serverUrl,
+      audience: value.audience,
+      trustedKeys: new Map(value.trustedKeys.map((k) => [k.id, k.pem]))
+    });
+    if (binding.id !== value.id)
+      throw denied();
+    return binding;
+  }
+  async state(id3) {
+    centralConnectionReference(id3);
+    const row = await this.records.read("settings", id3);
+    if (!row || row.deleted)
+      throw denied();
+    const value = centralConnectionRecord(row.value);
+    if (value.id !== id3)
+      throw denied();
+    return { revision: row.revision, value };
+  }
+  async assert(state, pending = false) {
+    if (this.invalid.has(state.value.credentialReference) || Date.parse(state.value.expiresAt) <= Date.now())
+      throw denied();
+    const current = await this.state(state.value.id);
+    if (current.revision !== state.revision || current.value.status !== (pending ? "pending" : "connected"))
+      throw denied();
+  }
+  async cache(value) {
+    if (!this.caches.has(value.id))
+      this.caches.set(value.id, await CentralKnowledgeCache.open({ ...this.options, binding: this.binding(value) }));
+    return this.caches.get(value.id);
+  }
+  transport(state, pending = false) {
+    const binding = this.binding(state.value);
+    return new KnowledgeHttpTransport(binding, {
+      bindingId: binding.id,
+      readToken: async () => {
+        await this.assert(state, pending);
+        const token2 = await this.credentials.read(state.value.credentialReference);
+        await this.assert(state, pending);
+        return token2;
+      }
+    }, state.value.ca ?? void 0);
+  }
+  async timed(signal, work) {
+    const controller2 = new AbortController();
+    const abort = () => controller2.abort();
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted)
+      abort();
+    const timer = setTimeout(abort, 15e3);
+    let rejectAbort;
+    const cancelled = new Promise((_, reject) => {
+      rejectAbort = () => reject(new KnowledgeSyncError("cancelled", "Central authentication was cancelled or timed out."));
+      controller2.signal.addEventListener("abort", rejectAbort, { once: true });
+      if (controller2.signal.aborted)
+        rejectAbort();
+    });
+    try {
+      return await Promise.race([work(controller2.signal), cancelled]);
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      controller2.signal.removeEventListener("abort", rejectAbort);
+    }
+  }
+  async connect(input2, apiKey, clientId, signal) {
+    const config = centralConnectionInput(input2);
+    validateCentralApiKey(apiKey);
+    if (new Set(config.trustedKeys.map((k) => k.id)).size !== config.trustedKeys.length || [...config.trustedKeys.map((k) => k.pem), config.ca ?? ""].some((s) => s.includes("PRIVATE KEY")))
+      throw denied();
+    const bootstrap = new TrustedCentralBinding({
+      serverUrl: config.serverUrl,
+      audience: {
+        serverId: config.serverId,
+        tenantId: config.tenantId,
+        repositoryId: config.repositoryId,
+        userId: "pending"
+      },
+      trustedKeys: new Map(config.trustedKeys.map((k) => [k.id, k.pem]))
+    });
+    const identity = await this.timed(signal, (s) => new KnowledgeHttpTransport(bootstrap, { bindingId: bootstrap.id, readToken: async () => apiKey }, config.ca ?? void 0).identity(s));
+    if (identity.serverId !== config.serverId || identity.tenantId !== config.tenantId || !identity.repositoryIds.includes(config.repositoryId) || identity.clientId !== clientId || Date.parse(identity.expiresAt) <= Date.now())
+      throw denied();
+    const binding = new TrustedCentralBinding({
+      serverUrl: config.serverUrl,
+      audience: { ...bootstrap.audience, userId: identity.userId },
+      trustedKeys: bootstrap.verificationKeys()
+    });
+    const previous = await this.records.read("settings", binding.id);
+    if (previous && (previous.deleted || centralConnectionRecord(previous.value).status !== "disconnected"))
+      throw new KnowledgeSyncError("busy", "Disconnect the existing connection before registering another key.");
+    if (previous && !previous.deleted)
+      await this.credentials.remove(centralConnectionRecord(previous.value).credentialReference);
+    const value = centralConnectionRecord({
+      formatVersion: 1,
+      id: binding.id,
+      status: "pending",
+      serverUrl: binding.serverUrl,
+      audience: binding.audience,
+      trustedKeys: [...binding.verificationKeys()].map(([id3, key4]) => ({
+        id: id3,
+        pem: key4.export({ type: "spki", format: "pem" }).toString()
+      })),
+      ca: config.ca,
+      credentialReference: "gcr-" + (0, import_node_crypto11.randomUUID)(),
+      keyId: identity.keyId,
+      clientId,
+      expiresAt: identity.expiresAt
+    });
+    const row = await this.records.write("settings", binding.id, value, previous?.revision ?? 0);
+    const state = { revision: row.revision, value };
+    try {
+      await this.credentials.write(value.credentialReference, apiKey);
+      await this.assert(state, true);
+      const cache = await this.cache(value);
+      const current = await cache.connectionState();
+      if (current.status !== "enabled")
+        await cache.resume(current.generation);
+      await cache.synchronize(this.transport(state, true), signal ? { signal } : {});
+      await this.assert(state, true);
+      await this.records.write("settings", value.id, { ...value, status: "connected" }, state.revision);
+      return this.status(value.id);
+    } catch (error2) {
+      this.invalid.add(value.credentialReference);
+      try {
+        await this.records.write("settings", value.id, { ...value, status: "disconnected" }, state.revision);
+      } catch {
+      }
+      try {
+        await this.credentials.remove(value.credentialReference);
+      } catch {
+      }
+      throw error2;
+    }
+  }
+  summary(state) {
+    const { value } = state;
+    return {
+      id: value.id,
+      revision: state.revision,
+      status: value.status,
+      serverUrl: value.serverUrl,
+      audience: value.audience,
+      keyId: value.keyId,
+      clientId: value.clientId,
+      expiresAt: value.expiresAt
+    };
+  }
+  async historyIdentity(id3) {
+    const state = await this.state(id3);
+    await this.assert(state);
+    return { id: state.value.id, audience: state.value.audience };
+  }
+  async status(id3) {
+    const state = await this.state(id3);
+    const summary = this.summary(state);
+    if (state.value.status !== "connected")
+      return { ...summary, cache: { status: "unavailable" } };
+    try {
+      await this.assert(state);
+      const snapshot = await (await this.cache(state.value)).read("offline");
+      return {
+        ...summary,
+        cache: {
+          status: "ready",
+          snapshotId: snapshot.manifest.payload.snapshotId,
+          components: snapshot.manifest.payload.components,
+          refreshAfter: snapshot.manifest.payload.refreshAfter,
+          offlineValidUntil: snapshot.manifest.payload.offlineValidUntil
+        }
+      };
+    } catch {
+      return { ...summary, cache: { status: "unavailable" } };
+    }
+  }
+  async list() {
+    const values = [];
+    for (const id3 of await this.records.listIds("settings"))
+      values.push(this.summary(await this.state(id3)));
+    return values;
+  }
+  async disconnect(id3) {
+    const state = await this.state(id3);
+    this.invalid.add(state.value.credentialReference);
+    const cache = await this.cache(state.value);
+    const cleanup = await cache.disable();
+    let current = state;
+    for (let attempt = 0; current.value.status !== "disconnected"; attempt++) {
+      if (attempt >= 3 || current.value.credentialReference !== state.value.credentialReference)
+        throw new KnowledgeSyncError("superseded", "Connection changed during disconnect.");
+      try {
+        await this.records.write("settings", id3, { ...current.value, status: "disconnected" }, current.revision);
+        break;
+      } catch {
+        current = await this.state(id3);
+      }
+    }
+    let credentialCleanupPending = false;
+    try {
+      await this.credentials.remove(state.value.credentialReference);
+    } catch {
+      credentialCleanupPending = true;
+    }
+    return {
+      id: id3,
+      status: "disconnected",
+      cacheCleanupPending: cleanup.cleanupPending,
+      credentialCleanupPending
+    };
+  }
+  async synchronize(id3, signal) {
+    const state = await this.state(id3);
+    await this.assert(state);
+    const cache = await this.cache(state.value);
+    try {
+      await cache.synchronize(this.transport(state), signal ? { signal } : {});
+      await this.assert(state);
+      return this.status(id3);
+    } catch (error2) {
+      if (error2 instanceof KnowledgeSyncError && ["authentication-required", "revoked"].includes(error2.code)) {
+        this.invalid.add(state.value.credentialReference);
+        try {
+          await this.records.write("settings", id3, { ...state.value, status: "disconnected" }, state.revision);
+        } catch {
+        }
+        try {
+          await this.credentials.remove(state.value.credentialReference);
+        } catch {
+        }
+      }
+      throw error2;
+    }
+  }
+  async review(id3, freshness, signal) {
+    let state = await this.state(id3);
+    await this.assert(state);
+    const cache = await this.cache(state.value);
+    if (freshness === "online") {
+      try {
+        await cache.read("online");
+      } catch {
+        await this.synchronize(id3, signal);
+      }
+    }
+    state = await this.state(id3);
+    await this.assert(state);
+    return {
+      client: {
+        mode: "centralized",
+        profileId: this.options.scope.profileId,
+        repositoryKey: this.options.scope.repositoryKey,
+        worktreeKey: this.options.scope.worktreeKey,
+        audience: state.value.audience
+      },
+      cache,
+      freshness,
+      assertConnection: () => this.assert(state)
+    };
+  }
+};
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
@@ -4016,14 +5412,14 @@ var clientCorePackage = Object.freeze({
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var import_node_crypto10 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 var import_node_fs5 = require("node:fs");
 var import_promises5 = require("node:fs/promises");
 var import_node_os4 = __toESM(require("node:os"), 1);
-var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_path13 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/codex-config.js
-var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_path10 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/process.js
 var import_node_child_process4 = require("node:child_process");
@@ -4088,13 +5484,13 @@ async function runManagedProcess(input2) {
         return;
       try {
         process.kill(-child.pid, signal);
-      } catch (error) {
-        if (error.code !== "ESRCH")
+      } catch (error2) {
+        if (error2.code !== "ESRCH")
           failure ??= new ExecutorError("cleanup-failed");
       }
     };
-    function stop(error) {
-      failure ??= error;
+    function stop(error2) {
+      failure ??= error2;
       if (terminating)
         return;
       terminating = true;
@@ -4130,8 +5526,8 @@ async function runManagedProcess(input2) {
     };
     child.stdout.on("data", (chunk) => collect(stdout, chunk));
     child.stderr.on("data", (chunk) => collect(stderr, chunk));
-    child.on("error", (error) => {
-      stop(new ExecutorError(error.code === "ENOENT" ? "executable-unavailable" : "process-failed"));
+    child.on("error", (error2) => {
+      stop(new ExecutorError(error2.code === "ENOENT" ? "executable-unavailable" : "process-failed"));
     });
     child.on("exit", () => stop());
     child.on("close", (exitCode) => {
@@ -4140,8 +5536,8 @@ async function runManagedProcess(input2) {
       stop();
       finish();
     });
-    child.stdin.on("error", (error) => {
-      if (error.code !== "EPIPE" && !terminating)
+    child.stdin.on("error", (error2) => {
+      if (error2.code !== "EPIPE" && !terminating)
         stop(new ExecutorError("process-failed"));
     });
     child.stdin.end(input2.stdin);
@@ -4194,7 +5590,7 @@ function codexReviewArgs(root, sourceUrl) {
     instructions: CODEX_REVIEW_INSTRUCTIONS,
     developer_instructions: "",
     model_reasoning_effort: CODEX_REVIEW_EFFORT,
-    model_catalog_json: import_node_path8.default.join(root, "models.json"),
+    model_catalog_json: import_node_path10.default.join(root, "models.json"),
     project_doc_max_bytes: 0,
     web_search: "disabled",
     "agents.enabled": false,
@@ -4207,8 +5603,8 @@ function codexReviewArgs(root, sourceUrl) {
     "history.persistence": "none",
     "analytics.enabled": false,
     "feedback.enabled": false,
-    sqlite_home: import_node_path8.default.join(root, "state"),
-    log_dir: import_node_path8.default.join(root, "logs"),
+    sqlite_home: import_node_path10.default.join(root, "state"),
+    log_dir: import_node_path10.default.join(root, "logs"),
     "otel.exporter": "none",
     "otel.trace_exporter": "none",
     "otel.metrics_exporter": "none",
@@ -4269,7 +5665,7 @@ function codexReviewArgs(root, sourceUrl) {
 }
 function codexAccountEnvironment() {
   const env = {};
-  for (const key3 of [
+  for (const key4 of [
     "PATH",
     "HOME",
     "CODEX_HOME",
@@ -4285,44 +5681,44 @@ function codexAccountEnvironment() {
     "http_proxy",
     "all_proxy"
   ]) {
-    const value = process.env[key3];
+    const value = process.env[key4];
     if (value !== void 0)
-      env[key3] = value;
+      env[key4] = value;
   }
   env.NO_PROXY = ["127.0.0.1", "localhost", process.env.NO_PROXY ?? process.env.no_proxy ?? ""].filter(Boolean).join(",");
   return env;
 }
 
 // node_modules/@gcr/client-executors/dist/catalog-probe.js
-var import_node_http2 = require("node:http");
+var import_node_http3 = require("node:http");
 var import_promises4 = require("node:fs/promises");
-var import_node_path10 = __toESM(require("node:path"), 1);
-var import_node_crypto9 = require("node:crypto");
+var import_node_path12 = __toESM(require("node:path"), 1);
+var import_node_crypto13 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
 var import_promises3 = require("node:fs/promises");
 var import_node_os3 = __toESM(require("node:os"), 1);
-var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_path11 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input2) {
   if (process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
-  const authHome = await (0, import_promises3.realpath)(input2.env.CODEX_HOME ?? import_node_path9.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
-  const denied = [];
+  const authHome = await (0, import_promises3.realpath)(input2.env.CODEX_HOME ?? import_node_path11.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  const denied2 = [];
   for (const name of ["AGENTS.md", "AGENTS.override.md"]) {
-    const file = import_node_path9.default.join(authHome, name);
+    const file = import_node_path11.default.join(authHome, name);
     try {
       const info = await (0, import_promises3.lstat)(file);
       if (!info.isFile() || info.isSymbolicLink())
         throw new ExecutorError("executor-unavailable");
-    } catch (error) {
-      if (error.code !== "ENOENT")
-        throw error;
+    } catch (error2) {
+      if (error2.code !== "ENOENT")
+        throw error2;
     }
-    denied.push(file);
+    denied2.push(file);
   }
   const profile = `(version 1)
 (allow default)
-(deny file-read* ${denied.map((file) => `(literal ${JSON.stringify(file)})`).join(" ")})
+(deny file-read* ${denied2.map((file) => `(literal ${JSON.stringify(file)})`).join(" ")})
 `;
   return runManagedProcess({
     ...input2,
@@ -4332,8 +5728,8 @@ async function runIsolatedCodex(input2) {
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
-var import_node_crypto8 = require("node:crypto");
-var import_node_http = require("node:http");
+var import_node_crypto12 = require("node:crypto");
+var import_node_http2 = require("node:http");
 var fixedSourceTools = [
   {
     name: "list_files",
@@ -4395,14 +5791,14 @@ var fixedSourceTools = [
   }
 ];
 async function startSourceBridge(port2) {
-  const token2 = (0, import_node_crypto8.randomBytes)(32).toString("hex");
+  const token2 = (0, import_node_crypto12.randomBytes)(32).toString("hex");
   const authorization = Buffer.from(`Bearer ${token2}`);
   const sockets = /* @__PURE__ */ new Set();
   let host = "";
   let requestCount = 0;
-  const server = (0, import_node_http.createServer)(async (req, res) => {
+  const server = (0, import_node_http2.createServer)(async (req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
-    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto8.timingSafeEqual)(supplied, authorization)) {
+    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto12.timingSafeEqual)(supplied, authorization)) {
       res.writeHead(403).end();
       return;
     }
@@ -4438,7 +5834,7 @@ async function startSourceBridge(port2) {
       if (!(typeof id3 === "number" && Number.isSafeInteger(id3)) && !(typeof id3 === "string" && id3.length <= 128))
         throw Error("invalid");
       let result;
-      let error;
+      let error2;
       const params = call.params;
       switch (call.method) {
         case "initialize":
@@ -4463,7 +5859,7 @@ async function startSourceBridge(port2) {
         case "tools/call": {
           const name = params?.name;
           if (!fixedSourceTools.some((tool) => tool.name === name)) {
-            error = { code: -32602, message: "Unknown source tool." };
+            error2 = { code: -32602, message: "Unknown source tool." };
             break;
           }
           try {
@@ -4485,10 +5881,10 @@ async function startSourceBridge(port2) {
           break;
         }
         default:
-          error = { code: -32601, message: "Method unavailable." };
+          error2 = { code: -32601, message: "Method unavailable." };
       }
       res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-      res.end(JSON.stringify({ jsonrpc: "2.0", id: id3, ...error ? { error } : { result } }));
+      res.end(JSON.stringify({ jsonrpc: "2.0", id: id3, ...error2 ? { error: error2 } : { result } }));
     } catch {
       if (!res.headersSent)
         res.writeHead(400);
@@ -4519,7 +5915,7 @@ async function startSourceBridge(port2) {
     async close() {
       for (const socket of sockets)
         socket.destroy();
-      await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+      await new Promise((resolve, reject) => server.close((error2) => error2 ? reject(error2) : resolve()));
     }
   };
 }
@@ -4542,11 +5938,11 @@ function catalogNames(request) {
   return tools.flatMap((tool) => tool.type === "namespace" && Array.isArray(tool.tools) ? tool.tools.map((child) => `${String(tool.name)}.${String(child.name)}`) : [`${String(tool.type)}.${String(tool.name)}`]).sort();
 }
 async function probeCodexCatalog(command, root, observe) {
-  const canary = `DO_NOT_LOAD_${(0, import_node_crypto9.randomBytes)(16).toString("hex")}`;
+  const canary = `DO_NOT_LOAD_${(0, import_node_crypto13.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
-    await (0, import_promises4.mkdir)(import_node_path10.default.join(root, name), { mode: 448 });
-  await (0, import_promises4.writeFile)(import_node_path10.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
-  await (0, import_promises4.writeFile)(import_node_path10.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+    await (0, import_promises4.mkdir)(import_node_path12.default.join(root, name), { mode: 448 });
+  await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
+  await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
   const bridge = await startSourceBridge({
     async execute() {
       throw Error("Probe never provides source.");
@@ -4555,7 +5951,7 @@ async function probeCodexCatalog(command, root, observe) {
   const requests = [];
   let invalidRequest = false;
   const sockets = /* @__PURE__ */ new Set();
-  const server = (0, import_node_http2.createServer)(async (req, res) => {
+  const server = (0, import_node_http3.createServer)(async (req, res) => {
     try {
       const buffers = [];
       let bytes = 0;
@@ -4592,7 +5988,7 @@ async function probeCodexCatalog(command, root, observe) {
     const address = server.address();
     if (!address || typeof address === "string")
       throw new ExecutorError("executor-unavailable");
-    await (0, import_promises4.writeFile)(import_node_path10.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
+    await (0, import_promises4.writeFile)(import_node_path12.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
 [mcp_servers.unexpected]
 url = "http://127.0.0.1:${address.port}/unexpected"
 `, { mode: 384 });
@@ -4610,11 +6006,11 @@ url = "http://127.0.0.1:${address.port}/unexpected"
     const processResult = await runIsolatedCodex({
       command,
       args,
-      cwd: import_node_path10.default.join(root, "cwd"),
+      cwd: import_node_path12.default.join(root, "cwd"),
       env: {
         PATH: "/usr/bin:/bin",
-        HOME: import_node_path10.default.join(root, "auth"),
-        CODEX_HOME: import_node_path10.default.join(root, "auth"),
+        HOME: import_node_path12.default.join(root, "auth"),
+        CODEX_HOME: import_node_path12.default.join(root, "auth"),
         LANG: "en_US.UTF-8",
         GCR_FIXED_SOURCE_TOKEN: bridge.token
       },
@@ -4648,18 +6044,18 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 }
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var hash2 = (value) => (0, import_node_crypto10.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
   const info = await (0, import_promises5.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
-  const digest2 = (0, import_node_crypto10.createHash)("sha256");
+  const digest2 = (0, import_node_crypto14.createHash)("sha256");
   for await (const bytes of (0, import_node_fs5.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
 }
 async function executablePath(value) {
-  const candidates = value.includes(import_node_path11.default.sep) ? [import_node_path11.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path11.default.delimiter).filter(Boolean).map((directory) => import_node_path11.default.join(directory, value));
+  const candidates = value.includes(import_node_path13.default.sep) ? [import_node_path13.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path13.default.delimiter).filter(Boolean).map((directory) => import_node_path13.default.join(directory, value));
   for (const candidate of candidates) {
     try {
       await (0, import_promises5.access)(candidate, import_node_fs5.constants.X_OK);
@@ -4705,20 +6101,20 @@ var CodexAccountExecutor = class {
       throw new ExecutorError("cancelled");
     if (await binaryHash(this.command) !== this.fingerprint)
       throw new ExecutorError("executor-unavailable");
-    const root = await (0, import_promises5.mkdtemp)(import_node_path11.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
+    const root = await (0, import_promises5.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
     const started = performance.now();
     let bridge;
     try {
-      const cwd = import_node_path11.default.join(root, "cwd");
+      const cwd = import_node_path13.default.join(root, "cwd");
       await (0, import_promises5.mkdir)(cwd, { mode: 448 });
-      await (0, import_promises5.writeFile)(import_node_path11.default.join(root, "models.json"), this.catalog, { mode: 384 });
+      await (0, import_promises5.writeFile)(import_node_path13.default.join(root, "models.json"), this.catalog, { mode: 384 });
       bridge = await startSourceBridge(input2.source);
       const args = codexReviewArgs(root, bridge.url);
       if (input2.responseSchema) {
         const schema = JSON.stringify(input2.responseSchema);
         if (Buffer.byteLength(schema) > 65536)
           throw new ExecutorError("executor-unavailable");
-        const file = import_node_path11.default.join(root, "response-schema.json");
+        const file = import_node_path13.default.join(root, "response-schema.json");
         await (0, import_promises5.writeFile)(file, schema, { mode: 384 });
         args.push("--output-schema", file);
       }
@@ -4757,9 +6153,9 @@ var CodexAccountExecutor = class {
           }
         } : {}
       };
-    } catch (error) {
-      if (error instanceof ExecutorError)
-        throw error;
+    } catch (error2) {
+      if (error2 instanceof ExecutorError)
+        throw error2;
       throw new ExecutorError("invalid-response");
     } finally {
       try {
@@ -4774,7 +6170,7 @@ async function prepareCodexAccountExecutor(options) {
   if (options.model !== CODEX_REVIEW_MODEL || options.reasoningEffort !== CODEX_REVIEW_EFFORT || process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
-  const root = await (0, import_promises5.mkdtemp)(import_node_path11.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
+  const root = await (0, import_promises5.mkdtemp)(import_node_path13.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
   try {
     const fingerprint = await binaryHash(command);
     const env = { PATH: "/usr/bin:/bin", HOME: root, CODEX_HOME: root };
@@ -4802,29 +6198,29 @@ async function prepareCodexAccountExecutor(options) {
     if (bundled.code !== 0)
       throw new ExecutorError("executor-unavailable");
     const catalog = reviewModelCatalog(bundled.stdout);
-    await (0, import_promises5.writeFile)(import_node_path11.default.join(root, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises5.writeFile)(import_node_path13.default.join(root, "models.json"), catalog, { mode: 384 });
     const tools = await probeCodexCatalog(command, root);
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
     const environment = codexAccountEnvironment();
-    const configHash = hash2(JSON.stringify({
+    const configHash = hash3(JSON.stringify({
       version: 1,
       command,
       fingerprint,
       cliVersion,
       model: options.model,
       effort: options.reasoningEffort,
-      catalogHash: hash2(catalog),
+      catalogHash: hash3(catalog),
       tools,
       toolDefinitions: fixedSourceTools,
       settings: codexReviewArgs("/gcr/run", "http://127.0.0.1/source"),
       isolation: "macos-global-instruction-deny-v1",
-      authHome: environment.CODEX_HOME ?? import_node_path11.default.join(import_node_os4.default.homedir(), ".codex")
+      authHome: environment.CODEX_HOME ?? import_node_path13.default.join(import_node_os4.default.homedir(), ".codex")
     }));
     return new CodexAccountExecutor(command, fingerprint, catalog, configHash, environment, cliVersion);
-  } catch (error) {
-    if (error instanceof ExecutorError)
-      throw error;
+  } catch (error2) {
+    if (error2 instanceof ExecutorError)
+      throw error2;
     throw new ExecutorError("executor-unavailable");
   } finally {
     await (0, import_promises5.rm)(root, { recursive: true, force: true });
@@ -4855,7 +6251,24 @@ function standaloneErrorMessage(code) {
     case "untrusted-workspace":
       return "Trust this workspace before starting a local review.";
     case "unsupported-mode":
-      return "Centralized review is not available in this build. Select standalone mode.";
+      return "Select standalone or an explicitly connected centralized review.";
+    case "central-connection-required":
+      return "Choose a central connection for this profile and worktree, or explicitly select standalone review.";
+    case "authentication-required":
+    case "revoked":
+    case "disabled":
+      return "The central connection is expired, disconnected or revoked. Reconnect before using its knowledge.";
+    case "unavailable":
+      return "The central service is unavailable. Retry, or explicitly select signed offline knowledge if its lease is valid.";
+    case "busy":
+    case "superseded":
+      return "The central connection is being updated. Refresh its status and retry.";
+    case "invalid-binding":
+    case "invalid-manifest":
+    case "invalid-bundle":
+    case "incompatible":
+    case "cache-unavailable":
+      return "Central knowledge could not be verified. Check the selected server, signing keys, compatibility and cache expiry.";
     case "unsupported-provider":
       return "This provider does not yet support fixed-source standalone review. Your account settings have been preserved.";
     case "account-not-configured":
@@ -4877,6 +6290,18 @@ function standaloneErrorMessage(code) {
   }
 }
 var safeCodes = /* @__PURE__ */ new Set([
+  "central-connection-required",
+  "authentication-required",
+  "revoked",
+  "disabled",
+  "unavailable",
+  "busy",
+  "superseded",
+  "invalid-binding",
+  "invalid-manifest",
+  "invalid-bundle",
+  "incompatible",
+  "cache-unavailable",
   "cancelled",
   "timeout",
   "untrusted-workspace",
@@ -4890,8 +6315,8 @@ var safeCodes = /* @__PURE__ */ new Set([
   "disposed",
   "account-not-configured"
 ]);
-function standaloneError(error) {
-  const code = error && typeof error === "object" && "code" in error ? error.code : void 0;
+function standaloneError(error2) {
+  const code = error2 && typeof error2 === "object" && "code" in error2 ? error2.code : void 0;
   return new StandaloneReviewError(
     typeof code === "string" && safeCodes.has(code) ? code : "preparation-failed"
   );
@@ -4907,6 +6332,7 @@ function checkAbort(signal) {
 async function prepareStandaloneReview(request, settings, signal, ports = {}) {
   let snapshot;
   const opened = [];
+  let connections;
   let disposed = false;
   let running2 = false;
   const dispose = () => {
@@ -4915,12 +6341,20 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     if (disposed) return;
     disposed = true;
     snapshot?.close();
+    connections?.close();
     for (const records of opened) records.close();
   };
   try {
     checkAbort(signal);
-    if (!resolveReviewMode({ mode: settings.mode }).supported)
+    if (!["standalone", "centralized"].includes(settings.mode))
       throw new StandaloneReviewError("unsupported-mode");
+    if (settings.mode === "centralized") {
+      if (!settings.connectionId)
+        throw new StandaloneReviewError("central-connection-required");
+      centralConnectionReference(settings.connectionId);
+      if (settings.freshness !== "online" && settings.freshness !== "offline")
+        throw new StandaloneReviewError("central-connection-required");
+    }
     if (!settings.workspaceTrusted)
       throw new StandaloneReviewError("untrusted-workspace");
     if (settings.provider === "unconfigured")
@@ -4930,7 +6364,11 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     if (settings.model !== "gpt-6-astra" || settings.reasoningEffort !== "xhigh")
       throw new StandaloneReviewError("executor-unavailable");
     if (!request.files.length) throw new StandaloneReviewError("no-source");
-    const client = discoverLocalIdentity(request.repoRoot, settings.profileId);
+    const localClient = discoverLocalIdentity(
+      request.repoRoot,
+      settings.profileId
+    );
+    let client = localClient;
     const repositoryScope = {
       kind: "repository",
       profileId: client.profileId,
@@ -4958,11 +6396,28 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       opened.push(records);
       checkAbort(signal);
     }
-    const context = await resolveLocalContext({
+    const query = {
       client,
       snapshot,
       stores: opened.map((records) => new LocalKnowledgeStore(records))
-    });
+    };
+    let central;
+    if (settings.mode === "centralized") {
+      connections = await CentralConnections.open({
+        scope: repositoryScope,
+        ...ports
+      });
+      const status = await connections.status(settings.connectionId);
+      if (status.clientId !== "commit-defender")
+        throw new StandaloneReviewError("authentication-required");
+      central = await connections.review(
+        settings.connectionId,
+        settings.freshness,
+        signal
+      );
+      client = central.client;
+    }
+    const context = central ? await resolveCentralContext({ ...query, ...central }) : await resolveLocalContext(query);
     checkAbort(signal);
     if (context.status !== "ready")
       throw new StandaloneReviewError("needs-context");
@@ -5000,9 +6455,25 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       throw new StandaloneReviewError("policy-unavailable");
     const fixedSnapshot = snapshot;
     const policy = resolution.policy;
-    const history = new LocalHistoryStore(opened[0]);
+    let history = new LocalHistoryStore(opened[0]);
+    if (central) {
+      const identity = await connections.historyIdentity(
+        settings.connectionId
+      );
+      const records = await LocalRecordStore.open({
+        scope: repositoryScope,
+        ...ports.keys ? { keys: ports.keys } : {},
+        dataDirectory: import_node_path14.default.join(
+          ports.dataDirectory ?? defaultLocalDataDirectory(),
+          "central-review-history",
+          identity.id
+        )
+      });
+      opened.push(records);
+      history = new LocalHistoryStore(records, void 0, identity.audience);
+    }
     return {
-      backendId: "standalone",
+      backendId: settings.mode,
       key: contentHash({ identity: policy.identity, scope: request.scope }),
       dispose,
       async run(runSignal, progress) {
@@ -5012,7 +6483,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
           progress?.(
             0,
             fixedSnapshot.selected.length,
-            "Captured source and local context"
+            central ? "Captured source and verified central/local context" : "Captured source and local context"
           );
           const report = await runLocalReview({
             snapshot: fixedSnapshot,
@@ -5049,9 +6520,9 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
         }
       }
     };
-  } catch (error) {
+  } catch (error2) {
     dispose();
-    throw standaloneError(error);
+    throw standaloneError(error2);
   }
 }
 
@@ -5090,10 +6561,10 @@ port.on(
       (result) => {
         port.postMessage({ type: "result", result });
       },
-      (error) => {
+      (error2) => {
         port.postMessage({
           type: "failure",
-          code: standaloneError(error).code
+          code: standaloneError(error2).code
         });
       }
     ).finally(async () => {
@@ -5120,8 +6591,8 @@ void prepareStandaloneReview(
       backendId: prepared.backendId
     });
   },
-  async (error) => {
-    port.postMessage({ type: "failure", code: standaloneError(error).code });
+  async (error2) => {
+    port.postMessage({ type: "failure", code: standaloneError(error2).code });
     await close();
   }
 );

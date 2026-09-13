@@ -50,6 +50,7 @@ export async function run(): Promise<void> {
     platform: process.platform,
     arch: process.arch,
     extensionVersion: extension.packageJSON.version,
+    delivery: process.env.CD_TEST_DELIVERY ?? "source-checkout",
     commandCount: declared.length,
     activation: true,
     hookDefault: "disable",

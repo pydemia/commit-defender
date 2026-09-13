@@ -57,7 +57,7 @@ try {
   await runTests({
     version,
     ...(executable ? { vscodeExecutablePath: executable } : {}),
-    extensionDevelopmentPath: extensionRoot,
+    extensionDevelopmentPath: path.resolve(process.env.CD_TEST_EXTENSION_PATH ?? extensionRoot),
     extensionTestsPath: path.join(
       extensionRoot,
       "out-test",
@@ -67,6 +67,7 @@ try {
       CD_TEST_WORKSPACE: workspace,
       CD_TEST_EVIDENCE_FILE: evidenceFile,
       CD_TEST_PROFILE: profileId,
+      CD_TEST_DELIVERY: process.env.CD_TEST_EXTENSION_PATH ? "packaged-extension" : "source-checkout",
     },
     launchArgs: [
       workspace,

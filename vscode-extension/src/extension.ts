@@ -8,6 +8,9 @@ import { liveBlocks, liveSource, retainCapturedSources } from './reviewSource.js
 import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.js';
 import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope, readLocalHistory } from './localKnowledge.js';
+import { readCentralHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
+import { manageCentralConnection } from './centralConnectionView.js';
+import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
 import { manageModelCredential } from './modelCredentialView.js';
@@ -349,9 +352,17 @@ export function activate(context: vscode.ExtensionContext): void {
     try {
       const scope = knowledgeScope({ profileId, repoRoot, scope: 'repository' });
       if (scope.kind !== 'repository') return;
-      const reports = await readLocalHistory({ profileId, repoRoot, scope: 'repository' });
-      if (generation === historyLoad && localProfile() === profileId) historyProvider.restore(reports, repoRoot, scope);
+      const selection = readSelection(context.globalState, scope);
+      if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === 'centralized' && selection?.mode !== 'centralized')
+        throw new StandaloneReviewError('central-connection-required');
+      const selected = JSON.stringify(selection);
+      const central = selection?.mode === 'centralized'
+        ? await readCentralHistory({ profileId, repoRoot, scope: 'repository' }, selection) : undefined;
+      const reports = central?.reports ?? await readLocalHistory({ profileId, repoRoot, scope: 'repository' });
+      if (generation === historyLoad && localProfile() === profileId && JSON.stringify(readSelection(context.globalState, scope)) === selected)
+        historyProvider.restore(reports, repoRoot, scope, central?.audience);
     } catch {
+      if (generation === historyLoad) historyProvider.clear();
       getOutputChannel().appendLine('[Commit Defender] Encrypted local history could not be loaded. Check the OS credential store and refresh local history.');
     }
   }
@@ -364,6 +375,26 @@ export function activate(context: vscode.ExtensionContext): void {
     renderSummary(view.report, view.repoRoot);
   }
   context.subscriptions.push(
+    vscode.commands.registerCommand('commitDefender.manageCentralConnection', async () => {
+      const repoRoot = await resolveRepoRoot();
+      const profileId = localProfile();
+      if (!repoRoot || !vscode.workspace.isTrusted) {
+        void vscode.window.showWarningMessage('Open and trust a Git worktree before managing central review.'); return;
+      }
+      const scope = knowledgeScope({ repoRoot, profileId, scope: 'repository' });
+      if (scope.kind !== 'repository') return;
+      await manageCentralConnection(context, scope, {
+        assertCurrent() {
+          if (!vscode.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: 'repository' })) !== selectionKey(scope))
+            throw Error('Connection selection changed.');
+        },
+        async invalidate() {
+          historyLoad++; reviewIntent++; execution.invalidate(); await execution.settled();
+          await vscode.commands.executeCommand('commitDefender.clearFindings');
+        },
+        refresh: refreshLocalHistory,
+      });
+    }),
     vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => manageModelCredential(await resolveRepoRoot())),
     vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
     vscode.commands.registerCommand('commitDefender.manageLocalKnowledge', async () => {
@@ -381,7 +412,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.window.onDidChangeWindowState(event => { if (event.focused) void refreshVisibleContext(); }),
     vscode.workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('commitDefender.localProfile')) {
+      if (event.affectsConfiguration('commitDefender.localProfile') || event.affectsConfiguration('commitDefender.reviewMode')) {
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
@@ -437,7 +468,13 @@ export function activate(context: vscode.ExtensionContext): void {
     sourceExclusions: SourceExclusion[] = [],
   ): Promise<void> {
     const cfg = getConfig();
-    const localSettings = getStandaloneReviewSettings(relPaths.length);
+    let localSettings = getStandaloneReviewSettings(relPaths.length);
+    try {
+      const scope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: 'repository' });
+      localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope));
+    } catch (error) {
+      void vscode.window.showErrorMessage(standaloneError(error).message); return;
+    }
     const backend = createReviewBackend(cfg, {
       workerFile: context.asAbsolutePath('out/standalone-review-worker.js'),
       settings: localSettings,
@@ -460,8 +497,9 @@ export function activate(context: vscode.ExtensionContext): void {
         getOutputChannel().appendLine(`[Commit Defender] ${message}`);
         void vscode.window.showErrorMessage(
           error instanceof Error ? error.message : 'Local review preparation failed.',
-          'Choose Account and Model…', 'Open User Settings',
+          'Central Review Connection…', 'Choose Account and Model…', 'Open User Settings',
         ).then(action => {
+          if (action === 'Central Review Connection…') return vscode.commands.executeCommand('commitDefender.manageCentralConnection');
           if (action === 'Choose Account and Model…') return selectAccountProviderAndModel();
           if (action === 'Open User Settings') return vscode.commands.executeCommand('workbench.action.openSettings', '@ext:pydemia.commit-defender');
         });

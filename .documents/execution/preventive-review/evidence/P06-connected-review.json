@@ -1,0 +1,499 @@
+{
+  "checkpoint": "P06-C05 connected Commit Defender UI and manual shared worker",
+  "verifiedAt": "2026-09-13T20:57:29.047460+00:00",
+  "status": "passed",
+  "baseCommit": "cf414c1f4e56478586c523b1b3968b2fdd14faf3",
+  "gcrSourceCommit": "a81d2c2",
+  "clientPackageVersion": "0.1.0-alpha.14",
+  "regression": {
+    "passed": 134,
+    "failed": 0,
+    "newCentralReviewCases": 6,
+    "newUiCases": 3,
+    "uiTransport": "actual HTTPS, mocked VS Code window API"
+  },
+  "artifact": {
+    "vsixSha256": "cc96d0b411ae70d6f178f9630058e76d018c038e7035ba85911bd8f45d844088",
+    "bundles": {
+      "extension.js": "6ecc299b0c6fdccf03b052632c556262b38cee88691f1cdd52b9fd208951a9e4",
+      "standalone-review-worker.js": "58dec5fb743e0deff35892f455b6b51729d9459dd7f23dab3020e3d872745d3d",
+      "hook-cli.js": "722d1237f9b09d8789d2554bb0f5bdb34127708ecf5875406dd0b8b562c90d33"
+    },
+    "status": "passed",
+    "sourceAndVendorExcluded": true
+  },
+  "packagedExtensionHost": {
+    "status": "passed",
+    "vscode": "1.137.0",
+    "node": "24.18.1",
+    "electron": "42.10.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "extensionVersion": "2.3.0",
+    "delivery": "packaged-extension",
+    "commandCount": 22,
+    "activation": true,
+    "hookDefault": "disable",
+    "modelCalled": false,
+    "checks": [
+      "activation",
+      "command registration",
+      "clear findings",
+      "cancel without run",
+      "no hook installed",
+      "standalone defaults and user profile",
+      "empty history refresh creates no local store or OS key"
+    ]
+  },
+  "actualAccount": {
+    "model": "gpt-6-astra",
+    "reasoningEffort": "xhigh",
+    "executableVersion": "0.154.0/gcr-fixed-source-v1",
+    "invocations": 2,
+    "syntheticCentralServerAndSource": true,
+    "report": {
+      "contractVersion": 1,
+      "runId": "e956622c-6db7-4b9e-9c75-42b0de2fc064",
+      "identity": {
+        "client": {
+          "mode": "centralized",
+          "profileId": "cd-central-29f0cd88-e427-45e9-bfd2-c40f97244249",
+          "repositoryKey": "3e13a304e01384678678a77412cef9ed521aa6ad0af95952cad1df4a5ea559c7",
+          "worktreeKey": "b1007345bc76e1d75d566ed08e5010dd86c786e7e36d65f5b0a6b69bbd03803f",
+          "audience": {
+            "serverId": "server",
+            "tenantId": "tenant",
+            "userId": "alice",
+            "repositoryId": "repository"
+          }
+        },
+        "source": {
+          "kind": "index",
+          "hash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "objectFormat": "sha1",
+          "baseCommit": "db978e7ed3e822380a8419941900f9067d3cc5a3",
+          "baseTree": "d0f4eef2de0c1980f734ba4d3181a5bd0837a1e9",
+          "sourceTree": "7dca417514c04b5b82c569b4b9ce56919c0e84a8"
+        },
+        "context": {
+          "hash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "entries": [
+            {
+              "origin": "builtin",
+              "kind": "skill",
+              "id": "gcr-standalone-review",
+              "revision": 1,
+              "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+            },
+            {
+              "origin": "central",
+              "kind": "skill",
+              "id": "skill-0",
+              "revision": 1,
+              "hash": "91c5d9801ace8b0cc51cdc486f04dd52b063483790cdb46f02aef215d6cb10dc",
+              "component": "policy"
+            },
+            {
+              "origin": "central",
+              "kind": "skill",
+              "id": "skill-1",
+              "revision": 1,
+              "hash": "a24e6b4398783c25a1b84fa7329a123b25693a1cc0dea83914d328b992bf3272",
+              "component": "policy"
+            },
+            {
+              "origin": "central",
+              "kind": "skill",
+              "id": "skill-2",
+              "revision": 1,
+              "hash": "c83b870829f8a799c19256cceea0cf185d877ff0b82a51b6e6a6a23953a2b816",
+              "component": "policy"
+            },
+            {
+              "origin": "central",
+              "kind": "skill",
+              "id": "skill-3",
+              "revision": 1,
+              "hash": "bd9fd730c95d691bf71ff854061ec7bf5f55831d3c9fa2621d5f03141bad2d7d",
+              "component": "policy"
+            }
+          ],
+          "centralSnapshot": {
+            "id": "snapshot",
+            "hash": "7116b3cc08f2f3dbf66955dbcea45a6a67e04535f87dcd0c51238df178a1fc9e",
+            "audience": {
+              "serverId": "server",
+              "tenantId": "tenant",
+              "userId": "alice",
+              "repositoryId": "repository"
+            },
+            "authorizationRevision": "1",
+            "offlineValidUntil": "2026-09-13T21:52:16.037Z"
+          },
+          "required": [
+            {
+              "kind": "knowledge",
+              "reference": "builtin:gcr-standalone-review",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "source",
+              "reference": "source:3cc2ae5b5767ead7782bdb6678e55a599c79c1c989d2242b98003c95384768e1",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "source",
+              "reference": "source:64b3d5880e0bbf90ebc82ce34112ea0f0cb6f571fcaa7da3ef6a0ee60f82fbd7",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "policy",
+              "reference": "central:policy:skill:skill-0",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "policy",
+              "reference": "central:policy:skill:skill-1",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "policy",
+              "reference": "central:policy:skill:skill-2",
+              "available": true,
+              "reason": ""
+            },
+            {
+              "kind": "policy",
+              "reference": "central:policy:skill:skill-3",
+              "available": true,
+              "reason": ""
+            }
+          ]
+        },
+        "reviewProfile": {
+          "id": "gcr-standalone-review",
+          "revision": 1,
+          "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+        },
+        "executor": {
+          "id": "codex-account",
+          "version": "0.154.0/gcr-fixed-source-v1",
+          "model": "gpt-6-astra",
+          "configHash": "dbaff6bfb1f2e5f39a9825601c3a861c99944d75204eb4ffe6450ec94ebeed77"
+        },
+        "toolsHash": "ad9688be85969dd25bfc2413d69c1172a688fe64fadb48eb3b8e17ad0bbcbff3"
+      },
+      "status": "completed",
+      "trigger": "manual",
+      "requestedAt": "2026-09-13T20:52:22.130Z",
+      "startedAt": "2026-09-13T20:52:22.132Z",
+      "finishedAt": "2026-09-13T20:53:26.776Z",
+      "durationMs": 64643,
+      "summary": "Complete source review found one cents-contract regression. Source, fixed base, caller and tests were inspected; no tests were run.",
+      "sourceFiles": [
+        {
+          "path": "sum.ts",
+          "side": "source",
+          "hash": "af63abd1b982de7a427b790cb6af71a5786a80c37671118272e1bdfb90091ab8",
+          "byteLength": 118,
+          "lineCount": 4,
+          "gitBlob": "9a8162d3818686c91d4b66b5f5bfcc6b59af1303"
+        },
+        {
+          "path": "sum.ts",
+          "side": "base",
+          "hash": "8f6621c1bf8ad770602309429c517fe1eb1b6ba5198039116ef20289bd5902a4",
+          "byteLength": 112,
+          "lineCount": 4,
+          "gitBlob": "fd129c541005fe13d0fb7109f2a6c0486127068f"
+        },
+        {
+          "path": "caller.ts",
+          "side": "source",
+          "hash": "42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc",
+          "byteLength": 123,
+          "lineCount": 3,
+          "gitBlob": "31394f10d5946999cf6684048f55309219642450"
+        },
+        {
+          "path": "caller.ts",
+          "side": "base",
+          "hash": "42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc",
+          "byteLength": 123,
+          "lineCount": 3,
+          "gitBlob": "31394f10d5946999cf6684048f55309219642450"
+        },
+        {
+          "path": "sum.test.ts",
+          "side": "source",
+          "hash": "7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8",
+          "byteLength": 140,
+          "lineCount": 5,
+          "gitBlob": "cb0750e4224efa9227c227ff5beaffe80f523cf3"
+        },
+        {
+          "path": "sum.test.ts",
+          "side": "base",
+          "hash": "7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8",
+          "byteLength": 140,
+          "lineCount": 5,
+          "gitBlob": "cb0750e4224efa9227c227ff5beaffe80f523cf3"
+        }
+      ],
+      "files": [
+        {
+          "source": {
+            "path": "sum.ts",
+            "side": "source",
+            "hash": "af63abd1b982de7a427b790cb6af71a5786a80c37671118272e1bdfb90091ab8",
+            "byteLength": 118,
+            "lineCount": 4,
+            "gitBlob": "9a8162d3818686c91d4b66b5f5bfcc6b59af1303"
+          },
+          "status": "completed",
+          "summary": "Reviewed all source/base lines and available caller/test context, including empty and zero-sum inputs."
+        }
+      ],
+      "excluded": [],
+      "problems": [],
+      "findings": [
+        {
+          "id": "8be7e764-66cc-4ca4-be22-ddb0ecc61a22",
+          "title": "Return the total in cents without dividing by 100",
+          "problem": "The added division converts cents to dollars despite the cents-returning contract. Source evaluation of total([125, 75]) yields 2 instead of 200; the fixed base preserves 200.",
+          "impact": "The unchanged invoice() caller assigns this result to amountCents, understating its invoice amount by a factor of 100. Other inputs can produce fractional cents.",
+          "recommendation": "Remove `/ 100` and retain the existing cents assertion. Perform any display conversion outside total().",
+          "category": "correctness",
+          "severity": "P2",
+          "outcome": "violation",
+          "confidence": "high",
+          "followUp": "required",
+          "anchor": {
+            "path": "sum.ts",
+            "side": "source",
+            "hash": "af63abd1b982de7a427b790cb6af71a5786a80c37671118272e1bdfb90091ab8",
+            "startLine": 2,
+            "endLine": 2
+          },
+          "anchorValidation": {
+            "status": "verified",
+            "checks": [
+              "fixed-source-hash",
+              "selected-file",
+              "returned-read-range"
+            ],
+            "reason": "Anchor matches a non-truncated source read. This does not prove the finding."
+          },
+          "evidenceAssessment": {
+            "level": "source-confirmed",
+            "rationale": "Source-confirmed regression against policy CD_CENTS_bdc6d79a-7bf8-4cb1-9829-18b0987c4e35. The caller's amountCents field and unchanged test expectation independently corroborate the required units.",
+            "conditions": [
+              "total() receives cent amounts with a finite, nonzero sum; the existing caller supplies [125, 75]."
+            ],
+            "evidenceIds": [
+              "fdacd5e2-31fe-469e-8c83-ddbf459fa023",
+              "46858cb2-c6eb-4c72-b14d-9cf9962fa3a6",
+              "f6fc339a-396e-4f8d-a73b-1049812fc60c",
+              "1bfed304-f54c-400b-b5c6-d617270f3267",
+              "9a4cb248-8575-45c9-ac53-82818aaaf241",
+              "c1d4ab0f-345b-42ad-9b43-6d681462ac7c"
+            ],
+            "counterEvidence": {
+              "status": "reviewed",
+              "summary": "Empty and zero-sum inputs still return zero, so those cases do not expose the defect. Neither the unchanged caller nor the tests indicate a migration to dollars; the test explicitly expects 200. Tests were inspected, not executed.",
+              "evidenceIds": [
+                "f6fc339a-396e-4f8d-a73b-1049812fc60c",
+                "1bfed304-f54c-400b-b5c6-d617270f3267",
+                "9a4cb248-8575-45c9-ac53-82818aaaf241",
+                "c1d4ab0f-345b-42ad-9b43-6d681462ac7c"
+              ]
+            }
+          },
+          "policy": {
+            "enforcement": "advisory"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "kind": "source-read",
+          "id": "fdacd5e2-31fe-469e-8c83-ddbf459fa023",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:fdacd5e2-31fe-469e-8c83-ddbf459fa023"
+          },
+          "observedAt": "2026-09-13T20:52:39.550Z",
+          "location": {
+            "path": "sum.ts",
+            "side": "source",
+            "hash": "af63abd1b982de7a427b790cb6af71a5786a80c37671118272e1bdfb90091ab8",
+            "startLine": 1,
+            "endLine": 4
+          },
+          "observation": "Returned excerpt sha256=af63abd1b982de7a427b790cb6af71a5786a80c37671118272e1bdfb90091ab8; truncated=false. Port return only; no test executed."
+        },
+        {
+          "kind": "source-read",
+          "id": "46858cb2-c6eb-4c72-b14d-9cf9962fa3a6",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:46858cb2-c6eb-4c72-b14d-9cf9962fa3a6"
+          },
+          "observedAt": "2026-09-13T20:52:42.330Z",
+          "location": {
+            "path": "sum.ts",
+            "side": "base",
+            "hash": "8f6621c1bf8ad770602309429c517fe1eb1b6ba5198039116ef20289bd5902a4",
+            "startLine": 1,
+            "endLine": 4
+          },
+          "observation": "Returned excerpt sha256=8f6621c1bf8ad770602309429c517fe1eb1b6ba5198039116ef20289bd5902a4; truncated=false. Port return only; no test executed."
+        },
+        {
+          "kind": "source-read",
+          "id": "f6fc339a-396e-4f8d-a73b-1049812fc60c",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:f6fc339a-396e-4f8d-a73b-1049812fc60c"
+          },
+          "observedAt": "2026-09-13T20:52:45.210Z",
+          "location": {
+            "path": "caller.ts",
+            "side": "source",
+            "hash": "42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc",
+            "startLine": 1,
+            "endLine": 3
+          },
+          "observation": "Returned excerpt sha256=42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc; truncated=false. Port return only; no test executed."
+        },
+        {
+          "kind": "source-read",
+          "id": "1bfed304-f54c-400b-b5c6-d617270f3267",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:1bfed304-f54c-400b-b5c6-d617270f3267"
+          },
+          "observedAt": "2026-09-13T20:52:47.794Z",
+          "location": {
+            "path": "caller.ts",
+            "side": "base",
+            "hash": "42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc",
+            "startLine": 1,
+            "endLine": 3
+          },
+          "observation": "Returned excerpt sha256=42abff3219b56dc091b0c43a7baf9995eeb8e92460cbf17f27312ecbb1d504fc; truncated=false. Port return only; no test executed."
+        },
+        {
+          "kind": "source-read",
+          "id": "9a4cb248-8575-45c9-ac53-82818aaaf241",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:9a4cb248-8575-45c9-ac53-82818aaaf241"
+          },
+          "observedAt": "2026-09-13T20:52:50.307Z",
+          "location": {
+            "path": "sum.test.ts",
+            "side": "source",
+            "hash": "7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8",
+            "startLine": 1,
+            "endLine": 5
+          },
+          "observation": "Returned excerpt sha256=7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8; truncated=false. Port return only; no test executed."
+        },
+        {
+          "kind": "source-read",
+          "id": "c1d4ab0f-345b-42ad-9b43-6d681462ac7c",
+          "sourceHash": "b24eec4c7418bb073958a2cc17bfd3fbbed13834906b75c6fdd3bde43accd340",
+          "contextHash": "731b9990710f07d0bacac61941144a62f35613efa5cc22dc6e385713df09b413",
+          "provenance": {
+            "kind": "local-observation",
+            "producer": "@gcr/client-core",
+            "reference": "fixed-source-read:c1d4ab0f-345b-42ad-9b43-6d681462ac7c"
+          },
+          "observedAt": "2026-09-13T20:52:52.716Z",
+          "location": {
+            "path": "sum.test.ts",
+            "side": "base",
+            "hash": "7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8",
+            "startLine": 1,
+            "endLine": 5
+          },
+          "observation": "Returned excerpt sha256=7dffe99025efc685e3fe76634eae6f9e1cfa39c9260526c25c741cd541db67d8; truncated=false. Port return only; no test executed."
+        }
+      ],
+      "questions": []
+    },
+    "workerSha256": "58dec5fb743e0deff35892f455b6b51729d9459dd7f23dab3020e3d872745d3d",
+    "historyRestoredExactly": true,
+    "disconnectVerified": true,
+    "testKeysRemoved": true,
+    "extensionHostUi": false
+  },
+  "reports": {
+    "vscode-extension/test-results/P06-central-regression.log": "6380259bac5a436ac69370daf71635572711e5a39b8ee5e3f71fb2801a076a00",
+    "vscode-extension/test-results/P06-central-review-first.log": "c8a9984583054321001916c7a82efe42c265bb2f78e12e2e534800be78c6c4d0",
+    "vscode-extension/test-results/P06-central-review-second.log": "a6d504360b7159f939ece680750f14cb1545ea20f87a4019a741023b6b03a84b",
+    "vscode-extension/test-results/P06-central-view-first.log": "3fe97aadf5f76ce20449fe49d79aff119c68caf8a64e869db9628ffd9294ecee",
+    "vscode-extension/test-results/P06-central-build-final.log": "4fccfecff125e2423c68b0dc4f4a7df8af0ad08e17b77c3101aa414ad3847d35",
+    "vscode-extension/test-results/P06-central-types-release.log": "324e87368feba75d13b1c466e1a20829e1e6d4f59231fee535989bf7c29746d5",
+    "vscode-extension/test-results/P06-central-host.log": "71af2666e9ee2c0a4322839e948a68d5d03e036995b2559d04365200f8514c3f",
+    "vscode-extension/test-results/P06-central-host-current.log": "ef7525d3eec059eacc8a5d7bf0da5a0e057396665527e9c78d34fdbba9c1e6f8",
+    "vscode-extension/test-results/P06-central-host-vsix.log": "460c871acc3b0c0778bcc6123d197fe6018b2d70f9161d73d02107f371f3d4fd",
+    "vscode-extension/test-results/P06-central-account.json": "89f918b8df427aa6d5875438a54142a261cb088c6a0d2508e81e98119f395606",
+    "vscode-extension/test-results/P06-central-account-vsix.json": "a89c13e2bb99eff8275f2502476ee5e442d86aa17e25f46c3924eb16c09cb6f8",
+    "vscode-extension/test-results/P06-central-vsix.json": "b8659d788370c67b568f23d74ee345db4ce89cfd970d00981272cb05a8ac8df5",
+    "vscode-extension/test-results/P06-central-vsix.log": "f15e63754e861c36f91b10acf673838f49d4f0b04d575807151298a15b4887cf"
+  },
+  "sourceHashes": {
+    ".documents/execution/preventive-review/P06.md": "2e76b04b9917b7dea95aadfcf0baa49400b953d4867095fba9881a6daf569c9c",
+    "vscode-extension/README.md": "d89040fddd8336faa59f6260ca651b926a46bf58e63248578e811a06a6198bf3",
+    "vscode-extension/docs/central-review.md": "5f462fbfb6a0b1614f826fcb16eee3edf29e9d45f306f7e8bc8a957d5488608a",
+    "vscode-extension/docs/standalone-review.md": "5f34b97fcd103cfb8350c77a89a6e9ff229103f9ea554ac4cb4901b76bf84b65",
+    "vscode-extension/out/extension.js": "6ecc299b0c6fdccf03b052632c556262b38cee88691f1cdd52b9fd208951a9e4",
+    "vscode-extension/out/standalone-review-worker.js": "58dec5fb743e0deff35892f455b6b51729d9459dd7f23dab3020e3d872745d3d",
+    "vscode-extension/package.json": "4ebd3e8f2e4a9c175ed240278f7b7f44b85ac98eab9bcef600a26865769c5ee3",
+    "vscode-extension/src/centralConnection.ts": "652028998fde82090e3d7f0485aecd44da26ad364643796cf6ed943acd4a6758",
+    "vscode-extension/src/centralConnectionView.ts": "ca71d55b671c8d4797eeea6117c9dfc1476a2a83e4401b0585d892c0c6db479e",
+    "vscode-extension/src/extension.ts": "41ef8d9593cd73310ba795b7843057d4e6632a668279e2887775d0ad9bdcf56e",
+    "vscode-extension/src/historyEntries.ts": "afb879908b8f56ced3413cea10a2bfcf94305a9e3a75b5080e2a269ecae09501",
+    "vscode-extension/src/historyProvider.ts": "92b2356f99cc84abad58f68dd5c2095004884056841b6af2fb227363d3b519ab",
+    "vscode-extension/src/standaloneReview.ts": "7befdd9c31f7a6f78f06aa82a1ea8d919b125d84debdd2580b364a27dfa61cf9",
+    "vscode-extension/src/standaloneReviewProtocol.ts": "ecef8b231109d9d8e0ec14fa23f58ae254111c4cb34280bf00bc40bad193e006",
+    "vscode-extension/src/summaryView.ts": "acc714884c7a91ef0553ca4d4be6da1d7d6833432f1ac412d67381abfd9a9ae4",
+    "vscode-extension/test/central-account-smoke.ts": "dae8041a9028ed0a033e3d14d9f727f7bf2453c8c29814e04bd2729ed9dcc190",
+    "vscode-extension/test/central-review.test.ts": "57e4f7290057495991dda8937d6f20541361300d62163a13f5d44139cc4d4b99",
+    "vscode-extension/test/central-view.test.ts": "c5f714c75cfa577501a175b75a5c7348b92b580e5e65196a71e5805c8e3e7be9",
+    "vscode-extension/test/extension-host.test.ts": "b376745e35f96262d03b08f48a4f376a4a696dfecaf34be0a83f5fe6da158ab3",
+    "vscode-extension/test/helpers/central-fixture.ts": "0b8924e87ba787f392a0e4b0b8a6d90897354fd40378d3dfbc7d3f1fb19b94d4",
+    "vscode-extension/test/helpers/vscode-central.ts": "16c6371f1533e2851c6bfcc883e09c0fea202c4f4bd3f58c508f5953eeb9cb63",
+    "vscode-extension/test/run-extension-host.mjs": "71c6f21417ef13ee1671f26d3dcb75cefd35b81c6f21145c268214330d4baba1"
+  },
+  "limitations": [
+    "PRISM-DEV v2/API key deployment and actual central server integration pending",
+    "Linux model runtime unverified",
+    "No visual dialog inspection; native host validates activation/commands",
+    "No remote auto-mapping, periodic sync/backoff/automatic fallback",
+    "Central bundle metadata and report provenance are read-only; content UI/export authorization pending",
+    "No Marketplace publication or user VS Code installation replacement"
+  ]
+}

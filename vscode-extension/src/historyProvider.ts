@@ -3,7 +3,7 @@ import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './
 import { ExtensionConfig } from './config.js';
 import type { ReviewScope } from './reviewBackend.js';
 import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
-import type { ClientReviewReport, LocalScope } from '@gcr/client-contract';
+import type { ClientReviewReport, LocalScope, KnowledgeAudience } from '@gcr/client-contract';
 import { mergeLocalHistory } from './historyEntries.js';
 
 // ── Public types ───────────────────────────────────────────────────────────────
@@ -65,8 +65,8 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
   }
 
   /** Reload only history; a saved report never becomes fresh editor diagnostics automatically. */
-  restore(reports: ClientReviewReport[], repoRoot: string, scope: Extract<LocalScope, { kind: 'repository' }>): void {
-    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope);
+  restore(reports: ClientReviewReport[], repoRoot: string, scope: Extract<LocalScope, { kind: 'repository' }>, audience?: KnowledgeAudience): void {
+    this._history = mergeLocalHistory(this._history, reports, repoRoot, scope, audience);
     this._emitter.fire(undefined);
   }
 
@@ -205,6 +205,7 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 
     children.push(
+      { kind: 'command', id: 'cmd-central-connection', label: 'Central Review Connection', desc: 'Select, synchronize or disconnect central knowledge', icon: 'plug', command: 'commitDefender.manageCentralConnection' },
       { kind: 'command', id: 'cmd-local-knowledge', label: 'Local Memory and Skills', desc: 'Manage encrypted personal review knowledge', icon: 'book', command: 'commitDefender.manageLocalKnowledge' },
       { kind: 'command', id: 'cmd-local-history', label: 'Refresh Local History', desc: 'Load history shared with the GCR CLI', icon: 'refresh', command: 'commitDefender.refreshLocalHistory' },
       { kind: 'command', id: 'cmd-summary', label: 'Show Summary Panel', desc: 'Reopen last summary',                  icon: 'preview',   command: 'commitDefender.showSummary' },

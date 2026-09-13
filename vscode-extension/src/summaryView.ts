@@ -163,7 +163,7 @@ function buildSummaryHtml(
   const metaParts: string[] = [
     reviewCoverage(report),
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
-    report.gcr ? "Standalone · advisory" : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
+    report.gcr ? `${report.gcr.report.identity.client.mode === "centralized" ? "Centralized" : "Standalone"} · advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`,
   ].filter(Boolean);
 
@@ -182,6 +182,11 @@ function buildSummaryHtml(
       body += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
         `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
+    const central = core.identity.context.centralSnapshot;
+    if (central) body += `<section><h2>Central knowledge used</h2>
+      <p>Server ${esc(central.audience.serverId)} · Tenant ${esc(central.audience.tenantId)} · Repository ${esc(central.audience.repositoryId)} · User ${esc(central.audience.userId)}</p>
+      <p>Snapshot <code>${esc(central.id)}</code> · <code>${esc(central.hash)}</code><br>Signed offline validity: ${esc(central.offlineValidUntil)}</p>
+      <p>This report records the snapshot used during review. Open Central Review Connection to check its current authorization and cache status.</p></section>`;
     const freshness = report.local_context_freshness;
     const current = !freshness ? "Current local entries have not been checked."
       : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review."

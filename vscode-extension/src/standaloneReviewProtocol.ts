@@ -1,6 +1,9 @@
 /** Supplied by the extension's user settings and command handler, never a repository file. */
 export interface StandaloneReviewSettings {
   mode: string;
+  /** Explicit extension-owned selection, scoped to the local profile and worktree. */
+  connectionId?: string;
+  freshness?: "online" | "offline";
   profileId: string;
   provider: string;
   model: string;
@@ -28,7 +31,24 @@ export function standaloneErrorMessage(code: string): string {
     case "untrusted-workspace":
       return "Trust this workspace before starting a local review.";
     case "unsupported-mode":
-      return "Centralized review is not available in this build. Select standalone mode.";
+      return "Select standalone or an explicitly connected centralized review.";
+    case "central-connection-required":
+      return "Choose a central connection for this profile and worktree, or explicitly select standalone review.";
+    case "authentication-required":
+    case "revoked":
+    case "disabled":
+      return "The central connection is expired, disconnected or revoked. Reconnect before using its knowledge.";
+    case "unavailable":
+      return "The central service is unavailable. Retry, or explicitly select signed offline knowledge if its lease is valid.";
+    case "busy":
+    case "superseded":
+      return "The central connection is being updated. Refresh its status and retry.";
+    case "invalid-binding":
+    case "invalid-manifest":
+    case "invalid-bundle":
+    case "incompatible":
+    case "cache-unavailable":
+      return "Central knowledge could not be verified. Check the selected server, signing keys, compatibility and cache expiry.";
     case "unsupported-provider":
       return "This provider does not yet support fixed-source standalone review. Your account settings have been preserved.";
     case "account-not-configured":
@@ -51,6 +71,18 @@ export function standaloneErrorMessage(code: string): string {
 }
 
 const safeCodes = new Set([
+  "central-connection-required",
+  "authentication-required",
+  "revoked",
+  "disabled",
+  "unavailable",
+  "busy",
+  "superseded",
+  "invalid-binding",
+  "invalid-manifest",
+  "invalid-bundle",
+  "incompatible",
+  "cache-unavailable",
   "cancelled",
   "timeout",
   "untrusted-workspace",
