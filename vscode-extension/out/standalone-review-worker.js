@@ -8305,6 +8305,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               diagnostic = "Review saved; encrypted history retention cleanup remains pending.";
           };
           let report;
+          let reviewCompletionConfirmed = false;
           try {
             const result = await executeReviewRequest({
               storage: {
@@ -8331,6 +8332,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               run: runReview
             });
             report = result.report;
+            reviewCompletionConfirmed = result.persisted && result.recorded;
             if (!result.persisted)
               diagnostic = "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
             else if (!result.recorded)
@@ -8366,6 +8368,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
             }
           }
           return {
+            reviewCompletionConfirmed,
             report: projectCommitDefender(report),
             capturedSources: Object.fromEntries(
               report.files.flatMap(({ source }) => {

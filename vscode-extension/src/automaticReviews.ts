@@ -5,8 +5,8 @@ import {
   AutomaticReviewScheduler,
   observeAutomaticRepository,
   observeAutomaticFile,
-  newlyStagedPaths,
   sourcePathPolicy,
+  contentHash,
   type AutomaticRepository,
   type AutomaticTask,
   type AutomaticState,
@@ -21,6 +21,9 @@ import {
   type AutomaticSettings,
 } from "./automaticSettings.js";
 import { knowledgeScope } from "./localKnowledge.js";
+import type { LocalStoragePorts } from "./localKnowledge.js";
+import { readSelection } from "./centralConnection.js";
+import { AutomaticStageCheckpoint } from "./automaticStageCheckpoint.js";
 interface Root {
   observed: AutomaticRepository;
   settings: AutomaticSettings;
@@ -28,6 +31,9 @@ interface Root {
   scanning?: Promise<void>;
   again?: boolean;
   files: Map<string, string | null>;
+  profileId: string;
+  stageSelection: string;
+  stageFingerprint?: string;
 }
 /** VS Code is an event adapter. The shared scheduler and worker own execution;
  * repository files never grant permission to start automatic model reviews. */
@@ -46,26 +52,46 @@ export class AutomaticReviews implements vscode.Disposable {
   private externalTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly poll: ReturnType<typeof setInterval>;
   private readonly scheduler: AutomaticReviewScheduler<ReviewRequest>;
+  private readonly checkpoints: AutomaticStageCheckpoint;
+  private readonly operations = new Set<Promise<unknown>>();
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly ports: {
       run(
         request: ReviewRequest,
         task: AutomaticTask<ReviewRequest>,
-      ): Promise<void | { retryAt?: number }>;
+      ): Promise<void | { retryAt?: number; completionConfirmed?: boolean }>;
       busy(): boolean;
       configureHooks?(root: string, settings: AutomaticSettings): Promise<void>;
       pauseHooks?(): Promise<void>;
       /** Test port; never read from workspace settings. */
       debounceMs?: number;
+      storage?: LocalStoragePorts;
       state(state: AutomaticState): void;
     },
   ) {
+    this.checkpoints = new AutomaticStageCheckpoint(ports.storage);
     this.scheduler = new AutomaticReviewScheduler({
       busy: ports.busy,
       onState: ports.state,
       run: async (task) => {
         const result = await ports.run(task.value, task);
+        if (
+          !result?.retryAt &&
+          task.isCurrent() &&
+          task.value.automatic?.reason === "stage"
+        ) {
+          if (result?.completionConfirmed !== true)
+            throw new Error("Automatic review completion was not confirmed.");
+          const root = this.roots.get(task.value.repoRoot);
+          if (root)
+            await this.checkpoints.acknowledge(
+              task.value.repoRoot,
+              root.profileId,
+              root.stageSelection,
+              task.value.automatic.indexFingerprint!,
+            );
+        }
         if (
           !result?.retryAt &&
           task.isCurrent() &&
@@ -89,9 +115,13 @@ export class AutomaticReviews implements vscode.Disposable {
         const reason = this.saveReasons.get(document);
         this.saveReasons.delete(document);
         if (document.uri.scheme === "file")
-          void this.saved(
-            document.uri,
-            reason === vscode.TextDocumentSaveReason.Manual ? "manual" : "auto",
+          void this.track(
+            this.saved(
+              document.uri,
+              reason === vscode.TextDocumentSaveReason.Manual
+                ? "manual"
+                : "auto",
+            ),
           ).finally(() => this.editorWrites.delete(document.uri.toString()));
       }),
       vscode.workspace.onDidChangeTextDocument((e) => {
@@ -141,6 +171,7 @@ export class AutomaticReviews implements vscode.Disposable {
       }),
       vscode.window.onDidChangeWindowState((e) => {
         if (e.focused) {
+          if (!this.roots.size) void this.refresh();
           for (const root of this.roots.keys()) void this.scan(root);
           this.scheduler.wake();
         }
@@ -186,7 +217,18 @@ export class AutomaticReviews implements vscode.Disposable {
       ),
     );
   }
-  async refresh() {
+  private track<T>(operation: Promise<T>) {
+    this.operations.add(operation);
+    void operation.then(
+      () => this.operations.delete(operation),
+      () => this.operations.delete(operation),
+    );
+    return operation;
+  }
+  refresh() {
+    return this.track(this.refreshRoots());
+  }
+  private async refreshRoots() {
     const generation = ++this.generation;
     this.scheduler.clear();
     for (const root of this.roots.values())
@@ -218,7 +260,9 @@ export class AutomaticReviews implements vscode.Disposable {
           this.excludes(),
         );
         if (generation !== this.generation || this.disposed) return;
-        const registered = this.register(observed);
+        const registered = await this.register(observed);
+        if (!registered || generation !== this.generation || this.disposed)
+          return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
         } catch {
@@ -233,10 +277,61 @@ export class AutomaticReviews implements vscode.Disposable {
       }
     }
   }
-  private register(observed: AutomaticRepository) {
+  private async register(observed: AutomaticRepository) {
     if (this.roots.has(observed.root)) return this.roots.get(observed.root)!;
+    const generation = this.generation;
     const settings = this.settings(observed.root);
-    const value: Root = { observed, settings, watches: [], files: new Map() };
+    const profileId = this.profile();
+    const scope = knowledgeScope({
+      repoRoot: observed.root,
+      profileId,
+      scope: "repository",
+    });
+    const user = getAutomaticUserSettings();
+    const stageSelection = contentHash({
+      profileId,
+      stage: settings.stage,
+      paused: settings.paused,
+      excludes: this.excludes(),
+      execution: Object.fromEntries(
+        [
+          "reviewMode",
+          "model",
+          "aiProvider",
+          "codexPath",
+          "reviewReasoningEffort",
+        ].map((key) => [key, user(key) ?? null]),
+      ),
+      connection: readSelection(this.context.globalState, scope) ?? null,
+    });
+    let pending: boolean;
+    try {
+      pending = await this.checkpoints.observe(
+        observed,
+        profileId,
+        stageSelection,
+        settings.stage && !settings.paused,
+        () => generation === this.generation && !this.disposed,
+      );
+    } catch (error) {
+      if (!this.disposed && generation === this.generation)
+        this.ports.state({
+          key: this.key(observed.root, "stage"),
+          phase: "waiting",
+          reason: "stage-observation-unavailable",
+        });
+      throw error;
+    }
+    if (generation !== this.generation || this.disposed) return;
+    if (this.roots.has(observed.root)) return this.roots.get(observed.root)!;
+    const value: Root = {
+      observed,
+      settings,
+      watches: [],
+      files: new Map(),
+      profileId,
+      stageSelection,
+    };
     this.roots.set(observed.root, value);
     if (settings.paused || (!settings.save && !settings.stage)) return value;
     const watcher = vscode.workspace.createFileSystemWatcher(
@@ -275,7 +370,8 @@ export class AutomaticReviews implements vscode.Disposable {
         clearTimeout(this.externalTimers.get(key));
         const timer = setTimeout(() => {
           this.externalTimers.delete(key);
-          if (!this.editorWrites.has(key)) void this.saved(uri, "external");
+          if (!this.editorWrites.has(key))
+            void this.track(this.saved(uri, "external"));
         }, 3000);
         timer.unref?.();
         this.externalTimers.set(key, timer);
@@ -287,6 +383,10 @@ export class AutomaticReviews implements vscode.Disposable {
         files.onDidDelete(changed),
       );
     }
+    if (pending) this.submitStage(observed.root, value);
+    // Recheck after installing the watcher: the index may have changed while
+    // opening the encrypted checkpoint or while the host was suspended.
+    void this.scan(observed.root);
     return value;
   }
   private scan(root: string): Promise<void> {
@@ -311,34 +411,24 @@ export class AutomaticReviews implements vscode.Disposable {
           );
           if (this.roots.get(root) !== state || this.disposed) return;
           const previous = state.observed;
+          const pending = await this.checkpoints.observe(
+            observed,
+            state.profileId,
+            state.stageSelection,
+            state.settings.stage,
+            () => this.roots.get(root) === state && !this.disposed,
+          );
+          if (this.roots.get(root) !== state || this.disposed) return;
           state.observed = observed;
           if (previous.head !== observed.head) {
             this.scheduler.cancel(this.key(root, "save"));
             state.files.clear();
           }
-          if (previous.fingerprint === observed.fingerprint) continue;
-          this.scheduler.cancel(this.key(root, "stage"));
-          if (
-            state.settings.stage &&
-            newlyStagedPaths(previous, observed).length
-          ) {
-            this.scheduler.submit(
-              this.key(root, "stage"),
-              {
-                repoRoot: root,
-                files: observed.changes.map((c) => c.path),
-                scope: "staged",
-                automatic: {
-                  reason: "stage",
-                  head: observed.head,
-                  indexFingerprint: observed.fingerprint,
-                  minimumIntervalMs: 0,
-                  maximumReviewsPerHour: state.settings.maximumReviewsPerHour,
-                },
-              },
-              { priority: 1, debounceMs: this.ports.debounceMs ?? 3000 },
-            );
+          if (previous.fingerprint !== observed.fingerprint) {
+            this.scheduler.cancel(this.key(root, "stage"));
+            state.stageFingerprint = undefined;
           }
+          if (state.settings.stage && pending) this.submitStage(root, state);
         } catch {
           if (!this.disposed && this.roots.get(root) === state)
             this.ports.state({
@@ -377,7 +467,9 @@ export class AutomaticReviews implements vscode.Disposable {
         );
         if (generation !== this.generation) return;
         root = observed.root;
-        const registered = this.register(observed);
+        const registered = await this.register(observed);
+        if (!registered || generation !== this.generation || this.disposed)
+          return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
         } catch {
@@ -427,6 +519,31 @@ export class AutomaticReviews implements vscode.Disposable {
     } catch {
       /* Unreadable, ignored, deleted parent or no Git root: no model request. */
     }
+  }
+  private submitStage(root: string, state: Root) {
+    const observed = state.observed;
+    if (
+      state.stageFingerprint === observed.fingerprint ||
+      !observed.changes.length
+    )
+      return;
+    state.stageFingerprint = observed.fingerprint;
+    this.scheduler.submit(
+      this.key(root, "stage"),
+      {
+        repoRoot: root,
+        files: observed.changes.map((c) => c.path),
+        scope: "staged",
+        automatic: {
+          reason: "stage",
+          head: observed.head,
+          indexFingerprint: observed.fingerprint,
+          minimumIntervalMs: 0,
+          maximumReviewsPerHour: state.settings.maximumReviewsPerHour,
+        },
+      },
+      { priority: 1, debounceMs: this.ports.debounceMs ?? 3000 },
+    );
   }
   private submitSave(root: string, state: Root) {
     this.scheduler.submit(
@@ -523,6 +640,7 @@ export class AutomaticReviews implements vscode.Disposable {
     this.subscriptions.forEach((s) => s.dispose());
   }
   async settled() {
+    await Promise.allSettled([...this.operations]);
     await this.scheduler.settled();
     await Promise.allSettled([...this.roots.values()].map((r) => r.scanning));
   }

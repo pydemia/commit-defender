@@ -456,3 +456,11 @@ MIT — see [LICENSE](LICENSE).
 An interrupted Commit or Push review appears in the status bar. Click it or run **Commit Defender: Recover Background Review**, then select the original workspace and profile’s job. Recovery checks the saved completion and current permissions without starting another review. Recovered partial or failed results retain their original status in review history.
 
 If no matching completion is available, the job remains interrupted. Reviews created by older services may have no completion receipt. A service that was already running before this extension update continues to use its original program; if recovery reports that a restart is required, wait for its active reviews to finish and restart that profile’s service with the bundled CLI. Updating the extension does not stop active reviews or reload your window.
+
+## Catching up on staged changes
+
+When Stage reviews remain enabled for a worktree, Commit Defender remembers its last index observation in encrypted local storage. Reopening the workspace or returning focus rechecks the index. A newly staged change or a request that was still waiting when the host closed returns to the shared review queue. An unchanged, acknowledged index and whole-file unstaging do not create another review.
+
+The pending observation is cleared only after both the report and the shared request completion are confirmed. If that final observation write fails, reopening can reuse the saved review without another model call. Stage off, pause, profile or execution-selection changes discard the old automatic pending observation. First-time enablement establishes a baseline; changes that predate that baseline are not inferred as missed Stage events.
+
+This catch-up covers Stage events. Save events while the host is closed, headless file watching, and partial-hunk unstage classification remain separate work.

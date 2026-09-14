@@ -138,6 +138,25 @@ async function answer(input: Parameters<LocalReviewExecutor["review"]>[0]) {
 }
 const abort = () => new AbortController().signal;
 
+for (const failure of ["history", "request"] as const) {
+  test(`a ${failure} persistence failure cannot acknowledge automatic completion`, async t => {
+    const f = setup(t);
+    const reject = async () => { throw Error("Injected persistence failure"); };
+    if (failure === "history") t.mock.method(LocalHistoryStore.prototype, "saveReview", reject);
+    else t.mock.method(ReviewRequests.prototype, "finish", reject);
+    const prepared = await prepareStandaloneReview(f.request, settings, abort(), {
+      dataDirectory: f.dataDirectory, keys: f.keyStore,
+      prepareExecutor: async () => ({ descriptor, review: async input => ({ model: descriptor.model, raw: JSON.stringify((await answer(input)).response) }) }),
+    });
+    try {
+      const result = await prepared.run(abort());
+      assert.equal(result.report.gcr?.report.status, "completed");
+      assert.equal(result.reviewCompletionConfirmed, false);
+      assert.match(result.stderr, /could not be confirmed/);
+    } finally { await prepared.dispose?.(); }
+  });
+}
+
 test("an empty profile has no history and does not create an OS key or storage on sidebar load", async (t) => {
   const f = setup(t);
   let keyReads = 0;
@@ -640,6 +659,7 @@ test("independent preparations share one model review and encrypted history for 
   const results = await Promise.all([first.run(abort()), second.run(abort())]);
   assert.equal(calls, 1);
   assert.deepEqual(results[0].report, results[1].report);
+  assert(results.every(result => result.reviewCompletionConfirmed === true));
   assert(
     results.some((result) => result.stderr.includes("Reused the saved review")),
   );

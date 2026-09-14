@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path37, originalPath, doThrow) => {
-      if (!isString(path37)) {
+    var checkPath = (path38, originalPath, doThrow) => {
+      if (!isString(path38)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path37) {
+      if (!path38) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path37)) {
+      if (checkPath.isNotRelative(path38)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path37) => REGEX_TEST_INVALID_PATH.test(path37);
+    var isNotRelative = (path38) => REGEX_TEST_INVALID_PATH.test(path38);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path37, checkUnignored) {
+      _testOne(path38, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path37);
+          const matched = rule.regex.test(path38);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path37 = originalPath && checkPath.convert(originalPath);
+        const path38 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path37,
+          path38,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path37, cache, checkUnignored, slices);
+        return this._t(path38, cache, checkUnignored, slices);
       }
-      _t(path37, cache, checkUnignored, slices) {
-        if (path37 in cache) {
-          return cache[path37];
+      _t(path38, cache, checkUnignored, slices) {
+        if (path38 in cache) {
+          return cache[path38];
         }
         if (!slices) {
-          slices = path37.split(SLASH);
+          slices = path38.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path37] = this._testOne(path37, checkUnignored);
+          return cache[path38] = this._testOne(path38, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path37] = parent.ignored ? parent : this._testOne(path37, checkUnignored);
+        return cache[path38] = parent.ignored ? parent : this._testOne(path38, checkUnignored);
       }
-      ignores(path37) {
-        return this._test(path37, this._ignoreCache, false).ignored;
+      ignores(path38) {
+        return this._test(path38, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path37) => !this.ignores(path37);
+        return (path38) => !this.ignores(path38);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path37) {
-        return this._test(path37, this._testCache, true);
+      test(path38) {
+        return this._test(path38, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path37) => checkPath(path37 && checkPath.convert(path37), path37, RETURN_FALSE);
+    var isPathValid = (path38) => checkPath(path38 && checkPath.convert(path38), path38, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path37) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path37) || isNotRelative(path37);
+      checkPath.isNotRelative = (path38) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path38) || isNotRelative(path38);
     }
   }
 });
@@ -425,7 +425,7 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var fs10 = __toESM(require("fs"));
-var path36 = __toESM(require("path"));
+var path37 = __toESM(require("path"));
 var vscode19 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
@@ -1408,8 +1408,8 @@ var PALETTES = {
     }
   }
 };
-function resolvePalette(id3) {
-  return PALETTES[id3] ?? PALETTES["theme-adaptive"];
+function resolvePalette(id4) {
+  return PALETTES[id4] ?? PALETTES["theme-adaptive"];
 }
 function gradeColor(palette, grade2) {
   switch (grade2) {
@@ -4232,8 +4232,8 @@ function compile(options) {
   function onexitmedia() {
     let index2 = mediaStack.length - 1;
     const media = mediaStack[index2];
-    const id3 = media.referenceId || media.labelId;
-    const context2 = media.destination === void 0 ? definitions[normalizeIdentifier(id3)] : media;
+    const id4 = media.referenceId || media.labelId;
+    const context2 = media.destination === void 0 ? definitions[normalizeIdentifier(id4)] : media;
     tags = true;
     while (index2--) {
       if (mediaStack[index2].image) {
@@ -4279,10 +4279,10 @@ function compile(options) {
   }
   function onexitdefinition() {
     const media = mediaStack[mediaStack.length - 1];
-    const id3 = normalizeIdentifier(media.labelId);
+    const id4 = normalizeIdentifier(media.labelId);
     resume();
-    if (!hasOwnProperty2.call(definitions, id3)) {
-      definitions[id3] = mediaStack[mediaStack.length - 1];
+    if (!hasOwnProperty2.call(definitions, id4)) {
+      definitions[id4] = mediaStack[mediaStack.length - 1];
     }
     mediaStack.pop();
   }
@@ -9053,8 +9053,8 @@ function zwitch(key3, options) {
     let fn = one2.invalid;
     const handlers = one2.handlers;
     if (value && own3.call(value, key3)) {
-      const id3 = String(value[key3]);
-      fn = own3.call(handlers, id3) ? handlers[id3] : one2.unknown;
+      const id4 = String(value[key3]);
+      fn = own3.call(handlers, id4) ? handlers[id4] : one2.unknown;
     }
     if (fn) {
       return fn.call(this, value, ...parameters);
@@ -11260,7 +11260,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path37, match) {
+function findUrl(_, protocol, domain2, path38, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -11273,7 +11273,7 @@ function findUrl(_, protocol, domain2, path37, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path37);
+  const parts2 = splitUrl(domain2 + path38);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -11421,14 +11421,14 @@ var ReviewLinks = class {
     this.targets.clear();
   }
   issue(target) {
-    const id3 = (0, import_crypto2.randomBytes)(16).toString("hex");
-    this.targets.set(id3, target);
+    const id4 = (0, import_crypto2.randomBytes)(16).toString("hex");
+    this.targets.set(id4, target);
     while (this.targets.size > this.limit)
       this.targets.delete(this.targets.keys().next().value);
-    return id3;
+    return id4;
   }
-  get(id3) {
-    return typeof id3 === "string" ? this.targets.get(id3) : void 0;
+  get(id4) {
+    return typeof id4 === "string" ? this.targets.get(id4) : void 0;
   }
   source(repoRoot, report, file, line = 1) {
     if (!normalizedSourcePath(file) || !report.staged_files.includes(file))
@@ -11509,10 +11509,10 @@ var SummaryView = class {
     }
     return reviewMessage(value, this.id, this.allowed);
   }
-  href(id3) {
-    if (!id3) return void 0;
-    this.allowed.add(id3);
-    return `#review-link-${id3}`;
+  href(id4) {
+    if (!id4) return void 0;
+    this.allowed.add(id4);
+    return `#review-link-${id4}`;
   }
   source(file, line, label) {
     const href = this.href(
@@ -11853,7 +11853,7 @@ var ReviewNavigation = class {
     context.subscriptions.push(
       vscode.commands.registerCommand(
         OPEN_COMMAND,
-        (id3) => this.open(id3)
+        (id4) => this.open(id4)
       )
     );
     context.subscriptions.push(
@@ -11871,10 +11871,10 @@ var ReviewNavigation = class {
   markdown(text7, repoRoot, report, file) {
     let linked = false;
     const body2 = safeMarkdown(text7, (raw) => {
-      const id3 = this.links.markdown(repoRoot, report, raw, file);
-      if (!id3) return void 0;
+      const id4 = this.links.markdown(repoRoot, report, raw, file);
+      if (!id4) return void 0;
       linked = true;
-      return `command:${OPEN_COMMAND}?${encodeURIComponent(JSON.stringify([id3]))}`;
+      return `command:${OPEN_COMMAND}?${encodeURIComponent(JSON.stringify([id4]))}`;
     });
     const markdown2 = new vscode.MarkdownString(body2);
     markdown2.isTrusted = linked ? { enabledCommands: [OPEN_COMMAND] } : false;
@@ -11883,16 +11883,16 @@ var ReviewNavigation = class {
     return markdown2;
   }
   sourceCommand(repoRoot, report, file, line) {
-    const id3 = this.links.source(repoRoot, report, file, line);
-    return id3 ? {
+    const id4 = this.links.source(repoRoot, report, file, line);
+    return id4 ? {
       command: OPEN_COMMAND,
       title: "Open reviewed source",
-      arguments: [id3]
+      arguments: [id4]
     } : void 0;
   }
-  async open(id3, isCurrent = () => true) {
+  async open(id4, isCurrent = () => true) {
     if (!isCurrent()) return;
-    const target = this.links.get(id3);
+    const target = this.links.get(id4);
     if (!target) return;
     if (target.kind === "web") {
       await vscode.env.openExternal(vscode.Uri.parse(target.url, true));
@@ -14551,10 +14551,10 @@ var clientReviewReport = refined(reportShape, (report, at) => {
     unique(assessment.evidenceIds, `${at}.evidenceAssessment.evidenceIds`);
     unique(assessment.counterEvidence.evidenceIds, `${at}.counterEvidence.evidenceIds`);
     const evidenceIds = [...assessment.evidenceIds, ...assessment.counterEvidence.evidenceIds];
-    for (const id3 of evidenceIds)
-      if (!evidenceById.has(id3))
+    for (const id4 of evidenceIds)
+      if (!evidenceById.has(id4))
         fail(at, "missing evidence reference");
-    const evidence = assessment.evidenceIds.map((id3) => evidenceById.get(id3));
+    const evidence = assessment.evidenceIds.map((id4) => evidenceById.get(id4));
     if (assessment.level === "source-confirmed" && !evidence.some((entry) => entry.kind === "source-read"))
       fail(at, "source confirmation has no read evidence");
     if (assessment.level === "test-confirmed" && !evidence.some((entry) => entry.kind === "test-execution" && entry.result === "confirmed"))
@@ -15668,8 +15668,8 @@ var maximumEnvelope = 24 * 1024 * 1024;
 var digest = (bytes) => (0, import_node_crypto3.createHash)("sha256").update(bytes).digest("hex");
 var corrupt = () => new LocalStoreError("corrupt-storage", "Local encrypted record is missing, malformed or fails authentication.");
 var conflict = () => new LocalStoreError("revision-conflict", "Local record changed. Reload it before applying this edit.");
-var validateId = (id3) => {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id3))
+var validateId = (id4) => {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id4))
     throw corrupt();
 };
 function parse2(bytes) {
@@ -15720,13 +15720,13 @@ async function profileKey(directory, profileId, keys2) {
       return raced;
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
-  const id3 = (0, import_node_crypto3.randomUUID)();
-  const reference = `${profileId}.${id3}`;
+  const id4 = (0, import_node_crypto3.randomUUID)();
+  const reference = `${profileId}.${id4}`;
   const candidate = (0, import_node_crypto3.randomBytes)(32);
   let preserve = false;
   try {
     await keys2.write(reference, candidate);
-    preserve = await publishImmutable(referenceFile, Buffer.from(canonicalJson({ formatVersion: 1, profileId, id: id3 })));
+    preserve = await publishImmutable(referenceFile, Buffer.from(canonicalJson({ formatVersion: 1, profileId, id: id4 })));
     if (preserve)
       return candidate;
     const winner = await read();
@@ -15783,33 +15783,33 @@ var LocalRecordStore = class _LocalRecordStore {
     if (this.closed)
       throw new LocalStoreError("store-closed", "Local store is closed.");
   }
-  aad(kind, id3, revision) {
+  aad(kind, id4, revision) {
     this.assertOpen();
     return Buffer.from(canonicalJson({
       formatVersion: 1,
       purpose: "local-record",
       scope: this.scope,
       kind,
-      id: id3,
+      id: id4,
       revision
     }));
   }
-  async recordDirectory(kind, id3, create = false) {
+  async recordDirectory(kind, id4, create = false) {
     this.assertOpen();
-    validateId(id3);
+    validateId(id4);
     if (!["knowledge", "reviews", "chats", "conversations", "submissions", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
       try {
-        await (0, import_promises3.lstat)(import_node_path3.default.join(namespace, id3));
+        await (0, import_promises3.lstat)(import_node_path3.default.join(namespace, id4));
       } catch (error2) {
         if (errorCode(error2) === "ENOENT")
           return void 0;
         throw error2;
       }
     }
-    return privateDirectory(namespace, id3);
+    return privateDirectory(namespace, id4);
   }
   async head(directory) {
     const entries = await (0, import_promises3.readdir)(directory);
@@ -15825,8 +15825,8 @@ var LocalRecordStore = class _LocalRecordStore {
       throw corrupt();
     return marker;
   }
-  async read(kind, id3) {
-    const directory = await this.recordDirectory(kind, id3);
+  async read(kind, id4) {
+    const directory = await this.recordDirectory(kind, id4);
     if (!directory)
       return void 0;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -15834,7 +15834,7 @@ var LocalRecordStore = class _LocalRecordStore {
       if (!marker)
         return void 0;
       try {
-        return await this.readRevision(directory, kind, id3, marker);
+        return await this.readRevision(directory, kind, id4, marker);
       } catch (error2) {
         if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
           throw error2;
@@ -15842,7 +15842,7 @@ var LocalRecordStore = class _LocalRecordStore {
     }
     throw conflict();
   }
-  async readRevision(directory, kind, id3, marker) {
+  async readRevision(directory, kind, id4, marker) {
     const blobs = await privateDirectory(directory, "blobs");
     const bytes = await readPrivateFile(import_node_path3.default.join(blobs, marker.blob), maximumEnvelope);
     if (!bytes || digest(bytes) !== marker.sha256)
@@ -15854,7 +15854,7 @@ var LocalRecordStore = class _LocalRecordStore {
     let plaintext;
     try {
       const decipher = (0, import_node_crypto3.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
-      decipher.setAAD(this.aad(kind, id3, marker.revision));
+      decipher.setAAD(this.aad(kind, id4, marker.revision));
       decipher.setAuthTag(binary(envelope.tag, 16));
       plaintext = Buffer.concat([decipher.update(binary(envelope.ciphertext)), decipher.final()]);
       if (plaintext.length > maximumPlaintext)
@@ -15882,16 +15882,16 @@ var LocalRecordStore = class _LocalRecordStore {
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     const ids = (await (0, import_promises3.readdir)(namespace)).filter((name) => name !== ".DS_Store");
-    for (const id3 of ids)
-      validateId(id3);
+    for (const id4 of ids)
+      validateId(id4);
     return ids.sort();
   }
-  async commit(kind, id3, value, expectedRevision, deleted) {
+  async commit(kind, id4, value, expectedRevision, deleted) {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision >= maximumRevision)
       throw conflict();
     const snapshot = canonicalJson(deleted ? { deleted: true } : { deleted: false, value }, maximumPlaintext);
-    const directory = await this.recordDirectory(kind, id3, true);
-    const previous3 = await this.read(kind, id3);
+    const directory = await this.recordDirectory(kind, id4, true);
+    const previous3 = await this.read(kind, id4);
     if ((previous3?.revision ?? 0) !== expectedRevision || previous3?.deleted)
       throw conflict();
     const revision = expectedRevision + 1;
@@ -15900,7 +15900,7 @@ var LocalRecordStore = class _LocalRecordStore {
     try {
       const iv = (0, import_node_crypto3.randomBytes)(12);
       const cipher = (0, import_node_crypto3.createCipheriv)("aes-256-gcm", this.#key, iv);
-      cipher.setAAD(this.aad(kind, id3, revision));
+      cipher.setAAD(this.aad(kind, id4, revision));
       const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       bytes = Buffer.from(canonicalJson({
         formatVersion: 1,
@@ -15932,24 +15932,24 @@ var LocalRecordStore = class _LocalRecordStore {
         await (0, import_promises3.unlink)(blobPath).catch(() => void 0);
     }
   }
-  write(kind, id3, value, expectedRevision) {
-    return this.commit(kind, id3, value, expectedRevision, false);
+  write(kind, id4, value, expectedRevision) {
+    return this.commit(kind, id4, value, expectedRevision, false);
   }
-  async remove(kind, id3, expectedRevision) {
-    const result = await this.commit(kind, id3, null, expectedRevision, true);
+  async remove(kind, id4, expectedRevision) {
+    const result = await this.commit(kind, id4, null, expectedRevision, true);
     let cleanupPending = true;
     try {
-      cleanupPending = !await this.purgeDeleted(kind, id3);
+      cleanupPending = !await this.purgeDeleted(kind, id4);
     } catch {
     }
     return { revision: result.revision, cleanupPending };
   }
   /** Reclaim encrypted old bodies while retaining revision markers to fence stale writers. */
-  async purgeDeleted(kind, id3) {
-    const current = await this.read(kind, id3);
+  async purgeDeleted(kind, id4) {
+    const current = await this.read(kind, id4);
     if (!current?.deleted)
       throw conflict();
-    const directory = await this.recordDirectory(kind, id3);
+    const directory = await this.recordDirectory(kind, id4);
     const marker = await this.head(directory);
     const blobs = await privateDirectory(directory, "blobs");
     let complete = true;
@@ -16006,12 +16006,12 @@ var LocalKnowledgeStore = class {
   timestamp() {
     return this.now().toISOString();
   }
-  async get(id3) {
-    const record2 = await this.records.read("knowledge", id3);
+  async get(id4) {
+    const record2 = await this.records.read("knowledge", id4);
     if (!record2 || record2.deleted)
       return void 0;
     const item = verify(record2.value);
-    if (item.id !== id3 || item.revision !== record2.revision || canonicalJson(item.scope) !== canonicalJson(this.records.scope))
+    if (item.id !== id4 || item.revision !== record2.revision || canonicalJson(item.scope) !== canonicalJson(this.records.scope))
       throw new LocalStoreError("corrupt-storage", "Local knowledge identity does not match its storage scope.");
     return item;
   }
@@ -16023,8 +16023,8 @@ var LocalKnowledgeStore = class {
   }
   /** Read one authenticated record at a time so context consumers can enforce a scan budget. */
   async *entries() {
-    for (const id3 of await this.records.listIds("knowledge")) {
-      const item = await this.get(id3);
+    for (const id4 of await this.records.listIds("knowledge")) {
+      const item = await this.get(id4);
       if (item)
         yield item;
     }
@@ -16050,8 +16050,8 @@ var LocalKnowledgeStore = class {
     await this.records.write("knowledge", item.id, item, 0);
     return item;
   }
-  async current(id3, revision) {
-    const current = await this.get(id3);
+  async current(id4, revision) {
+    const current = await this.get(id4);
     if (!current || current.revision !== revision)
       throw new LocalStoreError("revision-conflict", "Local knowledge changed. Reload it before applying this edit.");
     return current;
@@ -16070,9 +16070,9 @@ var LocalKnowledgeStore = class {
     await this.records.write("knowledge", item.id, item, current.revision);
     return item;
   }
-  async edit(id3, revision, changes) {
+  async edit(id4, revision, changes) {
     const copied = JSON.parse(canonicalJson(changes));
-    const current = await this.current(id3, revision);
+    const current = await this.current(id4, revision);
     const allowed = /* @__PURE__ */ new Set([
       "title",
       "body",
@@ -16085,22 +16085,22 @@ var LocalKnowledgeStore = class {
       throw new LocalStoreError("corrupt-storage", "Knowledge edit contains a field that cannot be changed.");
     return this.replace(current, copied);
   }
-  async setState(id3, revision, state) {
-    return this.replace(await this.current(id3, revision), { state });
+  async setState(id4, revision, state) {
+    return this.replace(await this.current(id4, revision), { state });
   }
-  async remove(id3, revision) {
-    await this.current(id3, revision);
-    return this.records.remove("knowledge", id3, revision);
+  async remove(id4, revision) {
+    await this.current(id4, revision);
+    return this.records.remove("knowledge", id4, revision);
   }
-  async exportKnowledge(id3) {
-    const item = await this.get(id3);
+  async exportKnowledge(id4) {
+    const item = await this.get(id4);
     if (!item)
       throw new LocalStoreError("revision-conflict", "Local knowledge no longer exists.");
     return canonicalJson(item) + "\n";
   }
   /** Explicit plaintext export to a new user-chosen file; never replace an existing file. */
-  async exportFile(id3, file) {
-    const bytes = Buffer.from(await this.exportKnowledge(id3));
+  async exportFile(id4, file) {
+    const bytes = Buffer.from(await this.exportKnowledge(id4));
     try {
       if (!await publishImmutable(file, bytes))
         throw new LocalStoreError("revision-conflict", "Export file already exists. Choose a new file.");
@@ -16238,21 +16238,21 @@ var LocalHistoryStore = class {
       throw invalid2();
     return chat;
   }
-  async getReview(id3) {
-    const stored = await this.records.read("reviews", id3);
+  async getReview(id4) {
+    const stored = await this.records.read("reviews", id4);
     if (!stored || stored.deleted)
       return void 0;
     const review = this.validateReview(stored.value);
-    if (review.runId !== id3 || stored.revision !== 1)
+    if (review.runId !== id4 || stored.revision !== 1)
       throw invalid2();
     return review;
   }
-  async getChat(id3) {
-    const stored = await this.records.read("chats", id3);
+  async getChat(id4) {
+    const stored = await this.records.read("chats", id4);
     if (!stored || stored.deleted)
       return void 0;
     const chat = this.validateChat(stored.value);
-    if (chat.id !== id3)
+    if (chat.id !== id4)
       throw invalid2();
     return { revision: stored.revision, chat };
   }
@@ -16280,8 +16280,8 @@ var LocalHistoryStore = class {
   }
   async listReviews() {
     const result = [];
-    for (const id3 of await this.records.listIds("reviews")) {
-      const review = await this.getReview(id3);
+    for (const id4 of await this.records.listIds("reviews")) {
+      const review = await this.getReview(id4);
       if (review)
         result.push(review);
     }
@@ -16289,18 +16289,18 @@ var LocalHistoryStore = class {
   }
   async listChats() {
     const result = [];
-    for (const id3 of await this.records.listIds("chats")) {
-      const chat = await this.getChat(id3);
+    for (const id4 of await this.records.listIds("chats")) {
+      const chat = await this.getChat(id4);
       if (chat)
         result.push(chat);
     }
     return result.sort((a, b) => b.chat.updatedAt.localeCompare(a.chat.updatedAt) || a.chat.id.localeCompare(b.chat.id));
   }
-  removeReview(id3) {
-    return this.records.remove("reviews", id3, 1);
+  removeReview(id4) {
+    return this.records.remove("reviews", id4, 1);
   }
-  removeChat(id3, revision) {
-    return this.records.remove("chats", id3, revision);
+  removeChat(id4, revision) {
+    return this.records.remove("chats", id4, revision);
   }
   async prune() {
     const { policy } = await this.getRetention();
@@ -16574,7 +16574,7 @@ var LocalSourceSnapshot = class {
     this.#repository = { ...repository };
     this.#headCommit = headCommit;
     this.#branchName = branchName;
-    this.#files = new Map([...files].map(([id3, file]) => [id3, structuredClone(file)]));
+    this.#files = new Map([...files].map(([id4, file]) => [id4, structuredClone(file)]));
     this.#selected = structuredClone(selected);
     this.#limitations = structuredClone(limitations);
     this.#diff = diff;
@@ -16713,25 +16713,25 @@ var LocalSourceSnapshot = class {
 };
 function restoreLocalSource(input) {
   const value = JSON.parse(canonicalJson(input, 8 * 1024 * 1024));
-  const invalid6 = () => {
+  const invalid7 = () => {
     throw new SourceCaptureError("invalid-source-request");
   };
   if (!value || value.formatVersion !== 1 || !value.repository || !Array.isArray(value.files) || !Array.isArray(value.selected) || !Array.isArray(value.limitations) || !Array.isArray(value.excludePatterns) || typeof value.diff !== "string")
-    invalid6();
+    invalid7();
   const identity = snapshotIdentity(value.identity);
   const oid = identity.objectFormat === "sha1" ? /^[a-f0-9]{40}$/ : /^[a-f0-9]{64}$/;
   if (!oid.test(value.sourceTree) || !(value.headCommit === null || oid.test(value.headCommit)) || !(value.branchName === null || typeof value.branchName === "string" && value.branchName.length <= 1024) || !/^[a-f0-9]{64}$/.test(value.repository.repositoryKey) || !/^[a-f0-9]{64}$/.test(value.repository.worktreeKey) || value.files.length > 2e4 || value.selected.length > 1e4 || value.limitations.length > 1e5)
-    invalid6();
+    invalid7();
   if ("sourceTree" in identity && identity.sourceTree !== value.sourceTree || identity.kind === "commit-tree" && identity.sourceCommit !== value.headCommit)
-    invalid6();
+    invalid7();
   const policy = sourcePathPolicy(value.excludePatterns), files = /* @__PURE__ */ new Map();
   for (const file of value.files) {
     const metadata = sourceFile(file.source);
     if (typeof file.text !== "string" || !["100644", "100755"].includes(file.mode) || policy(metadata.path) || files.has(key(metadata.side, metadata.path)))
-      invalid6();
+      invalid7();
     const bytes = Buffer.from(file.text, "utf8");
     if (bytes.length !== metadata.byteLength || file.text.split("\n").length !== metadata.lineCount || hash(bytes) !== metadata.hash || metadata.gitBlob && blobId(bytes, identity.objectFormat) !== metadata.gitBlob)
-      invalid6();
+      invalid7();
     files.set(key(metadata.side, metadata.path), {
       source: metadata,
       text: file.text,
@@ -16744,14 +16744,14 @@ function restoreLocalSource(input) {
     if (change.oldPath !== void 0)
       sourcePath(change.oldPath);
     if (!["A", "M", "D", "R", "T"].includes(change.status) || !["source", "base"].includes(change.side) || change.side !== (change.status === "D" ? "base" : "source") || selected.has(change.path) || !files.has(key(change.side, change.path)))
-      invalid6();
+      invalid7();
     selected.add(change.path);
   }
   for (const item of value.limitations) {
     sourcePath(item.path);
     sourceExclusionReason(item.reason);
     if (!["base", "source"].includes(item.side) || typeof item.detail !== "string" || item.detail.length > 1024 || files.has(key(item.side, item.path)))
-      invalid6();
+      invalid7();
   }
   const expected = contentHash({
     version: 1,
@@ -16768,7 +16768,7 @@ function restoreLocalSource(input) {
     diffHash: hash(value.diff)
   });
   if (expected !== identity.hash)
-    invalid6();
+    invalid7();
   return new LocalSourceSnapshot(identity, value.repository, value.headCommit, value.branchName, files, value.selected, value.limitations, value.diff, value.sourceTree, [...value.excludePatterns]);
 }
 
@@ -16839,13 +16839,13 @@ var TrustedCentralBinding = class {
       this.#keys = /* @__PURE__ */ new Map();
       if (!input.trustedKeys.size || input.trustedKeys.size > 16)
         throw invalid3();
-      for (const [id3, value] of input.trustedKeys) {
-        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id3))
+      for (const [id4, value] of input.trustedKeys) {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id4))
           throw invalid3();
         const key3 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
         if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
           throw invalid3();
-        this.#keys.set(id3, (0, import_node_crypto6.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
+        this.#keys.set(id4, (0, import_node_crypto6.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
       }
       this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
       Object.freeze(this);
@@ -17209,9 +17209,9 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         const bundle = this.bundle(parsed, part, manifest);
         this.check(controller.signal);
         await this.owned(token2, generation);
-        const id3 = (0, import_node_crypto8.randomUUID)();
-        await this.records.write("knowledge", id3, bundle, 0);
-        refs[part] = id3;
+        const id4 = (0, import_node_crypto8.randomUUID)();
+        await this.records.write("knowledge", id4, bundle, 0);
+        refs[part] = id4;
       }
       this.check(controller.signal);
       state = await this.owned(token2, generation);
@@ -17231,7 +17231,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         claim: null
       });
       this.identityUnavailableGeneration = void 0;
-      await this.purge(inventory.filter((id3) => !Object.values(refs).includes(id3)));
+      await this.purge(inventory.filter((id4) => !Object.values(refs).includes(id4)));
       return this.readActive(state, "online");
     } catch (cause) {
       if (generation !== void 0) {
@@ -17283,15 +17283,15 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
   }
   async purge(ids) {
     let pending = false;
-    for (const id3 of ids) {
+    for (const id4 of ids) {
       try {
-        const record2 = await this.records.read("knowledge", id3);
+        const record2 = await this.records.read("knowledge", id4);
         if (!record2)
           continue;
         if (record2.deleted) {
-          if (!await this.records.purgeDeleted("knowledge", id3))
+          if (!await this.records.purgeDeleted("knowledge", id4))
             pending = true;
-        } else if ((await this.records.remove("knowledge", id3, record2.revision)).cleanupPending)
+        } else if ((await this.records.remove("knowledge", id4, record2.revision)).cleanupPending)
           pending = true;
       } catch {
         pending = true;
@@ -17674,13 +17674,13 @@ var CentralConnections = class _CentralConnections {
       throw denied();
     return binding;
   }
-  async state(id3) {
-    centralConnectionReference(id3);
-    const row = await this.records.read("settings", id3);
+  async state(id4) {
+    centralConnectionReference(id4);
+    const row = await this.records.read("settings", id4);
     if (!row || row.deleted)
       throw denied();
     const value = centralConnectionRecord(row.value);
-    if (value.id !== id3)
+    if (value.id !== id4)
       throw denied();
     return { revision: row.revision, value };
   }
@@ -17765,8 +17765,8 @@ var CentralConnections = class _CentralConnections {
       status: "pending",
       serverUrl: binding.serverUrl,
       audience: binding.audience,
-      trustedKeys: [...binding.verificationKeys()].map(([id3, key3]) => ({
-        id: id3,
+      trustedKeys: [...binding.verificationKeys()].map(([id4, key3]) => ({
+        id: id4,
         pem: key3.export({ type: "spki", format: "pem" }).toString()
       })),
       ca: config.ca,
@@ -17827,17 +17827,17 @@ var CentralConnections = class _CentralConnections {
       expiresAt: value.expiresAt
     };
   }
-  async submitReview(id3, value, signal) {
+  async submitReview(id4, value, signal) {
     const input = reviewSubmission(value);
-    const state = await this.state(id3);
+    const state = await this.state(id4);
     await this.assert(state);
     if (input.clientId !== state.value.clientId)
       throw denied();
     return this.submissionOperation(state, (transport, s) => transport.submitReview(input, s), signal);
   }
-  async submissionStatus(id3, value, signal) {
+  async submissionStatus(id4, value, signal) {
     const receipt = reviewSubmissionReceipt(value);
-    const state = await this.state(id3);
+    const state = await this.state(id4);
     await this.assert(state);
     if (receipt.clientId !== state.value.clientId)
       throw denied();
@@ -17872,13 +17872,13 @@ var CentralConnections = class _CentralConnections {
       throw error2;
     }
   }
-  async historyIdentity(id3) {
-    const state = await this.state(id3);
+  async historyIdentity(id4) {
+    const state = await this.state(id4);
     await this.assert(state);
     return { id: state.value.id, audience: state.value.audience };
   }
-  async status(id3) {
-    const state = await this.state(id3);
+  async status(id4) {
+    const state = await this.state(id4);
     const summary = this.summary(state);
     if (state.value.status !== "connected")
       return { ...summary, cache: { status: "unavailable" } };
@@ -17908,12 +17908,12 @@ var CentralConnections = class _CentralConnections {
   }
   async list() {
     const values = [];
-    for (const id3 of await this.records.listIds("settings"))
-      values.push(this.summary(await this.state(id3)));
+    for (const id4 of await this.records.listIds("settings"))
+      values.push(this.summary(await this.state(id4)));
     return values;
   }
-  async disconnect(id3) {
-    const state = await this.state(id3);
+  async disconnect(id4) {
+    const state = await this.state(id4);
     this.invalid.add(state.value.credentialReference);
     const cache = await this.cache(state.value);
     const cleanup = await cache.disable();
@@ -17922,10 +17922,10 @@ var CentralConnections = class _CentralConnections {
       if (attempt >= 3 || current.value.credentialReference !== state.value.credentialReference)
         throw new KnowledgeSyncError("superseded", "Connection changed during disconnect.");
       try {
-        await this.records.write("settings", id3, { ...current.value, status: "disconnected" }, current.revision);
+        await this.records.write("settings", id4, { ...current.value, status: "disconnected" }, current.revision);
         break;
       } catch {
-        current = await this.state(id3);
+        current = await this.state(id4);
       }
     }
     let credentialCleanupPending = false;
@@ -17935,25 +17935,25 @@ var CentralConnections = class _CentralConnections {
       credentialCleanupPending = true;
     }
     return {
-      id: id3,
+      id: id4,
       status: "disconnected",
       cacheCleanupPending: cleanup.cleanupPending,
       credentialCleanupPending
     };
   }
-  async synchronize(id3, signal) {
-    const state = await this.state(id3);
+  async synchronize(id4, signal) {
+    const state = await this.state(id4);
     await this.assert(state);
     const cache = await this.cache(state.value);
     try {
       await cache.synchronize(this.transport(state), signal ? { signal } : {});
       await this.assert(state);
-      return this.status(id3);
+      return this.status(id4);
     } catch (error2) {
       if (error2 instanceof KnowledgeSyncError && ["authentication-required", "revoked"].includes(error2.code)) {
         this.invalid.add(state.value.credentialReference);
         try {
-          await this.records.write("settings", id3, { ...state.value, status: "disconnected" }, state.revision);
+          await this.records.write("settings", id4, { ...state.value, status: "disconnected" }, state.revision);
         } catch {
         }
         try {
@@ -17964,18 +17964,18 @@ var CentralConnections = class _CentralConnections {
       throw error2;
     }
   }
-  async review(id3, freshness, signal) {
-    let state = await this.state(id3);
+  async review(id4, freshness, signal) {
+    let state = await this.state(id4);
     await this.assert(state);
     const cache = await this.cache(state.value);
     if (freshness === "online") {
       try {
         await cache.read("online");
       } catch {
-        await this.synchronize(id3, signal);
+        await this.synchronize(id4, signal);
       }
     }
-    state = await this.state(id3);
+    state = await this.state(id4);
     await this.assert(state);
     return {
       client: {
@@ -18367,7 +18367,7 @@ var LocalServiceError = class extends Error {
     this.name = "LocalServiceError";
   }
 };
-var validId = (id3) => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id3);
+var validId = (id4) => /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id4);
 var invalid4 = () => new LocalServiceError("service-invalid");
 function reviewOptions(input) {
   const value = structuredClone(input);
@@ -18482,22 +18482,22 @@ var ServiceJobs = class _ServiceJobs {
   }
   async registrations() {
     const result = [];
-    for (const id3 of await this.records.listIds("settings"))
-      if (id3.startsWith("repo_")) {
-        const row = await this.registration(id3.slice(5));
+    for (const id4 of await this.records.listIds("settings"))
+      if (id4.startsWith("repo_")) {
+        const row = await this.registration(id4.slice(5));
         if (row)
           result.push(row);
       }
     return result;
   }
-  async job(id3) {
-    if (!validId(id3))
+  async job(id4) {
+    if (!validId(id4))
       throw invalid4();
-    const row = await this.records.read("settings", `job_${id3}`);
+    const row = await this.records.read("settings", `job_${id4}`);
     if (!row || row.deleted)
       return;
     const value = row.value;
-    if (value.version !== 1 || value.id !== id3 || !["queued", "running", "finished", "cancelled", "interrupted"].includes(value.state) || !Number.isSafeInteger(value.createdAt) || !Number.isInteger(value.registrationRevision) || !Number.isInteger(row.revision) || !/^[a-f0-9]{64}$/.test(value.repository) || !/^[a-f0-9]{64}$/.test(value.sourceHash) || !/^[a-f0-9]{64}$/.test(value.payloadHash))
+    if (value.version !== 1 || value.id !== id4 || !["queued", "running", "finished", "cancelled", "interrupted"].includes(value.state) || !Number.isSafeInteger(value.createdAt) || !Number.isInteger(value.registrationRevision) || !Number.isInteger(row.revision) || !/^[a-f0-9]{64}$/.test(value.repository) || !/^[a-f0-9]{64}$/.test(value.sourceHash) || !/^[a-f0-9]{64}$/.test(value.payloadHash))
       throw invalid4();
     reviewTrigger(value.trigger);
     if (value.execution && (!/^[a-f0-9]{64}$/.test(value.execution.key) || !Number.isSafeInteger(value.execution.generation) || value.execution.generation < 1))
@@ -18506,9 +18506,9 @@ var ServiceJobs = class _ServiceJobs {
   }
   async list() {
     const jobs2 = [];
-    for (const id3 of await this.records.listIds("settings"))
-      if (id3.startsWith("job_")) {
-        const job = await this.job(id3.slice(4));
+    for (const id4 of await this.records.listIds("settings"))
+      if (id4.startsWith("job_")) {
+        const job = await this.job(id4.slice(4));
         if (job)
           jobs2.push(job);
       }
@@ -18578,9 +18578,9 @@ var ServiceJobs = class _ServiceJobs {
       if (job.state === "running")
         await this.update({ ...job, state: "interrupted", owner: null }, job);
   }
-  async bindRequest(id3, token2, input) {
+  async bindRequest(id4, token2, input) {
     await this.assertOwner(token2);
-    const job = await this.job(id3), request = reviewRequestRecord(input);
+    const job = await this.job(id4), request = reviewRequestRecord(input);
     if (!job || job.state !== "running" || job.owner !== token2)
       throw new LocalServiceError("service-interrupted");
     const registration = await this.registration(job.repository), client = request.identity.client;
@@ -18591,9 +18591,9 @@ var ServiceJobs = class _ServiceJobs {
       throw invalid4();
     return this.update({ ...job, execution }, job);
   }
-  async reconcile(id3, token2, inspect) {
+  async reconcile(id4, token2, inspect) {
     await this.assertOwner(token2);
-    const job = await this.job(id3);
+    const job = await this.job(id4);
     if (!job)
       throw invalid4();
     if (job.state !== "interrupted" || !job.execution)
@@ -18649,9 +18649,9 @@ var ServiceJobs = class _ServiceJobs {
   }
   async purgePayload(job) {
     try {
-      const id3 = `payload_${job.id}`, row = await this.records.read("chats", id3);
+      const id4 = `payload_${job.id}`, row = await this.records.read("chats", id4);
       if (row && !row.deleted) {
-        const removed = await this.records.remove("chats", id3, row.revision);
+        const removed = await this.records.remove("chats", id4, row.revision);
         if (removed.cleanupPending)
           await this.update({ ...job, cleanupPending: true }, job);
       }
@@ -18659,9 +18659,9 @@ var ServiceJobs = class _ServiceJobs {
       await this.update({ ...job, cleanupPending: true }, job);
     }
   }
-  async finish(id3, token2, result) {
+  async finish(id4, token2, result) {
     await this.assertOwner(token2);
-    const job = await this.job(id3);
+    const job = await this.job(id4);
     if (!job || job.state !== "running" || job.owner !== token2)
       throw new LocalServiceError("service-interrupted");
     if (![0, 1, 2].includes(result.exitCode) || typeof result.status !== "string" || result.status.length > 128 || result.runId !== void 0 && !validId(result.runId))
@@ -18677,8 +18677,8 @@ var ServiceJobs = class _ServiceJobs {
     await this.purgePayload(done);
     return done;
   }
-  async cancel(id3) {
-    const job = await this.job(id3);
+  async cancel(id4) {
+    const job = await this.job(id4);
     if (!job)
       throw invalid4();
     if (job.state === "running")
@@ -18842,15 +18842,15 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
     if (identity.id !== this.connectionId || state.status !== "connected" || state.clientId !== payload.clientId || contentHash(identity.audience) !== contentHash(payload.audience))
       fail2("selection-changed");
   }
-  async entry(id3, authorize = true) {
-    const row = await this.records.read("submissions", id3);
+  async entry(id4, authorize = true) {
+    const row = await this.records.read("submissions", id4);
     if (!row || row.deleted)
       return fail2("missing");
     const value = row.value;
     if (!value || value.formatVersion !== 1 || value.connectionId !== this.connectionId || !["pending", "sending", "submitted", "rejected", "cancelled"].includes(value.status) || !Number.isSafeInteger(value.attempts) || value.attempts < 0)
       return fail2("invalid-record");
     const payload = reviewSubmission(value.payload);
-    if (payload.id !== id3 || value.payloadHash !== contentHash(payload))
+    if (payload.id !== id4 || value.payloadHash !== contentHash(payload))
       return fail2("invalid-record");
     if (value.status === "sending" && (!value.lease || !Number.isFinite(Date.parse(value.lease.until))))
       return fail2("invalid-record");
@@ -18866,15 +18866,15 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
       fail2("receipt-mismatch");
     return value;
   }
-  async get(id3) {
-    return this.entry(id3);
+  async get(id4) {
+    return this.entry(id4);
   }
   async list() {
     const values = [];
-    for (const id3 of await this.records.listIds("submissions")) {
-      const row = await this.records.read("submissions", id3);
+    for (const id4 of await this.records.listIds("submissions")) {
+      const row = await this.records.read("submissions", id4);
       if (row && !row.deleted)
-        values.push(await this.entry(id3));
+        values.push(await this.entry(id4));
     }
     return values;
   }
@@ -18911,8 +18911,8 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
     await this.records.write("submissions", payload.id, value, 0);
     return this.entry(payload.id);
   }
-  async send(id3, signal, retryRejected = false) {
-    const row = await this.entry(id3), now = this.now();
+  async send(id4, signal, retryRejected = false) {
+    const row = await this.entry(id4), now = this.now();
     if (row.value.status === "submitted")
       return row;
     if (row.value.status === "cancelled")
@@ -18932,7 +18932,7 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
       lease: { owner: (0, import_node_crypto12.randomUUID)(), until: new Date(now.getTime() + 6e4).toISOString() },
       lastError: null
     };
-    const claim = await this.records.write("submissions", id3, value, row.revision);
+    const claim = await this.records.write("submissions", id4, value, row.revision);
     let result;
     try {
       const receipt = this.verifyReceipt(value.payload, await this.connections.submitReview(this.connectionId, value.payload, signal));
@@ -18948,30 +18948,30 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
         lastError: rejected ? `http-${status}` : "delivery-unconfirmed"
       };
     }
-    await this.records.write("submissions", id3, result, claim.revision);
-    return this.entry(id3);
+    await this.records.write("submissions", id4, result, claim.revision);
+    return this.entry(id4);
   }
-  async cancel(id3) {
-    const row = await this.entry(id3);
+  async cancel(id4) {
+    const row = await this.entry(id4);
     if (row.value.status === "sending")
       fail2("delivery-unconfirmed");
     if (row.value.status === "submitted")
       fail2("already-submitted");
-    await this.records.write("submissions", id3, {
+    await this.records.write("submissions", id4, {
       ...row.value,
       status: "cancelled",
       lease: null,
       lastError: row.value.attempts ? "server-outcome-unconfirmed" : null
     }, row.revision);
-    return this.entry(id3);
+    return this.entry(id4);
   }
   async prune() {
     let deleted = 0;
-    for (const id3 of await this.records.listIds("submissions")) {
-      const record2 = await this.records.read("submissions", id3);
+    for (const id4 of await this.records.listIds("submissions")) {
+      const record2 = await this.records.read("submissions", id4);
       if (!record2 || record2.deleted)
         continue;
-      const row = await this.entry(id3, false);
+      const row = await this.entry(id4, false);
       if (Date.parse(row.value.payload.approvedAt) + REVIEW_SUBMISSION_RETENTION_MS > this.now().getTime())
         continue;
       if (row.value.lease && Date.parse(row.value.lease.until) > this.now().getTime())
@@ -19346,8 +19346,8 @@ async function readSelectedHistory(location2, selection, ports = {}) {
 
 // src/automaticReviews.ts
 var vscode3 = __toESM(require("vscode"));
-var import_node_path13 = __toESM(require("node:path"));
-var import_promises8 = require("node:fs/promises");
+var import_node_path14 = __toESM(require("node:path"));
+var import_promises9 = require("node:fs/promises");
 
 // src/config.ts
 var fs4 = __toESM(require("fs"));
@@ -19535,16 +19535,154 @@ function readAutomaticOverride(store, scope) {
   return store.get(automaticSelectionKey(scope));
 }
 
+// src/automaticStageCheckpoint.ts
+var import_node_path13 = __toESM(require("node:path"));
+var import_promises8 = require("node:fs/promises");
+var id3 = "automatic-stage-observation-v1";
+var invalid5 = () => new Error("Saved automatic stage observation is invalid.");
+var AutomaticStageCheckpoint = class {
+  constructor(ports = {}) {
+    this.ports = ports;
+  }
+  async records(root2, profileId, create, work) {
+    if (!create) {
+      try {
+        await (0, import_promises8.lstat)(
+          import_node_path13.default.join(
+            this.ports.dataDirectory ?? defaultLocalDataDirectory(),
+            "profiles",
+            profileId
+          )
+        );
+      } catch (error2) {
+        if (error2.code === "ENOENT") return;
+        throw error2;
+      }
+    }
+    const scope = knowledgeScope({
+      repoRoot: root2,
+      profileId,
+      scope: "repository"
+    });
+    const records = await LocalRecordStore.open({ scope, ...this.ports });
+    try {
+      for (let attempt = 0; attempt < 12; attempt++) {
+        try {
+          return await work(records);
+        } catch (error2) {
+          if (!(error2 instanceof LocalStoreError) || error2.code !== "revision-conflict")
+            throw error2;
+        }
+      }
+      throw new Error("Automatic stage observation is busy.");
+    } finally {
+      records.close();
+    }
+  }
+  decode(value, root2) {
+    if (!value || typeof value !== "object") throw invalid5();
+    const state = value;
+    if (state.version !== 1 || typeof state.enabled !== "boolean" || typeof state.selection !== "string" || !/^[a-f0-9]{64}$/.test(state.selection) || !state.observed || state.observed.root !== root2 || typeof state.observed.indexPath !== "string" || state.observed.head !== null && (typeof state.observed.head !== "string" || !/^[a-f0-9]{40,64}$/.test(state.observed.head)) || typeof state.observed.fingerprint !== "string" || !/^[a-f0-9]{64}$/.test(state.observed.fingerprint) || !Array.isArray(state.observed.changes) || !Array.isArray(state.pendingPaths))
+      throw invalid5();
+    for (const change of state.observed.changes) {
+      if (!change || [
+        change.path,
+        change.status,
+        change.oldOid,
+        change.oid,
+        change.oldMode,
+        change.mode
+      ].some((v) => typeof v !== "string"))
+        throw invalid5();
+      sourcePath(change.path);
+      if (!/^[AMDTU]$/.test(change.status) || !/^[a-f0-9]{40,64}$/.test(change.oldOid) || !/^[a-f0-9]{40,64}$/.test(change.oid) || !/^\d{6}$/.test(change.oldMode) || !/^\d{6}$/.test(change.mode))
+        throw invalid5();
+    }
+    if (new Set(state.pendingPaths).size !== state.pendingPaths.length || state.pendingPaths.some(
+      (file) => !state.observed.changes.some((c) => c.path === file)
+    ))
+      throw invalid5();
+    return state;
+  }
+  async observe(observed, profileId, selection, enabled, current = () => true) {
+    const next = await this.records(
+      observed.root,
+      profileId,
+      enabled,
+      async (records) => {
+        const row = await records.read("settings", id3);
+        if (!current()) return false;
+        const previous3 = row && !row.deleted ? this.decode(row.value, observed.root) : void 0;
+        let pendingPaths = [];
+        if (enabled && previous3?.enabled && previous3.selection === selection) {
+          if (previous3.observed.head !== observed.head) {
+            pendingPaths = observed.changes.map((c) => c.path);
+          } else {
+            const retained = previous3.pendingPaths.filter(
+              (file) => observed.changes.some((c) => c.path === file)
+            );
+            pendingPaths = [
+              .../* @__PURE__ */ new Set([
+                ...retained,
+                ...newlyStagedPaths(previous3.observed, observed)
+              ])
+            ].sort();
+          }
+        }
+        const value = {
+          version: 1,
+          enabled,
+          selection,
+          observed,
+          pendingPaths
+        };
+        this.decode(value, observed.root);
+        if (!previous3 || contentHash(previous3) !== contentHash(value))
+          await records.write("settings", id3, value, row?.revision ?? 0);
+        return pendingPaths.length > 0;
+      }
+    );
+    return next ?? false;
+  }
+  async acknowledge(root2, profileId, selection, fingerprint) {
+    await this.records(root2, profileId, false, async (records) => {
+      const row = await records.read("settings", id3);
+      if (!row || row.deleted) return;
+      const state = this.decode(row.value, root2);
+      if (state.enabled && state.selection === selection && state.observed.fingerprint === fingerprint && state.pendingPaths.length)
+        await records.write(
+          "settings",
+          id3,
+          { ...state, pendingPaths: [] },
+          row.revision
+        );
+    });
+  }
+};
+
 // src/automaticReviews.ts
 var AutomaticReviews = class {
   constructor(context, ports) {
     this.context = context;
     this.ports = ports;
+    this.checkpoints = new AutomaticStageCheckpoint(ports.storage);
     this.scheduler = new AutomaticReviewScheduler({
       busy: ports.busy,
       onState: ports.state,
       run: async (task) => {
         const result = await ports.run(task.value, task);
+        if (!result?.retryAt && task.isCurrent() && task.value.automatic?.reason === "stage") {
+          if (result?.completionConfirmed !== true)
+            throw new Error("Automatic review completion was not confirmed.");
+          const root2 = this.roots.get(task.value.repoRoot);
+          if (root2)
+            await this.checkpoints.acknowledge(
+              task.value.repoRoot,
+              root2.profileId,
+              root2.stageSelection,
+              task.value.automatic.indexFingerprint
+            );
+        }
         if (!result?.retryAt && task.isCurrent() && task.value.automatic?.reason === "save") {
           const root2 = this.roots.get(task.value.repoRoot);
           for (const [file, hash4] of Object.entries(
@@ -19564,16 +19702,18 @@ var AutomaticReviews = class {
         const reason = this.saveReasons.get(document3);
         this.saveReasons.delete(document3);
         if (document3.uri.scheme === "file")
-          void this.saved(
-            document3.uri,
-            reason === vscode3.TextDocumentSaveReason.Manual ? "manual" : "auto"
+          void this.track(
+            this.saved(
+              document3.uri,
+              reason === vscode3.TextDocumentSaveReason.Manual ? "manual" : "auto"
+            )
           ).finally(() => this.editorWrites.delete(document3.uri.toString()));
       }),
       vscode3.workspace.onDidChangeTextDocument((e) => {
         if (!e.document.isDirty || !e.contentChanges.length) return;
         for (const [root2, value] of this.roots)
-          if (e.document.uri.fsPath.startsWith(root2 + import_node_path13.default.sep)) {
-            const file = import_node_path13.default.relative(root2, e.document.uri.fsPath).split(import_node_path13.default.sep).join("/");
+          if (e.document.uri.fsPath.startsWith(root2 + import_node_path14.default.sep)) {
+            const file = import_node_path14.default.relative(root2, e.document.uri.fsPath).split(import_node_path14.default.sep).join("/");
             if (!value.files.has(file)) continue;
             value.files.delete(file);
             this.scheduler.cancel(this.key(root2, "save"));
@@ -19611,6 +19751,7 @@ var AutomaticReviews = class {
       }),
       vscode3.window.onDidChangeWindowState((e) => {
         if (e.focused) {
+          if (!this.roots.size) void this.refresh();
           for (const root2 of this.roots.keys()) void this.scan(root2);
           this.scheduler.wake();
         }
@@ -19637,6 +19778,8 @@ var AutomaticReviews = class {
   externalTimers = /* @__PURE__ */ new Map();
   poll;
   scheduler;
+  checkpoints;
+  operations = /* @__PURE__ */ new Set();
   profile() {
     return vscode3.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
   }
@@ -19659,7 +19802,18 @@ var AutomaticReviews = class {
       )
     );
   }
-  async refresh() {
+  track(operation) {
+    this.operations.add(operation);
+    void operation.then(
+      () => this.operations.delete(operation),
+      () => this.operations.delete(operation)
+    );
+    return operation;
+  }
+  refresh() {
+    return this.track(this.refreshRoots());
+  }
+  async refreshRoots() {
     const generation = ++this.generation;
     this.scheduler.clear();
     for (const root2 of this.roots.values())
@@ -19688,7 +19842,9 @@ var AutomaticReviews = class {
           this.excludes()
         );
         if (generation !== this.generation || this.disposed) return;
-        const registered = this.register(observed);
+        const registered = await this.register(observed);
+        if (!registered || generation !== this.generation || this.disposed)
+          return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
         } catch {
@@ -19702,16 +19858,67 @@ var AutomaticReviews = class {
       }
     }
   }
-  register(observed) {
+  async register(observed) {
     if (this.roots.has(observed.root)) return this.roots.get(observed.root);
+    const generation = this.generation;
     const settings = this.settings(observed.root);
-    const value = { observed, settings, watches: [], files: /* @__PURE__ */ new Map() };
+    const profileId = this.profile();
+    const scope = knowledgeScope({
+      repoRoot: observed.root,
+      profileId,
+      scope: "repository"
+    });
+    const user = getAutomaticUserSettings();
+    const stageSelection = contentHash({
+      profileId,
+      stage: settings.stage,
+      paused: settings.paused,
+      excludes: this.excludes(),
+      execution: Object.fromEntries(
+        [
+          "reviewMode",
+          "model",
+          "aiProvider",
+          "codexPath",
+          "reviewReasoningEffort"
+        ].map((key3) => [key3, user(key3) ?? null])
+      ),
+      connection: readSelection(this.context.globalState, scope) ?? null
+    });
+    let pending;
+    try {
+      pending = await this.checkpoints.observe(
+        observed,
+        profileId,
+        stageSelection,
+        settings.stage && !settings.paused,
+        () => generation === this.generation && !this.disposed
+      );
+    } catch (error2) {
+      if (!this.disposed && generation === this.generation)
+        this.ports.state({
+          key: this.key(observed.root, "stage"),
+          phase: "waiting",
+          reason: "stage-observation-unavailable"
+        });
+      throw error2;
+    }
+    if (generation !== this.generation || this.disposed) return;
+    if (this.roots.has(observed.root)) return this.roots.get(observed.root);
+    const value = {
+      observed,
+      settings,
+      watches: [],
+      files: /* @__PURE__ */ new Map(),
+      profileId,
+      stageSelection
+    };
     this.roots.set(observed.root, value);
     if (settings.paused || !settings.save && !settings.stage) return value;
     const watcher = vscode3.workspace.createFileSystemWatcher(
       new vscode3.RelativePattern(
-        vscode3.Uri.file(import_node_path13.default.dirname(observed.indexPath)),
-        import_node_path13.default.basename(observed.indexPath)
+        vscode3.Uri.file(import_node_path14.default.dirname(observed.indexPath)),
+        import_node_path14.default.basename(observed.indexPath)
       ),
       false,
       false,
@@ -19735,14 +19942,15 @@ var AutomaticReviews = class {
       );
       const changed = (uri) => {
         if (sourcePathPolicy(this.excludes())(
-          import_node_path13.default.relative(observed.root, uri.fsPath).split(import_node_path13.default.sep).join("/")
+          import_node_path14.default.relative(observed.root, uri.fsPath).split(import_node_path14.default.sep).join("/")
         ))
           return;
         const key3 = uri.toString();
         clearTimeout(this.externalTimers.get(key3));
         const timer = setTimeout(() => {
           this.externalTimers.delete(key3);
-          if (!this.editorWrites.has(key3)) void this.saved(uri, "external");
+          if (!this.editorWrites.has(key3))
+            void this.track(this.saved(uri, "external"));
         }, 3e3);
         timer.unref?.();
         this.externalTimers.set(key3, timer);
@@ -19754,6 +19962,8 @@ var AutomaticReviews = class {
         files.onDidDelete(changed)
       );
     }
+    if (pending) this.submitStage(observed.root, value);
+    void this.scan(observed.root);
     return value;
   }
   scan(root2) {
@@ -19774,31 +19984,24 @@ var AutomaticReviews = class {
           );
           if (this.roots.get(root2) !== state || this.disposed) return;
           const previous3 = state.observed;
+          const pending = await this.checkpoints.observe(
+            observed,
+            state.profileId,
+            state.stageSelection,
+            state.settings.stage,
+            () => this.roots.get(root2) === state && !this.disposed
+          );
+          if (this.roots.get(root2) !== state || this.disposed) return;
           state.observed = observed;
           if (previous3.head !== observed.head) {
             this.scheduler.cancel(this.key(root2, "save"));
             state.files.clear();
           }
-          if (previous3.fingerprint === observed.fingerprint) continue;
-          this.scheduler.cancel(this.key(root2, "stage"));
-          if (state.settings.stage && newlyStagedPaths(previous3, observed).length) {
-            this.scheduler.submit(
-              this.key(root2, "stage"),
-              {
-                repoRoot: root2,
-                files: observed.changes.map((c) => c.path),
-                scope: "staged",
-                automatic: {
-                  reason: "stage",
-                  head: observed.head,
-                  indexFingerprint: observed.fingerprint,
-                  minimumIntervalMs: 0,
-                  maximumReviewsPerHour: state.settings.maximumReviewsPerHour
-                }
-              },
-              { priority: 1, debounceMs: this.ports.debounceMs ?? 3e3 }
-            );
+          if (previous3.fingerprint !== observed.fingerprint) {
+            this.scheduler.cancel(this.key(root2, "stage"));
+            state.stageFingerprint = void 0;
           }
+          if (state.settings.stage && pending) this.submitStage(root2, state);
         } catch {
           if (!this.disposed && this.roots.get(root2) === state)
             this.ports.state({
@@ -19819,9 +20022,9 @@ var AutomaticReviews = class {
     const generation = this.generation, fileKey = uri.toString(), fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      const directory = await (0, import_promises8.realpath)(import_node_path13.default.dirname(uri.fsPath));
-      const absolute = import_node_path13.default.join(directory, import_node_path13.default.basename(uri.fsPath));
-      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path13.default.sep)).sort((a, b) => b.length - a.length)[0];
+      const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(uri.fsPath));
+      const absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(uri.fsPath));
+      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path14.default.sep)).sort((a, b) => b.length - a.length)[0];
       if (!root2) {
         const observed2 = await observeAutomaticRepository(
           directory,
@@ -19829,7 +20032,9 @@ var AutomaticReviews = class {
         );
         if (generation !== this.generation) return;
         root2 = observed2.root;
-        const registered = this.register(observed2);
+        const registered = await this.register(observed2);
+        if (!registered || generation !== this.generation || this.disposed)
+          return;
         try {
           await this.ports.configureHooks?.(observed2.root, registered.settings);
         } catch {
@@ -19842,7 +20047,7 @@ var AutomaticReviews = class {
       }
       const state = this.roots.get(root2);
       if (state.settings.paused || !state.settings.save) return;
-      const file = import_node_path13.default.relative(root2, absolute).split(import_node_path13.default.sep).join("/");
+      const file = import_node_path14.default.relative(root2, absolute).split(import_node_path14.default.sep).join("/");
       await this.scan(root2);
       const observed = await observeAutomaticFile(root2, file, this.excludes());
       if (generation !== this.generation || this.fileGeneration.get(fileKey) !== fileGeneration || !observed)
@@ -19868,6 +20073,28 @@ var AutomaticReviews = class {
     } catch {
     }
   }
+  submitStage(root2, state) {
+    const observed = state.observed;
+    if (state.stageFingerprint === observed.fingerprint || !observed.changes.length)
+      return;
+    state.stageFingerprint = observed.fingerprint;
+    this.scheduler.submit(
+      this.key(root2, "stage"),
+      {
+        repoRoot: root2,
+        files: observed.changes.map((c) => c.path),
+        scope: "staged",
+        automatic: {
+          reason: "stage",
+          head: observed.head,
+          indexFingerprint: observed.fingerprint,
+          minimumIntervalMs: 0,
+          maximumReviewsPerHour: state.settings.maximumReviewsPerHour
+        }
+      },
+      { priority: 1, debounceMs: this.ports.debounceMs ?? 3e3 }
+    );
+  }
   submitSave(root2, state) {
     this.scheduler.submit(
       this.key(root2, "save"),
@@ -19888,7 +20115,7 @@ var AutomaticReviews = class {
   }
   async manage() {
     const choices = [...this.roots.keys()].map((root2) => ({
-      label: import_node_path13.default.basename(root2),
+      label: import_node_path14.default.basename(root2),
       description: root2,
       root: root2
     }));
@@ -19958,22 +20185,23 @@ var AutomaticReviews = class {
     this.subscriptions.forEach((s) => s.dispose());
   }
   async settled() {
+    await Promise.allSettled([...this.operations]);
     await this.scheduler.settled();
     await Promise.allSettled([...this.roots.values()].map((r) => r.scanning));
   }
 };
 
 // src/backgroundHooks.ts
-var import_promises10 = __toESM(require("node:fs/promises"));
-var import_node_path15 = __toESM(require("node:path"));
+var import_promises11 = __toESM(require("node:fs/promises"));
+var import_node_path16 = __toESM(require("node:path"));
 var import_node_os3 = __toESM(require("node:os"));
 var import_node_crypto15 = require("node:crypto");
 var import_node_child_process5 = require("node:child_process");
 var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
-var import_promises9 = __toESM(require("node:fs/promises"));
-var import_node_path14 = __toESM(require("node:path"));
+var import_promises10 = __toESM(require("node:fs/promises"));
+var import_node_path15 = __toESM(require("node:path"));
 var import_node_crypto14 = require("node:crypto");
 var import_node_child_process4 = require("node:child_process");
 var digest2 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
@@ -19996,33 +20224,33 @@ function git2(root2, args, missing = false) {
   }
 }
 async function privateDirectory2(directory) {
-  await import_promises9.default.mkdir(directory, { recursive: true, mode: 448 });
-  const stat = await import_promises9.default.lstat(directory);
+  await import_promises10.default.mkdir(directory, { recursive: true, mode: 448 });
+  const stat = await import_promises10.default.lstat(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw new Error(
       "Hook storage must be a private directory owned by this OS user."
     );
-  return import_promises9.default.realpath(directory);
+  return import_promises10.default.realpath(directory);
 }
 async function writeJson(file, value) {
   const tmp = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
   try {
-    await import_promises9.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
+    await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
       flag: "wx",
       mode: 384
     });
-    await import_promises9.default.rename(tmp, file);
+    await import_promises10.default.rename(tmp, file);
   } finally {
-    await import_promises9.default.rm(tmp, { force: true });
+    await import_promises10.default.rm(tmp, { force: true });
   }
 }
 async function readState(file) {
   try {
-    const stat = await import_promises9.default.lstat(file);
+    const stat = await import_promises10.default.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63 || stat.size > 1048576)
       throw Error("Invalid hook state.");
     const state = JSON.parse(
-      await import_promises9.default.readFile(file, "utf8")
+      await import_promises10.default.readFile(file, "utf8")
     );
     if (state.version !== 1 || !state.routes || !state.files || !Array.isArray(state.previous))
       throw Error("Invalid hook state.");
@@ -20033,16 +20261,16 @@ async function readState(file) {
   }
 }
 async function lock(directory) {
-  const file = import_node_path14.default.join(directory, "owner.lock");
+  const file = import_node_path15.default.join(directory, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const handle2 = await import_promises9.default.open(file, "wx", 384);
+      const handle2 = await import_promises10.default.open(file, "wx", 384);
       await handle2.writeFile(JSON.stringify({ pid: process.pid }));
       await handle2.close();
-      return () => import_promises9.default.unlink(file);
+      return () => import_promises10.default.unlink(file);
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
-      const raw = await import_promises9.default.readFile(file, "utf8"), row = JSON.parse(raw);
+      const raw = await import_promises10.default.readFile(file, "utf8"), row = JSON.parse(raw);
       if (!Number.isSafeInteger(row.pid) || row.pid < 1)
         throw Error("Hook installation lock is invalid.");
       try {
@@ -20051,9 +20279,9 @@ async function lock(directory) {
       } catch (failure2) {
         if (failure2.code !== "ESRCH") throw failure2;
       }
-      if (await import_promises9.default.readFile(file, "utf8") !== raw)
+      if (await import_promises10.default.readFile(file, "utf8") !== raw)
         throw Error("Hook installation lock changed.");
-      await import_promises9.default.unlink(file);
+      await import_promises10.default.unlink(file);
     }
   }
   throw Error("Hook installation is busy.");
@@ -20089,7 +20317,7 @@ var hookNames = [
   "post-index-change"
 ];
 async function location(root2, dataDirectory) {
-  root2 = await import_promises9.default.realpath(git2(root2, ["rev-parse", "--show-toplevel"]));
+  root2 = await import_promises10.default.realpath(git2(root2, ["rev-parse", "--show-toplevel"]));
   const worktree = git2(
     root2,
     ["config", "--bool", "--get", "extensions.worktreeConfig"],
@@ -20102,14 +20330,14 @@ async function location(root2, dataDirectory) {
     worktree ? "config.worktree" : "config"
   ]);
   const base = await privateDirectory2(
-    import_node_path14.default.join(dataDirectory, "managed-hooks")
+    import_node_path15.default.join(dataDirectory, "managed-hooks")
   );
-  const directory = await privateDirectory2(import_node_path14.default.join(base, digest2(config)));
+  const directory = await privateDirectory2(import_node_path15.default.join(base, digest2(config)));
   return {
     root: root2,
     config,
     directory,
-    stateFile: import_node_path14.default.join(directory, "state.json")
+    stateFile: import_node_path15.default.join(directory, "state.json")
   };
 }
 var configured = (root2, config) => {
@@ -20124,8 +20352,8 @@ async function verifyFiles(state) {
   for (const [name, hash4] of Object.entries(state.files)) {
     if (!/^[a-z][a-z0-9-]*$/.test(name))
       throw Error("Invalid managed hook name.");
-    const file = import_node_path14.default.join(state.directory, name), stat = await import_promises9.default.lstat(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises9.default.readFile(file)) !== hash4)
+    const file = import_node_path15.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises10.default.readFile(file)) !== hash4)
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved."
       );
@@ -20184,7 +20412,7 @@ async function configureManagedHooks(options) {
           "This worktree has hooks registered to another profile. Disable that registration first."
         );
       if (![route2.node, route2.cli, route2.dataDirectory, options.adapter].every(
-        import_node_path14.default.isAbsolute
+        import_node_path15.default.isAbsolute
       ) || !Number.isInteger(route2.waitMs) || route2.waitMs < 0 || route2.waitMs > 6e5 || !route2.triggers.length || route2.triggers.some((t) => !["commit", "push"].includes(t)))
         throw Error("Invalid hook route.");
       state.routes[loc.root] = structuredClone(route2);
@@ -20215,8 +20443,8 @@ async function configureManagedHooks(options) {
     const route = options.route ?? Object.values(state.routes)[0];
     const names = new Set(hookNames);
     try {
-      for (const name of await import_promises9.default.readdir(
-        import_node_path14.default.resolve(loc.root, state.original)
+      for (const name of await import_promises10.default.readdir(
+        import_node_path15.default.resolve(loc.root, state.original)
       ))
         if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
     } catch (error2) {
@@ -20226,7 +20454,7 @@ async function configureManagedHooks(options) {
         throw error2;
     }
     for (const name of names) {
-      const original = import_node_path14.default.join(state.original, name);
+      const original = import_node_path15.default.join(state.original, name);
       const text7 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
@@ -20235,16 +20463,16 @@ fi
 ` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi
 exit 0
 `;
-      const file = import_node_path14.default.join(loc.directory, name);
+      const file = import_node_path15.default.join(loc.directory, name);
       if (!state.files[name]) {
-        await import_promises9.default.writeFile(file, text7, { flag: "wx", mode: 448 });
+        await import_promises10.default.writeFile(file, text7, { flag: "wx", mode: 448 });
       } else {
         const temporary = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
         try {
-          await import_promises9.default.writeFile(temporary, text7, { flag: "wx", mode: 448 });
-          await import_promises9.default.rename(temporary, file);
+          await import_promises10.default.writeFile(temporary, text7, { flag: "wx", mode: 448 });
+          await import_promises10.default.rename(temporary, file);
         } finally {
-          await import_promises9.default.rm(temporary, { force: true });
+          await import_promises10.default.rm(temporary, { force: true });
         }
       }
       state.files[name] = digest2(text7);
@@ -20280,19 +20508,19 @@ exit 0
 var key2 = "background-hooks.v1";
 var hash3 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
 async function privateCopy(source, directory, name) {
-  const bytes = await import_promises10.default.readFile(source), targetDir = import_node_path15.default.join(directory, hash3(bytes));
-  await import_promises10.default.mkdir(targetDir, { recursive: true, mode: 448 });
-  const stat = await import_promises10.default.lstat(targetDir);
+  const bytes = await import_promises11.default.readFile(source), targetDir = import_node_path16.default.join(directory, hash3(bytes));
+  await import_promises11.default.mkdir(targetDir, { recursive: true, mode: 448 });
+  const stat = await import_promises11.default.lstat(targetDir);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw Error("Service installation directory is not private.");
-  const target = import_node_path15.default.join(targetDir, name);
+  const target = import_node_path16.default.join(targetDir, name);
   try {
-    await import_promises10.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
+    await import_promises11.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
   } catch (error2) {
     if (error2.code !== "EEXIST") throw error2;
   }
-  const installed = await import_promises10.default.lstat(target);
-  if (!installed.isFile() || installed.isSymbolicLink() || hash3(await import_promises10.default.readFile(target)) !== hash3(bytes))
+  const installed = await import_promises11.default.lstat(target);
+  if (!installed.isFile() || installed.isSymbolicLink() || hash3(await import_promises11.default.readFile(target)) !== hash3(bytes))
     throw Error("Installed service artifact does not match this extension.");
   return target;
 }
@@ -20362,7 +20590,7 @@ var BackgroundHooks = class {
     }
     await configureManagedHooks({
       root: owned.root,
-      adapter: import_node_path15.default.join(this.extensionPath, "out/advisory-hook.cjs")
+      adapter: import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs")
     });
     await this.store.update(
       key2,
@@ -20480,18 +20708,18 @@ var BackgroundHooks = class {
           { cwd: import_node_os3.default.homedir(), env: env4, timeout: 1e4 }
         )).stdout
       );
-      if (node2.major < 22 || !import_node_path15.default.isAbsolute(node2.path))
+      if (node2.major < 22 || !import_node_path16.default.isAbsolute(node2.path))
         throw Error("Background review service requires Node.js 22 or newer.");
       const dataDirectory = defaultLocalDataDirectory(), location2 = { profileId: settings.profileId, dataDirectory };
-      const programs = import_node_path15.default.join(dataDirectory, "service-programs");
-      await import_promises10.default.mkdir(programs, { recursive: true, mode: 448 });
+      const programs = import_node_path16.default.join(dataDirectory, "service-programs");
+      await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
       const cli = await privateCopy(
-        import_node_path15.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
+        import_node_path16.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
         "gcr.mjs"
       );
       const adapter = await privateCopy(
-        import_node_path15.default.join(this.extensionPath, "out/advisory-hook.cjs"),
+        import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs"),
         programs,
         "advisory.cjs"
       );
@@ -20515,7 +20743,7 @@ var BackgroundHooks = class {
         throw Error(
           "Restart this profile\u2019s existing service with the bundled CLI to enable automatic review budgets."
         );
-      const executorPath = import_node_path15.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
+      const executorPath = import_node_path16.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
         { env: env4, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
@@ -20595,7 +20823,7 @@ var BackgroundHooks = class {
 
 // src/backgroundRecovery.ts
 var vscode4 = __toESM(require("vscode"));
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
   try {
     const jobs2 = (await hooks.status()).filter(
@@ -20609,7 +20837,7 @@ async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
     }
     const selected = await vscode4.window.showQuickPick(
       jobs2.map((job2) => ({
-        label: `${import_node_path16.default.basename(job2.root)} \xB7 ${job2.trigger}`,
+        label: `${import_node_path17.default.basename(job2.root)} \xB7 ${job2.trigger}`,
         description: `${new Date(job2.createdAt).toLocaleString()} \xB7 ${job2.profileId}`,
         detail: `${job2.root} \xB7 ${job2.id}${job2.supportsRecovery ? "" : " \xB7 Service restart required"}`,
         job: job2
@@ -20671,20 +20899,20 @@ var CentralSynchronization = class {
       this.retire(loop);
       this.loops.delete(key3);
     }
-    for (const [key3, { scope, id: id3 }] of wanted) {
+    for (const [key3, { scope, id: id4 }] of wanted) {
       if (this.loops.has(key3)) continue;
       const loop = new KnowledgeSyncLoop({
         synchronize: async (signal) => {
           if (this.options.synchronize)
-            return this.options.synchronize(scope, id3, signal);
+            return this.options.synchronize(scope, id4, signal);
           return withCentralConnection(
             scope,
             async (manager) => {
               if (signal.aborted) return;
-              const status = await manager.status(id3);
+              const status = await manager.status(id4);
               if (status.clientId !== "commit-defender")
                 throw new StandaloneReviewError("authentication-required");
-              if (!signal.aborted) return manager.synchronize(id3, signal);
+              if (!signal.aborted) return manager.synchronize(id4, signal);
             },
             this.options.ports
           );
@@ -20719,7 +20947,7 @@ var CentralSynchronization = class {
 // src/centralConnectionView.ts
 var vscode5 = __toESM(require("vscode"));
 var import_node_fs4 = require("node:fs");
-var import_promises11 = require("node:fs/promises");
+var import_promises12 = require("node:fs/promises");
 var import_node_crypto16 = require("node:crypto");
 var esc2 = (value) => String(value).replace(
   /[&<>"']/g,
@@ -20760,7 +20988,7 @@ function centralStatusHtml(value) {
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>Online reviews refresh expired knowledge. Offline reviews require an unexpired signed lease and active connection. Model availability is checked separately when a review starts.</p><table>${rows.map(([label, item]) => `<tr><th>${esc2(label)}</th><td>${esc2(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. Local Memory and Skills remain editable in their own view.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function readConfig(file) {
-  const handle2 = await (0, import_promises11.open)(
+  const handle2 = await (0, import_promises12.open)(
     file,
     import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NONBLOCK | import_node_fs4.constants.O_NOFOLLOW
   );
@@ -20974,7 +21202,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     }
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
-    const id3 = selection.connectionId;
+    const id4 = selection.connectionId;
     if (choice2.action === "fallback") {
       const picked = await vscode5.window.showQuickPick(
         [
@@ -21010,7 +21238,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     }
     if (choice2.action === "offline") {
       await withManager(async (manager) => {
-        const ready = await manager.review(id3, "offline");
+        const ready = await manager.review(id4, "offline");
         await ready.cache.read("offline");
       });
       await select({ ...selection, freshness: "offline" });
@@ -21019,7 +21247,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     if (choice2.action === "disconnect") {
       await actions.invalidate();
       actions.assertCurrent();
-      const result = await withManager((manager) => manager.disconnect(id3));
+      const result = await withManager((manager) => manager.disconnect(id4));
       await actions.refresh();
       void vscode5.window.showInformationMessage(
         result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`
@@ -21029,10 +21257,10 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     if (choice2.action === "sync")
       await progress(
         "Synchronizing central knowledge",
-        (signal) => withManager((manager) => manager.synchronize(id3, signal))
+        (signal) => withManager((manager) => manager.synchronize(id4, signal))
       );
     actions.assertCurrent();
-    const status = await withManager((manager) => manager.status(id3));
+    const status = await withManager((manager) => manager.status(id4));
     actions.assertCurrent();
     const panel = vscode5.window.createWebviewPanel(
       "commitDefender.centralConnection",
@@ -21223,8 +21451,8 @@ async function showLocalKnowledge(context, scope, changed) {
 }
 
 // src/modelCredentials.ts
-var import_promises12 = require("node:fs/promises");
-var import_node_path17 = __toESM(require("node:path"));
+var import_promises13 = require("node:fs/promises");
+var import_node_path18 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code3) {
@@ -21235,7 +21463,7 @@ var ModelCredentialError = class extends Error {
     this.name = "ModelCredentialError";
   }
 };
-var invalid5 = () => new ModelCredentialError("invalid-credential-config");
+var invalid6 = () => new ModelCredentialError("invalid-credential-config");
 var unavailable3 = () => new ModelCredentialError("credential-unavailable");
 function usesModelApiKey(provider) {
   return ["aoai", "openai", "anthropic", "gemini"].includes(provider);
@@ -21245,16 +21473,16 @@ function boundedText(value, limit) {
 }
 function modelCredentialBinding(config) {
   if (!usesModelApiKey(config.aiProvider) || !boundedText(config.endpoint, 4096) || !boundedText(config.model, 512) || !boundedText(config.apiVersion, 128))
-    throw invalid5();
+    throw invalid6();
   const raw = config.endpoint || (config.aiProvider === "aoai" ? "" : API_DEFAULT_ENDPOINTS[config.aiProvider]);
   let endpoint;
   try {
     endpoint = new URL(raw);
   } catch {
-    throw invalid5();
+    throw invalid6();
   }
   if (endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(endpoint.hostname)))
-    throw invalid5();
+    throw invalid6();
   return {
     provider: config.aiProvider,
     endpoint: endpoint.toString().replace(/\/+$/, ""),
@@ -21266,7 +21494,7 @@ function profileScope(profileId) {
   try {
     return localScope({ kind: "profile", profileId });
   } catch {
-    throw invalid5();
+    throw invalid6();
   }
 }
 function modelCredentialReference(profileId, binding) {
@@ -21275,7 +21503,7 @@ function modelCredentialReference(profileId, binding) {
     aiProvider: binding.provider,
     ...binding
   });
-  if (canonicalJson(normalized) !== canonicalJson(binding)) throw invalid5();
+  if (canonicalJson(normalized) !== canonicalJson(binding)) throw invalid6();
   return {
     version: 1,
     profileId,
@@ -21284,21 +21512,21 @@ function modelCredentialReference(profileId, binding) {
 }
 function parseModelCredentialReference(value) {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw invalid5();
+    throw invalid6();
   const r = value;
   if (Object.keys(r).sort().join(",") !== "id,profileId,version" || r.version !== 1 || typeof r.profileId !== "string" || typeof r.id !== "string" || !/^[a-f0-9]{64}$/.test(r.id))
-    throw invalid5();
+    throw invalid6();
   profileScope(r.profileId);
   return { version: 1, profileId: r.profileId, id: r.id };
 }
 function checkedReference(value, binding) {
   const reference = parseModelCredentialReference(value);
   if (canonicalJson(reference) !== canonicalJson(modelCredentialReference(reference.profileId, binding)))
-    throw invalid5();
+    throw invalid6();
   return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path17.default.join(
+  return import_node_path18.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -21307,7 +21535,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path17.default.join(
+    const file = import_node_path18.default.join(
       dataDirectory,
       "profiles",
       reference.profileId,
@@ -21315,7 +21543,7 @@ async function openStore(reference, create, ports) {
       "key-ref.json"
     );
     try {
-      await (0, import_promises12.lstat)(file);
+      await (0, import_promises13.lstat)(file);
     } catch {
       throw unavailable3();
     }
@@ -21368,7 +21596,7 @@ async function modelCredentialRevision(profileId, binding, ports = {}) {
 }
 async function saveModelCredential(profileId, binding, secret, ports = {}, replaceRevision) {
   const reference = modelCredentialReference(profileId, binding);
-  if (!boundedText(secret, 16384) || !secret.length) throw invalid5();
+  if (!boundedText(secret, 16384) || !secret.length) throw invalid6();
   try {
     const store = await openStore(reference, true, ports);
     try {
@@ -21441,7 +21669,7 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 
 // src/hook/config.ts
 var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path18 = __toESM(require("node:path"));
+var import_node_path19 = __toESM(require("node:path"));
 var import_node_crypto18 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
@@ -21455,7 +21683,7 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path18.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
+  const dir = import_node_path19.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
   if (create) import_node_fs5.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
     const stat = import_node_fs5.default.lstatSync(dir);
@@ -21473,7 +21701,7 @@ function readHookConfigSnapshot(repoRoot) {
   let fd;
   try {
     fd = import_node_fs5.default.openSync(
-      import_node_path18.default.join(dir, "hook.json"),
+      import_node_path19.default.join(dir, "hook.json"),
       import_node_fs5.default.constants.O_RDONLY | import_node_fs5.default.constants.O_NOFOLLOW | import_node_fs5.default.constants.O_NONBLOCK
     );
   } catch (error2) {
@@ -21590,15 +21818,15 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path18.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path18.default.join(dir, `.hook-lock-${(0, import_node_crypto18.randomUUID)()}`);
+  const lock2 = import_node_path19.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path19.default.join(dir, `.hook-lock-${(0, import_node_crypto18.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
     nonce: (0, import_node_crypto18.randomUUID)()
   });
   import_node_fs5.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs5.default.writeFileSync(import_node_path18.default.join(prepared, "owner.json"), owner, {
+  import_node_fs5.default.writeFileSync(import_node_path19.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
@@ -21618,7 +21846,7 @@ function acquireLock(dir) {
         const entries = import_node_fs5.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path18.default.join(lock2, "owner.json");
+        const ownerPath = import_node_path19.default.join(lock2, "owner.json");
         const ownerStat = import_node_fs5.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
@@ -21644,16 +21872,16 @@ function acquireLock(dir) {
     throw failure();
   }
   return () => {
-    if (import_node_fs5.default.readFileSync(import_node_path18.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs5.default.readFileSync(import_node_path19.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs5.default.unlinkSync(import_node_path18.default.join(lock2, "owner.json"));
+    import_node_fs5.default.unlinkSync(import_node_path19.default.join(lock2, "owner.json"));
     import_node_fs5.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path18.default.join(dir, `.hook-config-${(0, import_node_crypto18.randomUUID)()}`);
+  const temporary = import_node_path19.default.join(dir, `.hook-config-${(0, import_node_crypto18.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
@@ -21670,7 +21898,7 @@ function publishConfig(repoRoot, cfg, expectedText) {
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs5.default.renameSync(temporary, import_node_path18.default.join(dir, "hook.json"));
+    import_node_fs5.default.renameSync(temporary, import_node_path19.default.join(dir, "hook.json"));
     const directory = import_node_fs5.default.openSync(dir, import_node_fs5.default.constants.O_RDONLY);
     try {
       import_node_fs5.default.fsyncSync(directory);
@@ -21898,7 +22126,7 @@ async function manageModelCredential(repoRoot) {
 var vscode9 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path28 = __toESM(require("path"));
+var path29 = __toESM(require("path"));
 var vscode8 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
@@ -21914,7 +22142,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path28.join(repoRoot, b.file);
+      const absPath = path29.join(repoRoot, b.file);
       const uriKey = vscode8.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -21952,7 +22180,7 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path29 = __toESM(require("path"));
+var path30 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
   _onDidChangeCodeLenses = new vscode9.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
@@ -21965,7 +22193,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path29.relative(last.repoRoot, document3.uri.fsPath).split(path29.sep).join("/");
+    const file = path30.relative(last.repoRoot, document3.uri.fsPath).split(path30.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -21996,7 +22224,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path30 = __toESM(require("path"));
+var path31 = __toESM(require("path"));
 var vscode10 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -22029,7 +22257,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode10.Uri.file(path30.join(repoRoot, b.file));
+    const uri = vscode10.Uri.file(path31.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode10.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -22051,7 +22279,7 @@ var CommentManager = class {
 };
 
 // src/diagnostics.ts
-var path31 = __toESM(require("path"));
+var path32 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode11.DiagnosticSeverity.Error,
@@ -22071,7 +22299,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode11.Uri.file(path31.join(repoRoot, relFile));
+    const uri = vscode11.Uri.file(path32.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -22094,11 +22322,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path32 = __toESM(require("path"));
+var path33 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path32.relative(path32.resolve(repoRoot), path32.resolve(file)).split(path32.sep).join("/");
+  const relative4 = (file) => path33.relative(path33.resolve(repoRoot), path33.resolve(file)).split(path33.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -22113,18 +22341,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path32.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path33.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path32.join(dir, entry.name);
+      const absolute = path33.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path32.resolve(dirPath));
+  walk(path33.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -22488,7 +22716,7 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path33 = __toESM(require("path"));
+var path34 = __toESM(require("path"));
 var vscode14 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -22515,7 +22743,7 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path33.join(repoRoot, ".gitignore");
+  const gi = path34.join(repoRoot, ".gitignore");
   let text7 = "";
   try {
     text7 = fs9.readFileSync(gi, "utf8");
@@ -22530,7 +22758,7 @@ ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path33.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path34.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -22555,8 +22783,8 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path33.join(repoRoot, ".git", "hooks");
-  const hookPath = path33.join(hookDir, "pre-commit");
+  const hookDir = path34.join(repoRoot, ".git", "hooks");
+  const hookPath = path34.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
@@ -22605,7 +22833,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path33.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path34.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
@@ -22630,14 +22858,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path33.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path34.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path34 = __toESM(require("path"));
+var path35 = __toESM(require("path"));
 var vscode15 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -22708,11 +22936,11 @@ var PanelProvider = class {
     switch (node2.kind) {
       case "file": {
         const item = new vscode15.TreeItem(
-          path34.basename(node2.file),
+          path35.basename(node2.file),
           vscode15.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path34.dirname(node2.file);
+        const dir = path35.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
@@ -22768,13 +22996,13 @@ ${b.comment}`;
         }
         return (a.line || 0) - (b.line || 0);
       }).map((b, idx) => {
-        const id3 = `${node2.id}::${idx}`;
+        const id4 = `${node2.id}::${idx}`;
         return {
           kind: "block",
-          id: id3,
+          id: id4,
           block: b,
           absPath: node2.absPath,
-          uri: this._blockUri(id3)
+          uri: this._blockUri(id4)
         };
       });
     }
@@ -22804,23 +23032,23 @@ ${b.comment}`;
       return fa.localeCompare(fb);
     });
     return files.map(([file, blocks], idx) => {
-      const id3 = `panel-file-${idx}`;
+      const id4 = `panel-file-${idx}`;
       return {
         kind: "file",
-        id: id3,
+        id: id4,
         file,
-        absPath: path34.join(this._repoRoot, file),
+        absPath: path35.join(this._repoRoot, file),
         blocks,
-        uri: this._fileUri(id3, blocks)
+        uri: this._fileUri(id4, blocks)
       };
     });
   }
   // ── Decoration plumbing ───────────────────────────────────────────────────
-  _fileUri(id3, blocks) {
-    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/file/${id3}`, query: `n=${blocks.length}` });
+  _fileUri(id4, blocks) {
+    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
   }
-  _blockUri(id3) {
-    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id3)}` });
+  _blockUri(id4) {
+    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
   }
   _rebuildDecorations() {
     const oldUris = Array.from(this._decorations.keys()).map((s) => vscode15.Uri.parse(s));
@@ -22863,8 +23091,8 @@ ${b.comment}`;
         return (a.line || 0) - (b.line || 0);
       });
       sorted.forEach((b, idx) => {
-        const id3 = `panel-file-${fileIdx}::${idx}`;
-        const uri = this._blockUri(id3);
+        const id4 = `panel-file-${fileIdx}::${idx}`;
+        const uri = this._blockUri(id4);
         const meta = PRIORITY_META[b.priority];
         this._decorations.set(uri.toString(), {
           priority: b.priority,
@@ -22987,11 +23215,11 @@ var ReviewChatView = class {
   sources = /* @__PURE__ */ new Map();
   findings = /* @__PURE__ */ new Map();
   state;
-  source(id3) {
-    return this.sources.get(id3);
+  source(id4) {
+    return this.sources.get(id4);
   }
-  finding(id3) {
-    return this.findings.get(id3);
+  finding(id4) {
+    return this.findings.get(id4);
   }
   message(value) {
     if (!value || typeof value !== "object" || Array.isArray(value)) return;
@@ -23027,18 +23255,18 @@ var ReviewChatView = class {
     const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
-      const id3 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
-      this.findings.set(id3, `Explain finding ${f.id}: ${f.title}`);
-      return `<li><button class="link" data-finding="${id3}">${esc3(f.title)}</button></li>`;
+      const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
+      this.findings.set(id4, `Explain finding ${f.id}: ${f.title}`);
+      return `<li><button class="link" data-finding="${id4}">${esc3(f.title)}</button></li>`;
     }).join("")}</ul></details>`;
     const turns = chat.turns.map((t) => {
       const questions = t.questions.map(
         (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc3(q.question)}</p>${q.answer !== null ? `<div class="user">${esc3(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc3(option)}">${esc3(option)}</button>`).join("")}</div><small>Expires ${esc3(q.expiresAt)}</small>`}</section>`
       ).join("");
       const citations = (t.response?.citations ?? []).map((c, index2) => {
-        const id3 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
-        this.sources.set(id3, { turnId: t.id, citation: index2 });
-        return `<li><button class="link" data-source="${id3}">${esc3(c.location.side)} \xB7 ${esc3(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
+        const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
+        this.sources.set(id4, { turnId: t.id, citation: index2 });
+        return `<li><button class="link" data-source="${id4}">${esc3(c.location.side)} \xB7 ${esc3(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
       }).join("");
       return `<article><div class="user">${esc3(t.content)}</div>${questions}${t.response ? `<div class="answer">${markdown(t.response.content)}</div>${citations ? `<details open><summary>Source evidence</summary><ul>${citations}</ul></details>` : ""}` : ""}<p class="turn-status">${esc3(t.status)}${t.error ? ` \xB7 ${esc3(t.error)}` : ""}${["running", "failed", "cancelled"].includes(t.status) ? " \xB7 budget reserved; final usage unconfirmed" : ` \xB7 ${t.usage.modelCalls} model call(s)`}</p></article>`;
     }).join("");
@@ -23335,7 +23563,7 @@ async function openReviewChat(report, repoRoot, context) {
 var vscode18 = __toESM(require("vscode"));
 
 // src/reviewSubmissionSession.ts
-var import_node_path19 = __toESM(require("node:path"));
+var import_node_path20 = __toESM(require("node:path"));
 var import_node_crypto21 = require("node:crypto");
 var SubmissionSessionError = class extends Error {
   constructor(code3) {
@@ -23385,7 +23613,7 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       const records = await LocalRecordStore.open({
         scope,
         ...options.ports,
-        dataDirectory: client.mode === "centralized" ? import_node_path19.default.join(
+        dataDirectory: client.mode === "centralized" ? import_node_path20.default.join(
           directory,
           "central-review-history",
           options.connectionId
@@ -23476,9 +23704,9 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       async () => (await this.queue.list()).map((row) => row.value).filter((row) => row.payload.review.runId === this.report.runId).map((row) => this.belongs(row))
     );
   }
-  select(id3) {
+  select(id4) {
     return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id3)).value);
+      const entry = this.belongs((await this.queue.get(id4)).value);
       this.preview = {
         submission: entry.payload,
         payloadHash: entry.payloadHash
@@ -23501,14 +23729,14 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       return (await this.queue.send(entry.value.payload.id, signal, true)).value;
     });
   }
-  cancel(id3) {
+  cancel(id4) {
     return this.operation(async () => {
-      this.belongs((await this.queue.get(id3)).value);
-      return (await this.queue.cancel(id3)).value;
+      this.belongs((await this.queue.get(id4)).value);
+      return (await this.queue.cancel(id4)).value;
     });
   }
-  async inspect(id3, signal, withCache) {
-    const entry = this.belongs((await this.queue.get(id3)).value);
+  async inspect(id4, signal, withCache) {
+    const entry = this.belongs((await this.queue.get(id4)).value);
     if (!entry.receipt) return fail3("receipt-required");
     const status = await this.connections.submissionStatus(
       this.options.connectionId,
@@ -23528,27 +23756,27 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
         policyState: reviewSubmissionPolicyState(status, snapshot)
       };
     }
-    const result = { id: id3, status, sync };
-    this.followups.set(id3, result);
+    const result = { id: id4, status, sync };
+    this.followups.set(id4, result);
     return structuredClone(result);
   }
-  reviewStatus(id3, signal) {
-    return this.operation(() => this.inspect(id3, signal, false));
+  reviewStatus(id4, signal) {
+    return this.operation(() => this.inspect(id4, signal, false));
   }
-  synchronizeStatus(id3, signal) {
+  synchronizeStatus(id4, signal) {
     return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id3)).value);
+      const entry = this.belongs((await this.queue.get(id4)).value);
       if (!entry.receipt) return fail3("receipt-required");
       await this.connections.synchronize(this.options.connectionId, signal);
-      return this.inspect(id3, signal, true);
+      return this.inspect(id4, signal, true);
     });
   }
-  prepareRereview(id3, signal) {
+  prepareRereview(id4, signal) {
     return this.operation(async () => {
-      const prior = this.followups.get(id3)?.sync;
+      const prior = this.followups.get(id4)?.sync;
       if (!prior || !["criterion-current", "exception-current"].includes(prior.policyState))
         return fail3("synchronization-required");
-      const current = await this.inspect(id3, signal, true);
+      const current = await this.inspect(id4, signal, true);
       if (!current.sync || current.sync.snapshotId !== prior.snapshotId || !["criterion-current", "exception-current"].includes(
         current.sync.policyState
       ))
@@ -23560,9 +23788,9 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       };
     });
   }
-  centralReviewUrl(id3) {
+  centralReviewUrl(id4) {
     return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id3)).value);
+      const entry = this.belongs((await this.queue.get(id4)).value);
       if (!entry.receipt) return fail3("receipt-required");
       const url = new URL("review-criteria", this.destination.serverUrl);
       url.searchParams.set(
@@ -24146,7 +24374,7 @@ function activate(context) {
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
     const cwd = await resolveRepoRoot() ?? vscode19.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path36.isAbsolute(executable) && !fs10.existsSync(executable)) {
+    if (path37.isAbsolute(executable) && !fs10.existsSync(executable)) {
       vscode19.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
@@ -24443,7 +24671,7 @@ function activate(context) {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path36.relative(last.repoRoot, document3.uri.fsPath).split(path36.sep).join("/");
+    const file = path37.relative(last.repoRoot, document3.uri.fsPath).split(path37.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -24476,6 +24704,7 @@ function activate(context) {
     });
     let automaticError;
     let automaticResultDisplayed = false;
+    let automaticCompletionConfirmed = false;
     const ownerSignal = automatic?.signal ?? feedback?.signal;
     await execution.prepare((signal) => withReviewSignals(signal, ownerSignal, async (combined) => {
       if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
@@ -24534,6 +24763,7 @@ function activate(context) {
       result: async (result, isCurrent) => {
         if (automatic && !automatic.isCurrent()) return;
         automaticResultDisplayed = !!automatic;
+        automaticCompletionConfirmed = result.reviewCompletionConfirmed === true;
         retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
@@ -24541,7 +24771,7 @@ function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode19.Uri.file(path36.join(repoRoot, file)).toString();
+          const uri = vscode19.Uri.file(path37.join(repoRoot, file)).toString();
           return vscode19.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
@@ -24579,6 +24809,7 @@ function activate(context) {
       if (error2.code === "request-deferred" && error2.retryAt) return { retryAt: error2.retryAt };
       throw error2;
     }
+    if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
   context.subscriptions.push(vscode19.commands.registerCommand(
     "commitDefender.analyzeCurrentFile",
@@ -24609,7 +24840,7 @@ function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path36.relative(resolvedRoot, resolvedFile);
+        const relPath = path37.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -24660,7 +24891,7 @@ function activate(context) {
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path36.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path37.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -24784,7 +25015,7 @@ function activate(context) {
       if (!(uri instanceof vscode19.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path36.relative(last.repoRoot, uri.fsPath).split(path36.sep).join("/");
+      const file = path37.relative(last.repoRoot, uri.fsPath).split(path37.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
@@ -24903,7 +25134,7 @@ function activate(context) {
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path36.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path37.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
@@ -25016,7 +25247,7 @@ function activate(context) {
     if (!vscode19.workspace.isTrusted || !vscode19.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path36.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path37.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -25099,7 +25330,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path36.relative(root2, current) || ".";
+    const rel = path37.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -25116,7 +25347,7 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path36.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path37.join(rel, name) });
     }
     const picked = await vscode19.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -25129,9 +25360,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path36.dirname(current);
+      current = path37.dirname(current);
     } else {
-      current = path36.join(current, picked.label.replace("$(folder) ", ""));
+      current = path37.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }

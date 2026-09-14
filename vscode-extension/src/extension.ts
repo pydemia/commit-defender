@@ -515,7 +515,7 @@ export function activate(context: vscode.ExtensionContext): void {
     sourceExclusions: SourceExclusion[] = [],
     automatic?: AutomaticTask<ReviewRequest>,
     feedback?: { connectionId: string; profileId: string; snapshotId: string; signal: AbortSignal; current: () => boolean },
-  ): Promise<void | { retryAt?: number }> {
+  ): Promise<void | { retryAt?: number; completionConfirmed?: boolean }> {
     const cfg = getConfig();
     let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
     try {
@@ -537,6 +537,7 @@ export function activate(context: vscode.ExtensionContext): void {
     });
     let automaticError: unknown;
     let automaticResultDisplayed = false;
+    let automaticCompletionConfirmed = false;
     const ownerSignal = automatic?.signal ?? feedback?.signal;
     await execution.prepare(signal => withReviewSignals(signal, ownerSignal, async combined => {
       if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
@@ -584,6 +585,7 @@ export function activate(context: vscode.ExtensionContext): void {
       result: async (result, isCurrent) => {
         if (automatic && !automatic.isCurrent()) return;
         automaticResultDisplayed = !!automatic;
+        automaticCompletionConfirmed = result.reviewCompletionConfirmed === true;
         retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
@@ -633,6 +635,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (error.code === 'request-deferred' && error.retryAt) return { retryAt: error.retryAt };
       throw error;
     }
+    if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
 
   // ── 1. Analyze Current File ────────────────────────────────────────────

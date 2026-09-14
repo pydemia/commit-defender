@@ -113,6 +113,8 @@ export interface AnalysisReport {
 
 /** Internal result from DockerRunner */
 export interface RunResult {
+  /** The shared request and encrypted report were both confirmed by the worker. */
+  reviewCompletionConfirmed?: boolean;
   report: AnalysisReport;
   /** Ephemeral selected source bodies for navigation. Never persisted in the report/history. */
   capturedSources?: Record<string, string>;
