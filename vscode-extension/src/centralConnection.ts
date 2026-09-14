@@ -162,7 +162,7 @@ export async function readSelectedHistory(
   ports: CentralPorts = {},
 ) {
   const local = await readLocalHistory(location, ports);
-  if (selection?.mode !== "centralized") return { reports: local };
+  if (selection?.mode !== "centralized") return { reports: local, incompleteHistory: false };
   let central: Awaited<ReturnType<typeof readCentralHistory>> | undefined;
   try {
     central = await readCentralHistory(location, selection, ports);
@@ -178,6 +178,7 @@ export async function readSelectedHistory(
           selection.connectionId,
       ),
     ],
+    incompleteHistory: !central,
     audience: central?.audience,
     fallbackConnectionId: selection.connectionId,
   };

@@ -115,3 +115,9 @@ Review your provider's data-retention policy before enabling AI review on sensit
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+### Local Review Activity
+
+Run **Commit Defender: Local Review Activity** from the command palette or sidebar and choose the last 7, 30 or 90 days. Run it again to refresh. The view reads encrypted history for the selected local profile, worktree and connection. It shows saved terminal states, triggers, reported duration, executor/model identity and the provenance of downloaded review knowledge.
+
+The view makes no model calls, central synchronization requests or uploads. Changing the profile, review mode, workspace or central connection closes the previous view. When the selected connection's local history is unavailable, the view marks the remaining local fallback history as incomplete. Deleted or unsaved runs, token usage, provider call counts and billed cost are unknown. Findings are counted per saved review, not as unique confirmed defects; downloaded criteria counts describe inputs, not quality or compliance.

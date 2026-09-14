@@ -208,6 +208,7 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     children.push(
       { kind: 'command', id: 'cmd-central-connection', label: 'Central Review Connection', desc: 'Select, synchronize or disconnect central knowledge', icon: 'plug', command: 'commitDefender.manageCentralConnection' },
       { kind: 'command', id: 'cmd-local-knowledge', label: 'Local Memory and Skills', desc: 'Manage encrypted personal review knowledge', icon: 'book', command: 'commitDefender.manageLocalKnowledge' },
+      { kind: 'command', id: 'cmd-local-activity', label: 'Local Review Activity', desc: 'View saved execution status, duration and knowledge sources', icon: 'graph', command: 'commitDefender.localReviewActivity' },
       { kind: 'command', id: 'cmd-local-history', label: 'Refresh Local History', desc: 'Load history shared with the GCR CLI', icon: 'refresh', command: 'commitDefender.refreshLocalHistory' },
       { kind: 'command', id: 'cmd-summary', label: 'Show Summary Panel', desc: 'Reopen last summary',                  icon: 'preview',   command: 'commitDefender.showSummary' },
       { kind: 'command', id: 'cmd-clear',   label: 'Clear Findings',     desc: 'Remove all comments & diagnostics',   icon: 'clear-all', command: 'commitDefender.clearFindings' },

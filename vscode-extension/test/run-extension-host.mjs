@@ -1,5 +1,9 @@
+import {
+  defaultLocalDataDirectory,
+  PlatformLocalKeyStore,
+} from "@gcr/client-core";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,7 +61,9 @@ try {
   await runTests({
     version,
     ...(executable ? { vscodeExecutablePath: executable } : {}),
-    extensionDevelopmentPath: path.resolve(process.env.CD_TEST_EXTENSION_PATH ?? extensionRoot),
+    extensionDevelopmentPath: path.resolve(
+      process.env.CD_TEST_EXTENSION_PATH ?? extensionRoot,
+    ),
     extensionTestsPath: path.join(
       extensionRoot,
       "out-test",
@@ -67,7 +73,10 @@ try {
       CD_TEST_WORKSPACE: workspace,
       CD_TEST_EVIDENCE_FILE: evidenceFile,
       CD_TEST_PROFILE: profileId,
-      CD_TEST_DELIVERY: process.env.CD_TEST_EXTENSION_PATH ? "packaged-extension" : "source-checkout",
+      CD_TEST_ACTIVITY_FIXTURE: process.env.CD_TEST_ACTIVITY_FIXTURE ?? "0",
+      CD_TEST_DELIVERY: process.env.CD_TEST_EXTENSION_PATH
+        ? "packaged-extension"
+        : "source-checkout",
     },
     launchArgs: [
       workspace,
@@ -85,5 +94,29 @@ try {
   });
   console.log(`Extension Host evidence: ${evidenceFile}`);
 } finally {
+  if (process.env.CD_TEST_ACTIVITY_FIXTURE === "1") {
+    const directory = path.join(
+      defaultLocalDataDirectory(),
+      "profiles",
+      profileId,
+    );
+    let reference;
+    try {
+      reference = JSON.parse(
+        await readFile(path.join(directory, "key-ref.json"), "utf8"),
+      );
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    if (reference) {
+      if (
+        reference.profileId !== profileId ||
+        !/^[a-f0-9-]{36}$/.test(reference.id)
+      )
+        throw Error("Unexpected fixture key reference");
+      await new PlatformLocalKeyStore().remove(`${profileId}.${reference.id}`);
+    }
+    await rm(directory, { recursive: true, force: true });
+  }
   await rm(temporary, { recursive: true, force: true });
 }

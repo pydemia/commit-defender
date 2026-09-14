@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as vscode from "vscode";
-import { defaultLocalDataDirectory } from "@gcr/client-core";
+import {
+  defaultLocalDataDirectory,
+  discoverLocalIdentity,
+  LocalRecordStore,
+  LocalHistoryStore,
+} from "@gcr/client-core";
+import { clientReviewReport } from "@gcr/client-contract";
 
 /** Executed by the real VS Code Extension Host, not by a vscode module mock. */
 export async function run(): Promise<void> {
@@ -28,8 +34,15 @@ export async function run(): Promise<void> {
   );
   for (const command of declared)
     assert(commands.has(command), `Missing command: ${command}`);
-  for (const removed of ["commitDefender.analyzeWithExecutor", "commitDefender.centralModelRequests", "commitDefender.submitReviewFeedback"])
-    assert(!commands.has(removed), `One-way integration must not register ${removed}`);
+  for (const removed of [
+    "commitDefender.analyzeWithExecutor",
+    "commitDefender.centralModelRequests",
+    "commitDefender.submitReviewFeedback",
+  ])
+    assert(
+      !commands.has(removed),
+      `One-way integration must not register ${removed}`,
+    );
   await vscode.commands.executeCommand("commitDefender.clearFindings");
   await vscode.commands.executeCommand("commitDefender.cancel");
   await vscode.commands.executeCommand("commitDefender.refreshLocalHistory");
@@ -42,6 +55,102 @@ export async function run(): Promise<void> {
       ),
     ),
   );
+  await vscode.commands.executeCommand("commitDefender.localReviewActivity", 7);
+  const activityTabs = () =>
+    vscode.window.tabGroups.all
+      .flatMap((group) => group.tabs)
+      .filter((tab) => tab.label === "Local Review Activity");
+  const waitForActivity = async (count:number) => {
+    for(let attempt=0;attempt<100 && activityTabs().length!==count;attempt++)
+      await new Promise(resolve=>setTimeout(resolve,50));
+  };
+  await waitForActivity(1);
+
+  assert.equal(
+    activityTabs().length,
+    1,
+    "Activity command must open the real webview",
+  );
+  await vscode.commands.executeCommand(
+    "commitDefender.localReviewActivity",
+    90,
+  );
+  await waitForActivity(1);
+  assert.equal(
+    activityTabs().length,
+    1,
+    "Refreshing must replace the previous view",
+  );
+  await vscode.commands.executeCommand("commitDefender.clearFindings");
+  // Tab close events are delivered after the command resolves.
+  for (let attempt = 0; attempt < 40 && activityTabs().length; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.equal(
+    activityTabs().length,
+    0,
+    "Invalidation closes the activity view",
+  );
+  assert(
+    !existsSync(
+      path.join(
+        defaultLocalDataDirectory(),
+        "profiles",
+        process.env.CD_TEST_PROFILE!,
+      ),
+    ),
+    "Empty activity must not create storage or an OS key",
+  );
+  if (process.env.CD_TEST_ACTIVITY_FIXTURE === "1") {
+    const profileId = process.env.CD_TEST_PROFILE!;
+    const identity = discoverLocalIdentity(workspace, profileId);
+    const scope = {
+      kind: "repository" as const,
+      profileId,
+      repositoryKey: identity.repositoryKey,
+      worktreeKey: identity.worktreeKey,
+    };
+    const corpus = JSON.parse(
+      readFileSync(
+        path.resolve(
+          __dirname,
+          "../test/fixtures/client-contract/reports.json",
+        ),
+        "utf8",
+      ),
+    );
+    const report = clientReviewReport(
+      corpus.cases.find((item: { name: string }) => item.name === "clean")
+        .report,
+    );
+    report.identity.client = {
+      mode: "standalone",
+      profileId,
+      repositoryKey: scope.repositoryKey,
+      worktreeKey: scope.worktreeKey,
+    };
+    report.identity.executor.model = "synthetic-observation-fixture";
+    report.requestedAt = report.startedAt = new Date(
+      Date.now() - 1000,
+    ).toISOString();
+    report.finishedAt = new Date().toISOString();
+    const records = await LocalRecordStore.open({ scope });
+    try {
+      await new LocalHistoryStore(records).saveReview(report);
+    } finally {
+      records.close();
+    }
+    await vscode.commands.executeCommand(
+      "commitDefender.localReviewActivity",
+      30,
+    );
+    await waitForActivity(1);
+    assert.equal(
+      activityTabs().length,
+      1,
+      "Read real encrypted fixture history in the installed extension",
+    );
+    await vscode.commands.executeCommand("commitDefender.clearFindings");
+  }
   assert(!existsSync(path.join(workspace, ".git", "hooks", "pre-commit")));
 
   const evidence = {
@@ -55,6 +164,7 @@ export async function run(): Promise<void> {
     delivery: process.env.CD_TEST_DELIVERY ?? "source-checkout",
     commandCount: declared.length,
     activation: true,
+    encryptedActivityFixture: process.env.CD_TEST_ACTIVITY_FIXTURE === "1",
     hookDefault: "disable",
     modelCalled: false,
     checks: [
@@ -66,6 +176,7 @@ export async function run(): Promise<void> {
       "no hook installed",
       "standalone defaults and user profile",
       "empty history refresh creates no local store or OS key",
+      "local activity webview opens, refreshes and closes on invalidation without creating storage",
     ],
   };
   if (process.env.CD_TEST_EVIDENCE_FILE) {

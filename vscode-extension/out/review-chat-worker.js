@@ -1207,9 +1207,16 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.37",
+  version: "0.1.0-alpha.39",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
+
+// node_modules/@gcr/client-core/dist/local-identity.js
+var import_node_child_process = require("node:child_process");
+var import_node_crypto = require("node:crypto");
+var import_node_fs = require("node:fs");
+var import_node_os = require("node:os");
+var import_node_path = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/local-errors.js
 var LocalStoreError = class extends Error {
@@ -1223,11 +1230,6 @@ var LocalStoreError = class extends Error {
 var errorCode = (error2) => error2 && typeof error2 === "object" && "code" in error2 && typeof error2.code === "string" ? error2.code : void 0;
 
 // node_modules/@gcr/client-core/dist/local-identity.js
-var import_node_child_process = require("node:child_process");
-var import_node_crypto = require("node:crypto");
-var import_node_fs = require("node:fs");
-var import_node_os = require("node:os");
-var import_node_path = __toESM(require("node:path"), 1);
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   const active = /* @__PURE__ */ new Set();
   let bytes = 0;
@@ -3409,12 +3411,18 @@ function matches(scope, file, branch) {
   return (!scope.filePaths.length || compilePathPatterns(scope.filePaths)(file.source.path)) && (!scope.languages.length || scope.languages.some((language) => language.toLowerCase() === sourceLanguage(file.source.path))) && (!scope.symbols.length || scope.symbols.some((symbol) => file.text.includes(symbol))) && (!scope.contracts.length || scope.contracts.some((contract) => file.text.includes(contract)));
 }
 function selectCentralKnowledge(input) {
-  const policy = centralKnowledgeBundle(input.bundles.policy), collective = centralKnowledgeBundle(input.bundles.collective), personal = centralKnowledgeBundle(input.bundles.personal);
-  if (policy.component !== "policy" || collective.component !== "collective" || personal.component !== "personal" || [policy, collective, personal].some((b) => b.schemaVersion !== 2))
+  const personal = centralKnowledgeBundle(input.bundles.personal);
+  if (personal.component !== "personal")
+    throw Error("central-precedence-contract-required");
+  return selectKnowledge({ ...input, bundles: { ...input.bundles, personal } });
+}
+function selectKnowledge(input) {
+  const policy = centralKnowledgeBundle(input.bundles.policy), collective = centralKnowledgeBundle(input.bundles.collective), personal = input.bundles.personal ? centralKnowledgeBundle(input.bundles.personal) : void 0;
+  if (policy.component !== "policy" || collective.component !== "collective" || personal && personal.component !== "personal" || [policy, collective, ...personal ? [personal] : []].some((b) => b.schemaVersion !== 2))
     throw Error("central-precedence-contract-required");
   if (!Number.isSafeInteger(input.byteLimit) || input.byteLimit < 0 || input.byteLimit > 1048576 || !Number.isFinite(Date.parse(input.now)) || new Date(input.now).toISOString() !== input.now)
     throw Error("invalid-central-selection");
-  if ([collective, personal].some((b) => b.tenantId !== policy.tenantId || b.repositoryId !== policy.repositoryId))
+  if ([collective, ...personal ? [personal] : []].some((b) => b.tenantId !== policy.tenantId || b.repositoryId !== policy.repositoryId))
     throw Error("central-scope-mismatch");
   const result = {
     items: [],
@@ -3503,7 +3511,7 @@ function selectCentralKnowledge(input) {
   }
   const relevant = [];
   const seen = /* @__PURE__ */ new Set();
-  for (const bundle of [collective, personal])
+  for (const bundle of [collective, ...personal ? [personal] : []])
     for (const memory2 of bundle.memories) {
       if (seen.has(memory2.id))
         throw Error("duplicate-central-memory");
@@ -5680,7 +5688,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.37",
+  version: "0.1.0-alpha.39",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6554,7 +6562,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.37",
+  version: "0.1.0-alpha.39",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

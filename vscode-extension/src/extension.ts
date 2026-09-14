@@ -1,3 +1,4 @@
+import { LocalReviewActivity } from './localReviewActivity.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -387,6 +388,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await Promise.all([settleReviews?.(), centralSynchronization.settled()]);
   };
   context.subscriptions.push({ dispose: () => { syncDiscovery++; centralSynchronization.stop(); } });
+  const localReviewActivity = new LocalReviewActivity(async () => {
+    const profileId = localProfile();
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot || !vscode.workspace.isTrusted) throw new Error('Trusted worktree required');
+    const scope = knowledgeScope({ profileId, repoRoot, scope: 'repository' });
+    const selection = readSelection(context.globalState, scope);
+    if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === 'centralized' && selection?.mode !== 'centralized')
+      throw new StandaloneReviewError('central-connection-required');
+    const selected = JSON.stringify(selection);
+    const history = await readSelectedHistory({ profileId, repoRoot, scope: 'repository' }, selection);
+    if (!vscode.workspace.isTrusted || localProfile() !== profileId || await resolveRepoRoot() !== repoRoot ||
+        JSON.stringify(readSelection(context.globalState, scope)) !== selected)
+      throw new Error('Local history selection changed');
+    return { scope, repository: repoRoot, reports: history.reports, incompleteHistory: history.incompleteHistory };
+  });
+  context.subscriptions.push(localReviewActivity,
+    vscode.commands.registerCommand('commitDefender.localReviewActivity', days => localReviewActivity.show(days)));
   let historyLoad = 0;
   async function refreshLocalHistory(): Promise<void> {
     const generation = ++historyLoad;
@@ -457,10 +475,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } catch { void vscode.window.showErrorMessage('Local knowledge could not be opened. Check the profile and OS credential store.'); }
     }),
     vscode.window.onDidChangeWindowState(event => { if (event.focused) { void refreshVisibleContext(); void refreshCentralSynchronization().then(() => centralSynchronization.wake()); } }),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => { syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization(); }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => { localReviewActivity.dispose(); syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization(); }),
     vscode.workspace.onDidGrantWorkspaceTrust(() => { void refreshCentralSynchronization(); }),
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('commitDefender.localProfile') || event.affectsConfiguration('commitDefender.reviewMode')) {
+        localReviewActivity.dispose();
         syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization();
         historyLoad++;
         messageIntent++;
@@ -848,6 +867,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // ── Clear findings ─────────────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand('commitDefender.clearFindings', () => {
+    localReviewActivity.dispose();
     reviewIntent++;
     execution.invalidate();
     _summaryPanel?.dispose();

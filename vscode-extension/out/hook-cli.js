@@ -1557,9 +1557,14 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.37",
+  version: "0.1.0-alpha.39",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
+
+// node_modules/@gcr/client-core/dist/local-identity.js
+var import_node_crypto = require("node:crypto");
+var import_node_os = require("node:os");
+var import_node_path = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/local-errors.js
 var LocalStoreError = class extends Error {
@@ -1573,9 +1578,6 @@ var LocalStoreError = class extends Error {
 var errorCode = (error) => error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : void 0;
 
 // node_modules/@gcr/client-core/dist/local-identity.js
-var import_node_crypto = require("node:crypto");
-var import_node_os = require("node:os");
-var import_node_path = __toESM(require("node:path"), 1);
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   const active = /* @__PURE__ */ new Set();
   let bytes = 0;
@@ -2203,7 +2205,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.37",
+  version: "0.1.0-alpha.39",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

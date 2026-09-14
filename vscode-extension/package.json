@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.9.4",
+    "version": "2.10.0",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -164,6 +164,10 @@
                 "command": "commitDefender.openReviewChat",
                 "title": "Commit Defender: Discuss Review",
                 "icon": "$(comment-discussion)"
+            },
+            {
+                "command": "commitDefender.localReviewActivity",
+                "title": "Commit Defender: Local Review Activity"
             }
         ],
         "configuration": {
@@ -672,7 +676,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -707,7 +711,8 @@
         "test:trigger-matrix": "npm run bundle-advisory-hook && npm run prepare-service && esbuild test/trigger-matrix.test.ts --bundle --platform=node --target=node22 --format=cjs --alias:vscode=./test/helpers/vscode-automatic.ts --outfile=out-test/trigger-matrix.test.cjs && node --test out-test/trigger-matrix.test.cjs",
         "test:counted-codex": "node --test test/counted-codex.test.mjs",
         "test:trigger-overlap": "esbuild test/trigger-overlap-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/trigger-overlap-host.cjs && node test/run-trigger-overlap-host.mjs",
-        "test:editor-save": "esbuild test/editor-save-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/editor-save-host.cjs && node test/run-editor-save-host.mjs"
+        "test:editor-save": "esbuild test/editor-save-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/editor-save-host.cjs && node test/run-editor-save-host.mjs",
+        "test:local-activity": "esbuild test/local-review-activity.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/local-review-activity.test.cjs && node --test out-test/local-review-activity.test.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
@@ -716,9 +721,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.37/gcr-client-contract-0.1.0-alpha.37.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.37/gcr-client-core-0.1.0-alpha.37.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.37/gcr-client-executors-0.1.0-alpha.37.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-contract-0.1.0-alpha.39.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-core-0.1.0-alpha.39.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-executors-0.1.0-alpha.39.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
