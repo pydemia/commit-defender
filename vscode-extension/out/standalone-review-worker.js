@@ -1322,7 +1322,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.30",
+  version: "0.1.0-alpha.31",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6215,16 +6215,18 @@ var import_promises4 = require("node:timers/promises");
 var ReviewRequestError = class extends Error {
   code;
   retryAt;
-  constructor(code, retryAt) {
+  deferredReason;
+  constructor(code, retryAt, deferredReason) {
     super({
       "request-busy": "Another process is updating this review request.",
       "request-interrupted": "A previous process may have started this review. Its outcome must be checked before another execution.",
-      "request-deferred": "The automatic review budget or minimum interval defers this request.",
+      "request-deferred": "Manual review priority, the automatic budget or minimum interval defers this request.",
       "request-lost": "This process no longer owns the review request.",
       "request-invalid": "The review request does not match its profile, worktree or saved result."
     }[code]);
     this.code = code;
     this.retryAt = retryAt;
+    this.deferredReason = deferredReason;
     this.name = "ReviewRequestError";
   }
 };
@@ -6291,6 +6293,61 @@ var ReviewRequests = class _ReviewRequests {
       }
     }
     throw new ReviewRequestError("request-busy");
+  }
+  async priorityState() {
+    const row = await this.records.read("chats", "manual_priority");
+    if (row?.deleted)
+      throw new ReviewRequestError("request-invalid");
+    const value = row?.value ?? { version: 1, observedAt: 0, holders: [] };
+    if (value.version !== 1 || !Number.isSafeInteger(value.observedAt) || value.observedAt < 0 || !Array.isArray(value.holders) || value.holders.length > 64 || value.holders.some((holder) => !holder || !/^[a-f0-9-]{36}$/.test(holder.token) || !Number.isSafeInteger(holder.deadline) || holder.deadline < 0 || holder.deadline > value.observedAt + 3e4) || new Set(value.holders.map((holder) => holder.token)).size !== value.holders.length)
+      throw new ReviewRequestError("request-invalid");
+    const now = this.time(value.observedAt);
+    return {
+      revision: row?.revision ?? 0,
+      value: {
+        ...value,
+        observedAt: now,
+        holders: value.holders.filter((holder) => holder.deadline > now)
+      }
+    };
+  }
+  /** A caller renews its priority while waiting for or executing a manual review.
+   * Expiration releases scheduling priority only; it never retries an unknown model. */
+  async prioritizeManual(token2) {
+    const selected = token2 ?? (0, import_node_crypto12.randomUUID)();
+    return this.retry(async () => {
+      const state = await this.priorityState();
+      const existing = state.value.holders.find((holder) => holder.token === selected);
+      if (token2 && !existing)
+        throw new ReviewRequestError("request-lost");
+      if (!existing && state.value.holders.length >= 64)
+        throw new ReviewRequestError("request-busy");
+      state.value.holders = [
+        ...state.value.holders.filter((holder) => holder.token !== selected),
+        { token: selected, deadline: state.value.observedAt + 3e4 }
+      ];
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+      return selected;
+    });
+  }
+  async releaseManualPriority(token2) {
+    await this.retry(async () => {
+      const state = await this.priorityState();
+      state.value.holders = state.value.holders.filter((holder) => holder.token !== token2);
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+    });
+  }
+  async manualPriorityRetryAt() {
+    const state = await this.priorityState();
+    return state.value.holders.length ? Math.min(state.value.observedAt + 2e3, ...state.value.holders.map((holder) => holder.deadline)) : void 0;
+  }
+  async admitAutomatic() {
+    await this.retry(async () => {
+      const state = await this.priorityState();
+      if (state.value.holders.length)
+        throw new ReviewRequestError("request-deferred", Math.min(state.value.observedAt + 2e3, ...state.value.holders.map((holder) => holder.deadline)), "manual-priority");
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+    });
   }
   async enqueue(input2, reason) {
     const identity = executionIdentity(input2);
@@ -6401,6 +6458,8 @@ var ReviewRequests = class _ReviewRequests {
     const owned = await this.owned(lease);
     if (owned.value.state !== "claimed")
       throw new ReviewRequestError("request-lost");
+    if (reason !== "manual")
+      await this.admitAutomatic();
     await this.retry(async () => {
       await this.owned(lease);
       const row = await this.records.read("settings", "budget");
@@ -6547,6 +6606,7 @@ async function executeReviewRequest(input2) {
   if (input2.signal?.aborted)
     cancel();
   let lease;
+  let manualPriority;
   let timer;
   let heartbeat = Promise.resolve();
   let lost = false;
@@ -6556,7 +6616,12 @@ async function executeReviewRequest(input2) {
   };
   const beat = () => {
     timer = setTimeout(() => {
-      heartbeat = queue.heartbeat(lease).then(() => {
+      heartbeat = (async () => {
+        if (manualPriority)
+          await queue.prioritizeManual(manualPriority);
+        if (lease)
+          await queue.heartbeat(lease);
+      })().then(() => {
         if (!controller2.signal.aborted)
           beat();
       }, () => {
@@ -6569,6 +6634,10 @@ async function executeReviewRequest(input2) {
   try {
     check();
     const request = await queue.enqueue(input2.identity, input2.reason ?? "manual");
+    if ((input2.reason ?? "manual") === "manual") {
+      manualPriority = await queue.prioritizeManual();
+      beat();
+    }
     while (true) {
       check();
       const claimed = await queue.claim(request.key, request.state === "finished" && input2.retryFinished ? { retryFinishedGeneration: request.generation } : {});
@@ -6592,7 +6661,8 @@ async function executeReviewRequest(input2) {
       await input2.onRequest?.(claimed.request);
       break;
     }
-    beat();
+    if (!manualPriority)
+      beat();
     await input2.assertValid?.();
     check();
     await queue.begin(lease, input2.reason ?? "manual", input2.limits);
@@ -6630,6 +6700,8 @@ async function executeReviewRequest(input2) {
     await heartbeat;
     if (lease)
       await queue.release(lease).catch(() => void 0);
+    if (manualPriority)
+      await queue.releaseManualPriority(manualPriority).catch(() => void 0);
     input2.signal?.removeEventListener("abort", cancel);
     queue.close();
   }
@@ -6664,6 +6736,7 @@ async function git(cwd, args, input2, allow = [0]) {
         GIT_CONFIG_GLOBAL: "/dev/null",
         GIT_OPTIONAL_LOCKS: "0",
         GIT_NO_LAZY_FETCH: "1",
+        GIT_NO_REPLACE_OBJECTS: "1",
         GIT_TERMINAL_PROMPT: "0",
         GIT_ALLOW_PROTOCOL: ""
       }
@@ -7083,7 +7156,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.30",
+  version: "0.1.0-alpha.31",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7957,7 +8030,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.30",
+  version: "0.1.0-alpha.31",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7978,7 +8051,7 @@ function standaloneErrorMessage(code) {
       return "A previous process may have started this review. Check its outcome before another execution.";
     case "request-busy":
     case "request-deferred":
-      return "The shared review request is busy or waiting for its review budget.";
+      return "The shared review request is busy or waiting for manual review priority or its review budget.";
     case "request-lost":
       return "This process no longer owns the review request.";
     case "request-invalid":

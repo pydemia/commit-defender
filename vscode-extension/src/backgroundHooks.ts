@@ -413,6 +413,10 @@ export class BackgroundHooks {
         throw Error(
           "Restart this profile’s existing service with the bundled CLI to enable automatic review budgets.",
         );
+      if (!service.features?.includes("manual-review-priority-v1"))
+        throw Error(
+          "This running service cannot defer automatic work for manual reviews. After its active reviews finish, restart it with this extension’s bundled CLI.",
+        );
       if (
         (automatic.save &&
           !service.features?.includes("editor-save-events-v1")) ||

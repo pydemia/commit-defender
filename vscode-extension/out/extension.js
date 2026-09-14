@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path38, originalPath, doThrow) => {
-      if (!isString(path38)) {
+    var checkPath = (path39, originalPath, doThrow) => {
+      if (!isString(path39)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path38) {
+      if (!path39) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path38)) {
+      if (checkPath.isNotRelative(path39)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path38) => REGEX_TEST_INVALID_PATH.test(path38);
+    var isNotRelative = (path39) => REGEX_TEST_INVALID_PATH.test(path39);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path38, checkUnignored) {
+      _testOne(path39, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path38);
+          const matched = rule.regex.test(path39);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path38 = originalPath && checkPath.convert(originalPath);
+        const path39 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path38,
+          path39,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path38, cache, checkUnignored, slices);
+        return this._t(path39, cache, checkUnignored, slices);
       }
-      _t(path38, cache, checkUnignored, slices) {
-        if (path38 in cache) {
-          return cache[path38];
+      _t(path39, cache, checkUnignored, slices) {
+        if (path39 in cache) {
+          return cache[path39];
         }
         if (!slices) {
-          slices = path38.split(SLASH);
+          slices = path39.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path38] = this._testOne(path38, checkUnignored);
+          return cache[path39] = this._testOne(path39, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path38] = parent.ignored ? parent : this._testOne(path38, checkUnignored);
+        return cache[path39] = parent.ignored ? parent : this._testOne(path39, checkUnignored);
       }
-      ignores(path38) {
-        return this._test(path38, this._ignoreCache, false).ignored;
+      ignores(path39) {
+        return this._test(path39, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path38) => !this.ignores(path38);
+        return (path39) => !this.ignores(path39);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path38) {
-        return this._test(path38, this._testCache, true);
+      test(path39) {
+        return this._test(path39, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path38) => checkPath(path38 && checkPath.convert(path38), path38, RETURN_FALSE);
+    var isPathValid = (path39) => checkPath(path39 && checkPath.convert(path39), path39, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path38) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path38) || isNotRelative(path38);
+      checkPath.isNotRelative = (path39) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path39) || isNotRelative(path39);
     }
   }
 });
@@ -425,7 +425,7 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var fs10 = __toESM(require("fs"));
-var path37 = __toESM(require("path"));
+var path38 = __toESM(require("path"));
 var vscode19 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
@@ -11260,7 +11260,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path38, match) {
+function findUrl(_, protocol, domain2, path39, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -11273,7 +11273,7 @@ function findUrl(_, protocol, domain2, path38, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path38);
+  const parts2 = splitUrl(domain2 + path39);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -13567,7 +13567,7 @@ function standaloneErrorMessage(code3) {
       return "A previous process may have started this review. Check its outcome before another execution.";
     case "request-busy":
     case "request-deferred":
-      return "The shared review request is busy or waiting for its review budget.";
+      return "The shared review request is busy or waiting for manual review priority or its review budget.";
     case "request-lost":
       return "This process no longer owns the review request.";
     case "request-invalid":
@@ -14016,9 +14016,9 @@ var ReviewExecutionOwner = class {
 };
 
 // src/localKnowledge.ts
-var import_node_crypto13 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 var import_promises7 = require("node:fs/promises");
-var import_node_path11 = __toESM(require("node:path"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -15264,7 +15264,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.30",
+  version: "0.1.0-alpha.31",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -18087,12 +18087,395 @@ var KnowledgeSyncLoop = class {
 };
 
 // node_modules/@gcr/client-core/dist/review-requests.js
+var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_crypto10 = require("node:crypto");
+var ReviewRequestError = class extends Error {
+  code;
+  retryAt;
+  deferredReason;
+  constructor(code3, retryAt, deferredReason) {
+    super({
+      "request-busy": "Another process is updating this review request.",
+      "request-interrupted": "A previous process may have started this review. Its outcome must be checked before another execution.",
+      "request-deferred": "Manual review priority, the automatic budget or minimum interval defers this request.",
+      "request-lost": "This process no longer owns the review request.",
+      "request-invalid": "The review request does not match its profile, worktree or saved result."
+    }[code3]);
+    this.code = code3;
+    this.retryAt = retryAt;
+    this.deferredReason = deferredReason;
+    this.name = "ReviewRequestError";
+  }
+};
 function reviewRequestKey(input) {
   const identity = executionIdentity(input);
   if (identity.client.execution)
     delete identity.client.execution.lastSynchronizedAt;
   return contentHash(identity);
 }
+var ReviewRequests = class _ReviewRequests {
+  records;
+  now;
+  constructor(records, now) {
+    this.records = records;
+    this.now = now;
+  }
+  static async open(options) {
+    if (options.scope.kind !== "repository")
+      throw new ReviewRequestError("request-invalid");
+    const records = await LocalRecordStore.open({
+      ...options,
+      dataDirectory: import_node_path7.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
+    });
+    return new _ReviewRequests(records, options.now ?? Date.now);
+  }
+  close() {
+    this.records.close();
+  }
+  time(previous3 = 0) {
+    const now = this.now();
+    if (!Number.isSafeInteger(now) || now < 0 || now < previous3)
+      throw new ReviewRequestError("request-invalid");
+    return now;
+  }
+  checkIdentity(identity) {
+    const scope = this.records.scope, client = identity.client;
+    if (scope.kind !== "repository" || scope.profileId !== client.profileId || scope.repositoryKey !== client.repositoryKey || scope.worktreeKey !== client.worktreeKey)
+      throw new ReviewRequestError("request-invalid");
+  }
+  async state(key3) {
+    if (!/^[a-f0-9]{64}$/.test(key3))
+      throw new ReviewRequestError("request-invalid");
+    const row = await this.records.read("settings", key3);
+    if (!row || row.deleted)
+      return void 0;
+    const value = reviewRequestRecord(row.value);
+    this.checkIdentity(value.identity);
+    this.time(value.updatedAt);
+    if (value.key !== key3 || reviewRequestKey(value.identity) !== key3)
+      throw new ReviewRequestError("request-invalid");
+    return { revision: row.revision, value };
+  }
+  async put(state, value) {
+    await this.records.write("settings", value.key, reviewRequestRecord(value), state?.revision ?? 0);
+    return value;
+  }
+  async retry(work) {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      try {
+        return await work();
+      } catch (cause) {
+        if (!(cause instanceof LocalStoreError) || cause.code !== "revision-conflict")
+          throw cause;
+      }
+    }
+    throw new ReviewRequestError("request-busy");
+  }
+  async priorityState() {
+    const row = await this.records.read("chats", "manual_priority");
+    if (row?.deleted)
+      throw new ReviewRequestError("request-invalid");
+    const value = row?.value ?? { version: 1, observedAt: 0, holders: [] };
+    if (value.version !== 1 || !Number.isSafeInteger(value.observedAt) || value.observedAt < 0 || !Array.isArray(value.holders) || value.holders.length > 64 || value.holders.some((holder) => !holder || !/^[a-f0-9-]{36}$/.test(holder.token) || !Number.isSafeInteger(holder.deadline) || holder.deadline < 0 || holder.deadline > value.observedAt + 3e4) || new Set(value.holders.map((holder) => holder.token)).size !== value.holders.length)
+      throw new ReviewRequestError("request-invalid");
+    const now = this.time(value.observedAt);
+    return {
+      revision: row?.revision ?? 0,
+      value: {
+        ...value,
+        observedAt: now,
+        holders: value.holders.filter((holder) => holder.deadline > now)
+      }
+    };
+  }
+  /** A caller renews its priority while waiting for or executing a manual review.
+   * Expiration releases scheduling priority only; it never retries an unknown model. */
+  async prioritizeManual(token2) {
+    const selected = token2 ?? (0, import_node_crypto10.randomUUID)();
+    return this.retry(async () => {
+      const state = await this.priorityState();
+      const existing = state.value.holders.find((holder) => holder.token === selected);
+      if (token2 && !existing)
+        throw new ReviewRequestError("request-lost");
+      if (!existing && state.value.holders.length >= 64)
+        throw new ReviewRequestError("request-busy");
+      state.value.holders = [
+        ...state.value.holders.filter((holder) => holder.token !== selected),
+        { token: selected, deadline: state.value.observedAt + 3e4 }
+      ];
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+      return selected;
+    });
+  }
+  async releaseManualPriority(token2) {
+    await this.retry(async () => {
+      const state = await this.priorityState();
+      state.value.holders = state.value.holders.filter((holder) => holder.token !== token2);
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+    });
+  }
+  async manualPriorityRetryAt() {
+    const state = await this.priorityState();
+    return state.value.holders.length ? Math.min(state.value.observedAt + 2e3, ...state.value.holders.map((holder) => holder.deadline)) : void 0;
+  }
+  async admitAutomatic() {
+    await this.retry(async () => {
+      const state = await this.priorityState();
+      if (state.value.holders.length)
+        throw new ReviewRequestError("request-deferred", Math.min(state.value.observedAt + 2e3, ...state.value.holders.map((holder) => holder.deadline)), "manual-priority");
+      await this.records.write("chats", "manual_priority", state.value, state.revision);
+    });
+  }
+  async enqueue(input, reason) {
+    const identity = executionIdentity(input);
+    this.checkIdentity(identity);
+    reviewTrigger(reason);
+    const key3 = reviewRequestKey(identity);
+    return this.retry(async () => {
+      const state = await this.state(key3);
+      if (state) {
+        if (state.value.reasons.includes(reason))
+          return state.value;
+        return this.put(state, {
+          ...state.value,
+          reasons: [...state.value.reasons, reason].sort(),
+          updatedAt: this.time(state.value.updatedAt)
+        });
+      }
+      const now = this.time();
+      return this.put(void 0, {
+        formatVersion: 1,
+        key: key3,
+        identity,
+        reasons: [reason],
+        state: "queued",
+        generation: 0,
+        createdAt: now,
+        updatedAt: now,
+        owner: null,
+        resultId: null
+      });
+    });
+  }
+  async get(key3) {
+    return (await this.state(key3))?.value;
+  }
+  async list() {
+    const rows = [];
+    for (const id4 of await this.records.listIds("settings")) {
+      if (id4 === "budget")
+        continue;
+      const row = await this.get(id4);
+      if (row)
+        rows.push(row);
+    }
+    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+  async claim(key3, options = {}) {
+    const leaseMs = options.leaseMs ?? 3e4;
+    if (!Number.isInteger(leaseMs) || leaseMs < 1e3 || leaseMs > 12e4)
+      throw new ReviewRequestError("request-invalid");
+    return this.retry(async () => {
+      const state = await this.state(key3);
+      if (!state)
+        throw new ReviewRequestError("request-invalid");
+      const now = this.time(state.value.updatedAt);
+      if (state.value.owner && state.value.owner.deadline > now)
+        return { kind: "waiting", request: state.value };
+      if (state.value.state === "running") {
+        const request2 = await this.put(state, {
+          ...state.value,
+          state: "interrupted",
+          // Interruption fences the owner token; it does not start another attempt.
+          // Keep the attempt number so its completion receipt can be reconciled.
+          owner: null,
+          updatedAt: now
+        });
+        return { kind: "interrupted", request: request2 };
+      }
+      if (state.value.state === "interrupted")
+        return { kind: "interrupted", request: state.value };
+      if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
+        return { kind: "finished", request: state.value };
+      const token2 = (0, import_node_crypto10.randomUUID)(), generation = state.value.generation + 1;
+      const request = await this.put(state, {
+        ...state.value,
+        state: "claimed",
+        generation,
+        updatedAt: now,
+        owner: { token: token2, deadline: now + leaseMs },
+        resultId: null
+      });
+      return { kind: "acquired", request, lease: { key: key3, token: token2, generation } };
+    });
+  }
+  async owned(lease) {
+    const state = await this.state(lease.key);
+    if (!state || state.value.generation !== lease.generation || state.value.owner?.token !== lease.token || state.value.owner.deadline <= this.time())
+      throw new ReviewRequestError("request-lost");
+    return state;
+  }
+  async heartbeat(lease, leaseMs = 3e4) {
+    if (!Number.isInteger(leaseMs) || leaseMs < 1e3 || leaseMs > 12e4)
+      throw new ReviewRequestError("request-invalid");
+    await this.retry(async () => {
+      const state = await this.owned(lease), now = this.time(state.value.updatedAt);
+      await this.put(state, {
+        ...state.value,
+        updatedAt: now,
+        owner: { token: lease.token, deadline: now + leaseMs }
+      });
+    });
+  }
+  async begin(lease, reason, limits = {}) {
+    reviewTrigger(reason);
+    const minimum = limits.minimumIntervalMs ?? 0, maximum = limits.maximumReviewsPerHour ?? 1e3;
+    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum) || maximum < 1 || maximum > 1e3)
+      throw new ReviewRequestError("request-invalid");
+    const owned = await this.owned(lease);
+    if (owned.value.state !== "claimed")
+      throw new ReviewRequestError("request-lost");
+    if (reason !== "manual")
+      await this.admitAutomatic();
+    await this.retry(async () => {
+      await this.owned(lease);
+      const row = await this.records.read("settings", "budget");
+      if (row?.deleted)
+        throw new ReviewRequestError("request-invalid");
+      const ledger = row ? reviewStartLedger(row.value) : { formatVersion: 1, observedAt: 0, reservations: [] };
+      const now = this.time(ledger.observedAt);
+      const reservations = ledger.reservations.filter((r) => r.at > now - 36e5);
+      if (reservations.some((r) => r.key === lease.key && r.generation === lease.generation))
+        return;
+      const last = reservations.filter((r) => r.reason === reason).at(-1);
+      const retryAt = Math.max(reservations.length >= maximum ? reservations[reservations.length - maximum].at + 36e5 : 0, last ? last.at + minimum : 0);
+      if (retryAt > now)
+        throw new ReviewRequestError("request-deferred", retryAt);
+      reservations.push({ key: lease.key, generation: lease.generation, at: now, reason });
+      await this.records.write("settings", "budget", reviewStartLedger({ formatVersion: 1, observedAt: now, reservations }), row?.revision ?? 0);
+    });
+    await this.retry(async () => {
+      const state = await this.owned(lease);
+      if (state.value.state !== "claimed")
+        throw new ReviewRequestError("request-lost");
+      await this.put(state, {
+        ...state.value,
+        state: "running",
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+  async finish(lease, report) {
+    const parsed = clientReviewReport(report);
+    if (reviewRequestKey(parsed.identity) !== lease.key || !parsed.finishedAt)
+      throw new ReviewRequestError("request-invalid");
+    return this.retry(async () => {
+      const state = await this.owned(lease);
+      if (state.value.state !== "running")
+        throw new ReviewRequestError("request-lost");
+      return this.put(state, {
+        ...state.value,
+        state: "finished",
+        owner: null,
+        resultId: parsed.runId,
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+  /** Record the returned terminal report before saving history. This is a pointer
+   * and digest, not another copy of private report/source content. Older clients
+   * ignore this separate record and can still decode the request journal. */
+  async prepareCompletion(lease, report) {
+    const parsed = clientReviewReport(report);
+    if (reviewRequestKey(parsed.identity) !== lease.key || !parsed.finishedAt)
+      throw new ReviewRequestError("request-invalid");
+    const state = await this.owned(lease);
+    if (state.value.state !== "running")
+      throw new ReviewRequestError("request-lost");
+    const id4 = `completion_${lease.key}_${lease.generation}`;
+    const value = {
+      version: 1,
+      key: lease.key,
+      generation: lease.generation,
+      reportId: parsed.runId,
+      reportHash: contentHash(parsed)
+    };
+    const old = await this.records.read("chats", id4);
+    if (old) {
+      if (old.deleted || contentHash(old.value) !== contentHash(value))
+        throw new ReviewRequestError("request-invalid");
+      return;
+    }
+    await this.records.write("chats", id4, value, 0);
+  }
+  /** Reattach only this attempt's terminal report. Never claim or run a model.
+   * A missing receipt/history leaves interruption visible; lease expiry alone
+   * does not establish that an external executor stopped. */
+  async reconcile(key3, generation, input) {
+    if (!Number.isSafeInteger(generation) || generation < 1)
+      throw new ReviewRequestError("request-invalid");
+    return this.retry(async () => {
+      let state = await this.state(key3);
+      if (!state || state.value.generation !== generation)
+        throw new ReviewRequestError("request-invalid");
+      const now = this.time(state.value.updatedAt);
+      if (state.value.owner && state.value.owner.deadline > now)
+        return { request: state.value };
+      if (state.value.state === "running") {
+        const value = await this.put(state, {
+          ...state.value,
+          state: "interrupted",
+          owner: null,
+          updatedAt: now
+        });
+        state = await this.state(key3);
+        if (state.value.generation !== generation || state.value.state !== value.state)
+          throw new ReviewRequestError("request-lost");
+      }
+      if (!["interrupted", "finished"].includes(state.value.state))
+        return { request: state.value };
+      await input.assertValid();
+      const row = await this.records.read("chats", `completion_${key3}_${generation}`);
+      const receipt = row && !row.deleted ? row.value : void 0;
+      if (receipt && (receipt.version !== 1 || receipt.key !== key3 || receipt.generation !== generation || typeof receipt.reportId !== "string" || typeof receipt.reportHash !== "string" || !/^[a-f0-9]{64}$/.test(receipt.reportHash)))
+        throw new ReviewRequestError("request-invalid");
+      if (!receipt && state.value.state !== "finished")
+        return { request: state.value };
+      const id4 = state.value.resultId ?? String(receipt.reportId);
+      const report = await input.loadReport(id4);
+      if (!report)
+        return { request: state.value };
+      const parsed = clientReviewReport(report);
+      if (parsed.runId !== id4 || !parsed.finishedAt || reviewRequestKey(parsed.identity) !== key3 || receipt && (receipt.reportId !== id4 || receipt.reportHash !== contentHash(parsed)))
+        throw new ReviewRequestError("request-invalid");
+      await input.assertValid();
+      if (state.value.state === "finished") {
+        if ((await this.state(key3))?.revision !== state.revision)
+          throw new ReviewRequestError("request-lost");
+        return { request: state.value, report: parsed };
+      }
+      const request = await this.put(state, {
+        ...state.value,
+        state: "finished",
+        owner: null,
+        resultId: parsed.runId,
+        updatedAt: this.time(state.value.updatedAt)
+      });
+      return { request, report: parsed };
+    });
+  }
+  async release(lease) {
+    await this.retry(async () => {
+      const state = await this.owned(lease);
+      await this.put(state, {
+        ...state.value,
+        state: state.value.state === "running" ? "interrupted" : "queued",
+        owner: null,
+        updatedAt: this.time(state.value.updatedAt)
+      });
+    });
+  }
+};
 
 // node_modules/@gcr/client-core/dist/automatic-scheduler.js
 var AutomaticReviewScheduler = class {
@@ -18207,8 +18590,8 @@ var AutomaticReviewScheduler = class {
 var import_node_child_process3 = require("node:child_process");
 var import_node_fs3 = require("node:fs");
 var import_promises5 = require("node:fs/promises");
-var import_node_path7 = __toESM(require("node:path"), 1);
-var import_node_crypto10 = require("node:crypto");
+var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_crypto11 = require("node:crypto");
 async function git(cwd, args, input, allow = [0]) {
   return new Promise((resolve4, reject) => {
     const child = (0, import_node_child_process3.execFile)("git", [
@@ -18232,6 +18615,7 @@ async function git(cwd, args, input, allow = [0]) {
         GIT_CONFIG_GLOBAL: "/dev/null",
         GIT_OPTIONAL_LOCKS: "0",
         GIT_NO_LAZY_FETCH: "1",
+        GIT_NO_REPLACE_OBJECTS: "1",
         GIT_TERMINAL_PROMPT: "0",
         GIT_ALLOW_PROTOCOL: ""
       }
@@ -18291,11 +18675,80 @@ async function observeAutomaticRepository(cwd, excludes = []) {
     throw new SourceCaptureError("source-unavailable");
   return { root: root2, indexPath, head, fingerprint: contentHash({ head, index: index2 }), changes };
 }
-function newlyStagedPaths(previous3, current) {
+async function newlyStagedPaths(previous3, current) {
   if (previous3.root !== current.root || previous3.head !== current.head || previous3.fingerprint === current.fingerprint)
     return [];
-  const before = new Map(previous3.changes.map((c) => [c.path, contentHash(c)]));
-  return current.changes.filter((c) => before.get(c.path) !== contentHash(c)).map((c) => c.path);
+  const before = new Map(previous3.changes.map((c) => [c.path, c]));
+  const lineCounts = /* @__PURE__ */ new Map();
+  const distances = /* @__PURE__ */ new Map();
+  const deadline = Date.now() + 2e4;
+  const lines2 = async (oid) => {
+    if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(oid))
+      throw new SourceCaptureError("source-unavailable");
+    if (/^0+$/.test(oid))
+      return 0;
+    const cached = lineCounts.get(oid);
+    if (cached !== void 0)
+      return cached;
+    if (Date.now() > deadline)
+      throw new SourceCaptureError("source-unavailable");
+    const size = Number(await git(current.root, ["cat-file", "-s", oid]));
+    if (!Number.isSafeInteger(size) || size < 0 || size > 2 * 1024 * 1024)
+      throw new SourceCaptureError("source-unavailable");
+    const text7 = await git(current.root, ["cat-file", "blob", oid]);
+    if (text7.includes("\0"))
+      throw new SourceCaptureError("source-unavailable");
+    const count = (text7.match(/\n/g)?.length ?? 0) + Number(!!text7 && !text7.endsWith("\n"));
+    lineCounts.set(oid, count);
+    return count;
+  };
+  const distance = async (left, right) => {
+    if (left === right)
+      return 0;
+    const key3 = [left, right].sort().join(":");
+    const cached = distances.get(key3);
+    if (cached !== void 0)
+      return cached;
+    const leftLines = await lines2(left), rightLines = await lines2(right);
+    if (/^0+$/.test(left) || /^0+$/.test(right))
+      return leftLines + rightLines;
+    if (Date.now() > deadline)
+      throw new SourceCaptureError("source-unavailable");
+    const stat = await git(current.root, [
+      "diff",
+      "--numstat",
+      "--no-renames",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-color",
+      "--diff-algorithm=minimal",
+      left,
+      right,
+      "--"
+    ]);
+    const row = stat.match(/^(\d+)\t(\d+)\t[^\n]*\n?$/);
+    if (!row)
+      throw new SourceCaptureError("source-unavailable");
+    const value = Number(row[1]) + Number(row[2]);
+    distances.set(key3, value);
+    return value;
+  };
+  const added = [];
+  for (const change of current.changes) {
+    const old = before.get(change.path);
+    if (old && contentHash(old) === contentHash(change))
+      continue;
+    if (!old || old.oldOid !== change.oldOid || old.oldMode !== change.oldMode || change.mode !== old.mode && change.mode !== change.oldMode) {
+      added.push(change.path);
+      continue;
+    }
+    const original = await distance(old.oldOid, old.oid);
+    const remaining = await distance(change.oldOid, change.oid);
+    const reverted = await distance(old.oid, change.oid);
+    if (remaining + reverted !== original)
+      added.push(change.path);
+  }
+  return added;
 }
 async function workingTreeChanged(root2, file) {
   const head = (await git(root2, ["rev-parse", "--verify", "HEAD"], void 0, [0, 128])).trim();
@@ -18319,8 +18772,8 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
   file = sourcePath(file);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path7.default.join(root2, file);
-  let parent = import_node_path7.default.dirname(absolute);
+  const absolute = import_node_path8.default.join(root2, file);
+  let parent = import_node_path8.default.dirname(absolute);
   for (; ; ) {
     try {
       if (await (0, import_promises5.realpath)(parent) !== parent)
@@ -18329,10 +18782,10 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     } catch (error2) {
       if (error2.code !== "ENOENT" || parent === root2)
         return void 0;
-      parent = import_node_path7.default.dirname(parent);
+      parent = import_node_path8.default.dirname(parent);
     }
   }
-  if (parent !== root2 && !parent.startsWith(root2 + import_node_path7.default.sep))
+  if (parent !== root2 && !parent.startsWith(root2 + import_node_path8.default.sep))
     return void 0;
   const ignored = knownChanged ? "" : await git(root2, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
@@ -18357,7 +18810,7 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     if (buffer.subarray(0, length).includes(0))
       return void 0;
     const changed = knownChanged || await workingTreeChanged(root2, file);
-    return { hash: (0, import_node_crypto10.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
+    return { hash: (0, import_node_crypto11.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       const changed = knownChanged || await workingTreeChanged(root2, file);
@@ -18370,9 +18823,9 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
 }
 
 // node_modules/@gcr/client-core/dist/service-jobs.js
-var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_path9 = __toESM(require("node:path"), 1);
 var import_promises6 = require("node:fs/promises");
-var import_node_crypto11 = require("node:crypto");
+var import_node_crypto12 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/service-watch.js
 var uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -18392,6 +18845,15 @@ function validateServiceWatch(input) {
     sourcePath(file.path);
     if (file.hash !== null && !/^[a-f0-9]{64}$/.test(file.hash))
       throw new LocalServiceError("service-invalid");
+  }
+  if (input.observed.index !== void 0) {
+    if (input.trigger !== "stage" || !Array.isArray(input.observed.index) || input.observed.index.length !== input.observed.files.length)
+      throw new LocalServiceError("service-invalid");
+    for (const change of input.observed.index) {
+      sourcePath(change.path);
+      if (!/^[AMDTU]$/.test(change.status) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(change.oldOid) || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(change.oid) || !/^\d{6}$/.test(change.oldMode) || !/^\d{6}$/.test(change.mode) || !input.observed.files.some((file) => file.path === change.path && file.hash === contentHash(change)))
+        throw new LocalServiceError("service-invalid");
+    }
   }
   for (const file of [...input.pendingPaths, ...input.reviewPaths])
     sourcePath(file);
@@ -18426,7 +18888,7 @@ var invalid4 = () => new LocalServiceError("service-invalid");
 function reviewOptions(input) {
   const value = structuredClone(input);
   value.maximumReviewsPerHour ??= 6;
-  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path8.default.isAbsolute(value.executorPath)))
+  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path9.default.isAbsolute(value.executorPath)))
     throw invalid4();
   for (const [field, max] of [
     ["durationMs", 6e5],
@@ -18447,17 +18909,19 @@ function reviewOptions(input) {
 var ServiceJobs = class _ServiceJobs {
   records;
   profileId;
-  constructor(records, profileId) {
+  storage;
+  constructor(records, profileId, storage) {
     this.records = records;
     this.profileId = profileId;
+    this.storage = storage;
   }
   static async open(options) {
     if (options.scope.kind !== "profile")
       throw invalid4();
     return new _ServiceJobs(await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path8.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
-    }), options.scope.profileId);
+      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
+    }), options.scope.profileId, options);
   }
   close() {
     this.records.close();
@@ -18508,7 +18972,7 @@ var ServiceJobs = class _ServiceJobs {
             throw new LocalServiceError("service-busy");
         }
       }
-      const token2 = (0, import_node_crypto11.randomUUID)();
+      const token2 = (0, import_node_crypto12.randomUUID)();
       try {
         await this.records.write("settings", "owner", { version: 1, pid: process.pid, token: token2 }, row?.revision ?? 0);
         return token2;
@@ -18559,7 +19023,7 @@ var ServiceJobs = class _ServiceJobs {
     if (!row || row.deleted)
       return;
     const value = row.value;
-    if (value.version !== 1 || value.key !== key3 || value.revision !== row.revision || !import_node_path8.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key3 || !Array.isArray(value.triggers))
+    if (value.version !== 1 || value.key !== key3 || value.revision !== row.revision || !import_node_path9.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key3 || !Array.isArray(value.triggers))
       throw invalid4();
     value.triggers.forEach((t) => reviewTrigger(t));
     reviewOptions(value.options);
@@ -18585,6 +19049,8 @@ var ServiceJobs = class _ServiceJobs {
     if (value.version !== 1 || value.id !== id4 || !["queued", "running", "finished", "cancelled", "interrupted"].includes(value.state) || !Number.isSafeInteger(value.createdAt) || !Number.isInteger(value.registrationRevision) || !Number.isInteger(row.revision) || !/^[a-f0-9]{64}$/.test(value.repository) || !/^[a-f0-9]{64}$/.test(value.sourceHash) || !/^[a-f0-9]{64}$/.test(value.payloadHash))
       throw invalid4();
     reviewTrigger(value.trigger);
+    if (value.waitingReason !== void 0 && !["manual-priority", "review-budget"].includes(value.waitingReason))
+      throw invalid4();
     if (value.execution && (!/^[a-f0-9]{64}$/.test(value.execution.key) || !Number.isSafeInteger(value.execution.generation) || value.execution.generation < 1))
       throw invalid4();
     return value;
@@ -18736,15 +19202,38 @@ var ServiceJobs = class _ServiceJobs {
       }
       if (job.notBefore && job.notBefore > Date.now())
         continue;
+      if (job.trigger !== "manual") {
+        const requests = await ReviewRequests.open({
+          ...this.storage,
+          scope: {
+            kind: "repository",
+            profileId: this.profileId,
+            repositoryKey: registration.repositoryKey,
+            worktreeKey: registration.worktreeKey
+          }
+        });
+        let retryAt;
+        try {
+          retryAt = await requests.manualPriorityRetryAt();
+        } finally {
+          requests.close();
+        }
+        if (retryAt) {
+          await this.update({ ...job, notBefore: retryAt, waitingReason: "manual-priority" }, job);
+          continue;
+        }
+      }
       const row = await this.records.read("chats", `payload_${job.id}`);
       if (!row || row.deleted || contentHash(row.value) !== job.payloadHash)
         throw invalid4();
       const source = restoreLocalSource(row.value);
       source.close();
       const startedAt = Date.now();
-      await this.update({ ...job, state: "running", owner: token2, startedAt }, job);
+      const running = { ...job, state: "running", owner: token2, startedAt };
+      delete running.waitingReason;
+      await this.update(running, job);
       return {
-        job: { ...job, state: "running", owner: token2, startedAt },
+        job: running,
         registration,
         source: row.value
       };
@@ -18769,8 +19258,16 @@ var ServiceJobs = class _ServiceJobs {
       throw new LocalServiceError("service-interrupted");
     if (![0, 1, 2].includes(result.exitCode) || typeof result.status !== "string" || result.status.length > 128 || result.runId !== void 0 && !validId(result.runId))
       throw invalid4();
-    if (result.status === "deferred" && result.exitCode === 2 && Number.isSafeInteger(result.retryAt) && result.retryAt > Date.now()) {
-      const queued = { ...job, state: "queued", owner: null, notBefore: result.retryAt };
+    if (result.deferredReason !== void 0 && !["manual-priority", "review-budget"].includes(result.deferredReason))
+      throw invalid4();
+    if (result.status === "deferred" && result.exitCode === 2 && Number.isSafeInteger(result.retryAt) && result.retryAt >= 0) {
+      const queued = {
+        ...job,
+        state: "queued",
+        owner: null,
+        notBefore: Math.max(Date.now() + 250, result.retryAt),
+        waitingReason: result.deferredReason ?? "review-budget"
+      };
       delete queued.execution;
       return this.update(queued, job);
     }
@@ -18796,16 +19293,16 @@ var ServiceJobs = class _ServiceJobs {
 
 // node_modules/@gcr/client-core/dist/local-service.js
 var import_node_net = __toESM(require("node:net"), 1);
-var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_path10 = __toESM(require("node:path"), 1);
 var import_node_os2 = __toESM(require("node:os"), 1);
 var maximumFrame = 9 * 1024 * 1024;
 async function localServiceAddress(options) {
   if (process.platform === "win32")
     throw new LocalServiceError("service-unavailable");
-  const directory = await privateRoot(import_node_path9.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
-  const data = await privateRoot(import_node_path9.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
+  const directory = await privateRoot(import_node_path10.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
+  const data = await privateRoot(import_node_path10.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
   const key3 = contentHash({ profile: options.profileId, data });
-  const socket = import_node_path9.default.join(directory, key3.slice(0, 24));
+  const socket = import_node_path10.default.join(directory, key3.slice(0, 24));
   if (Buffer.byteLength(socket) > 100)
     throw new LocalServiceError("service-unavailable");
   return socket;
@@ -18866,8 +19363,8 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
 }
 
 // node_modules/@gcr/client-core/dist/review-submissions.js
-var import_node_path10 = __toESM(require("node:path"), 1);
-var import_node_crypto12 = require("node:crypto");
+var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_crypto13 = require("node:crypto");
 var ReviewSubmissionQueueError = class extends Error {
   code;
   constructor(code3) {
@@ -18925,7 +19422,7 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
       fail2("repository-required");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-submissions", options.connectionId)
+      dataDirectory: import_node_path11.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-submissions", options.connectionId)
     });
     const queue = new _ReviewSubmissionQueue(records, options.connectionId, options.connections, options.now ?? (() => /* @__PURE__ */ new Date()));
     try {
@@ -19032,7 +19529,7 @@ var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
       ...row.value,
       status: "sending",
       attempts: row.value.attempts + 1,
-      lease: { owner: (0, import_node_crypto12.randomUUID)(), until: new Date(now.getTime() + 6e4).toISOString() },
+      lease: { owner: (0, import_node_crypto13.randomUUID)(), until: new Date(now.getTime() + 6e4).toISOString() },
       lastError: null
     };
     const claim = await this.records.write("submissions", id4, value, row.revision);
@@ -19140,7 +19637,7 @@ function prepareReviewSubmission(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.30",
+  version: "0.1.0-alpha.31",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -19271,7 +19768,7 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
     title: update.title,
     body: update.body,
     appliesTo: update.appliesTo,
-    sources: [{ kind: "user-note", id: (0, import_node_crypto13.randomUUID)() }],
+    sources: [{ kind: "user-note", id: (0, import_node_crypto14.randomUUID)() }],
     ...update.expiresAt ? { expiresAt: update.expiresAt } : {}
   };
   const draft = kind === "memory" ? {
@@ -19286,7 +19783,7 @@ async function readLocalHistory(location2, ports = {}) {
   const scope = knowledgeScope(location2);
   const dataDirectory = ports.dataDirectory ?? defaultLocalDataDirectory();
   try {
-    await (0, import_promises7.lstat)(import_node_path11.default.join(dataDirectory, "profiles", scope.profileId));
+    await (0, import_promises7.lstat)(import_node_path12.default.join(dataDirectory, "profiles", scope.profileId));
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "code" in error2 && error2.code === "ENOENT")
       return [];
@@ -19340,7 +19837,7 @@ async function checkLocalContextFreshness(report, ports = {}, now = /* @__PURE__
 }
 
 // src/centralConnection.ts
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_path13 = __toESM(require("node:path"));
 function selectionKey(scope) {
   if (scope.kind !== "repository")
     throw new StandaloneReviewError("central-connection-required");
@@ -19405,7 +19902,7 @@ async function readCentralHistory(location2, selection, ports = {}) {
       const records = await LocalRecordStore.open({
         scope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path12.default.join(
+        dataDirectory: import_node_path13.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id
@@ -19449,12 +19946,12 @@ async function readSelectedHistory(location2, selection, ports = {}) {
 
 // src/automaticReviews.ts
 var vscode3 = __toESM(require("vscode"));
-var import_node_path14 = __toESM(require("node:path"));
+var import_node_path15 = __toESM(require("node:path"));
 var import_promises9 = require("node:fs/promises");
 
 // src/config.ts
 var fs4 = __toESM(require("fs"));
-var path21 = __toESM(require("path"));
+var path22 = __toESM(require("path"));
 var vscode2 = __toESM(require("vscode"));
 function getStandaloneReviewSettings(fileCount, repoRoot) {
   const cfg = vscode2.workspace.getConfiguration("commitDefender", repoRoot ? vscode2.Uri.file(repoRoot) : void 0);
@@ -19517,7 +20014,7 @@ function resolveCodexPath(configured2) {
   const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
     for (const name of names) {
-      const candidate = path21.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      const candidate = path22.join(extensionPath, "bin", `${platform}-${arch}`, name);
       if (fs4.existsSync(candidate)) {
         return candidate;
       }
@@ -19531,24 +20028,24 @@ function resolveExternalCliPath(configured2, name) {
   }
   const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   const candidates = [];
-  for (const dir of (process.env.PATH ?? "").split(path21.delimiter).filter(Boolean)) {
+  for (const dir of (process.env.PATH ?? "").split(path22.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
-      candidates.push(path21.join(dir, executable));
+      candidates.push(path22.join(dir, executable));
     }
   }
   const userHome = process.env.HOME || process.env.USERPROFILE;
   if (userHome) {
     for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
       for (const executable of executableNames) {
-        candidates.push(path21.join(userHome, dir, executable));
+        candidates.push(path22.join(userHome, dir, executable));
       }
     }
-    const nvmVersions = path21.join(userHome, ".nvm", "versions", "node");
+    const nvmVersions = path22.join(userHome, ".nvm", "versions", "node");
     try {
       const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
       for (const version of versions) {
         for (const executable of executableNames) {
-          candidates.push(path21.join(nvmVersions, version, "bin", executable));
+          candidates.push(path22.join(nvmVersions, version, "bin", executable));
         }
       }
     } catch {
@@ -19556,7 +20053,7 @@ function resolveExternalCliPath(configured2, name) {
   }
   for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
     for (const executable of executableNames) {
-      candidates.push(path21.join(dir, executable));
+      candidates.push(path22.join(dir, executable));
     }
   }
   return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured2;
@@ -19639,7 +20136,7 @@ function readAutomaticOverride(store, scope) {
 }
 
 // src/automaticStageCheckpoint.ts
-var import_node_path13 = __toESM(require("node:path"));
+var import_node_path14 = __toESM(require("node:path"));
 var import_promises8 = require("node:fs/promises");
 var id3 = "automatic-stage-observation-v1";
 var invalid5 = () => new Error("Saved automatic stage observation is invalid.");
@@ -19651,7 +20148,7 @@ var AutomaticStageCheckpoint = class {
     if (!create) {
       try {
         await (0, import_promises8.lstat)(
-          import_node_path13.default.join(
+          import_node_path14.default.join(
             this.ports.dataDirectory ?? defaultLocalDataDirectory(),
             "profiles",
             profileId
@@ -19727,7 +20224,7 @@ var AutomaticStageCheckpoint = class {
             pendingPaths = [
               .../* @__PURE__ */ new Set([
                 ...retained,
-                ...newlyStagedPaths(previous3.observed, observed)
+                ...await newlyStagedPaths(previous3.observed, observed)
               ])
             ].sort();
           }
@@ -19816,8 +20313,8 @@ var AutomaticReviews = class {
       vscode3.workspace.onDidChangeTextDocument((e) => {
         if (!e.document.isDirty || !e.contentChanges.length) return;
         for (const [root2, value] of this.roots)
-          if (e.document.uri.fsPath.startsWith(root2 + import_node_path14.default.sep)) {
-            const file = import_node_path14.default.relative(root2, e.document.uri.fsPath).split(import_node_path14.default.sep).join("/");
+          if (e.document.uri.fsPath.startsWith(root2 + import_node_path15.default.sep)) {
+            const file = import_node_path15.default.relative(root2, e.document.uri.fsPath).split(import_node_path15.default.sep).join("/");
             if (value.backgroundReady && this.ports.backgroundSave)
               void this.track(
                 this.ports.backgroundSave(root2, { file, reason: "dirty" })
@@ -20038,8 +20535,8 @@ var AutomaticReviews = class {
     if (settings.paused || !settings.save && !settings.stage) return value;
     const watcher = vscode3.workspace.createFileSystemWatcher(
       new vscode3.RelativePattern(
-        vscode3.Uri.file(import_node_path14.default.dirname(observed.indexPath)),
-        import_node_path14.default.basename(observed.indexPath)
+        vscode3.Uri.file(import_node_path15.default.dirname(observed.indexPath)),
+        import_node_path15.default.basename(observed.indexPath)
       ),
       false,
       false,
@@ -20063,7 +20560,7 @@ var AutomaticReviews = class {
       );
       const changed = (uri) => {
         if (sourcePathPolicy(this.excludes())(
-          import_node_path14.default.relative(observed.root, uri.fsPath).split(import_node_path14.default.sep).join("/")
+          import_node_path15.default.relative(observed.root, uri.fsPath).split(import_node_path15.default.sep).join("/")
         ))
           return;
         const key3 = uri.toString();
@@ -20144,11 +20641,11 @@ var AutomaticReviews = class {
     const generation = this.generation, fileKey = uri.toString(), fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      let absolute = import_node_path14.default.resolve(uri.fsPath);
-      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path14.default.sep)).sort((a, b) => b.length - a.length)[0];
+      let absolute = import_node_path15.default.resolve(uri.fsPath);
+      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path15.default.sep)).sort((a, b) => b.length - a.length)[0];
       if (!root2) {
-        const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(absolute));
-        absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(absolute));
+        const directory = await (0, import_promises9.realpath)(import_node_path15.default.dirname(absolute));
+        absolute = import_node_path15.default.join(directory, import_node_path15.default.basename(absolute));
         const observed2 = await observeAutomaticRepository(
           directory,
           this.excludes()
@@ -20172,7 +20669,7 @@ var AutomaticReviews = class {
       const state = this.roots.get(root2);
       if (state.settings.paused || !state.settings.save || !state.backgroundReady)
         return;
-      const file = import_node_path14.default.relative(root2, absolute).split(import_node_path14.default.sep).join("/");
+      const file = import_node_path15.default.relative(root2, absolute).split(import_node_path15.default.sep).join("/");
       await this.scan(root2);
       const observed = await observeAutomaticFile(root2, file, this.excludes());
       if (generation !== this.generation || this.fileGeneration.get(fileKey) !== fileGeneration || !observed)
@@ -20264,7 +20761,7 @@ var AutomaticReviews = class {
   }
   async manage() {
     const choices = [...this.roots.keys()].map((root2) => ({
-      label: import_node_path14.default.basename(root2),
+      label: import_node_path15.default.basename(root2),
       description: root2,
       root: root2
     }));
@@ -20342,18 +20839,18 @@ var AutomaticReviews = class {
 
 // src/backgroundHooks.ts
 var import_promises11 = __toESM(require("node:fs/promises"));
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 var import_node_os3 = __toESM(require("node:os"));
-var import_node_crypto15 = require("node:crypto");
+var import_node_crypto16 = require("node:crypto");
 var import_node_child_process5 = require("node:child_process");
 var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
 var import_promises10 = __toESM(require("node:fs/promises"));
-var import_node_path15 = __toESM(require("node:path"));
-var import_node_crypto14 = require("node:crypto");
+var import_node_path16 = __toESM(require("node:path"));
+var import_node_crypto15 = require("node:crypto");
 var import_node_child_process4 = require("node:child_process");
-var digest2 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
+var digest2 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
 var quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
 function git2(root2, args, missing = false) {
   const env4 = { ...process.env };
@@ -20382,7 +20879,7 @@ async function privateDirectory2(directory) {
   return import_promises10.default.realpath(directory);
 }
 async function writeJson(file, value) {
-  const tmp = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
+  const tmp = `${file}.${(0, import_node_crypto15.randomUUID)()}`;
   try {
     await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
       flag: "wx",
@@ -20410,7 +20907,7 @@ async function readState(file) {
   }
 }
 async function lock(directory) {
-  const file = import_node_path15.default.join(directory, "owner.lock");
+  const file = import_node_path16.default.join(directory, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const handle2 = await import_promises10.default.open(file, "wx", 384);
@@ -20479,14 +20976,14 @@ async function location(root2, dataDirectory) {
     worktree ? "config.worktree" : "config"
   ]);
   const base = await privateDirectory2(
-    import_node_path15.default.join(dataDirectory, "managed-hooks")
+    import_node_path16.default.join(dataDirectory, "managed-hooks")
   );
-  const directory = await privateDirectory2(import_node_path15.default.join(base, digest2(config)));
+  const directory = await privateDirectory2(import_node_path16.default.join(base, digest2(config)));
   return {
     root: root2,
     config,
     directory,
-    stateFile: import_node_path15.default.join(directory, "state.json")
+    stateFile: import_node_path16.default.join(directory, "state.json")
   };
 }
 var configured = (root2, config) => {
@@ -20501,7 +20998,7 @@ async function verifyFiles(state) {
   for (const [name, hash4] of Object.entries(state.files)) {
     if (!/^[a-z][a-z0-9-]*$/.test(name))
       throw Error("Invalid managed hook name.");
-    const file = import_node_path15.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
+    const file = import_node_path16.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises10.default.readFile(file)) !== hash4)
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved."
@@ -20561,7 +21058,7 @@ async function configureManagedHooks(options) {
           "This worktree has hooks registered to another profile. Disable that registration first."
         );
       if (![route2.node, route2.cli, route2.dataDirectory, options.adapter].every(
-        import_node_path15.default.isAbsolute
+        import_node_path16.default.isAbsolute
       ) || !Number.isInteger(route2.waitMs) || route2.waitMs < 0 || route2.waitMs > 6e5 || !route2.triggers.length || route2.triggers.some((t) => !["commit", "push"].includes(t)))
         throw Error("Invalid hook route.");
       state.routes[loc.root] = structuredClone(route2);
@@ -20593,7 +21090,7 @@ async function configureManagedHooks(options) {
     const names = new Set(hookNames);
     try {
       for (const name of await import_promises10.default.readdir(
-        import_node_path15.default.resolve(loc.root, state.original)
+        import_node_path16.default.resolve(loc.root, state.original)
       ))
         if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
     } catch (error2) {
@@ -20603,7 +21100,7 @@ async function configureManagedHooks(options) {
         throw error2;
     }
     for (const name of names) {
-      const original = import_node_path15.default.join(state.original, name);
+      const original = import_node_path16.default.join(state.original, name);
       const text7 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
@@ -20612,11 +21109,11 @@ fi
 ` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi
 exit 0
 `;
-      const file = import_node_path15.default.join(loc.directory, name);
+      const file = import_node_path16.default.join(loc.directory, name);
       if (!state.files[name]) {
         await import_promises10.default.writeFile(file, text7, { flag: "wx", mode: 448 });
       } else {
-        const temporary = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
+        const temporary = `${file}.${(0, import_node_crypto15.randomUUID)()}`;
         try {
           await import_promises10.default.writeFile(temporary, text7, { flag: "wx", mode: 448 });
           await import_promises10.default.rename(temporary, file);
@@ -20655,14 +21152,14 @@ exit 0
 
 // src/backgroundHooks.ts
 var key2 = "background-hooks.v1";
-var hash3 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
 async function privateCopy(source, directory, name) {
-  const bytes = await import_promises11.default.readFile(source), targetDir = import_node_path16.default.join(directory, hash3(bytes));
+  const bytes = await import_promises11.default.readFile(source), targetDir = import_node_path17.default.join(directory, hash3(bytes));
   await import_promises11.default.mkdir(targetDir, { recursive: true, mode: 448 });
   const stat = await import_promises11.default.lstat(targetDir);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw Error("Service installation directory is not private.");
-  const target = import_node_path16.default.join(targetDir, name);
+  const target = import_node_path17.default.join(targetDir, name);
   try {
     await import_promises11.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
   } catch (error2) {
@@ -20679,7 +21176,7 @@ var BackgroundHooks = class {
     this.store = store;
     this.call = call;
   }
-  sessionId = (0, import_node_crypto15.randomUUID)();
+  sessionId = (0, import_node_crypto16.randomUUID)();
   epoch = 0;
   generations = /* @__PURE__ */ new Map();
   pending = Promise.resolve();
@@ -20740,7 +21237,7 @@ var BackgroundHooks = class {
     }
     await configureManagedHooks({
       root: owned.root,
-      adapter: import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs")
+      adapter: import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs")
     });
     await this.store.update(
       key2,
@@ -20924,18 +21421,18 @@ var BackgroundHooks = class {
           { cwd: import_node_os3.default.homedir(), env: env4, timeout: 1e4 }
         )).stdout
       );
-      if (node2.major < 22 || !import_node_path16.default.isAbsolute(node2.path))
+      if (node2.major < 22 || !import_node_path17.default.isAbsolute(node2.path))
         throw Error("Background review service requires Node.js 22 or newer.");
       const dataDirectory = defaultLocalDataDirectory(), location2 = { profileId: settings.profileId, dataDirectory };
-      const programs = import_node_path16.default.join(dataDirectory, "service-programs");
+      const programs = import_node_path17.default.join(dataDirectory, "service-programs");
       await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
       const cli = await privateCopy(
-        import_node_path16.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
+        import_node_path17.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
         "gcr.mjs"
       );
       const adapter = await privateCopy(
-        import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs"),
+        import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs"),
         programs,
         "advisory.cjs"
       );
@@ -20959,11 +21456,15 @@ var BackgroundHooks = class {
         throw Error(
           "Restart this profile\u2019s existing service with the bundled CLI to enable automatic review budgets."
         );
+      if (!service.features?.includes("manual-review-priority-v1"))
+        throw Error(
+          "This running service cannot defer automatic work for manual reviews. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
+        );
       if (automatic.save && !service.features?.includes("editor-save-events-v1") || automatic.stage && !service.features?.includes("headless-watch-v1"))
         throw Error(
           "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
         );
-      const executorPath = import_node_path16.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
+      const executorPath = import_node_path17.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
         { env: env4, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
@@ -21109,7 +21610,7 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallback
 
 // src/backgroundRecovery.ts
 var vscode4 = __toESM(require("vscode"));
-var import_node_path17 = __toESM(require("node:path"));
+var import_node_path18 = __toESM(require("node:path"));
 async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
   try {
     const jobs2 = (await hooks.status()).filter(
@@ -21123,7 +21624,7 @@ async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
     }
     const selected = await vscode4.window.showQuickPick(
       jobs2.map((job2) => ({
-        label: `${import_node_path17.default.basename(job2.root)} \xB7 ${job2.trigger}`,
+        label: `${import_node_path18.default.basename(job2.root)} \xB7 ${job2.trigger}`,
         description: `${new Date(job2.createdAt).toLocaleString()} \xB7 ${job2.profileId}`,
         detail: `${job2.root} \xB7 ${job2.id}${job2.supportsRecovery ? "" : " \xB7 Service restart required"}`,
         job: job2
@@ -21234,7 +21735,7 @@ var CentralSynchronization = class {
 var vscode5 = __toESM(require("vscode"));
 var import_node_fs4 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
-var import_node_crypto16 = require("node:crypto");
+var import_node_crypto17 = require("node:crypto");
 var esc2 = (value) => String(value).replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
@@ -21393,7 +21894,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const config = await readConfig(files[0].fsPath);
       config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
       const pins = config.trustedKeys.map(
-        (k) => `${k.id}: ${(0, import_node_crypto16.createHash)("sha256").update(k.pem).digest("hex")}`
+        (k) => `${k.id}: ${(0, import_node_crypto17.createHash)("sha256").update(k.pem).digest("hex")}`
       ).join(" \xB7 ");
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       const confirmed = await vscode5.window.showInformationMessage(
@@ -21570,7 +22071,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
 }
 
 // src/localKnowledgeView.ts
-var import_node_crypto17 = require("node:crypto");
+var import_node_crypto18 = require("node:crypto");
 var vscode6 = __toESM(require("vscode"));
 async function showLocalKnowledge(context, scope, changed) {
   const panel = vscode6.window.createWebviewPanel(
@@ -21597,7 +22098,7 @@ async function showLocalKnowledge(context, scope, changed) {
   });
   const render = (notice = "") => {
     if (closed) return;
-    nonce = (0, import_node_crypto17.randomBytes)(16).toString("hex");
+    nonce = (0, import_node_crypto18.randomBytes)(16).toString("hex");
     panel.webview.html = localKnowledgeHtml(
       nonce,
       `${scope.profileId} \xB7 ${scope.kind === "profile" ? "All repositories in this profile" : "This repository and worktree"}`,
@@ -21738,7 +22239,7 @@ async function showLocalKnowledge(context, scope, changed) {
 
 // src/modelCredentials.ts
 var import_promises13 = require("node:fs/promises");
-var import_node_path18 = __toESM(require("node:path"));
+var import_node_path19 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code3) {
@@ -21812,7 +22313,7 @@ function checkedReference(value, binding) {
   return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path18.default.join(
+  return import_node_path19.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -21821,7 +22322,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path18.default.join(
+    const file = import_node_path19.default.join(
       dataDirectory,
       "profiles",
       reference.profileId,
@@ -21955,8 +22456,8 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 
 // src/hook/config.ts
 var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path19 = __toESM(require("node:path"));
-var import_node_crypto18 = require("node:crypto");
+var import_node_path20 = __toESM(require("node:path"));
+var import_node_crypto19 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
     super(
@@ -21969,7 +22470,7 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path19.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
+  const dir = import_node_path20.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
   if (create) import_node_fs5.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
     const stat = import_node_fs5.default.lstatSync(dir);
@@ -21987,7 +22488,7 @@ function readHookConfigSnapshot(repoRoot) {
   let fd;
   try {
     fd = import_node_fs5.default.openSync(
-      import_node_path19.default.join(dir, "hook.json"),
+      import_node_path20.default.join(dir, "hook.json"),
       import_node_fs5.default.constants.O_RDONLY | import_node_fs5.default.constants.O_NOFOLLOW | import_node_fs5.default.constants.O_NONBLOCK
     );
   } catch (error2) {
@@ -22104,15 +22605,15 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path19.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path19.default.join(dir, `.hook-lock-${(0, import_node_crypto18.randomUUID)()}`);
+  const lock2 = import_node_path20.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path20.default.join(dir, `.hook-lock-${(0, import_node_crypto19.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
-    nonce: (0, import_node_crypto18.randomUUID)()
+    nonce: (0, import_node_crypto19.randomUUID)()
   });
   import_node_fs5.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs5.default.writeFileSync(import_node_path19.default.join(prepared, "owner.json"), owner, {
+  import_node_fs5.default.writeFileSync(import_node_path20.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
@@ -22132,7 +22633,7 @@ function acquireLock(dir) {
         const entries = import_node_fs5.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path19.default.join(lock2, "owner.json");
+        const ownerPath = import_node_path20.default.join(lock2, "owner.json");
         const ownerStat = import_node_fs5.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
@@ -22158,16 +22659,16 @@ function acquireLock(dir) {
     throw failure();
   }
   return () => {
-    if (import_node_fs5.default.readFileSync(import_node_path19.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs5.default.readFileSync(import_node_path20.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs5.default.unlinkSync(import_node_path19.default.join(lock2, "owner.json"));
+    import_node_fs5.default.unlinkSync(import_node_path20.default.join(lock2, "owner.json"));
     import_node_fs5.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path19.default.join(dir, `.hook-config-${(0, import_node_crypto18.randomUUID)()}`);
+  const temporary = import_node_path20.default.join(dir, `.hook-config-${(0, import_node_crypto19.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
@@ -22184,7 +22685,7 @@ function publishConfig(repoRoot, cfg, expectedText) {
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs5.default.renameSync(temporary, import_node_path19.default.join(dir, "hook.json"));
+    import_node_fs5.default.renameSync(temporary, import_node_path20.default.join(dir, "hook.json"));
     const directory = import_node_fs5.default.openSync(dir, import_node_fs5.default.constants.O_RDONLY);
     try {
       import_node_fs5.default.fsyncSync(directory);
@@ -22412,7 +22913,7 @@ async function manageModelCredential(repoRoot) {
 var vscode9 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path29 = __toESM(require("path"));
+var path30 = __toESM(require("path"));
 var vscode8 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
@@ -22428,7 +22929,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path29.join(repoRoot, b.file);
+      const absPath = path30.join(repoRoot, b.file);
       const uriKey = vscode8.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -22466,7 +22967,7 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path30 = __toESM(require("path"));
+var path31 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
   _onDidChangeCodeLenses = new vscode9.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
@@ -22479,7 +22980,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path30.relative(last.repoRoot, document3.uri.fsPath).split(path30.sep).join("/");
+    const file = path31.relative(last.repoRoot, document3.uri.fsPath).split(path31.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -22510,7 +23011,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path31 = __toESM(require("path"));
+var path32 = __toESM(require("path"));
 var vscode10 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -22543,7 +23044,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode10.Uri.file(path31.join(repoRoot, b.file));
+    const uri = vscode10.Uri.file(path32.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode10.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -22565,7 +23066,7 @@ var CommentManager = class {
 };
 
 // src/diagnostics.ts
-var path32 = __toESM(require("path"));
+var path33 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode11.DiagnosticSeverity.Error,
@@ -22585,7 +23086,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode11.Uri.file(path32.join(repoRoot, relFile));
+    const uri = vscode11.Uri.file(path33.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -22608,11 +23109,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path33 = __toESM(require("path"));
+var path34 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path33.relative(path33.resolve(repoRoot), path33.resolve(file)).split(path33.sep).join("/");
+  const relative4 = (file) => path34.relative(path34.resolve(repoRoot), path34.resolve(file)).split(path34.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -22627,18 +23128,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path33.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path34.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path33.join(dir, entry.name);
+      const absolute = path34.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path33.resolve(dirPath));
+  walk(path34.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -22972,7 +23473,7 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path34 = __toESM(require("path"));
+var path35 = __toESM(require("path"));
 var vscode14 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -22999,7 +23500,7 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path34.join(repoRoot, ".gitignore");
+  const gi = path35.join(repoRoot, ".gitignore");
   let text7 = "";
   try {
     text7 = fs9.readFileSync(gi, "utf8");
@@ -23014,7 +23515,7 @@ ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path34.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path35.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -23039,8 +23540,8 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path34.join(repoRoot, ".git", "hooks");
-  const hookPath = path34.join(hookDir, "pre-commit");
+  const hookDir = path35.join(repoRoot, ".git", "hooks");
+  const hookPath = path35.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
@@ -23089,7 +23590,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path34.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path35.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
@@ -23114,14 +23615,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path34.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path35.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path35 = __toESM(require("path"));
+var path36 = __toESM(require("path"));
 var vscode15 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -23192,11 +23693,11 @@ var PanelProvider = class {
     switch (node2.kind) {
       case "file": {
         const item = new vscode15.TreeItem(
-          path35.basename(node2.file),
+          path36.basename(node2.file),
           vscode15.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path35.dirname(node2.file);
+        const dir = path36.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
@@ -23293,7 +23794,7 @@ ${b.comment}`;
         kind: "file",
         id: id4,
         file,
-        absPath: path35.join(this._repoRoot, file),
+        absPath: path36.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id4, blocks)
       };
@@ -23456,17 +23957,17 @@ var StatusBarManager = class {
 
 // src/reviewChat.ts
 var vscode17 = __toESM(require("vscode"));
-var import_node_crypto20 = require("node:crypto");
+var import_node_crypto21 = require("node:crypto");
 
 // src/reviewChatView.ts
-var import_node_crypto19 = require("node:crypto");
+var import_node_crypto20 = require("node:crypto");
 var esc3 = (text7) => text7.replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
 var markdown = (text7) => safeMarkdownHtml(text7, () => void 0);
 var ReviewChatView = class {
-  id = (0, import_node_crypto19.randomBytes)(16).toString("hex");
+  id = (0, import_node_crypto20.randomBytes)(16).toString("hex");
   revision = 0;
   sources = /* @__PURE__ */ new Map();
   findings = /* @__PURE__ */ new Map();
@@ -23511,7 +24012,7 @@ var ReviewChatView = class {
     const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
-      const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
+      const id4 = (0, import_node_crypto20.randomBytes)(12).toString("hex");
       this.findings.set(id4, `Explain finding ${f.id}: ${f.title}`);
       return `<li><button class="link" data-finding="${id4}">${esc3(f.title)}</button></li>`;
     }).join("")}</ul></details>`;
@@ -23520,7 +24021,7 @@ var ReviewChatView = class {
         (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc3(q.question)}</p>${q.answer !== null ? `<div class="user">${esc3(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc3(option)}">${esc3(option)}</button>`).join("")}</div><small>Expires ${esc3(q.expiresAt)}</small>`}</section>`
       ).join("");
       const citations = (t.response?.citations ?? []).map((c, index2) => {
-        const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
+        const id4 = (0, import_node_crypto20.randomBytes)(12).toString("hex");
         this.sources.set(id4, { turnId: t.id, citation: index2 });
         return `<li><button class="link" data-source="${id4}">${esc3(c.location.side)} \xB7 ${esc3(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
       }).join("");
@@ -23804,7 +24305,7 @@ async function openReviewChat(report, repoRoot, context) {
         else if (view.state && (!turn || !["queued", "running"].includes(turn.status)))
           await execute({
             type: "send",
-            turnId: (0, import_node_crypto20.randomUUID)(),
+            turnId: (0, import_node_crypto21.randomUUID)(),
             content: message.content
           });
       }
@@ -23819,8 +24320,8 @@ async function openReviewChat(report, repoRoot, context) {
 var vscode18 = __toESM(require("vscode"));
 
 // src/reviewSubmissionSession.ts
-var import_node_path20 = __toESM(require("node:path"));
-var import_node_crypto21 = require("node:crypto");
+var import_node_path21 = __toESM(require("node:path"));
+var import_node_crypto22 = require("node:crypto");
 var SubmissionSessionError = class extends Error {
   constructor(code3) {
     super(code3);
@@ -23869,7 +24370,7 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       const records = await LocalRecordStore.open({
         scope,
         ...options.ports,
-        dataDirectory: client.mode === "centralized" ? import_node_path20.default.join(
+        dataDirectory: client.mode === "centralized" ? import_node_path21.default.join(
           directory,
           "central-review-history",
           options.connectionId
@@ -23946,7 +24447,7 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
     return this.operation(async () => {
       this.preview = prepareReviewSubmission({
         report: this.report,
-        id: (0, import_node_crypto21.randomUUID)(),
+        id: (0, import_node_crypto22.randomUUID)(),
         audience: this.destination.audience,
         clientId: "commit-defender",
         approvedAt: (/* @__PURE__ */ new Date()).toISOString(),
@@ -24087,9 +24588,9 @@ function connectionBinding(status) {
 }
 
 // src/reviewSubmissionView.ts
-var import_node_crypto22 = require("node:crypto");
+var import_node_crypto23 = require("node:crypto");
 var ReviewSubmissionView = class {
-  id = (0, import_node_crypto22.randomBytes)(16).toString("hex");
+  id = (0, import_node_crypto23.randomBytes)(16).toString("hex");
   message(raw) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
     const v = raw;
@@ -24632,7 +25133,7 @@ async function activate(context) {
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
     const cwd = await resolveRepoRoot() ?? vscode19.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path37.isAbsolute(executable) && !fs10.existsSync(executable)) {
+    if (path38.isAbsolute(executable) && !fs10.existsSync(executable)) {
       vscode19.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
@@ -24929,7 +25430,7 @@ async function activate(context) {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path37.relative(last.repoRoot, document3.uri.fsPath).split(path37.sep).join("/");
+    const file = path38.relative(last.repoRoot, document3.uri.fsPath).split(path38.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -25030,7 +25531,7 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode19.Uri.file(path37.join(repoRoot, file)).toString();
+          const uri = vscode19.Uri.file(path38.join(repoRoot, file)).toString();
           return vscode19.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
@@ -25099,7 +25600,7 @@ async function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path37.relative(resolvedRoot, resolvedFile);
+        const relPath = path38.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -25150,7 +25651,7 @@ async function activate(context) {
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path37.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path38.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -25274,7 +25775,7 @@ async function activate(context) {
       if (!(uri instanceof vscode19.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path37.relative(last.repoRoot, uri.fsPath).split(path37.sep).join("/");
+      const file = path38.relative(last.repoRoot, uri.fsPath).split(path38.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
@@ -25393,7 +25894,7 @@ async function activate(context) {
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path37.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path38.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
@@ -25506,7 +26007,7 @@ async function activate(context) {
     if (!vscode19.workspace.isTrusted || !vscode19.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path37.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path38.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -25545,10 +26046,10 @@ async function activate(context) {
     const folder = vscode19.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
-      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path37.sep) || canonicalRoot.startsWith(root2 + path37.sep);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path38.sep) || canonicalRoot.startsWith(root2 + path38.sep);
     });
     if (!folder) return;
-    const displayRoot = path37.resolve(folder.uri.fsPath, path37.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const displayRoot = path38.resolve(folder.uri.fsPath, path38.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
     const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
     if (scope.kind !== "repository") return;
     const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
@@ -25560,9 +26061,9 @@ async function activate(context) {
     const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode19.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
-        return fs10.realpathSync(document3.uri.fsPath) === path37.join(canonicalRoot, file);
+        return fs10.realpathSync(document3.uri.fsPath) === path38.join(canonicalRoot, file);
       } catch {
-        return path37.resolve(document3.uri.fsPath) === path37.resolve(displayRoot, file);
+        return path38.resolve(document3.uri.fsPath) === path38.resolve(displayRoot, file);
       }
     })?.getText());
     findingsStore.update(entry.report, displayRoot, blocks);
@@ -25578,7 +26079,7 @@ async function activate(context) {
     backgroundPolling = true;
     void backgroundHooks.status().then(async (jobs2) => {
       const pending = jobs2.filter((job) => job.state === "queued" || job.state === "running");
-      if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some((job) => job.notBefore && job.notBefore > Date.now()) ? " (hourly limit)" : ""}.`);
+      if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some((job) => job.waitingReason === "manual-priority") ? " (waiting for manual review)" : pending.some((job) => job.notBefore && job.notBefore > Date.now()) ? " (review budget)" : ""}.`);
       const interrupted = jobs2.filter((job) => job.state === "interrupted");
       const finished = jobs2.filter((job) => job.state === "finished" && job.result?.runId && !observedBackgroundResults.has(job.id));
       if (finished.length) {
@@ -25632,7 +26133,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path37.relative(root2, current) || ".";
+    const rel = path38.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -25649,7 +26150,7 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path37.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path38.join(rel, name) });
     }
     const picked = await vscode19.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -25662,9 +26163,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path37.dirname(current);
+      current = path38.dirname(current);
     } else {
-      current = path37.join(current, picked.label.replace("$(folder) ", ""));
+      current = path38.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }

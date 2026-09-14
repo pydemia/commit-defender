@@ -38,7 +38,7 @@ export function standaloneErrorMessage(code: string): string {
       return "A previous process may have started this review. Check its outcome before another execution.";
     case "request-busy":
     case "request-deferred":
-      return "The shared review request is busy or waiting for its review budget.";
+      return "The shared review request is busy or waiting for manual review priority or its review budget.";
     case "request-lost":
       return "This process no longer owns the review request.";
     case "request-invalid":

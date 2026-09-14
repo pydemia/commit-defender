@@ -151,7 +151,7 @@ export class AutomaticStageCheckpoint {
             pendingPaths = [
               ...new Set([
                 ...retained,
-                ...newlyStagedPaths(previous.observed, observed),
+                ...(await newlyStagedPaths(previous.observed, observed)),
               ]),
             ].sort();
           }

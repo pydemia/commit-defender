@@ -1177,7 +1177,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     backgroundPolling = true;
     void backgroundHooks.status().then(async jobs => {
       const pending = jobs.filter(job => job.state === 'queued' || job.state === 'running');
-      if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some(job => job.notBefore && job.notBefore > Date.now()) ? ' (hourly limit)' : ''}.`);
+      if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some(job => job.waitingReason === 'manual-priority') ? ' (waiting for manual review)' : pending.some(job => job.notBefore && job.notBefore > Date.now()) ? ' (review budget)' : ''}.`);
       const interrupted = jobs.filter(job => job.state === 'interrupted');
       const finished = jobs.filter(job => job.state === 'finished' && job.result?.runId && !observedBackgroundResults.has(job.id));
       if (finished.length) {
