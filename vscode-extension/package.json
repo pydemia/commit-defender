@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.3.0",
+    "version": "2.4.0",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -160,6 +160,11 @@
                 "command": "commitDefender.openReviewChat",
                 "title": "Commit Defender: Discuss Review",
                 "icon": "$(comment-discussion)"
+            },
+            {
+                "command": "commitDefender.submitReviewFeedback",
+                "title": "Commit Defender: Submit Review Feedback",
+                "icon": "$(cloud-upload)"
             }
         ],
         "configuration": {
@@ -624,6 +629,11 @@
                     "command": "commitDefender.openReviewChat",
                     "when": "view == commitDefender.history && viewItem == historyEntry",
                     "group": "inline"
+                },
+                {
+                    "command": "commitDefender.submitReviewFeedback",
+                    "when": "view == commitDefender.history && viewItem == historyEntry",
+                    "group": "inline"
                 }
             ]
         },
@@ -668,7 +678,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:review-submission",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -698,7 +708,8 @@
         "bundle-advisory-hook": "esbuild src/hook/advisoryMain.ts --bundle --platform=node --target=node22 --outfile=out/advisory-hook.cjs",
         "test:managed-hooks": "npm run bundle-advisory-hook && esbuild test/managed-hooks.test.ts --bundle --platform=node --target=node22 --outfile=out-test/managed-hooks.test.cjs && node --test out-test/managed-hooks.test.cjs",
         "bundle-chat-worker": "esbuild src/reviewChatWorker.ts --bundle --platform=node --target=node18 --outfile=out/review-chat-worker.js",
-        "test:review-chat": "npm run bundle-chat-worker && esbuild test/review-chat.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-chat.test.cjs && node --test out-test/review-chat.test.cjs"
+        "test:review-chat": "npm run bundle-chat-worker && esbuild test/review-chat.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-chat.test.cjs && node --test out-test/review-chat.test.cjs",
+        "test:review-submission": "esbuild test/review-submission.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-submission.test.cjs && node --test out-test/review-submission.test.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
@@ -707,9 +718,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.23/gcr-client-contract-0.1.0-alpha.23.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.23/gcr-client-core-0.1.0-alpha.23.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.23/gcr-client-executors-0.1.0-alpha.23.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.25/gcr-client-contract-0.1.0-alpha.25.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.25/gcr-client-core-0.1.0-alpha.25.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.25/gcr-client-executors-0.1.0-alpha.25.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",

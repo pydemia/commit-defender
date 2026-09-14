@@ -10,6 +10,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  reviewSubmission,
+  type ReviewSubmission,
+  type ReviewSubmissionReceipt,
   canonicalKnowledgeJson,
   encodeKnowledgeBundle,
   KNOWLEDGE_SIGNATURE_CONTEXT,
@@ -154,6 +157,12 @@ export async function centralFixture(
   let status = 200,
     calls = 0,
     clientId = "commit-defender";
+  let submissionStatus = 404;
+  const submissions = new Map<
+    string,
+    { payload: ReviewSubmission; receipt: ReviewSubmissionReceipt }
+  >();
+  let submissionCalls = 0;
   const server = createServer(
     { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) },
     (req, res) => {
@@ -202,6 +211,55 @@ export async function centralFixture(
         res.end(JSON.stringify(manifest));
         return;
       }
+      if (
+        req.method === "POST" &&
+        /\/review-submissions\/(feedback|results)$/.test(req.url ?? "")
+      ) {
+        submissionCalls++;
+        let body = "";
+        req.setEncoding("utf8");
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
+        req.on("end", () => {
+          if (submissionStatus !== 200) {
+            res.writeHead(submissionStatus);
+            res.end("{}");
+            return;
+          }
+          try {
+            const value = reviewSubmission(JSON.parse(body));
+            const previous = submissions.get(value.id);
+            if (
+              previous &&
+              previous.receipt.payloadHash !== contentHash(value)
+            ) {
+              res.writeHead(409);
+              res.end("{}");
+              return;
+            }
+            const receipt: ReviewSubmissionReceipt = previous?.receipt ?? {
+              schemaVersion: 1,
+              id: randomUUID(),
+              requestId: value.id,
+              payloadHash: contentHash(value),
+              audience: value.audience,
+              clientId: value.clientId,
+              kind: value.kind,
+              status: "submitted",
+              evidence: "client-reported",
+              receivedAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+            };
+            submissions.set(value.id, { payload: value, receipt });
+            res.end(JSON.stringify(receipt));
+          } catch {
+            res.writeHead(400);
+            res.end("{}");
+          }
+        });
+        return;
+      }
       const component =
         /\/bundles\/(policy|collective|personal)\?snapshotId=snapshot$/.exec(
           req.url ?? "",
@@ -244,6 +302,13 @@ export async function centralFixture(
   };
   return {
     audience,
+    submissions,
+    get submissionCalls() {
+      return submissionCalls;
+    },
+    setSubmissionStatus(value: number) {
+      submissionStatus = value;
+    },
     secret,
     keys,
     credentials,

@@ -28,7 +28,7 @@ const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
-const deliveryVersion = "0.1.0-alpha.23";
+const deliveryVersion = "0.1.0-alpha.25";
 const corpus = JSON.parse(bytes.toString("utf8")) as {
   synthetic: boolean;
   sourceText: Record<string, string>;

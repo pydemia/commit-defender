@@ -1042,7 +1042,7 @@ var centralCredentialIdentity = object({
   displayName: text(1e3),
   tenantId: id,
   repositoryIds: list(id, 100),
-  scopes: list(choice(["knowledge:read"]), 1, 1),
+  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
   expiresAt: timestamp
@@ -1200,11 +1200,82 @@ var localReviewConversation = refined(object({
   }
 });
 
+// node_modules/@gcr/client-contract/dist/review-submission.js
+var reviewReference = object({
+  runId: id,
+  mode: choice(["standalone", "centralized"]),
+  sourceHash: sha256,
+  contextHash: sha256,
+  snapshot: union(object({ id, hash: sha256 }), literal(null))
+});
+var common2 = {
+  schemaVersion: literal(1),
+  id,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  approvedAt: timestamp,
+  visibility: literal("repository-reviewers"),
+  review: reviewReference
+};
+var reviewSubmission = refined(union(object({
+  ...common2,
+  kind: literal("result"),
+  result: object({
+    status: choice([
+      "completed",
+      "partial",
+      "failed",
+      "cancelled",
+      "needs-context",
+      "unavailable",
+      "superseded"
+    ]),
+    fileCount: integer(0, 1e5),
+    findingCount: integer(0, 1e5)
+  })
+}), object({
+  ...common2,
+  kind: literal("feedback"),
+  feedback: object({
+    kind: choice(["correction", "exception", "judgment"]),
+    message: text(4e3, 1),
+    findingId: union(id, literal(null)),
+    rule: union(object({ id, revision: integer(1), hash: sha256 }), literal(null)),
+    source: union(sourceLocation, literal(null))
+  })
+})), (value, at) => {
+  if (value.review.mode === "centralized" !== (value.review.snapshot !== null))
+    fail(at, "snapshot does not match review mode");
+  if (value.kind === "feedback") {
+    if (!value.feedback.message.trim())
+      fail(at, "feedback message is empty");
+    if (value.review.mode === "standalone" && value.feedback.rule)
+      fail(at, "standalone review cannot claim a central rule");
+    const source = value.feedback.source;
+    if (source && (source.startLine < 1 || source.endLine < source.startLine))
+      fail(at, "invalid source range");
+  }
+});
+var reviewSubmissionReceipt = object({
+  schemaVersion: literal(1),
+  id,
+  requestId: id,
+  payloadHash: sha256,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  kind: choice(["result", "feedback"]),
+  status: literal("submitted"),
+  evidence: literal("client-reported"),
+  receivedAt: timestamp,
+  expiresAt: timestamp
+});
+var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.23",
+  version: "0.1.0-alpha.25",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1291,15 +1362,15 @@ function discoverLocalIdentity(cwd, profileId) {
   }).trim();
   try {
     const root = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--show-toplevel"]));
-    const common2 = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-common-dir"]));
+    const common3 = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-common-dir"]));
     const directory = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-dir"]));
     return clientIdentity({
       mode: "standalone",
       profileId,
-      repositoryKey: contentHash({ version: 1, commonDirectory: common2 }),
+      repositoryKey: contentHash({ version: 1, commonDirectory: common3 }),
       worktreeKey: contentHash({
         version: 1,
-        commonDirectory: common2,
+        commonDirectory: common3,
         gitDirectory: directory,
         root
       })
@@ -1737,7 +1808,7 @@ var LocalRecordStore = class _LocalRecordStore {
   async recordDirectory(kind, id3, create = false) {
     this.assertOpen();
     validateId(id3);
-    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "submissions", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
@@ -1818,7 +1889,7 @@ var LocalRecordStore = class _LocalRecordStore {
   }
   async listIds(kind) {
     this.assertOpen();
-    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "submissions", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     const ids = (await (0, import_promises2.readdir)(namespace)).filter((name) => name !== ".DS_Store");
@@ -2520,13 +2591,13 @@ var SourceGit = class {
       if (format !== "sha1" && format !== "sha256")
         throw new SourceCaptureError("source-unavailable");
       this.objectFormat = format;
-      const common2 = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim());
+      const common3 = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim());
       const directory = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-dir"]).trim());
       this.repository = {
-        repositoryKey: contentHash({ version: 1, commonDirectory: common2 }),
+        repositoryKey: contentHash({ version: 1, commonDirectory: common3 }),
         worktreeKey: contentHash({
           version: 1,
-          commonDirectory: common2,
+          commonDirectory: common3,
           gitDirectory: directory,
           root: this.root
         })
@@ -3929,6 +4000,54 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       }
     }
     return pending;
+  }
+  /** A negative response from another authenticated API is scoped to the cache
+   * generation that sent it. It cannot revoke a replacement connection. */
+  async rejectAuthority(generation, reason) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const state = await this.state();
+      if (state.value.generation !== generation)
+        throw error("superseded");
+      try {
+        if (reason === "identity-unavailable") {
+          this.identityUnavailableGeneration = generation;
+          await this.put(state, {
+            ...state.value,
+            identityUnavailable: true,
+            observedAt: this.time(),
+            claim: null
+          });
+        } else {
+          this.denied = reason;
+          let inventory;
+          try {
+            inventory = await this.records.listIds("knowledge");
+          } catch {
+          }
+          await this.put(state, {
+            ...state.value,
+            generation: generation + 1,
+            status: reason,
+            observedAt: this.time(),
+            claim: null,
+            active: null
+          });
+          if (inventory)
+            await this.purge(inventory);
+        }
+        return;
+      } catch (cause) {
+        if (!(cause instanceof LocalStoreError) || cause.code !== "revision-conflict")
+          throw cause;
+        const current = await this.state();
+        if (current.value.generation !== generation) {
+          if (current.value.status === "enabled")
+            this.denied = void 0;
+          throw error("superseded");
+        }
+      }
+    }
+    throw error("superseded");
   }
   async disable(reason = "disconnected") {
     this.denied = reason;
@@ -5374,7 +5493,7 @@ var KnowledgeHttpTransport = class {
     if (!(binding instanceof TrustedCentralBinding) || credential.bindingId !== binding.id)
       throw new KnowledgeSyncError("invalid-binding", "Credential binding does not match the selected server and audience.");
   }
-  async get(relative, signal, etag) {
+  async get(relative, signal, etag, body2) {
     if (signal.aborted)
       throw unavailable3();
     if (this.credential.bindingId !== this.binding.id)
@@ -5398,18 +5517,19 @@ var KnowledgeHttpTransport = class {
     return new Promise((resolve, reject) => {
       const request = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
       const req = request(target, {
-        method: "GET",
+        method: body2 === void 0 ? "GET" : "POST",
         signal,
         ...target.protocol === "https:" ? { rejectUnauthorized: true, ...this.ca ? { ca: this.ca } : {} } : {},
         headers: {
           authorization: `Bearer ${token2}`,
           "x-gcr-server-id": this.binding.audience.serverId,
           accept: "application/json",
+          ...body2 === void 0 ? {} : { "content-type": "application/json", "content-length": Buffer.byteLength(body2) },
           ...etag ? { "if-none-match": etag } : {}
         }
       }, resolve);
       req.on("error", () => reject(unavailable3()));
-      req.end();
+      req.end(body2);
     });
   }
   async failure(response) {
@@ -5488,6 +5608,41 @@ var KnowledgeHttpTransport = class {
       response.destroy();
     }
   }
+  /** Explicit write only. Its failures never mutate the knowledge cache. */
+  async submitReview(value, signal) {
+    const input2 = reviewSubmission(value);
+    if (contentHash(input2.audience) !== contentHash(this.binding.audience))
+      throw new Error("submission-binding-mismatch");
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(input2.audience.repositoryId)}/review-submissions/${input2.kind === "result" ? "results" : "feedback"}`, signal, void 0, JSON.stringify(input2));
+    try {
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of response) {
+        const bytes = Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 32768)
+          throw new ReviewSubmissionDeliveryError(503);
+        chunks.push(bytes);
+      }
+      let body2;
+      try {
+        body2 = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+      } catch {
+        throw new ReviewSubmissionDeliveryError(response.statusCode === 200 || response.statusCode === 201 ? 503 : response.statusCode ?? 503);
+      }
+      if (response.statusCode !== 200 && response.statusCode !== 201) {
+        const code = body2?.error?.code;
+        const authorityFailure = response.statusCode === 403 && code === "CLIENT_ACCESS_REVOKED" ? "revoked" : response.statusCode === 401 && code === "CLIENT_AUTHENTICATION_REQUIRED" ? "authentication-required" : response.statusCode === 503 && code === "IDENTITY_UNAVAILABLE" ? "identity-unavailable" : void 0;
+        throw new ReviewSubmissionDeliveryError(response.statusCode ?? 503, authorityFailure);
+      }
+      const receipt = reviewSubmissionReceipt(body2);
+      if (receipt.requestId !== input2.id || receipt.payloadHash !== contentHash(input2) || contentHash(receipt.audience) !== contentHash(input2.audience) || receipt.clientId !== input2.clientId || receipt.kind !== input2.kind)
+        throw new ReviewSubmissionDeliveryError(503);
+      return receipt;
+    } finally {
+      response.destroy();
+    }
+  }
   async identity(signal) {
     const response = await this.get("api/v1/client-auth/me", signal);
     if (response.statusCode !== 200) {
@@ -5528,6 +5683,16 @@ var KnowledgeHttpTransport = class {
         }
       }()
     };
+  }
+};
+var ReviewSubmissionDeliveryError = class extends Error {
+  statusCode;
+  authorityFailure;
+  constructor(statusCode, authorityFailure) {
+    super("Review submission was not confirmed.");
+    this.statusCode = statusCode;
+    this.authorityFailure = authorityFailure;
+    this.name = "ReviewSubmissionDeliveryError";
   }
 };
 
@@ -5729,6 +5894,40 @@ var CentralConnections = class _CentralConnections {
       clientId: value.clientId,
       expiresAt: value.expiresAt
     };
+  }
+  async submitReview(id3, value, signal) {
+    const input2 = reviewSubmission(value);
+    const state = await this.state(id3);
+    await this.assert(state);
+    if (input2.clientId !== state.value.clientId)
+      throw denied();
+    const cache = await this.cache(state.value);
+    const { generation } = await cache.connectionState();
+    try {
+      const result = await this.timed(signal, (s) => this.transport(state).submitReview(input2, s));
+      await this.assert(state);
+      return result;
+    } catch (error2) {
+      if (error2 instanceof ReviewSubmissionDeliveryError && error2.authorityFailure) {
+        await this.assert(state);
+        try {
+          await cache.rejectAuthority(generation, error2.authorityFailure);
+        } finally {
+          if (error2.authorityFailure !== "identity-unavailable") {
+            this.invalid.add(state.value.credentialReference);
+            try {
+              await this.records.write("settings", id3, { ...state.value, status: "disconnected" }, state.revision);
+            } catch {
+            }
+            try {
+              await this.credentials.remove(state.value.credentialReference);
+            } catch {
+            }
+          }
+        }
+      }
+      throw error2;
+    }
   }
   async historyIdentity(id3) {
     const state = await this.state(id3);
@@ -6707,7 +6906,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.23",
+  version: "0.1.0-alpha.25",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7581,7 +7780,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.23",
+  version: "0.1.0-alpha.25",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

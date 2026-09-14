@@ -1264,7 +1264,7 @@ var centralCredentialIdentity = object({
   displayName: text(1e3),
   tenantId: id,
   repositoryIds: list(id, 100),
-  scopes: list(choice(["knowledge:read"]), 1, 1),
+  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
   expiresAt: timestamp
@@ -1421,11 +1421,82 @@ var localReviewConversation = refined(object({
   }
 });
 
+// node_modules/@gcr/client-contract/dist/review-submission.js
+var reviewReference = object({
+  runId: id,
+  mode: choice(["standalone", "centralized"]),
+  sourceHash: sha256,
+  contextHash: sha256,
+  snapshot: union(object({ id, hash: sha256 }), literal(null))
+});
+var common2 = {
+  schemaVersion: literal(1),
+  id,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  approvedAt: timestamp,
+  visibility: literal("repository-reviewers"),
+  review: reviewReference
+};
+var reviewSubmission = refined(union(object({
+  ...common2,
+  kind: literal("result"),
+  result: object({
+    status: choice([
+      "completed",
+      "partial",
+      "failed",
+      "cancelled",
+      "needs-context",
+      "unavailable",
+      "superseded"
+    ]),
+    fileCount: integer(0, 1e5),
+    findingCount: integer(0, 1e5)
+  })
+}), object({
+  ...common2,
+  kind: literal("feedback"),
+  feedback: object({
+    kind: choice(["correction", "exception", "judgment"]),
+    message: text(4e3, 1),
+    findingId: union(id, literal(null)),
+    rule: union(object({ id, revision: integer(1), hash: sha256 }), literal(null)),
+    source: union(sourceLocation, literal(null))
+  })
+})), (value, at) => {
+  if (value.review.mode === "centralized" !== (value.review.snapshot !== null))
+    fail(at, "snapshot does not match review mode");
+  if (value.kind === "feedback") {
+    if (!value.feedback.message.trim())
+      fail(at, "feedback message is empty");
+    if (value.review.mode === "standalone" && value.feedback.rule)
+      fail(at, "standalone review cannot claim a central rule");
+    const source = value.feedback.source;
+    if (source && (source.startLine < 1 || source.endLine < source.startLine))
+      fail(at, "invalid source range");
+  }
+});
+var reviewSubmissionReceipt = object({
+  schemaVersion: literal(1),
+  id,
+  requestId: id,
+  payloadHash: sha256,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  kind: choice(["result", "feedback"]),
+  status: literal("submitted"),
+  evidence: literal("client-reported"),
+  receivedAt: timestamp,
+  expiresAt: timestamp
+});
+var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.23",
+  version: "0.1.0-alpha.25",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1870,7 +1941,7 @@ var LocalRecordStore = class _LocalRecordStore {
   async recordDirectory(kind, id2, create = false) {
     this.assertOpen();
     validateId(id2);
-    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "submissions", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
@@ -1951,7 +2022,7 @@ var LocalRecordStore = class _LocalRecordStore {
   }
   async listIds(kind) {
     this.assertOpen();
-    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "submissions", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     const ids = (await (0, import_promises2.readdir)(namespace)).filter((name) => name !== ".DS_Store");
@@ -2071,7 +2142,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.23",
+  version: "0.1.0-alpha.25",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
