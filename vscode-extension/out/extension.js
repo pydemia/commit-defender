@@ -15264,7 +15264,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.27",
+  version: "0.1.0-alpha.28",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -19037,7 +19037,7 @@ function prepareReviewSubmission(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.27",
+  version: "0.1.0-alpha.28",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

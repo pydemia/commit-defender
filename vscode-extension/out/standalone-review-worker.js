@@ -1322,7 +1322,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.27",
+  version: "0.1.0-alpha.28",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -3430,6 +3430,7 @@ function captureLocalSource(input2) {
       patchTree("base"),
       patchTree("source")
     ], void 0, byteLimit * 2 + 1048576) : "";
+    const canonicalFiles = new Map([...files.entries()].sort(([left2], [right2]) => left2 < right2 ? -1 : left2 > right2 ? 1 : 0));
     const identity = snapshotIdentity({
       kind: options.kind,
       objectFormat: git2.objectFormat,
@@ -3445,14 +3446,17 @@ function captureLocalSource(input2) {
         baseTree,
         sourceTree,
         ...committed ? { targetBranch: options.targetBranch ?? null } : {},
-        sourceFiles: [...files.values()].map((file) => ({ ...file.source, mode: file.mode })),
+        sourceFiles: [...canonicalFiles.values()].map((file) => ({
+          ...file.source,
+          mode: file.mode
+        })),
         selected,
         limitations,
         policy: options.excludePatterns ?? [],
         diffHash: hash(diff)
       })
     });
-    return new LocalSourceSnapshot(identity, git2.repository, headCommit, committed ? options.targetBranch ?? null : git2.initialBranch, files, selected, limitations, diff, sourceTree, [...options.excludePatterns ?? []]);
+    return new LocalSourceSnapshot(identity, git2.repository, headCommit, committed ? options.targetBranch ?? null : git2.initialBranch, canonicalFiles, selected, limitations, diff, sourceTree, [...options.excludePatterns ?? []]);
   } finally {
     git2.close();
   }
@@ -7065,7 +7069,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.27",
+  version: "0.1.0-alpha.28",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7939,7 +7943,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.27",
+  version: "0.1.0-alpha.28",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

@@ -145,6 +145,10 @@ for (let mask = 0; mask < 16; mask++) {
         },
       };
       f.write("a.ts", "export const a=1;\n");
+      f.write(
+        "0-caller.ts",
+        "import { a } from './a.ts';\nexport const value = () => a;\n",
+      );
       f.git("add", ".");
       f.git("commit", "-m", "base");
       const remote = path.join(f.root, "remote.git");

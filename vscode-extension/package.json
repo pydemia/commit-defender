@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.7.0",
+    "version": "2.7.1",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -715,7 +715,9 @@
         "test:review-chat": "npm run bundle-chat-worker && esbuild test/review-chat.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-chat.test.cjs && node --test out-test/review-chat.test.cjs",
         "test:review-submission": "esbuild test/review-submission.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-submission.test.cjs && node --test out-test/review-submission.test.cjs",
         "test:background-recovery": "esbuild test/background-recovery.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-recovery.ts --outfile=out-test/background-recovery.test.cjs && node --test out-test/background-recovery.test.cjs",
-        "test:trigger-matrix": "npm run bundle-advisory-hook && npm run prepare-service && esbuild test/trigger-matrix.test.ts --bundle --platform=node --target=node22 --format=cjs --alias:vscode=./test/helpers/vscode-automatic.ts --outfile=out-test/trigger-matrix.test.cjs && node --test out-test/trigger-matrix.test.cjs"
+        "test:trigger-matrix": "npm run bundle-advisory-hook && npm run prepare-service && esbuild test/trigger-matrix.test.ts --bundle --platform=node --target=node22 --format=cjs --alias:vscode=./test/helpers/vscode-automatic.ts --outfile=out-test/trigger-matrix.test.cjs && node --test out-test/trigger-matrix.test.cjs",
+        "test:counted-codex": "node --test test/counted-codex.test.mjs",
+        "test:trigger-overlap": "esbuild test/trigger-overlap-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/trigger-overlap-host.cjs && node test/run-trigger-overlap-host.mjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
@@ -724,9 +726,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.27/gcr-client-contract-0.1.0-alpha.27.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.27/gcr-client-core-0.1.0-alpha.27.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.27/gcr-client-executors-0.1.0-alpha.27.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.28/gcr-client-contract-0.1.0-alpha.28.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.28/gcr-client-core-0.1.0-alpha.28.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.28/gcr-client-executors-0.1.0-alpha.28.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
