@@ -29,6 +29,12 @@ export class StatusBarManager {
     this.item.color = undefined;
   }
 
+  setBackgroundInterrupted(count: number): void {
+    this.setIdle(`${count} background review(s) interrupted. Click to check saved results without starting a new review.`);
+    this.item.text = `$(history) CD: ${count} interrupted`;
+    this.item.command = 'commitDefender.recoverBackgroundReview';
+  }
+
   setPreparing(): void {
     this.setRunning();
     this.item.text = '$(loading~spin) Preparing local review... $(stop-circle)';

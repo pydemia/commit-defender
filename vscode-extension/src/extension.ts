@@ -11,6 +11,7 @@ import { checkLocalContextFreshness, knowledgeScope } from './localKnowledge.js'
 import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
 import { AutomaticReviews } from './automaticReviews.js';
 import { BackgroundHooks } from './backgroundHooks.js';
+import { recoverBackgroundReview } from './backgroundRecovery.js';
 import type { AutomaticTask } from '@gcr/client-core';
 import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
@@ -1090,6 +1091,15 @@ export function activate(context: vscode.ExtensionContext): void {
   ));
 
   const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);
+  context.subscriptions.push(vscode.commands.registerCommand('commitDefender.recoverBackgroundReview', () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, job => {
+    const originalRoot = fs.realpathSync(job.root);
+    if (!vscode.workspace.isTrusted || !vscode.workspace.workspaceFolders?.some(folder => {
+      if (folder.uri.scheme !== 'file') return false;
+      const workspaceRoot = fs.realpathSync(folder.uri.fsPath);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path.sep);
+    })) throw Error('Open and trust the original workspace before recovering this review.');
+    if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error('Select the original local profile before recovering this review.');
+  })));
   const automaticReviews = new AutomaticReviews(context, {
     pauseHooks: () => backgroundHooks.pauseAll(),
     configureHooks: async (root, automatic) => {
@@ -1123,12 +1133,14 @@ export function activate(context: vscode.ExtensionContext): void {
     void backgroundHooks.status().then(async jobs => {
       const pending = jobs.filter(job => job.state === 'queued' || job.state === 'running');
       if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some(job => job.notBefore && job.notBefore > Date.now()) ? ' (hourly limit)' : ''}.`);
-      const finished = jobs.filter(job => job.result?.runId && !observedBackgroundResults.has(job.id));
+      const interrupted = jobs.filter(job => job.state === 'interrupted');
+      const finished = jobs.filter(job => job.state === 'finished' && job.result?.runId && !observedBackgroundResults.has(job.id));
       if (finished.length) {
         finished.forEach(job => observedBackgroundResults.add(job.id));
         await refreshLocalHistory();
-        if (!pending.length && !execution.isRunning) statusBar.setIdle('Background review finished. Results are available in review history.');
+        if (!pending.length && !interrupted.length && !execution.isRunning) statusBar.setIdle('Background review finished. Results are available in review history.');
       }
+      if (interrupted.length && !pending.length && !execution.isRunning) statusBar.setBackgroundInterrupted(interrupted.length);
     }).catch(() => { /* A stopped service does not invalidate saved history. */ }).finally(() => { backgroundPolling = false; });
   }, 15000);
   backgroundPoll.unref();

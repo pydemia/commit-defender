@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "status": "verified-installation-pending",
+  "recordedAt": "2026-09-14T08:59:50.063336+00:00",
+  "gcrSourceCommit": "dbd7a46",
+  "extensionVersion": "2.6.0",
+  "clientVersion": "0.1.0-alpha.27",
+  "cliVersion": "0.1.0-alpha.23",
+  "regression": {
+    "distinctPassed": 185,
+    "initialFailure": "Client contract delivery test still expected alpha.26; updated to the actual alpha.27 artifact. Existing corpus hashes were unchanged.",
+    "logs": {
+      "regression": {
+        "path": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/cd-p07-recovery-regression.log",
+        "sha256": "6a298a807edac27ef82bf6fbcdac8dc47856451322ccb900b7e4e276316398e9"
+      },
+      "contract": {
+        "path": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/cd-p07-recovery-contract.log",
+        "sha256": "381b57e0d924746e1b6f3ba364dc9530286c5227e3829605929cb261b1a52755"
+      },
+      "remaining": {
+        "path": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/cd-p07-recovery-remaining.log",
+        "sha256": "748537ee52defba284420f42dabaf7064ac5a475c6125e6fc0f0111a7e9bb860"
+      },
+      "native-ui-final": {
+        "path": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/cd-p07-recovery-native-ui-final.log",
+        "sha256": "9ced6c86325662923bb457be201bb3c31ecd44d46e778214aa1232b907b65bbd"
+      },
+      "min-host": {
+        "path": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/cd-p07-recovery-min-host.log",
+        "sha256": "8d4372bc4225e31e7cc76aea4b722d5759716d5221db5e7b2110f723d39083a1"
+      }
+    }
+  },
+  "vsix": {
+    "version": "2.6.0",
+    "vsixSha256": "2fd1469ca48e02e7876e3629a39f3e48a26bd74e718edcb41cff9d831d0dfccd",
+    "files": {
+      "extension.js": "e91b4aede60ab885b5f7ce25e4a0bc3a6f4c25216149dd84b5385bc5410b52b4",
+      "hook-cli.js": "50f283dd454100ddd73b634fc5e704c4b9b71a0e486f12c3caaeff1ab6ff28d0",
+      "standalone-review-worker.js": "00f5e0b5706aa963775d1b4e43e128b896a4f767f072a8922149117e6a978109",
+      "review-chat-worker.js": "eeaa64c2d5e4ea300b237d9456f0ccf7ebb646e41eed449f0f89a093570e6d36",
+      "advisory-hook.cjs": "0dfa237d096ca87009377de9032a68ba1e21367d8a45c0b885e648b135292ced",
+      "gcr-service/main.mjs": "c654f0325ccc9c8aab9fc7057cdb00aa4414f4d3a179d1d12cc6347f9161ec52",
+      "gcr-service/manifest.json": "95251b24880107474bb760c190b30b9e7fdff8243df9aa562b7c69e4bd0a54c3"
+    }
+  },
+  "nativeUi": {
+    "status": "passed",
+    "profileId": "cd-recovery-8375da7c-bbb4-4a34-a993-24217a3d4a8f",
+    "artifact": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P07-cd-recovery/unpacked/extension",
+    "syntheticExecutorCalls": 1,
+    "externalModelCalls": 0,
+    "fixture": "/var/folders/ht/0ztx9m_d3xz1lg1m0rsy6bk80000gn/T/cd-recovery-ui-pfcHEp",
+    "originalRunId": "7604c7bc-fa60-4c1d-9578-7ae619b867a5",
+    "interruptedVisible": true,
+    "recoveryMessageVisible": true,
+    "recovered": {
+      "id": "b2e03219-afe1-4acd-950e-c6545492c703",
+      "runId": "7604c7bc-fa60-4c1d-9578-7ae619b867a5",
+      "status": "completed",
+      "sourceHash": "8fac2569ca0b1d619477244b49b5d165ffb11b11934aaab6601cd0c125ec1d3e"
+    },
+    "host": {
+      "stage": "passed",
+      "vscode": "1.135.0",
+      "extensionVersion": "2.6.0"
+    },
+    "serviceStopped": true,
+    "ownedKeysRemoved": 3,
+    "ownedFilesRemoved": true,
+    "finishedAt": "2026-09-14T08:57:08.112Z",
+    "extensionSha256": "e91b4aede60ab885b5f7ce25e4a0bc3a6f4c25216149dd84b5385bc5410b52b4"
+  },
+  "minimumHost": {
+    "status": "passed",
+    "vscode": "1.90.2",
+    "node": "20.9.0",
+    "electron": "29.4.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "extensionVersion": "2.6.0",
+    "delivery": "packaged-extension",
+    "commandCount": 26,
+    "activation": true,
+    "hookDefault": "disable",
+    "modelCalled": false,
+    "checks": [
+      "activation",
+      "command registration",
+      "clear findings",
+      "cancel without run",
+      "no hook installed",
+      "standalone defaults and user profile",
+      "empty history refresh creates no local store or OS key"
+    ]
+  },
+  "observerFailure": {
+    "status": "failed",
+    "profileId": "cd-recovery-764412af-9148-467b-ada6-53ef16051fcf",
+    "artifact": "/Users/a09255/git/commit-defender-preventive-review/vscode-extension",
+    "syntheticExecutorCalls": 1,
+    "externalModelCalls": 0,
+    "fixture": "/var/folders/ht/0ztx9m_d3xz1lg1m0rsy6bk80000gn/T/cd-recovery-ui-UsOEw2",
+    "originalRunId": "dd30c24f-b95a-4932-8391-667268de171f",
+    "interruptedVisible": true,
+    "recoveryMessageVisible": true,
+    "recovered": {
+      "id": "14264496-be95-4f2f-901a-263e2dca52ca",
+      "runId": "dd30c24f-b95a-4932-8391-667268de171f",
+      "status": "completed",
+      "sourceHash": "d97e33e27ef502347030c4f5e936697a26b17b5d6a66293ad9714d400bb182e1"
+    },
+    "error": "TimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('Saved review recovered (completed). Open review history to inspect the result.', { exact: true }).locator('xpath=ancestor::*[contains(@class, \\'notification-toast\\')]').first().getByRole('button', { name: /Clear Notification/ })\u001b[22m\n",
+    "serviceStopped": true,
+    "nativeHostStillLive": true,
+    "finishedAt": "2026-09-14T08:54:23.096Z",
+    "extensionSha256": "e91b4aede60ab885b5f7ce25e4a0bc3a6f4c25216149dd84b5385bc5410b52b4"
+  },
+  "observerCleanup": {
+    "status": "cleaned",
+    "originalDriverStatus": "failed",
+    "nativeHostOutcome": {
+      "stage": "passed",
+      "vscode": "1.135.0",
+      "extensionVersion": "2.6.0"
+    },
+    "nativeProcesses": 0,
+    "serviceUnavailable": true,
+    "ownedKeysRemoved": 3,
+    "ownedFilesRemoved": true,
+    "note": "Notification was cleared in the same live host after the observer selector timed out. Original failed evidence is retained."
+  },
+  "limitations": [
+    "Native UI used a synthetic executor and intentionally unconfirmed service receipt with real encrypted history and macOS Keychain; this is not a new model quality test.",
+    "CLI alpha.23 crash/restart and central revocation checks are recorded in GCR P07-recovery.json.",
+    "Existing services are not automatically restarted. Older jobs without completion receipts may remain interrupted.",
+    "P07 combined triggers, headless watching, missed events, user-wide budgets, retention and other-UID checks remain.",
+    "P03-P06 and P09-P13 remaining gates stay in the original goal."
+  ]
+}

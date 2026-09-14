@@ -10,6 +10,7 @@ import {
   ServiceJobs,
   contentHash,
   type ServiceRegistration,
+  type ServiceJob,
 } from "@gcr/client-core";
 import { configureManagedHooks } from "./hook/managedHooks.js";
 import type { AutomaticSettings } from "./automaticSettings.js";
@@ -22,6 +23,12 @@ interface Owned {
   dataDirectory: string;
   configHash?: string;
 }
+export type BackgroundReviewJob = ServiceJob & {
+  root: string;
+  profileId: string;
+  dataDirectory: string;
+  supportsRecovery: boolean;
+};
 const hash = (value: Uint8Array) =>
   createHash("sha256").update(value).digest("hex");
 async function privateCopy(source: string, directory: string, name: string) {
@@ -59,6 +66,7 @@ export class BackgroundHooks {
   constructor(
     private readonly extensionPath: string,
     private readonly store: SelectionStore,
+    private readonly call: typeof callLocalService = callLocalService,
   ) {}
   private serial<T>(work: () => Promise<T>) {
     const next = this.pending.then(work, work);
@@ -75,12 +83,12 @@ export class BackgroundHooks {
     };
     let registration: ServiceRegistration | null;
     try {
-      registration = (await callLocalService(location, {
+      registration = (await this.call(location, {
         action: "registration",
         root: owned.root,
       })) as ServiceRegistration | null;
       if (registration)
-        await callLocalService(location, {
+        await this.call(location, {
           action: "register",
           root: owned.root,
           triggers: registration.triggers.filter(
@@ -136,33 +144,91 @@ export class BackgroundHooks {
     });
   }
   async status() {
-    const result = [];
+    const result: BackgroundReviewJob[] = [];
     for (const owned of this.owned()) {
       const location = {
         profileId: owned.profileId,
         dataDirectory: owned.dataDirectory,
       };
-      const registration = (await callLocalService(location, {
+      const registration = (await this.call(location, {
         action: "registration",
         root: owned.root,
       })) as ServiceRegistration | null;
-      const status = (await callLocalService(location, {
+      const status = (await this.call(location, {
         action: "status",
       })) as {
-        jobs: Array<{
-          id: string;
-          repository: string;
-          state: string;
-          notBefore?: number;
-          result?: { status: string; runId?: string };
-        }>;
+        jobs: ServiceJob[];
+        features?: string[];
       };
       for (const job of status.jobs.filter(
         (job) => job.repository === registration?.key,
       ))
-        result.push({ root: owned.root, ...job });
+        result.push({
+          ...job,
+          ...location,
+          root: owned.root,
+          supportsRecovery:
+            status.features?.includes("review-reconciliation-v1") ?? false,
+        });
     }
     return result;
+  }
+  reconcile(
+    selected: Pick<
+      BackgroundReviewJob,
+      "root" | "profileId" | "dataDirectory" | "id"
+    >,
+  ) {
+    const epoch = this.epoch;
+    return this.serial(async () => {
+      const current = () =>
+        epoch === this.epoch &&
+        this.owned().some(
+          (row) =>
+            row.root === selected.root &&
+            row.profileId === selected.profileId &&
+            row.dataDirectory === selected.dataDirectory,
+        );
+      if (!current())
+        throw Error("Background review selection is no longer authorized.");
+      const location = {
+        profileId: selected.profileId,
+        dataDirectory: selected.dataDirectory,
+      };
+      const registration = (await this.call(location, {
+        action: "registration",
+        root: selected.root,
+      })) as ServiceRegistration | null;
+      const status = (await this.call(location, { action: "status" })) as {
+        features?: string[];
+      };
+      if (!status.features?.includes("review-reconciliation-v1"))
+        throw Error(
+          "This running service does not support recovery. After its active reviews finish, restart it with the bundled CLI and try again.",
+        );
+      const job = (await this.call(location, {
+        action: "job",
+        id: selected.id,
+      })) as ServiceJob | null;
+      if (
+        !current() ||
+        !registration ||
+        !job ||
+        job.repository !== registration.key ||
+        job.registrationRevision !== registration.revision ||
+        !registration.triggers.includes(job.trigger)
+      )
+        throw Error("Background review selection is no longer authorized.");
+      if (job.state === "finished") return job;
+      if (job.state !== "interrupted")
+        throw Error(
+          "This review is no longer interrupted. Refresh the review list.",
+        );
+      return (await this.call(location, {
+        action: "reconcile",
+        id: job.id,
+      })) as ServiceJob;
+    });
   }
   configure(
     root: string,
@@ -283,7 +349,7 @@ export class BackgroundHooks {
         toolCalls: 100,
         maximumReviewsPerHour: automatic.maximumReviewsPerHour,
       };
-      const previous = (await callLocalService(location, {
+      const previous = (await this.call(location, {
         action: "registration",
         root,
       })) as ServiceRegistration | null;
@@ -316,7 +382,7 @@ export class BackgroundHooks {
           contentHash(previous.options) !== contentHash(options) ||
           contentHash([...previous.triggers].sort()) !== contentHash(allowed)
         )
-          await callLocalService(location, {
+          await this.call(location, {
             action: "register",
             root,
             triggers: allowed,
@@ -332,7 +398,7 @@ export class BackgroundHooks {
           route: { ...location, node: node.path, cli, triggers, waitMs },
         });
       } catch (error) {
-        await callLocalService(location, {
+        await this.call(location, {
           action: "register",
           root,
           triggers:

@@ -269,6 +269,7 @@ All commands are available in the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P
 | `Commit Defender: Analyze Directory...` | Pick a directory to analyze |
 | `Commit Defender: Analyze Repository` | Analyze every file in the workspace |
 | `Commit Defender: Cancel Analysis` | Stop the running analysis |
+| `Commit Defender: Recover Background Review` | Check and recover a saved result for an interrupted background review |
 | `Commit Defender: Show Summary Panel` | Open the summary webview |
 | `Commit Defender: Clear Findings` | Remove all diagnostics and decorations |
 | `Commit Defender: Generate Commit Message` | Draft a structured commit message from the staged diff |
@@ -449,3 +450,9 @@ The hook config is updated only on `onDidChangeConfiguration` events from a runn
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Recovering interrupted background reviews
+
+An interrupted Commit or Push review appears in the status bar. Click it or run **Commit Defender: Recover Background Review**, then select the original workspace and profile’s job. Recovery checks the saved completion and current permissions without starting another review. Recovered partial or failed results retain their original status in review history.
+
+If no matching completion is available, the job remains interrupted. Reviews created by older services may have no completion receipt. A service that was already running before this extension update continues to use its original program; if recovery reports that a restart is required, wait for its active reviews to finish and restart that profile’s service with the bundled CLI. Updating the extension does not stop active reviews or reload your window.
