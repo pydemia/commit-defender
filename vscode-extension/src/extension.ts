@@ -10,6 +10,7 @@ import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope } from './localKnowledge.js';
 import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
 import { AutomaticReviews } from './automaticReviews.js';
+import { BackgroundHooks } from './backgroundHooks.js';
 import type { AutomaticTask } from '@gcr/client-core';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
@@ -431,7 +432,7 @@ export function activate(context: vscode.ExtensionContext): void {
           await vscode.commands.executeCommand('commitDefender.clearFindings');
         },
         refresh: refreshLocalHistory,
-      }); } finally { syncManagement--; await refreshCentralSynchronization(); }
+      }); } finally { syncManagement--; await refreshCentralSynchronization(); await automaticReviews.refresh(); }
     }),
     vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => manageModelCredential(await resolveRepoRoot())),
     vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
@@ -1047,7 +1048,21 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
+  const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);
   const automaticReviews = new AutomaticReviews(context, {
+    pauseHooks: () => backgroundHooks.pauseAll(),
+    configureHooks: async (root, automatic) => {
+      const initial = getStandaloneReviewSettings(2, root);
+      const scope = knowledgeScope({ repoRoot: root, profileId: initial.profileId, scope: 'repository' });
+      const settings = selectedReviewSettings(initial, readSelection(context.globalState, scope));
+      const cfg = vscode.workspace.getConfiguration('commitDefender');
+      try {
+        await backgroundHooks.configure(root, automatic, settings, cfg.inspect<string>('serviceNodePath')?.globalValue ?? 'node', (cfg.inspect<number>('hookReviewWaitSeconds')?.globalValue ?? 0) * 1000);
+      } catch (error) {
+        getOutputChannel().appendLine('[Commit Defender] Background hook setup did not complete: ' + (error instanceof Error ? error.message : 'unavailable'));
+        throw error;
+      }
+    },
     busy: () => execution.isRunning,
     run: (request, task) => analyze(request.files, request.repoRoot, request.scope, request.scopeTarget, request.sourceExclusions ?? [], task),
     state: state => {
@@ -1059,8 +1074,26 @@ export function activate(context: vscode.ExtensionContext): void {
     },
   });
   context.subscriptions.push(automaticReviews);
+  let backgroundPolling = false;
+  const observedBackgroundResults = new Set<string>();
+  const backgroundPoll = setInterval(() => {
+    if (backgroundPolling) return;
+    backgroundPolling = true;
+    void backgroundHooks.status().then(async jobs => {
+      const pending = jobs.filter(job => job.state === 'queued' || job.state === 'running');
+      if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some(job => job.notBefore && job.notBefore > Date.now()) ? ' (hourly limit)' : ''}.`);
+      const finished = jobs.filter(job => job.result?.runId && !observedBackgroundResults.has(job.id));
+      if (finished.length) {
+        finished.forEach(job => observedBackgroundResults.add(job.id));
+        await refreshLocalHistory();
+        if (!pending.length && !execution.isRunning) statusBar.setIdle('Background review finished. Results are available in review history.');
+      }
+    }).catch(() => { /* A stopped service does not invalidate saved history. */ }).finally(() => { backgroundPolling = false; });
+  }, 15000);
+  backgroundPoll.unref();
+  context.subscriptions.push({ dispose: () => clearInterval(backgroundPoll) });
   const settlePrevious = settleExecutions;
-  settleExecutions = async () => { automaticReviews.dispose(); await settlePrevious?.(); await automaticReviews.settled(); };
+  settleExecutions = async () => { automaticReviews.dispose(); await settlePrevious?.(); await automaticReviews.settled(); await backgroundHooks.settled(); };
 }
 
 export async function deactivate(): Promise<void> {

@@ -14,3 +14,8 @@ tsconfig.test.json
 test-results/**
 # GCR libraries are bundled into the worker. Their notices ship in third-party/gcr/.
 vendor/**
+
+!out/advisory-hook.cjs
+!out/gcr-service/main.mjs
+!out/gcr-service/manifest.json
+scripts/**

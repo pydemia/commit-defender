@@ -85,18 +85,25 @@ function setup(
     },
   };
 }
-test("all Save/Stage combinations are independent; workspace settings cannot grant execution", () => {
-  for (const save of [false, true])
-    for (const stage of [false, true]) {
-      const global = { runOnSave: save, runOnStage: stage };
-      const cfg = automaticSettings(
-        (key) => (global as Record<string, unknown>)[key],
-      );
-      assert.equal(cfg.save, save);
-      assert.equal(cfg.stage, stage);
-      assert.equal(cfg.autoSave, false);
-      assert.equal(cfg.external, false);
-    }
+test("all sixteen trigger settings are independent and workspace values cannot grant execution", () => {
+  for (let mask = 0; mask < 16; mask++) {
+    const fields = ["save", "stage", "commit", "push"] as const;
+    const settings = ["runOnSave", "runOnStage", "runOnCommit", "runOnPush"];
+    const global = Object.fromEntries(
+      settings.map((name, bit) => [name, !!(mask & (1 << bit))]),
+    );
+    const cfg = automaticSettings((key) => global[key]);
+    fields.forEach((field, bit) =>
+      assert.equal(cfg[field], !!(mask & (1 << bit))),
+    );
+    assert.equal(cfg.autoSave, false);
+    assert.equal(cfg.external, false);
+    const paused = automaticSettings(
+      (key) => (key === "automaticReviewsPaused" ? true : global[key]),
+      { version: 1, paused: false },
+    );
+    assert.equal(paused.paused, true);
+  }
   assert.equal(automaticSettings(() => undefined).save, false);
   assert.equal(
     automaticSettings(

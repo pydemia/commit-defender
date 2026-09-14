@@ -49,8 +49,8 @@ export interface ResolvedConfig {
 export type ExtensionConfig = ResolvedConfig;
 
 /** Account selection and source grants are never read from a repository's settings.json. */
-export function getStandaloneReviewSettings(fileCount: number): StandaloneReviewSettings {
-  const cfg = vscode.workspace.getConfiguration('commitDefender');
+export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string): StandaloneReviewSettings {
+  const cfg = vscode.workspace.getConfiguration('commitDefender', repoRoot ? vscode.Uri.file(repoRoot) : undefined);
   const user = <T>(name: string): T | undefined => cfg.inspect<T>(name)?.globalValue;
   const seconds = user<number>(fileCount === 1 ? 'fileTimeoutSeconds' : 'directoryTimeoutSeconds');
   return {

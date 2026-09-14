@@ -4,6 +4,8 @@ import type { SelectionStore } from "./centralConnection.js";
 export interface AutomaticSettings {
   save: boolean;
   stage: boolean;
+  commit: boolean;
+  push: boolean;
   autoSave: boolean;
   external: boolean;
   paused: boolean;
@@ -14,6 +16,8 @@ export interface AutomaticOverride {
   version: 1;
   save?: boolean;
   stage?: boolean;
+  commit?: boolean;
+  push?: boolean;
   autoSave?: boolean;
   external?: boolean;
   paused?: boolean;
@@ -21,6 +25,8 @@ export interface AutomaticOverride {
 export const automaticDefaults: AutomaticSettings = {
   save: false,
   stage: false,
+  commit: false,
+  push: false,
   autoSave: false,
   external: false,
   paused: false,
@@ -35,6 +41,8 @@ export function automaticSettings(
   for (const [field, setting] of Object.entries({
     save: "runOnSave",
     stage: "runOnStage",
+    commit: "runOnCommit",
+    push: "runOnPush",
     autoSave: "reviewAutoSaves",
     external: "reviewExternalChanges",
     paused: "automaticReviewsPaused",
@@ -70,6 +78,8 @@ export function automaticSettings(
             "version",
             "save",
             "stage",
+            "commit",
+            "push",
             "autoSave",
             "external",
             "paused",
@@ -80,6 +90,8 @@ export function automaticSettings(
     for (const field of [
       "save",
       "stage",
+      "commit",
+      "push",
       "autoSave",
       "external",
       "paused",

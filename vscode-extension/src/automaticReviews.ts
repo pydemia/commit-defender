@@ -54,6 +54,8 @@ export class AutomaticReviews implements vscode.Disposable {
         task: AutomaticTask<ReviewRequest>,
       ): Promise<void | { retryAt?: number }>;
       busy(): boolean;
+      configureHooks?(root: string, settings: AutomaticSettings): Promise<void>;
+      pauseHooks?(): Promise<void>;
       /** Test port; never read from workspace settings. */
       debounceMs?: number;
       state(state: AutomaticState): void;
@@ -117,6 +119,11 @@ export class AutomaticReviews implements vscode.Disposable {
           [
             "runOnSave",
             "runOnStage",
+            "runOnCommit",
+            "runOnPush",
+            "serviceNodePath",
+            "hookReviewWaitSeconds",
+            "reviewReasoningEffort",
             "reviewAutoSaves",
             "reviewExternalChanges",
             "automaticReviewsPaused",
@@ -187,7 +194,22 @@ export class AutomaticReviews implements vscode.Disposable {
     this.roots.clear();
     for (const timer of this.externalTimers.values()) clearTimeout(timer);
     this.externalTimers.clear();
-    if (this.disposed || !vscode.workspace.isTrusted) return;
+    if (this.disposed) return;
+    if (
+      !vscode.workspace.isTrusted ||
+      getAutomaticUserSettings()("automaticReviewsPaused") === true
+    ) {
+      try {
+        await this.ports.pauseHooks?.();
+      } catch {
+        this.ports.state({
+          key: "hooks",
+          phase: "failed",
+          reason: "hook-revocation-failed",
+        });
+      }
+    }
+    if (!vscode.workspace.isTrusted) return;
     for (const folder of vscode.workspace.workspaceFolders ?? []) {
       if (folder.uri.scheme !== "file") continue;
       try {
@@ -196,7 +218,16 @@ export class AutomaticReviews implements vscode.Disposable {
           this.excludes(),
         );
         if (generation !== this.generation || this.disposed) return;
-        this.register(observed);
+        const registered = this.register(observed);
+        try {
+          await this.ports.configureHooks?.(observed.root, registered.settings);
+        } catch {
+          this.ports.state({
+            key: observed.root,
+            phase: "failed",
+            reason: "hook-configuration-failed",
+          });
+        }
       } catch {
         /* No repository or temporarily changing metadata. A later workspace refresh can retry. */
       }
@@ -346,7 +377,16 @@ export class AutomaticReviews implements vscode.Disposable {
         );
         if (generation !== this.generation) return;
         root = observed.root;
-        this.register(observed);
+        const registered = this.register(observed);
+        try {
+          await this.ports.configureHooks?.(observed.root, registered.settings);
+        } catch {
+          this.ports.state({
+            key: observed.root,
+            phase: "failed",
+            reason: "hook-configuration-failed",
+          });
+        }
       }
       const state = this.roots.get(root)!;
       if (state.settings.paused || !state.settings.save) return;
@@ -424,10 +464,18 @@ export class AutomaticReviews implements vscode.Disposable {
     const key = automaticSelectionKey(scope);
     const settings = this.settings(selected.root);
     const choices2 = (
-      ["save", "stage", "autoSave", "external", "paused"] as const
+      [
+        "save",
+        "stage",
+        "commit",
+        "push",
+        "autoSave",
+        "external",
+        "paused",
+      ] as const
     ).map((field) => ({
       field,
-      label: `${settings[field] ? "$(check)" : "$(circle-large-outline)"} ${{ save: "Review saved changes", stage: "Review staged changes", autoSave: "Include Auto Save", external: "Include external file changes", paused: "Pause automatic reviews in this worktree" }[field]}`,
+      label: `${settings[field] ? "$(check)" : "$(circle-large-outline)"} ${{ save: "Review saved changes", stage: "Review staged changes", commit: "Review commits in the background", push: "Review pushes in the background", autoSave: "Include Auto Save", external: "Include external file changes", paused: "Pause automatic reviews in this worktree" }[field]}`,
     }));
     const choice = await vscode.window.showQuickPick(
       [

@@ -1102,7 +1102,7 @@ var reviewStartLedger = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.20",
+  version: "0.1.0-alpha.22",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2643,6 +2643,8 @@ function paths(values = []) {
   ].sort();
 }
 var LocalSourceSnapshot = class {
+  captureTree;
+  excludePatterns;
   #files;
   #closed = false;
   #identity;
@@ -2652,7 +2654,9 @@ var LocalSourceSnapshot = class {
   #headCommit;
   #branchName;
   #repository;
-  constructor(identity, repository, headCommit, branchName, files, selected, limitations, diff) {
+  constructor(identity, repository, headCommit, branchName, files, selected, limitations, diff, captureTree, excludePatterns) {
+    this.captureTree = captureTree;
+    this.excludePatterns = excludePatterns;
     this.#identity = snapshotIdentity(identity);
     this.#repository = { ...repository };
     this.#headCommit = headCommit;
@@ -2697,6 +2701,24 @@ var LocalSourceSnapshot = class {
   get diff() {
     this.open();
     return this.#diff;
+  }
+  freeze() {
+    this.open();
+    const value = {
+      formatVersion: 1,
+      identity: this.identity,
+      repository: this.repository,
+      headCommit: this.headCommit,
+      branchName: this.branchName,
+      sourceTree: this.captureTree,
+      excludePatterns: [...this.excludePatterns],
+      files: [...this.#files.values()].map((file) => structuredClone(file)),
+      selected: this.selected,
+      limitations: this.limitations,
+      diff: this.diff
+    };
+    canonicalJson(value, 8 * 1024 * 1024);
+    return value;
   }
   readFile(file, side = "source") {
     this.open();
@@ -3150,7 +3172,7 @@ function captureLocalSource(input2) {
         diffHash: hash(diff)
       })
     });
-    return new LocalSourceSnapshot(identity, git2.repository, headCommit, committed ? options.targetBranch ?? null : git2.initialBranch, files, selected, limitations, diff);
+    return new LocalSourceSnapshot(identity, git2.repository, headCommit, committed ? options.targetBranch ?? null : git2.initialBranch, files, selected, limitations, diff, sourceTree, [...options.excludePatterns ?? []]);
   } finally {
     git2.close();
   }
@@ -6235,10 +6257,13 @@ async function observeAutomaticFile(root, file, excludes = []) {
   }
 }
 
+// node_modules/@gcr/client-core/dist/local-service.js
+var maximumFrame = 9 * 1024 * 1024;
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.20",
+  version: "0.1.0-alpha.22",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7061,7 +7086,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.20",
+  version: "0.1.0-alpha.22",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
