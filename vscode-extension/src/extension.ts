@@ -35,6 +35,7 @@ import { StatusBarManager } from './statusBar.js';
 import { AnalysisReport, CommitMessageResult, RunResult } from './types.js';
 import { resolvePalette } from './palette.js';
 import { normalizeReport } from './commentFormatter.js';
+import { openReviewChat, settleReviewChats } from './reviewChat.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 let settleExecutions: (() => Promise<void>) | undefined;
@@ -867,6 +868,15 @@ export function activate(context: vscode.ExtensionContext): void {
   ));
 
   // ── Show history entry ─────────────────────────────────────────────────
+  context.subscriptions.push(vscode.commands.registerCommand('commitDefender.openReviewChat', async (arg: unknown) => {
+    const entry = (arg as { kind?: string; entry?: import('./historyProvider.js').HistoryEntry })?.kind === 'entry'
+      ? (arg as { entry: import('./historyProvider.js').HistoryEntry }).entry
+      : (arg as { report?: AnalysisReport; repoRoot?: string });
+    const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
+    if (!selected?.report || !selected.repoRoot) { void vscode.window.showInformationMessage('Select a saved review in history or run a review first.'); return; }
+    try { await openReviewChat(selected.report, selected.repoRoot, context); }
+    catch { void vscode.window.showErrorMessage('The review conversation could not be opened. Check the current workspace and review connection.'); }
+  }));
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.showHistoryEntry',
     (entry: import('./historyProvider.js').HistoryEntry) => {
@@ -1097,6 +1107,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export async function deactivate(): Promise<void> {
+  await settleReviewChats();
   await settleExecutions?.();
   settleExecutions = undefined;
   findingsStore.clear();
@@ -1230,6 +1241,8 @@ function showSummaryPanel(
         if (!view || !message) return;
         if (message.command === 'open') {
           await reviewNavigation.open(message.id);
+        } else if (message.command === 'discuss') {
+          await vscode.commands.executeCommand('commitDefender.openReviewChat', { report: view.report, repoRoot: view.repoRoot });
         } else {
           const doc = await vscode.workspace.openTextDocument({ content: JSON.stringify(view.report, null, 2), language: 'json' });
           await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: false });

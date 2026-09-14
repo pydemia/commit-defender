@@ -254,7 +254,7 @@ test("webview accepts only issued IDs for its current render and its script send
           : null
         : this.href
           ? null
-          : this;
+          : selector === '#btnShowJson' ? this : null;
     }
     getAttribute() {
       return this.href;

@@ -19,3 +19,5 @@ vendor/**
 !out/gcr-service/main.mjs
 !out/gcr-service/manifest.json
 scripts/**
+
+!out/review-chat-worker.js

@@ -11,6 +11,16 @@ const OPEN_COMMAND = "commitDefender.openReviewLink";
 class ReviewNavigation {
   readonly links = new ReviewLinks();
   private documents = new Map<string, string>();
+  async openCaptured(source: { content: string; path: string; side: 'source' | 'base'; line: number }, isCurrent: () => boolean): Promise<void> {
+    if (!isCurrent() || !Number.isSafeInteger(source.line) || source.line < 1 || source.line > source.content.split(/\r?\n/).length) return;
+    const destination = vscode.Uri.from({ scheme: SOURCE_SCHEME, path: `/${randomBytes(12).toString('hex')}/${source.side}/${source.path}`, query: 'conversation-source' });
+    this.documents.set(destination.toString(), source.content);
+    try {
+      const document = await vscode.workspace.openTextDocument(destination);
+      if (!isCurrent()) { this.documents.delete(destination.toString()); return; }
+      await vscode.window.showTextDocument(document, { preview: true, preserveFocus: false, selection: new vscode.Range(source.line - 1, 0, source.line - 1, 0) });
+    } catch { this.documents.delete(destination.toString()); }
+  }
   register(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
       vscode.commands.registerCommand(OPEN_COMMAND, (id: unknown) =>

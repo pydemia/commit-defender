@@ -1319,11 +1319,113 @@ var reviewStartLedger = object({
   reservations: list(object({ key: sha256, generation: integer(), at: integer(), reason: reviewTrigger }), 1e3)
 });
 
+// node_modules/@gcr/client-contract/dist/review-chat.js
+var reviewChatQuestionInput = object({
+  question: text(2e3, 1),
+  options: list(text(300, 1), 6)
+});
+var reviewChatQuestion = object({
+  id,
+  callId: id,
+  question: text(2e3, 1),
+  options: list(text(300, 1), 6),
+  answer: union(text(4e3, 1), literal(null)),
+  expiresAt: timestamp
+});
+var reviewChatCitation = object({
+  readId: id,
+  location: sourceLocation,
+  excerptHash: sha256
+});
+var reviewChatResponse = object({
+  content: text(1e5, 1),
+  citations: list(object({ readId: id, startLine: integer(1), endLine: integer(1) }), 100)
+});
+var reviewChatLimits = object({
+  modelCalls: integer(1, 10),
+  durationMs: integer(1, 6e5),
+  sourceBytes: integer(1, 33554432),
+  toolCalls: integer(1, 1e3)
+});
+var reviewChatUsage = object({
+  modelCalls: integer(),
+  durationMs: integer(),
+  sourceBytes: integer(),
+  toolCalls: integer()
+});
+var reviewChatTurn = refined(object({
+  id,
+  content: text(4e3, 1),
+  status: choice([
+    "queued",
+    "running",
+    "awaiting_input",
+    "completed",
+    "partial",
+    "failed",
+    "cancelled"
+  ]),
+  worker: union(id, literal(null)),
+  createdAt: timestamp,
+  updatedAt: timestamp,
+  questions: list(reviewChatQuestion, 10),
+  response: union(object({ content: text(1e5, 1), citations: list(reviewChatCitation, 100) }), literal(null)),
+  usage: reviewChatUsage,
+  error: union(choice([
+    "interrupted",
+    "cancelled",
+    "expired",
+    "quota-exceeded",
+    "timeout",
+    "invalid-output",
+    "policy-unavailable",
+    "executor-error"
+  ]), literal(null))
+}), (turn, at) => {
+  unique(turn.questions.map((q) => q.id), at);
+  unique(turn.questions.map((q) => q.callId), at);
+  if (turn.updatedAt < turn.createdAt)
+    fail(at, "invalid chronology");
+  if (turn.status === "running" !== (turn.worker !== null))
+    fail(at, "invalid worker ownership");
+  const unanswered = turn.questions.filter((q) => q.answer === null);
+  if (unanswered.length > 1 || turn.status === "awaiting_input" && unanswered.length !== 1 || ["queued", "running", "completed", "partial"].includes(turn.status) && unanswered.length)
+    fail(at, "invalid question checkpoint");
+  if (turn.response !== null !== ["completed", "partial"].includes(turn.status))
+    fail(at, "invalid response state");
+});
+var localReviewConversation = refined(object({
+  formatVersion: literal(1),
+  id,
+  reviewRunId: id,
+  identity: executionIdentity,
+  limits: reviewChatLimits,
+  createdAt: timestamp,
+  updatedAt: timestamp,
+  turns: list(reviewChatTurn, 100),
+  closed: boolean
+}), (chat, at) => {
+  unique(chat.turns.map((turn) => turn.id), at);
+  if (chat.updatedAt < chat.createdAt)
+    fail(at, "invalid chronology");
+  for (const [index, turn] of chat.turns.entries()) {
+    if (turn.createdAt < chat.createdAt || turn.updatedAt > chat.updatedAt)
+      fail(at, "turn outside conversation");
+    if (index < chat.turns.length - 1 && ["queued", "running", "awaiting_input"].includes(turn.status))
+      fail(at, "unfinished earlier turn");
+    if (chat.closed && ["queued", "running", "awaiting_input"].includes(turn.status))
+      fail(at, "closed conversation is active");
+    for (const key of ["modelCalls", "durationMs", "sourceBytes", "toolCalls"])
+      if (turn.usage[key] > chat.limits[key])
+        fail(at, "usage exceeds limit");
+  }
+});
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.22",
+  version: "0.1.0-alpha.23",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1768,7 +1870,7 @@ var LocalRecordStore = class _LocalRecordStore {
   async recordDirectory(kind, id2, create = false) {
     this.assertOpen();
     validateId(id2);
-    if (!["knowledge", "reviews", "chats", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
@@ -1849,7 +1951,7 @@ var LocalRecordStore = class _LocalRecordStore {
   }
   async listIds(kind) {
     this.assertOpen();
-    if (!["knowledge", "reviews", "chats", "settings"].includes(kind))
+    if (!["knowledge", "reviews", "chats", "conversations", "settings"].includes(kind))
       throw corrupt();
     const namespace = await privateDirectory(this.directory, kind);
     const ids = (await (0, import_promises2.readdir)(namespace)).filter((name) => name !== ".DS_Store");
@@ -1969,7 +2071,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.22",
+  version: "0.1.0-alpha.23",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

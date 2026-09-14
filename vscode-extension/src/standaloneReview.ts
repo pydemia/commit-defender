@@ -20,6 +20,8 @@ import {
   observeAutomaticFile,
   discoverLocalIdentity,
   LocalHistoryStore,
+  ReviewConversationStore,
+  ReviewConversationError,
   LocalKnowledgeStore,
   LocalRecordStore,
   resolveLocalContext,
@@ -246,6 +248,7 @@ export async function prepareStandaloneReview(
     const fixedSnapshot = snapshot;
     const policy = resolution.policy;
     let history = new LocalHistoryStore(opened[0]);
+    let conversations = new ReviewConversationStore(opened[0]);
     if (central) {
       const identity = await connections!.historyIdentity(
         settings.connectionId!,
@@ -261,6 +264,7 @@ export async function prepareStandaloneReview(
       });
       opened.push(records);
       history = new LocalHistoryStore(records, undefined, identity.audience);
+      conversations = new ReviewConversationStore(records, undefined, identity.audience);
     }
     return {
       backendId: client.mode,
@@ -340,6 +344,18 @@ export async function prepareStandaloneReview(
             } catch {
               diagnostic =
                 "The cancelled attempt could not be confirmed in encrypted history.";
+            }
+          }
+          if (["completed", "partial", "needs-context"].includes(report.status)) {
+            try {
+              try { await conversations.get(report.runId); }
+              catch (error) {
+                if (!(error instanceof ReviewConversationError) || error.code !== "missing") throw error;
+                await conversations.create({ id: report.runId, review: report, snapshot: fixedSnapshot, policy });
+              }
+              await conversations.prune();
+            } catch {
+              diagnostic += " The review is available, but its conversation snapshot could not be saved.";
             }
           }
           return {

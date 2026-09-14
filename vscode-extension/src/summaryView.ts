@@ -36,7 +36,11 @@ export class SummaryView {
   ) {
     this.html = buildSummaryHtml(report, this, palette);
   }
-  message(value: unknown): ReturnType<typeof reviewMessage> {
+  message(value: unknown): ReturnType<typeof reviewMessage> | { command: 'discuss' } {
+    if (this.report.gcr && value && typeof value === 'object' && !Array.isArray(value)) {
+      const message = value as Record<string, unknown>;
+      if (message.command === 'discuss' && message.viewId === this.id && Object.keys(message).every(key => ['command', 'viewId'].includes(key))) return { command: 'discuss' };
+    }
     return reviewMessage(value, this.id, this.allowed);
   }
   private href(id: string | undefined): string | undefined {
@@ -172,6 +176,7 @@ function buildSummaryHtml(
     <div class="header">
       <div class="header-row">
         <h1>🛡 Commit Defender &nbsp;${headerBadge} ${gradeBadge} &nbsp;${worstBadge}</h1>
+        ${report.gcr ? '<button class="json-btn" id="btnDiscuss">Discuss review</button>' : ''}
         <button class="json-btn" id="btnShowJson" title="Open raw JSON report in editor">{ } Raw JSON</button>
       </div>
       <div class="meta">${metaParts.map(esc).join(" &nbsp;·&nbsp; ")}</div>
@@ -385,6 +390,8 @@ ${body}
       if (/^#review-link-[a-f0-9]{32}$/.test(href)) {
         vscode.postMessage({ command: 'open', viewId: '${view.id}', id: href.slice(13) });
       }
+    } else if (e.target.closest('#btnDiscuss')) {
+      vscode.postMessage({ command: 'discuss', viewId: '${view.id}' });
     } else if (e.target.closest('#btnShowJson')) {
       vscode.postMessage({ command: 'showJson', viewId: '${view.id}' });
     }
