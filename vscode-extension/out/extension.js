@@ -19667,6 +19667,7 @@ var AutomaticReviews = class {
     this.ports = ports;
     this.checkpoints = new AutomaticStageCheckpoint(ports.storage);
     this.scheduler = new AutomaticReviewScheduler({
+      now: ports.now,
       busy: ports.busy,
       onState: ports.state,
       run: async (task) => {

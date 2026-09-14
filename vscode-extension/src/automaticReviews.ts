@@ -66,12 +66,14 @@ export class AutomaticReviews implements vscode.Disposable {
       pauseHooks?(): Promise<void>;
       /** Test port; never read from workspace settings. */
       debounceMs?: number;
+      now?: () => number;
       storage?: LocalStoragePorts;
       state(state: AutomaticState): void;
     },
   ) {
     this.checkpoints = new AutomaticStageCheckpoint(ports.storage);
     this.scheduler = new AutomaticReviewScheduler({
+      now: ports.now,
       busy: ports.busy,
       onState: ports.state,
       run: async (task) => {

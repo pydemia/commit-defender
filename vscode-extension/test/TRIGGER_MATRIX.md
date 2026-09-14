@@ -1,0 +1,19 @@
+# 자동 리뷰 trigger 실행 조합 검증
+
+Node.js 22 이상과 Git이 있는 macOS에서 `npm ci` 후 `npm run test:trigger-matrix`를 실행한다. 확장의 최소 Node runtime을 대상으로 하는 `npm test`와 달리 이 검사는 Node.js 22 이상이 필요한 background service CLI를 실제 자식 프로세스로 실행한다.
+
+Save·Stage·Commit·Push의 16개 설정 조합마다 임시 Git 저장소와 로컬 bare remote, 고유 profile을 만든다. `AutomaticReviews`에 VS Code 저장/index 이벤트를 전달하고 `BackgroundHooks`로 실제 hook을 설치한다. 설치된 CLI artifact가 index와 pre-push stdin의 ref를 capture하고 실제 IPC로 요청을 접수한다. Git commit과 push는 service와 IPC를 주고받을 수 있도록 비동기로 실행한다.
+
+검사하는 조건은 다음과 같다.
+
+- 모든 toggle을 끄면 공통 요청과 executor 호출이 모두 0개다. 각 조합의 공통 요청 사유 집합은 켜진 trigger와 정확히 일치한다.
+- 제어 시계가 debounce 시점을 지나기 전에는 editor 이벤트의 executor 호출이 없다. 저장 내용과 index가 그대로인 반복 이벤트도 추가 호출을 만들지 않는다.
+- Stage와 Commit의 같은 index 입력은 하나의 요청·결과를 공유한다. Save의 working-tree와 Push의 commit-tree는 별도 요청이다. 네 trigger를 모두 켜면 executor 호출은 3회다.
+- Commit hook을 두 번 직접 실행한 뒤 실제 commit을 수행한다. Push는 같은 ref로 dry-run 두 번과 실제 push를 수행한다. Trigger별 세 접수 기록은 같은 결과를 재사용하고 각 기록의 실행 key와 run ID가 공통 요청 기록과 일치한다.
+- Git push 후 bare remote의 main은 로컬 HEAD와 일치한다. Hook의 advisory 성공뿐 아니라 서비스 작업의 finished와 보고서의 completed도 확인한다.
+
+VS Code 이벤트 발신부와 executor는 합성이다. 서비스의 실행 callback은 배포된 client-core의 context·policy·review·broker API를 조합한다. CLI의 실제 service-run 인자 해석은 GCR의 CLI 회귀 검사에서 다루며 이 검사가 그 경로 전체나 실제 모델 품질 검증을 대신하지 않는다. Editor scheduler만 제어 시계를 사용하고 서비스 lease·IPC·Git은 실제 시간으로 동작한다.
+
+기본 local data directory에 고유 profile을 만들지만 OS credential 대신 테스트 전용 메모리 key port를 사용한다. 설정상 executor 경로는 `/usr/bin/false`로 고정하며 실제 모델 계정을 읽거나 호출하지 않는다. 종료 시 소유 hook을 해제하고 서비스가 더 이상 응답하지 않는지 확인한 뒤 고유 profile·hook 디렉터리·Git fixture·메모리 key를 정리한다. 공용 불변 CLI/adapter 설치 cache는 유지한다.
+
+이 검사는 단일 저장소의 기본 변경과 반복 입력 조합을 다룬다. 실제 모델의 trigger 중복 경로, 여러 ref·부분 commit·base 변경, headless 감시, Linux·다른 UID 검증은 각각의 증거가 필요하다.

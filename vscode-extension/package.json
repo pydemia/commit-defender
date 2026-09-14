@@ -714,7 +714,8 @@
         "bundle-chat-worker": "esbuild src/reviewChatWorker.ts --bundle --platform=node --target=node18 --outfile=out/review-chat-worker.js",
         "test:review-chat": "npm run bundle-chat-worker && esbuild test/review-chat.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-chat.test.cjs && node --test out-test/review-chat.test.cjs",
         "test:review-submission": "esbuild test/review-submission.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/review-submission.test.cjs && node --test out-test/review-submission.test.cjs",
-        "test:background-recovery": "esbuild test/background-recovery.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-recovery.ts --outfile=out-test/background-recovery.test.cjs && node --test out-test/background-recovery.test.cjs"
+        "test:background-recovery": "esbuild test/background-recovery.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-recovery.ts --outfile=out-test/background-recovery.test.cjs && node --test out-test/background-recovery.test.cjs",
+        "test:trigger-matrix": "npm run bundle-advisory-hook && npm run prepare-service && esbuild test/trigger-matrix.test.ts --bundle --platform=node --target=node22 --format=cjs --alias:vscode=./test/helpers/vscode-automatic.ts --outfile=out-test/trigger-matrix.test.cjs && node --test out-test/trigger-matrix.test.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
