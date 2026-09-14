@@ -53,3 +53,11 @@ The macOS packaged worker has performed an actual Astra/xhigh central review usi
 Reports show configured and effective modes separately: `Centralized · online`, `Centralized · cached` or `Standalone · fallback: <reason>`. A fallback does not change the saved connection or switch the model provider. Local fallback history remains locally owned, contains no central snapshot or entries, and is labeled as advisory without establishing central policy compliance. The selected connection's fallback results remain readable after central access expires. Reconnection never reruns or relabels an existing local result.
 
 If identity verification succeeds but the first knowledge publication fails, a confirmed local fallback policy can retain the selected connection. The pending API key is removed; reconnect to restore central reviews. Cancelling connection setup never selects fallback automatically.
+
+## View downloaded content
+
+Open **Manage Central Review Connection → View downloaded review knowledge** to read the selected repository's signed snapshot. The view includes prompt instructions and documents, review criteria with applicability, counter-evidence and exceptions, shared review knowledge, and your centrally published memories. It shows all downloaded entries; each review selects relevant entries and records its own context.
+
+The view is read-only. It refreshes knowledge when online freshness requires it and never invokes a model or uploads local content. Markdown and source references are displayed as text. Local Memory and Skills remain editable in their own view.
+
+Connection changes in the manager close the view. The view also checks local access on focus, at signed lease expiry, and every 30 seconds while open. A changed selection or manifest, confirmed local revocation, or invalid cache closes it. An offline client cannot detect a server revocation before synchronization; the existing signed offline lease applies.

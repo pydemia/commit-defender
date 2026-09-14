@@ -7,11 +7,16 @@ import {
   manageCentralConnection,
   centralStatusHtml,
 } from "../src/centralConnectionView.js";
-import { readSelection } from "../src/centralConnection.js";
+import {
+  readSelection,
+  selectionKey,
+  withCentralConnection,
+} from "../src/centralConnection.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { fixture } from "./helpers/review-fixture.js";
 import { centralFixture } from "./helpers/central-fixture.js";
 import { ui } from "./helpers/vscode-central.js";
+import { showCentralKnowledge } from "../src/centralKnowledgeView.js";
 
 test("connection UI scopes selection, masks the API key, shows signed status and disconnects without fallback", async (t) => {
   ui.reset();
@@ -75,7 +80,23 @@ test("connection UI scopes selection, masks the API key, shows signed status and
   assert.equal(invalidations, 1);
   assert.equal(refreshes, 1);
   assert(!JSON.stringify([...state]).includes(server.secret));
+  const beforeKnowledge = server.calls;
+  await run("knowledge");
+  assert(ui.html.at(-1)?.includes("CD_CENTRAL_POLICY"));
+  assert(
+    ui.html.at(-1)?.includes("Reviews run with your locally configured model"),
+  );
+  assert(ui.html.at(-1)?.includes("No published review criteria"));
+  assert(!ui.html.at(-1)?.includes(server.secret));
+  assert.equal(
+    server.calls,
+    beforeKnowledge,
+    "fresh downloaded knowledge does not request a model or network",
+  );
+  assert.equal(server.submissionCalls, 0);
+  const knowledgePanel = ui.panels.at(-1)!;
   await run("status");
+  assert.equal(knowledgePanel.disposed, true);
   assert(ui.html.at(-1)?.includes("Signed knowledge bundles"));
   assert(ui.html.at(-1)?.includes("Release 1"));
   assert(!ui.html.join("").includes(server.secret));
@@ -97,6 +118,130 @@ test("connection UI scopes selection, masks the API key, shows signed status and
   assert.equal(server.credentialValues.size, 0);
   assert(ui.messages.some((m) => m.includes("offline behavior is pause")));
   assert(!JSON.stringify(ui.messages).includes(server.secret));
+});
+
+test("downloaded prompt text stays inert and an open view closes when local access is revoked", async (t) => {
+  ui.reset();
+  const f = fixture();
+  const server = await centralFixture(
+    f.root,
+    '<script>PRIVATE_PROMPT()</script><img src="https://untrusted.invalid/pixel">',
+  );
+  t.after(async () => {
+    ui.reset();
+    await server.close();
+    f.cleanup();
+  });
+  const scope = knowledgeScope({
+    profileId: "knowledge-revocation",
+    repoRoot: f.repo,
+    scope: "repository",
+  });
+  if (scope.kind !== "repository") throw Error("scope");
+  const ports = {
+    dataDirectory: path.join(f.root, "data"),
+    keys: server.keys,
+    credentials: server.credentials,
+  };
+  const connected = await withCentralConnection(
+    scope,
+    (m) => m.connect(server.config, server.secret, "commit-defender"),
+    ports,
+  );
+  const values = new Map<string, unknown>([
+    [
+      selectionKey(scope),
+      {
+        version: 1,
+        mode: "centralized",
+        connectionId: connected.id,
+        freshness: "online",
+      },
+    ],
+  ]);
+  const context = {
+    subscriptions: [],
+    globalState: {
+      get<T>(key: string) {
+        return values.get(key) as T | undefined;
+      },
+      async update(key: string, value: unknown) {
+        values.set(key, value);
+      },
+    },
+  } as unknown as ExtensionContext;
+  const actions = {
+    assertCurrent() {},
+    async invalidate() {},
+    async refresh() {},
+  };
+  ui.choices = ["knowledge"];
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.deepEqual(ui.errors, []);
+  const html = ui.html.at(-1)!;
+  assert(html.includes("&lt;script&gt;PRIVATE_PROMPT"));
+  assert(!html.includes("<script>"));
+  assert(!html.includes("<img"));
+  assert(!html.includes("<a "));
+  assert(html.includes("form-action 'none'"));
+  let panel = ui.panels.at(-1)!;
+  const originalSelection = values.get(selectionKey(scope));
+  values.set(selectionKey(scope), { version: 1, mode: "standalone" });
+  panel.focus();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(
+    panel.disposed,
+    true,
+    "changing the selected scope removes the old content",
+  );
+  values.set(selectionKey(scope), originalSelection);
+  ui.choices = ["knowledge"];
+  await manageCentralConnection(context, scope, actions, ports);
+  panel = ui.panels.at(-1)!;
+  assert.equal(panel.disposed, false);
+  const snapshot = await withCentralConnection(
+    scope,
+    async (m) => {
+      const ready = await m.review(connected.id, "offline");
+      return ready.cache.read("offline");
+    },
+    ports,
+  );
+  // Drive the panel's local lease timer independently of network or model access.
+  const expiring = structuredClone(snapshot);
+  expiring.manifest.payload.offlineValidUntil = new Date(
+    Date.now() + 40,
+  ).toISOString();
+  showCentralKnowledge(context, expiring, async () => {});
+  const leasePanel = ui.panels.at(-1)!;
+  for (let attempt = 0; attempt < 100 && !leasePanel.disposed; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(
+    leasePanel.disposed,
+    true,
+    "expired content is removed without a focus event",
+  );
+  const before = server.calls;
+  await withCentralConnection(scope, (m) => m.disconnect(connected.id), ports);
+  panel.focus();
+  for (let attempt = 0; attempt < 100 && !panel.disposed; attempt++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(panel.disposed, true);
+  assert.equal(ui.html.at(-1), "");
+  assert.equal(
+    server.calls,
+    before,
+    "access checks use local authorization barriers without uploading or executing models",
+  );
+  ui.choices = ["knowledge"];
+  const panelCount = ui.panels.length;
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.equal(
+    ui.panels.length,
+    panelCount,
+    "disconnected content must not open again",
+  );
+  assert.equal(ui.errors.length, 1);
 });
 
 test("cancelling server confirmation never stores a key or contacts the server", async (t) => {

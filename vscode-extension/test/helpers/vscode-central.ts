@@ -7,7 +7,10 @@ export const ui = {
   errors: [] as string[],
   messages: [] as string[],
   inputs: [] as Array<Record<string, unknown>>,
+  panels: [] as Array<{ disposed: boolean; dispose(): void; focus(): void }>,
   reset() {
+    for (const panel of this.panels) panel.dispose();
+    this.panels = [];
     this.choices = [];
     this.file = "";
     this.secret = "";
@@ -42,7 +45,10 @@ export const window = {
     ui.inputs.push(options);
     return ui.secret || undefined;
   },
-  async withProgress(_options: unknown, work: (progress: unknown, token: unknown) => Promise<unknown>) {
+  async withProgress(
+    _options: unknown,
+    work: (progress: unknown, token: unknown) => Promise<unknown>,
+  ) {
     return work(
       {},
       {
@@ -52,14 +58,35 @@ export const window = {
     );
   },
   createWebviewPanel() {
-    return {
+    const disposals: Array<() => void> = [];
+    const focus: Array<() => void> = [];
+    const panel = {
+      disposed: false,
       webview: {
         set html(value: string) {
           ui.html.push(value);
         },
       },
-      dispose() {},
+      onDidDispose(listener: () => void) {
+        disposals.push(listener);
+        return { dispose() {} };
+      },
+      onDidChangeViewState(listener: () => void) {
+        focus.push(listener);
+        return { dispose() {} };
+      },
+      focus() {
+        for (const listener of focus) listener();
+      },
+      dispose() {
+        if (!this.disposed) {
+          this.disposed = true;
+          for (const listener of disposals) listener();
+        }
+      },
     };
+    ui.panels.push(panel);
+    return panel;
   },
   async showErrorMessage(message: string) {
     ui.errors.push(message);

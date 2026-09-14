@@ -25,6 +25,7 @@ import {
   standaloneError,
   StandaloneReviewError,
 } from "./standaloneReviewProtocol.js";
+import { showCentralKnowledge } from "./centralKnowledgeView.js";
 
 const esc = (value: unknown) =>
   String(value).replace(
@@ -98,6 +99,7 @@ async function readConfig(file: string) {
   }
 }
 const activeViews = new Set<string>();
+let knowledgePanel: vscode.WebviewPanel | undefined;
 export async function manageCentralConnection(
   context: vscode.ExtensionContext,
   scope: Extract<LocalScope, { kind: "repository" }>,
@@ -173,6 +175,12 @@ export async function manageCentralConnection(
           description: "Download and verify a complete signed snapshot",
         },
         {
+          label: "View downloaded review knowledge",
+          action: "knowledge",
+          description:
+            "Read central prompts, review criteria and memories; model execution stays local",
+        },
+        {
           label: "Use signed offline knowledge",
           action: "offline",
           description:
@@ -201,6 +209,8 @@ export async function manageCentralConnection(
     );
     if (!choice) return;
     actions.assertCurrent();
+    knowledgePanel?.dispose();
+    knowledgePanel = undefined;
     if (choice.action === "standalone") {
       await select({ version: 1, mode: "standalone" });
       return;
@@ -328,6 +338,44 @@ export async function manageCentralConnection(
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const id = selection.connectionId;
+    if (choice.action === "knowledge") {
+      const selected = JSON.stringify(selection);
+      const assertSelection = () => {
+        actions.assertCurrent();
+        if (
+          JSON.stringify(readSelection(context.globalState, scope)) !== selected
+        )
+          throw new StandaloneReviewError("central-connection-required");
+      };
+      const freshness = selection.freshness;
+      const snapshot = await progress(
+        "Reading downloaded review knowledge",
+        (signal) =>
+          withManager(async (manager) => {
+            const status = await manager.status(id);
+            if (status.clientId !== "commit-defender")
+              throw new StandaloneReviewError("authentication-required");
+            const ready = await manager.review(id, freshness, signal);
+            const value = await ready.cache.read(freshness);
+            await ready.assertConnection();
+            assertSelection();
+            return value;
+          }),
+      );
+      assertSelection();
+      knowledgePanel = showCentralKnowledge(context, snapshot, async () => {
+        assertSelection();
+        await withManager(async (manager) => {
+          const ready = await manager.review(id, "offline");
+          const current = await ready.cache.read("offline");
+          await ready.assertConnection();
+          if (current.manifest.manifestHash !== snapshot.manifest.manifestHash)
+            throw new StandaloneReviewError("central-connection-required");
+        });
+        assertSelection();
+      });
+      return;
+    }
     if (choice.action === "fallback") {
       const picked = await vscode.window.showQuickPick(
         [
