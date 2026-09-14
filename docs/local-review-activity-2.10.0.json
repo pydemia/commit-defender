@@ -1,0 +1,193 @@
+{
+  "version": "2.10.0",
+  "sourceCommit": "fecf93274af43cdf9737af495343988e074292fc",
+  "gcrSourceCommit": "2dbaf55bc5a2128e4898047e21c8c66e93bc2954",
+  "libraries": "0.1.0-alpha.39",
+  "cli": "0.1.0-alpha.34",
+  "package": {
+    "version": "2.10.0",
+    "vsixSha256": "e91f91f0e63372b4105511c1f5f939fe79ac5bdb4613e5d18d6ab9901bca387b",
+    "cliVersion": "0.1.0-alpha.34",
+    "cliBundleSha256": "1f96d3da23f53e936c1fd612dbd26fd81294ccdf561d96f3dd39109606721aa8",
+    "fileCount": 52
+  },
+  "tests": {
+    "status": "passed",
+    "suites": 18,
+    "tests": 195,
+    "results": {
+      "test:providers": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:source-policy": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:git-snapshot": {
+        "tests": 14,
+        "pass": 14,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:review-outcome": {
+        "tests": 23,
+        "pass": 23,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:review-security": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:review-backend": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:client-contract": {
+        "tests": 21,
+        "pass": 21,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:standalone-review": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:standalone-config": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:model-credentials": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:central-review": {
+        "tests": 12,
+        "pass": 12,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:central-view": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:central-sync": {
+        "tests": 3,
+        "pass": 3,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:automatic-review": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:managed-hooks": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:review-chat": {
+        "tests": 4,
+        "pass": 4,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:background-recovery": {
+        "tests": 9,
+        "pass": 9,
+        "fail": 0,
+        "skipped": 0
+      },
+      "test:local-activity": {
+        "tests": 5,
+        "pass": 5,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "initialFailures": [
+      "Missing new vendor provenance metadata; supplied source commit and manifest hash, reran failed suite and remaining suites.",
+      "Cancellation UI mock selected the first item for an absent choice; used its explicit cancellation choice and reran activity tests."
+    ]
+  },
+  "hosts": [
+    {
+      "status": "passed",
+      "vscode": "1.90.2",
+      "node": "20.9.0",
+      "electron": "29.4.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "extensionVersion": "2.10.0",
+      "delivery": "packaged-extension",
+      "commandCount": 26,
+      "activation": true,
+      "encryptedActivityFixture": true,
+      "hookDefault": "disable",
+      "modelCalled": false,
+      "checks": [
+        "activation",
+        "command registration",
+        "central executor and upstream submission commands absent",
+        "clear findings",
+        "cancel without run",
+        "no hook installed",
+        "standalone defaults and user profile",
+        "empty history refresh creates no local store or OS key",
+        "local activity webview opens, refreshes and closes on invalidation without creating storage"
+      ]
+    },
+    {
+      "status": "passed",
+      "vscode": "1.137.0",
+      "node": "24.18.1",
+      "electron": "42.10.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "extensionVersion": "2.10.0",
+      "delivery": "packaged-extension",
+      "commandCount": 26,
+      "activation": true,
+      "encryptedActivityFixture": true,
+      "hookDefault": "disable",
+      "modelCalled": false,
+      "checks": [
+        "activation",
+        "command registration",
+        "central executor and upstream submission commands absent",
+        "clear findings",
+        "cancel without run",
+        "no hook installed",
+        "standalone defaults and user profile",
+        "empty history refresh creates no local store or OS key",
+        "local activity webview opens, refreshes and closes on invalidation without creating storage"
+      ]
+    }
+  ],
+  "installedFilesVerified": true,
+  "settingsUnchanged": true,
+  "forcedReload": false,
+  "modelCalledForVerification": false,
+  "centralUploadsAdded": false,
+  "details": "/Users/a09255/git/git-code-reviewer/.documents/execution/preventive-review/evidence/P13-local-review-activity.json"
+}
