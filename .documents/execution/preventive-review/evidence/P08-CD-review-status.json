@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "status": "package-verified-installation-pending",
-  "scope": "P08-C05 follow-up status, explicit sync and snapshot-pinned re-review; full PRISM CD UI model cycle remains open",
+  "status": "installed-and-live-cycle-verified",
+  "scope": "P08-C05 complete: submission, central adoption, approval status, signed synchronization and explicit pinned re-review",
   "clientSource": "714b37d17777fe12a5e9ecbeba81ae76de8f04c7",
   "clientVersion": "0.1.0-alpha.26",
   "package": {
@@ -95,16 +95,58 @@
       "empty history refresh creates no local store or OS key"
     ]
   },
-  "externalModelCalls": 0,
+  "externalModelCalls": 1,
   "limitations": [
-    "Native UI uses an owned TLS publisher and synthetic initial review.",
-    "The successful pinned re-review integration uses a synthetic executor.",
-    "Actual PRISM approval to sync to model re-review from this CD UI remains unverified.",
-    "Public Marketplace release and full P08 remain open."
+    "Initial report and four manual evaluation cases are synthetic; only the follow-up review invokes the actual model.",
+    "Central adoption/evaluation/activation uses the real authorized HTTPS API; CD actions use its native webview.",
+    "A single fixture does not establish general review accuracy or executed-test evidence.",
+    "P08-C04/C06, other phase residual work, and public Marketplace release remain open."
   ],
   "initialFailures": [
     "Full suite initially stopped on the old alpha.25 version assertion; updated to delivered alpha.26.",
     "New message test initially expected confirmed to be retained after validated parsing; corrected the expectation.",
     "New snapshot-change test initially changed only the publisher, while a fresh signed local cache remained valid; added actual shared-cache synchronization to exercise snapshot replacement."
-  ]
+  ],
+  "commitComplete": true,
+  "phaseComplete": false,
+  "extensionSourceCommit": "0adb60b7af15ede0350196c89b8bd8e6a21bf101",
+  "installation": {
+    "status": "passed",
+    "version": "2.5.0",
+    "vsixSha256": "89b090537137be9b47360b93ea658eca06193eae7bfd17b18e1cb729d25130d4",
+    "installedFilesMatch": true,
+    "previousVersionBackup": "test-results/P08-status-previous-install-2.4.0",
+    "forcedWindowReload": false,
+    "globalCliChanged": false
+  },
+  "livePrismNative": {
+    "status": "passed",
+    "vscode": "1.135.0",
+    "syntheticInitialReview": true,
+    "actualFollowupReview": true,
+    "externalModelCalls": 1,
+    "connectionId": "00500916fe187c2478a6ff89d18814794401eb5ec861bf2673b606f4cf012a54",
+    "stage": "review-terminal",
+    "reviewStatus": "completed",
+    "runId": "8960d5aa-b91e-489c-a36b-49c91deb1b2a",
+    "model": "gpt-6-astra",
+    "reasoningEffort": "xhigh",
+    "snapshotId": "05519007-4569-4972-8f0f-05e966fa83bf",
+    "ruleId": "1fb999ec-81b9-41a2-86b6-66a6efb50dee",
+    "findingCount": 1,
+    "reportSha256": "586f6bb38a612ffc7153e99048de105fbd20e2814bee2d1c204da75f0b0fae99",
+    "credentialRemoved": true,
+    "fixtureAndKeysRemoved": true,
+    "centralCleanup": {
+      "ownedRepositoryAndUserRemoved": true,
+      "ownedLocalFilesRemoved": true
+    },
+    "ui": {
+      "verified": true,
+      "explicitSubmission": true,
+      "realPrismApproval": true,
+      "explicitSynchronization": true,
+      "explicitModelRereview": true
+    }
+  }
 }
