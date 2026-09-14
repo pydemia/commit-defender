@@ -34,6 +34,8 @@ interface Root {
   profileId: string;
   stageSelection: string;
   stageFingerprint?: string;
+  backgroundReady: boolean;
+  stagePending: boolean;
 }
 /** VS Code is an event adapter. The shared scheduler and worker own execution;
  * repository files never grant permission to start automatic model reviews. */
@@ -64,6 +66,15 @@ export class AutomaticReviews implements vscode.Disposable {
       busy(): boolean;
       configureHooks?(root: string, settings: AutomaticSettings): Promise<void>;
       pauseHooks?(): Promise<void>;
+      backgroundStage?(root: string): boolean;
+      backgroundSave?(
+        root: string,
+        input: {
+          file: string;
+          hash?: string | null;
+          reason: "manual" | "auto" | "external" | "dirty";
+        },
+      ): Promise<false | { status: string }>;
       /** Test port; never read from workspace settings. */
       debounceMs?: number;
       now?: () => number;
@@ -134,6 +145,16 @@ export class AutomaticReviews implements vscode.Disposable {
               .relative(root, e.document.uri.fsPath)
               .split(path.sep)
               .join("/");
+            if (value.backgroundReady && this.ports.backgroundSave)
+              void this.track(
+                this.ports.backgroundSave(root, { file, reason: "dirty" }),
+              ).catch(() => {
+                this.ports.state({
+                  key: root,
+                  phase: "failed",
+                  reason: "background-save-unavailable",
+                });
+              });
             if (!value.files.has(file)) continue;
             value.files.delete(file);
             this.scheduler.cancel(this.key(root, "save"));
@@ -267,6 +288,11 @@ export class AutomaticReviews implements vscode.Disposable {
           return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
+          registered.backgroundReady = true;
+          if (this.ports.backgroundStage?.(observed.root))
+            this.scheduler.cancel(this.key(observed.root, "stage"));
+          else if (registered.stagePending)
+            this.submitStage(observed.root, registered);
         } catch {
           this.ports.state({
             key: observed.root,
@@ -333,6 +359,8 @@ export class AutomaticReviews implements vscode.Disposable {
       files: new Map(),
       profileId,
       stageSelection,
+      backgroundReady: !this.ports.configureHooks,
+      stagePending: pending,
     };
     this.roots.set(observed.root, value);
     if (settings.paused || (!settings.save && !settings.stage)) return value;
@@ -422,6 +450,7 @@ export class AutomaticReviews implements vscode.Disposable {
           );
           if (this.roots.get(root) !== state || this.disposed) return;
           state.observed = observed;
+          state.stagePending = pending;
           if (previous.head !== observed.head) {
             this.scheduler.cancel(this.key(root, "save"));
             state.files.clear();
@@ -457,12 +486,13 @@ export class AutomaticReviews implements vscode.Disposable {
       fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      const directory = await realpath(path.dirname(uri.fsPath));
-      const absolute = path.join(directory, path.basename(uri.fsPath));
+      let absolute = path.resolve(uri.fsPath);
       let root = [...this.roots.keys()]
         .filter((r) => absolute.startsWith(r + path.sep))
         .sort((a, b) => b.length - a.length)[0];
       if (!root) {
+        const directory = await realpath(path.dirname(absolute));
+        absolute = path.join(directory, path.basename(absolute));
         const observed = await observeAutomaticRepository(
           directory,
           this.excludes(),
@@ -474,6 +504,7 @@ export class AutomaticReviews implements vscode.Disposable {
           return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
+          registered.backgroundReady = true;
         } catch {
           this.ports.state({
             key: observed.root,
@@ -483,7 +514,12 @@ export class AutomaticReviews implements vscode.Disposable {
         }
       }
       const state = this.roots.get(root)!;
-      if (state.settings.paused || !state.settings.save) return;
+      if (
+        state.settings.paused ||
+        !state.settings.save ||
+        !state.backgroundReady
+      )
+        return;
       const file = path.relative(root, absolute).split(path.sep).join("/");
       await this.scan(root);
       const observed = await observeAutomaticFile(root, file, this.excludes());
@@ -495,6 +531,25 @@ export class AutomaticReviews implements vscode.Disposable {
         return;
       const previous = this.observedFiles.get(fileKey);
       this.observedFiles.set(fileKey, observed.hash);
+      if (previous === observed.hash) return;
+      const background = await this.ports.backgroundSave?.(root, {
+        file,
+        hash: observed.hash,
+        reason: vscode.workspace.textDocuments.some(
+          (d) => d.uri.toString() === uri.toString() && d.isDirty,
+        )
+          ? "dirty"
+          : reason,
+      });
+      if (background) {
+        if (background.status === "pending")
+          this.ports.state({
+            key: this.key(root, "save"),
+            phase: "waiting",
+            reason: "background-save",
+          });
+        return;
+      }
       const settings = state.settings;
       if (
         settings.paused ||
@@ -519,10 +574,17 @@ export class AutomaticReviews implements vscode.Disposable {
       state.files.set(file, observed.hash);
       this.submitSave(root, state);
     } catch {
+      if (this.ports.backgroundSave)
+        this.ports.state({
+          key: fileKey,
+          phase: "failed",
+          reason: "background-save-unavailable",
+        });
       /* Unreadable, ignored, deleted parent or no Git root: no model request. */
     }
   }
   private submitStage(root: string, state: Root) {
+    if (!state.backgroundReady || this.ports.backgroundStage?.(root)) return;
     const observed = state.observed;
     if (
       state.stageFingerprint === observed.fingerprint ||

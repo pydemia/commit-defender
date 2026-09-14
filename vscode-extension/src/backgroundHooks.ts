@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
@@ -22,12 +22,14 @@ interface Owned {
   profileId: string;
   dataDirectory: string;
   configHash?: string;
+  triggers?: Array<"save" | "stage" | "commit" | "push">;
 }
 export type BackgroundReviewJob = ServiceJob & {
   root: string;
   profileId: string;
   dataDirectory: string;
   supportsRecovery: boolean;
+  currentRegistration?: boolean;
 };
 const hash = (value: Uint8Array) =>
   createHash("sha256").update(value).digest("hex");
@@ -60,6 +62,7 @@ async function privateCopy(source: string, directory: string, name: string) {
 }
 /** Explicit extension-owned grants survive host exit; repository settings cannot create them. */
 export class BackgroundHooks {
+  private readonly sessionId = randomUUID();
   private epoch = 0;
   private generations = new Map<string, number>();
   private pending: Promise<unknown> = Promise.resolve();
@@ -92,7 +95,8 @@ export class BackgroundHooks {
           action: "register",
           root: owned.root,
           triggers: registration.triggers.filter(
-            (t) => !["commit", "push"].includes(t),
+            (t) =>
+              !(owned.triggers ?? ["commit", "push"]).includes(t as "commit"),
           ),
           options: registration.options,
         });
@@ -114,7 +118,8 @@ export class BackgroundHooks {
           await jobs.register(
             owned.root,
             registration.triggers.filter(
-              (t) => !["commit", "push"].includes(t),
+              (t) =>
+                !(owned.triggers ?? ["commit", "push"]).includes(t as "commit"),
             ),
             registration.options,
           );
@@ -143,6 +148,85 @@ export class BackgroundHooks {
       for (const row of this.owned()) await this.disable(row);
     });
   }
+  watchesStage(root: string) {
+    return this.owned().some(
+      (row) => row.root === root && row.triggers?.includes("stage"),
+    );
+  }
+  saveEvent(
+    root: string,
+    input: {
+      file: string;
+      hash?: string | null;
+      reason: "manual" | "auto" | "external" | "dirty";
+    },
+  ) {
+    return this.serial(async () => {
+      const owned = this.owned().find(
+        (row) => row.root === root && row.triggers?.includes("save"),
+      );
+      if (!owned) return false;
+      return (await this.call(
+        { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+        {
+          action: "watch-editor-save",
+          root,
+          sessionId: this.sessionId,
+          ...input,
+        },
+      )) as { status: string };
+    });
+  }
+  detachEditors() {
+    return this.serial(async () => {
+      for (const owned of this.owned()) {
+        if (!owned.triggers?.includes("save")) continue;
+        try {
+          await this.call(
+            { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+            {
+              action: "watch-editor-detach",
+              root: owned.root,
+              sessionId: this.sessionId,
+            },
+          );
+        } catch (error) {
+          if ((error as { code?: string }).code !== "service-denied")
+            throw error;
+        }
+      }
+    });
+  }
+  async watchStatus() {
+    const states: Array<{
+      root: string;
+      pendingFiles: number;
+      unclassifiedFiles: string[];
+      problem: string | null;
+    }> = [];
+    for (const owned of this.owned()) {
+      if (!owned.triggers?.some((t) => t === "save" || t === "stage")) continue;
+      const result = (await this.call(
+        { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+        {
+          action: "watch-status",
+          root: owned.root,
+        },
+      )) as Array<{
+        pendingFiles: number;
+        unclassifiedFiles?: string[];
+        problem: string | null;
+      }>;
+      states.push(
+        ...result.map((state) => ({
+          ...state,
+          root: owned.root,
+          unclassifiedFiles: state.unclassifiedFiles ?? [],
+        })),
+      );
+    }
+    return states;
+  }
   async status() {
     const result: BackgroundReviewJob[] = [];
     for (const owned of this.owned()) {
@@ -167,6 +251,7 @@ export class BackgroundHooks {
           ...job,
           ...location,
           root: owned.root,
+          currentRegistration: job.registrationRevision === registration?.revision && registration.triggers.includes(job.trigger),
           supportsRecovery:
             status.features?.includes("review-reconciliation-v1") ?? false,
         });
@@ -250,12 +335,15 @@ export class BackgroundHooks {
         await this.disable(old);
         old = undefined;
       }
-      const triggers: Array<"commit" | "push"> = automatic.paused
-        ? []
-        : [
-            ...(automatic.commit ? ["commit" as const] : []),
-            ...(automatic.push ? ["push" as const] : []),
-          ];
+      const triggers: Array<"save" | "stage" | "commit" | "push"> =
+        automatic.paused
+          ? []
+          : [
+              ...(automatic.save ? ["save" as const] : []),
+              ...(automatic.stage ? ["stage" as const] : []),
+              ...(automatic.commit ? ["commit" as const] : []),
+              ...(automatic.push ? ["push" as const] : []),
+            ];
       if (!triggers.length || (old?.profileId !== settings.profileId && old)) {
         if (old) await this.disable(old);
         if (!triggers.length) return;
@@ -325,6 +413,14 @@ export class BackgroundHooks {
         throw Error(
           "Restart this profile’s existing service with the bundled CLI to enable automatic review budgets.",
         );
+      if (
+        (automatic.save &&
+          !service.features?.includes("editor-save-events-v1")) ||
+        (automatic.stage && !service.features?.includes("headless-watch-v1"))
+      )
+        throw Error(
+          "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension’s bundled CLI.",
+        );
       const executorPath = path.isAbsolute(settings.executablePath)
         ? settings.executablePath
         : (
@@ -340,7 +436,10 @@ export class BackgroundHooks {
         reasoningEffort: "xhigh",
         executorPath,
         ...(settings.connectionId
-          ? { connectionId: settings.connectionId }
+          ? {
+              connectionId: settings.connectionId,
+              centralClientId: "commit-defender",
+            }
           : {}),
         excludePatterns: settings.excludePatterns,
         allowPaths: ["**"],
@@ -357,7 +456,7 @@ export class BackgroundHooks {
       const allowed = [
         ...new Set([
           ...(previous?.triggers.filter(
-            (t) => !["commit", "push"].includes(t),
+            (t) => !["save", "stage", "commit", "push"].includes(t),
           ) ?? []),
           ...triggers,
         ]),
@@ -367,6 +466,7 @@ export class BackgroundHooks {
         profileId: settings.profileId,
         dataDirectory,
         configHash,
+        triggers,
       };
       await this.store.update(key, [
         ...this.owned().filter((row) => row.root !== root),
@@ -392,18 +492,56 @@ export class BackgroundHooks {
           await this.disable(owned);
           return;
         }
+        const watched = triggers.filter(
+          (trigger) => trigger === "save" || trigger === "stage",
+        );
+        if (watched.length)
+          await this.call(location, {
+            action: "watch-start",
+            root,
+            triggers: watched,
+            externalChanges: automatic.external,
+            minimumSaveIntervalMs: automatic.minimumSaveIntervalMs,
+            ...(automatic.save
+              ? {
+                  editor: {
+                    id: this.sessionId,
+                    pid: process.pid,
+                    autoSave: automatic.autoSave,
+                  },
+                }
+              : {}),
+          });
+        if (!current()) {
+          await this.disable(owned);
+          return;
+        }
         await configureManagedHooks({
           root,
           adapter,
-          route: { ...location, node: node.path, cli, triggers, waitMs },
+          ...(triggers.some((t) => t === "commit" || t === "push")
+            ? {
+                route: {
+                  ...location,
+                  node: node.path,
+                  cli,
+                  triggers: triggers.filter(
+                    (t): t is "commit" | "push" =>
+                      t === "commit" || t === "push",
+                  ),
+                  waitMs,
+                },
+              }
+            : {}),
         });
       } catch (error) {
         await this.call(location, {
           action: "register",
           root,
           triggers:
-            previous?.triggers.filter((t) => !["commit", "push"].includes(t)) ??
-            [],
+            previous?.triggers.filter(
+              (t) => !["save", "stage", "commit", "push"].includes(t),
+            ) ?? [],
           options,
         });
         throw error;

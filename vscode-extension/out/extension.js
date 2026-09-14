@@ -4673,10 +4673,10 @@ function resolveAll(constructs2, events, context) {
   const called = [];
   let index2 = -1;
   while (++index2 < constructs2.length) {
-    const resolve3 = constructs2[index2].resolveAll;
-    if (resolve3 && !called.includes(resolve3)) {
-      events = resolve3(events, context);
-      called.push(resolve3);
+    const resolve4 = constructs2[index2].resolveAll;
+    if (resolve4 && !called.includes(resolve4)) {
+      events = resolve4(events, context);
+      called.push(resolve4);
     }
   }
   return events;
@@ -12787,7 +12787,7 @@ async function withSchemaFile(schema, fn) {
   }
 }
 function runCli(command, args, stdin, req, env4) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
       return;
@@ -12866,7 +12866,7 @@ function runCli(command, args, stdin, req, env4) {
       }
       settled = true;
       cleanup();
-      resolve3({ code: code3 ?? 1, stdout, stderr });
+      resolve4({ code: code3 ?? 1, stdout, stderr });
     });
     child.stdin.on("error", (error2) => {
       if (error2.code !== "EPIPE" && !processError) {
@@ -13667,7 +13667,7 @@ function standaloneError(error2) {
 function prepareStandaloneWorker(workerFile, request, settings, preparationSignal) {
   if (preparationSignal.aborted)
     return Promise.reject(new StandaloneReviewError("cancelled"));
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const worker = new import_node_worker_threads.Worker(workerFile, {
       workerData: { request, settings }
     });
@@ -13712,7 +13712,7 @@ function prepareStandaloneWorker(workerFile, request, settings, preparationSigna
         case "prepared":
           if (prepared) return;
           prepared = true;
-          resolve3({
+          resolve4({
             backendId: message.backendId,
             key: message.key,
             async dispose() {
@@ -15264,7 +15264,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.28",
+  version: "0.1.0-alpha.30",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -15371,7 +15371,7 @@ function discoverLocalIdentity(cwd, profileId) {
 
 // node_modules/@gcr/client-core/dist/local-credentials.js
 var import_node_child_process2 = require("node:child_process");
-var run2 = (file, args, input) => new Promise((resolve3, reject) => {
+var run2 = (file, args, input) => new Promise((resolve4, reject) => {
   const child = (0, import_node_child_process2.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
   const stdout = [];
   const stderr = [];
@@ -15400,7 +15400,7 @@ var run2 = (file, args, input) => new Promise((resolve3, reject) => {
   child.on("close", (code3) => {
     clearTimeout(timer);
     if (!rejected)
-      resolve3({
+      resolve4({
         code: code3,
         stdout: Buffer.concat(stdout).toString("utf8"),
         stderr: Buffer.concat(stderr).toString("utf8")
@@ -17432,7 +17432,7 @@ var KnowledgeHttpTransport = class {
     const base = new URL(this.binding.serverUrl);
     if (target.origin !== base.origin || !target.pathname.startsWith(base.pathname))
       throw unavailable2();
-    return new Promise((resolve3, reject) => {
+    return new Promise((resolve4, reject) => {
       const request = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
       const req = request(target, {
         method: body2 === void 0 ? "GET" : "POST",
@@ -17445,7 +17445,7 @@ var KnowledgeHttpTransport = class {
           ...body2 === void 0 ? {} : { "content-type": "application/json", "content-length": Buffer.byteLength(body2) },
           ...etag ? { "if-none-match": etag } : {}
         }
-      }, resolve3);
+      }, resolve4);
       req.on("error", () => reject(unavailable2()));
       req.end(body2);
     });
@@ -18210,7 +18210,7 @@ var import_promises5 = require("node:fs/promises");
 var import_node_path7 = __toESM(require("node:path"), 1);
 var import_node_crypto10 = require("node:crypto");
 async function git(cwd, args, input, allow = [0]) {
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const child = (0, import_node_child_process3.execFile)("git", [
       ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
       "-c",
@@ -18239,7 +18239,7 @@ async function git(cwd, args, input, allow = [0]) {
       if (error2 && !allow.includes(Number(error2.code)))
         reject(new SourceCaptureError("source-unavailable"));
       else
-        resolve3(stdout);
+        resolve4(stdout);
     });
     child.stdin?.on("error", () => {
     });
@@ -18313,14 +18313,28 @@ async function workingTreeChanged(root2, file) {
   ]) || !!await git(root2, ["ls-files", "--others", "--exclude-standard", "-z", "--", file]);
 }
 async function observeAutomaticFile(root2, file, excludes = []) {
+  return readAutomaticFile(await (0, import_promises5.realpath)(root2), file, excludes);
+}
+async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
   file = sourcePath(file);
-  root2 = await (0, import_promises5.realpath)(root2);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path7.default.join(root2, file), parent = await (0, import_promises5.realpath)(import_node_path7.default.dirname(absolute)).catch(() => void 0);
-  if (!parent || parent !== import_node_path7.default.dirname(absolute) || parent !== root2 && !parent.startsWith(root2 + import_node_path7.default.sep))
+  const absolute = import_node_path7.default.join(root2, file);
+  let parent = import_node_path7.default.dirname(absolute);
+  for (; ; ) {
+    try {
+      if (await (0, import_promises5.realpath)(parent) !== parent)
+        return void 0;
+      break;
+    } catch (error2) {
+      if (error2.code !== "ENOENT" || parent === root2)
+        return void 0;
+      parent = import_node_path7.default.dirname(parent);
+    }
+  }
+  if (parent !== root2 && !parent.startsWith(root2 + import_node_path7.default.sep))
     return void 0;
-  const ignored = await git(root2, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
+  const ignored = knownChanged ? "" : await git(root2, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
     return void 0;
   let handle2;
@@ -18342,11 +18356,11 @@ async function observeAutomaticFile(root2, file, excludes = []) {
       return void 0;
     if (buffer.subarray(0, length).includes(0))
       return void 0;
-    const changed = await workingTreeChanged(root2, file);
+    const changed = knownChanged || await workingTreeChanged(root2, file);
     return { hash: (0, import_node_crypto10.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
-      const changed = await workingTreeChanged(root2, file);
+      const changed = knownChanged || await workingTreeChanged(root2, file);
       return { hash: null, changed };
     }
     return void 0;
@@ -18359,6 +18373,46 @@ async function observeAutomaticFile(root2, file, excludes = []) {
 var import_node_path8 = __toESM(require("node:path"), 1);
 var import_promises6 = require("node:fs/promises");
 var import_node_crypto11 = require("node:crypto");
+
+// node_modules/@gcr/client-core/dist/service-watch.js
+var uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+function editorSession(input) {
+  const value = input;
+  if (!value || !uuidPattern.test(value.id) || !Number.isSafeInteger(value.pid) || value.pid < 1 || typeof value.autoSave !== "boolean")
+    throw new LocalServiceError("service-invalid");
+  return { id: value.id, pid: value.pid, autoSave: value.autoSave };
+}
+function validateServiceWatch(input) {
+  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+  if (!input || input.version !== 1 || !/^[a-f0-9]{64}$/.test(input.repository) || !["stage", "save"].includes(input.trigger) || typeof input.enabled !== "boolean" || !Number.isSafeInteger(input.registrationRevision) || input.registrationRevision < 1 || !Number.isSafeInteger(input.minimumSaveIntervalMs) || input.minimumSaveIntervalMs < 1e4 || input.minimumSaveIntervalMs > 36e5 || !Array.isArray(input.pendingPaths) || !Array.isArray(input.reviewPaths) || !Array.isArray(input.cancelIds) || !Array.isArray(input.observed?.files) || !/^[a-f0-9]{64}$/.test(input.observed.fingerprint))
+    throw new LocalServiceError("service-invalid");
+  if (![input.changedAt, input.lastSubmittedAt].every((n) => Number.isSafeInteger(n) && n >= 0) || input.observed.files.length > 512 || input.pendingPaths.length > 512 || input.reviewPaths.length > 512 || input.cancelIds.length > 2 || input.cancelIds.some((id4) => !uuid.test(id4)) || input.receiptId !== void 0 && !uuid.test(input.receiptId) || input.intent !== void 0 && (!uuid.test(input.intent.id) || !input.intent.source) || input.observed.head !== null && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(input.observed.head))
+    throw new LocalServiceError("service-invalid");
+  for (const file of input.observed.files) {
+    sourcePath(file.path);
+    if (file.hash !== null && !/^[a-f0-9]{64}$/.test(file.hash))
+      throw new LocalServiceError("service-invalid");
+  }
+  for (const file of [...input.pendingPaths, ...input.reviewPaths])
+    sourcePath(file);
+  if (input.externalChanges !== void 0 && typeof input.externalChanges !== "boolean")
+    throw new LocalServiceError("service-invalid");
+  if (input.editor) {
+    if (input.trigger !== "save" || typeof input.editor.autoSave !== "boolean" || !Array.isArray(input.editor.sessions) || input.editor.sessions.length > 16 || !Array.isArray(input.editor.events) || input.editor.events.length > 512 || !Array.isArray(input.editor.unclassified) || input.editor.unclassified.length > 512)
+      throw new LocalServiceError("service-invalid");
+    for (const session of input.editor.sessions)
+      editorSession({ ...session, autoSave: input.editor.autoSave });
+    for (const event of input.editor.events) {
+      sourcePath(event.path);
+      if (typeof event.allowed !== "boolean" || event.hash !== null && !/^[a-f0-9]{64}$/.test(event.hash))
+        throw new LocalServiceError("service-invalid");
+    }
+    input.editor.unclassified.forEach((file) => sourcePath(file));
+  }
+  return input;
+}
+
+// node_modules/@gcr/client-core/dist/service-jobs.js
 var LocalServiceError = class extends Error {
   code;
   constructor(code3) {
@@ -18372,7 +18426,7 @@ var invalid4 = () => new LocalServiceError("service-invalid");
 function reviewOptions(input) {
   const value = structuredClone(input);
   value.maximumReviewsPerHour ??= 6;
-  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path8.default.isAbsolute(value.executorPath)))
+  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path8.default.isAbsolute(value.executorPath)))
     throw invalid4();
   for (const [field, max] of [
     ["durationMs", 6e5],
@@ -18407,6 +18461,37 @@ var ServiceJobs = class _ServiceJobs {
   }
   close() {
     this.records.close();
+  }
+  async watch(repository, trigger) {
+    if (!/^[a-f0-9]{64}$/.test(repository) || !["stage", "save"].includes(trigger))
+      throw invalid4();
+    const row = await this.records.read("settings", `watch_${repository}_${trigger}`);
+    if (!row || row.deleted)
+      return;
+    const value = validateServiceWatch(row.value);
+    if (value.repository !== repository || value.trigger !== trigger)
+      throw invalid4();
+    return value;
+  }
+  async watches() {
+    const result = [];
+    for (const id4 of await this.records.listIds("settings")) {
+      if (!id4.startsWith("watch_"))
+        continue;
+      const match = /^watch_([a-f0-9]{64})_(stage|save)$/.exec(id4);
+      if (!match)
+        throw invalid4();
+      const state = await this.watch(match[1], match[2]);
+      if (state)
+        result.push(state);
+    }
+    return result;
+  }
+  /** The service owner serializes configuration, observation and job mutations. */
+  async writeWatch(input) {
+    const state = validateServiceWatch(input), id4 = `watch_${state.repository}_${state.trigger}`;
+    const row = await this.records.read("settings", id4);
+    await this.records.write("settings", id4, state, row?.revision ?? 0);
   }
   async acquireOwner() {
     for (let attempt = 0; attempt < 10; attempt++) {
@@ -18521,6 +18606,13 @@ var ServiceJobs = class _ServiceJobs {
     const registration = await this.registration(input.repository);
     if (!registration || registration.revision !== input.registrationRevision || !registration.triggers.includes(input.trigger))
       throw new LocalServiceError("service-denied");
+    if (input.watch !== void 0) {
+      if (input.watch !== true || input.trigger !== "stage" && input.trigger !== "save")
+        throw invalid4();
+      const watch = await this.watch(input.repository, input.trigger);
+      if (!watch?.enabled || watch.registrationRevision !== input.registrationRevision || watch.intent?.id !== input.id || contentHash(watch.intent.source) !== contentHash(input.source))
+        throw new LocalServiceError("service-denied");
+    }
     const snapshot = restoreLocalSource(input.source);
     try {
       if (snapshot.repository.repositoryKey !== registration.repositoryKey || snapshot.repository.worktreeKey !== registration.worktreeKey || contentHash(input.source.excludePatterns) !== contentHash(registration.options.excludePatterns))
@@ -18533,7 +18625,7 @@ var ServiceJobs = class _ServiceJobs {
         throw invalid4();
       const payloadHash = contentHash(input.source), old = await this.job(input.id);
       if (old) {
-        if (old.repository !== input.repository || old.registrationRevision !== input.registrationRevision || old.trigger !== input.trigger || old.payloadHash !== payloadHash)
+        if (old.repository !== input.repository || old.registrationRevision !== input.registrationRevision || old.trigger !== input.trigger || old.watch !== input.watch || old.payloadHash !== payloadHash)
           throw invalid4();
         return old;
       }
@@ -18555,7 +18647,8 @@ var ServiceJobs = class _ServiceJobs {
         payloadHash,
         createdAt: Date.now(),
         state: "queued",
-        owner: null
+        owner: null,
+        ...input.watch ? { watch: true } : {}
       };
       await this.records.write("settings", `job_${job.id}`, job, 0);
       return job;
@@ -18627,6 +18720,15 @@ var ServiceJobs = class _ServiceJobs {
     for (const job of await this.list()) {
       if (job.state !== "queued")
         continue;
+      if (job.watch) {
+        if (job.trigger !== "stage" && job.trigger !== "save")
+          throw invalid4();
+        const watch = await this.watch(job.repository, job.trigger);
+        if (!watch?.enabled || watch.registrationRevision !== job.registrationRevision || watch.cancelIds.includes(job.id) || watch.receiptId !== job.id && watch.intent?.id !== job.id) {
+          await this.cancel(job.id);
+          continue;
+        }
+      }
       const registration = await this.registration(job.repository);
       if (!registration || registration.revision !== job.registrationRevision || !registration.triggers.includes(job.trigger)) {
         await this.cancel(job.id);
@@ -18639,9 +18741,10 @@ var ServiceJobs = class _ServiceJobs {
         throw invalid4();
       const source = restoreLocalSource(row.value);
       source.close();
-      await this.update({ ...job, state: "running", owner: token2 }, job);
+      const startedAt = Date.now();
+      await this.update({ ...job, state: "running", owner: token2, startedAt }, job);
       return {
-        job: { ...job, state: "running", owner: token2 },
+        job: { ...job, state: "running", owner: token2, startedAt },
         registration,
         source: row.value
       };
@@ -18712,7 +18815,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
   const body2 = Buffer.from(JSON.stringify(request) + "\n");
   if (body2.length > maximumFrame)
     throw new LocalServiceError("service-capacity");
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const socket = import_node_net.default.createConnection(address);
     let received = Buffer.alloc(0), settled = false;
     const fail4 = () => {
@@ -18744,7 +18847,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
           throw new Error("invalid-reply");
         settled = true;
         if (reply.ok === true)
-          resolve3(reply.value);
+          resolve4(reply.value);
         else
           reject(new LocalServiceError([
             "service-unavailable",
@@ -19037,7 +19140,7 @@ function prepareReviewSubmission(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.28",
+  version: "0.1.0-alpha.30",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -19715,6 +19818,16 @@ var AutomaticReviews = class {
         for (const [root2, value] of this.roots)
           if (e.document.uri.fsPath.startsWith(root2 + import_node_path14.default.sep)) {
             const file = import_node_path14.default.relative(root2, e.document.uri.fsPath).split(import_node_path14.default.sep).join("/");
+            if (value.backgroundReady && this.ports.backgroundSave)
+              void this.track(
+                this.ports.backgroundSave(root2, { file, reason: "dirty" })
+              ).catch(() => {
+                this.ports.state({
+                  key: root2,
+                  phase: "failed",
+                  reason: "background-save-unavailable"
+                });
+              });
             if (!value.files.has(file)) continue;
             value.files.delete(file);
             this.scheduler.cancel(this.key(root2, "save"));
@@ -19848,6 +19961,11 @@ var AutomaticReviews = class {
           return;
         try {
           await this.ports.configureHooks?.(observed.root, registered.settings);
+          registered.backgroundReady = true;
+          if (this.ports.backgroundStage?.(observed.root))
+            this.scheduler.cancel(this.key(observed.root, "stage"));
+          else if (registered.stagePending)
+            this.submitStage(observed.root, registered);
         } catch {
           this.ports.state({
             key: observed.root,
@@ -19912,7 +20030,9 @@ var AutomaticReviews = class {
       watches: [],
       files: /* @__PURE__ */ new Map(),
       profileId,
-      stageSelection
+      stageSelection,
+      backgroundReady: !this.ports.configureHooks,
+      stagePending: pending
     };
     this.roots.set(observed.root, value);
     if (settings.paused || !settings.save && !settings.stage) return value;
@@ -19994,6 +20114,7 @@ var AutomaticReviews = class {
           );
           if (this.roots.get(root2) !== state || this.disposed) return;
           state.observed = observed;
+          state.stagePending = pending;
           if (previous3.head !== observed.head) {
             this.scheduler.cancel(this.key(root2, "save"));
             state.files.clear();
@@ -20023,10 +20144,11 @@ var AutomaticReviews = class {
     const generation = this.generation, fileKey = uri.toString(), fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(uri.fsPath));
-      const absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(uri.fsPath));
+      let absolute = import_node_path14.default.resolve(uri.fsPath);
       let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path14.default.sep)).sort((a, b) => b.length - a.length)[0];
       if (!root2) {
+        const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(absolute));
+        absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(absolute));
         const observed2 = await observeAutomaticRepository(
           directory,
           this.excludes()
@@ -20038,6 +20160,7 @@ var AutomaticReviews = class {
           return;
         try {
           await this.ports.configureHooks?.(observed2.root, registered.settings);
+          registered.backgroundReady = true;
         } catch {
           this.ports.state({
             key: observed2.root,
@@ -20047,7 +20170,8 @@ var AutomaticReviews = class {
         }
       }
       const state = this.roots.get(root2);
-      if (state.settings.paused || !state.settings.save) return;
+      if (state.settings.paused || !state.settings.save || !state.backgroundReady)
+        return;
       const file = import_node_path14.default.relative(root2, absolute).split(import_node_path14.default.sep).join("/");
       await this.scan(root2);
       const observed = await observeAutomaticFile(root2, file, this.excludes());
@@ -20055,6 +20179,23 @@ var AutomaticReviews = class {
         return;
       const previous3 = this.observedFiles.get(fileKey);
       this.observedFiles.set(fileKey, observed.hash);
+      if (previous3 === observed.hash) return;
+      const background = await this.ports.backgroundSave?.(root2, {
+        file,
+        hash: observed.hash,
+        reason: vscode3.workspace.textDocuments.some(
+          (d) => d.uri.toString() === uri.toString() && d.isDirty
+        ) ? "dirty" : reason
+      });
+      if (background) {
+        if (background.status === "pending")
+          this.ports.state({
+            key: this.key(root2, "save"),
+            phase: "waiting",
+            reason: "background-save"
+          });
+        return;
+      }
       const settings = state.settings;
       if (settings.paused || !settings.save || reason === "auto" && !settings.autoSave || reason === "external" && !settings.external)
         return;
@@ -20072,9 +20213,16 @@ var AutomaticReviews = class {
       state.files.set(file, observed.hash);
       this.submitSave(root2, state);
     } catch {
+      if (this.ports.backgroundSave)
+        this.ports.state({
+          key: fileKey,
+          phase: "failed",
+          reason: "background-save-unavailable"
+        });
     }
   }
   submitStage(root2, state) {
+    if (!state.backgroundReady || this.ports.backgroundStage?.(root2)) return;
     const observed = state.observed;
     if (state.stageFingerprint === observed.fingerprint || !observed.changes.length)
       return;
@@ -20531,6 +20679,7 @@ var BackgroundHooks = class {
     this.store = store;
     this.call = call;
   }
+  sessionId = (0, import_node_crypto15.randomUUID)();
   epoch = 0;
   generations = /* @__PURE__ */ new Map();
   pending = Promise.resolve();
@@ -20558,7 +20707,7 @@ var BackgroundHooks = class {
           action: "register",
           root: owned.root,
           triggers: registration.triggers.filter(
-            (t) => !["commit", "push"].includes(t)
+            (t) => !(owned.triggers ?? ["commit", "push"]).includes(t)
           ),
           options: registration.options
         });
@@ -20577,7 +20726,7 @@ var BackgroundHooks = class {
           await jobs2.register(
             owned.root,
             registration.triggers.filter(
-              (t) => !["commit", "push"].includes(t)
+              (t) => !(owned.triggers ?? ["commit", "push"]).includes(t)
             ),
             registration.options
           );
@@ -20606,6 +20755,69 @@ var BackgroundHooks = class {
       for (const row of this.owned()) await this.disable(row);
     });
   }
+  watchesStage(root2) {
+    return this.owned().some(
+      (row) => row.root === root2 && row.triggers?.includes("stage")
+    );
+  }
+  saveEvent(root2, input) {
+    return this.serial(async () => {
+      const owned = this.owned().find(
+        (row) => row.root === root2 && row.triggers?.includes("save")
+      );
+      if (!owned) return false;
+      return await this.call(
+        { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+        {
+          action: "watch-editor-save",
+          root: root2,
+          sessionId: this.sessionId,
+          ...input
+        }
+      );
+    });
+  }
+  detachEditors() {
+    return this.serial(async () => {
+      for (const owned of this.owned()) {
+        if (!owned.triggers?.includes("save")) continue;
+        try {
+          await this.call(
+            { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+            {
+              action: "watch-editor-detach",
+              root: owned.root,
+              sessionId: this.sessionId
+            }
+          );
+        } catch (error2) {
+          if (error2.code !== "service-denied")
+            throw error2;
+        }
+      }
+    });
+  }
+  async watchStatus() {
+    const states = [];
+    for (const owned of this.owned()) {
+      if (!owned.triggers?.some((t) => t === "save" || t === "stage")) continue;
+      const result = await this.call(
+        { profileId: owned.profileId, dataDirectory: owned.dataDirectory },
+        {
+          action: "watch-status",
+          root: owned.root
+        }
+      );
+      states.push(
+        ...result.map((state) => ({
+          ...state,
+          root: owned.root,
+          unclassifiedFiles: state.unclassifiedFiles ?? []
+        }))
+      );
+    }
+    return states;
+  }
   async status() {
     const result = [];
     for (const owned of this.owned()) {
@@ -20627,6 +20839,7 @@ var BackgroundHooks = class {
           ...job,
           ...location2,
           root: owned.root,
+          currentRegistration: job.registrationRevision === registration?.revision && registration.triggers.includes(job.trigger),
           supportsRecovery: status.features?.includes("review-reconciliation-v1") ?? false
         });
     }
@@ -20683,6 +20896,8 @@ var BackgroundHooks = class {
         old = void 0;
       }
       const triggers = automatic.paused ? [] : [
+        ...automatic.save ? ["save"] : [],
+        ...automatic.stage ? ["stage"] : [],
         ...automatic.commit ? ["commit"] : [],
         ...automatic.push ? ["push"] : []
       ];
@@ -20744,6 +20959,10 @@ var BackgroundHooks = class {
         throw Error(
           "Restart this profile\u2019s existing service with the bundled CLI to enable automatic review budgets."
         );
+      if (automatic.save && !service.features?.includes("editor-save-events-v1") || automatic.stage && !service.features?.includes("headless-watch-v1"))
+        throw Error(
+          "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
+        );
       const executorPath = import_node_path16.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
@@ -20754,7 +20973,10 @@ var BackgroundHooks = class {
         model: "gpt-6-astra",
         reasoningEffort: "xhigh",
         executorPath,
-        ...settings.connectionId ? { connectionId: settings.connectionId } : {},
+        ...settings.connectionId ? {
+          connectionId: settings.connectionId,
+          centralClientId: "commit-defender"
+        } : {},
         excludePatterns: settings.excludePatterns,
         allowPaths: ["**"],
         durationMs: settings.durationMs,
@@ -20770,7 +20992,7 @@ var BackgroundHooks = class {
       const allowed = [
         .../* @__PURE__ */ new Set([
           ...previous3?.triggers.filter(
-            (t) => !["commit", "push"].includes(t)
+            (t) => !["save", "stage", "commit", "push"].includes(t)
           ) ?? [],
           ...triggers
         ])
@@ -20779,7 +21001,8 @@ var BackgroundHooks = class {
         root: root2,
         profileId: settings.profileId,
         dataDirectory,
-        configHash
+        configHash,
+        triggers
       };
       await this.store.update(key2, [
         ...this.owned().filter((row) => row.root !== root2),
@@ -20801,16 +21024,50 @@ var BackgroundHooks = class {
           await this.disable(owned);
           return;
         }
+        const watched = triggers.filter(
+          (trigger) => trigger === "save" || trigger === "stage"
+        );
+        if (watched.length)
+          await this.call(location2, {
+            action: "watch-start",
+            root: root2,
+            triggers: watched,
+            externalChanges: automatic.external,
+            minimumSaveIntervalMs: automatic.minimumSaveIntervalMs,
+            ...automatic.save ? {
+              editor: {
+                id: this.sessionId,
+                pid: process.pid,
+                autoSave: automatic.autoSave
+              }
+            } : {}
+          });
+        if (!current()) {
+          await this.disable(owned);
+          return;
+        }
         await configureManagedHooks({
           root: root2,
           adapter,
-          route: { ...location2, node: node2.path, cli, triggers, waitMs }
+          ...triggers.some((t) => t === "commit" || t === "push") ? {
+            route: {
+              ...location2,
+              node: node2.path,
+              cli,
+              triggers: triggers.filter(
+                (t) => t === "commit" || t === "push"
+              ),
+              waitMs
+            }
+          } : {}
         });
       } catch (error2) {
         await this.call(location2, {
           action: "register",
           root: root2,
-          triggers: previous3?.triggers.filter((t) => !["commit", "push"].includes(t)) ?? [],
+          triggers: previous3?.triggers.filter(
+            (t) => !["save", "stage", "commit", "push"].includes(t)
+          ) ?? [],
           options
         });
         throw error2;
@@ -20821,6 +21078,34 @@ var BackgroundHooks = class {
     await this.pending;
   }
 };
+
+// src/historyEntries.ts
+function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallbackConnectionId) {
+  const belongs = (report) => {
+    const client = report.identity.client;
+    return (client.mode === "centralized" && audience && Object.entries(audience).every(
+      ([key3, value]) => client.audience[key3] === value
+    ) || client.mode === "standalone" && (fallbackConnectionId ? client.execution?.connectionId === fallbackConnectionId : !audience)) && client.profileId === scope.profileId && client.repositoryKey === scope.repositoryKey && client.worktreeKey === scope.worktreeKey;
+  };
+  const merged = /* @__PURE__ */ new Map();
+  for (const core of reports) {
+    if (!belongs(core) || !core.finishedAt) continue;
+    const report = projectCommitDefender(core);
+    merged.set(core.runId, {
+      id: core.runId,
+      timestamp: new Date(core.finishedAt),
+      report,
+      repoRoot,
+      label: `${reviewExecutionLabel(core.identity.client)} \xB7 ${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${report.staged_files.length} file(s)`,
+      scope: core.identity.source.kind === "index" ? "staged" : "selection"
+    });
+  }
+  for (const entry of current) {
+    if (entry.report.gcr && belongs(entry.report.gcr.report))
+      merged.set(entry.id, { ...entry, repoRoot });
+  }
+  return [...merged.values()].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 20);
+}
 
 // src/backgroundRecovery.ts
 var vscode4 = __toESM(require("vscode"));
@@ -22371,36 +22656,6 @@ async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
 
 // src/historyProvider.ts
 var vscode12 = __toESM(require("vscode"));
-
-// src/historyEntries.ts
-function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallbackConnectionId) {
-  const belongs = (report) => {
-    const client = report.identity.client;
-    return (client.mode === "centralized" && audience && Object.entries(audience).every(
-      ([key3, value]) => client.audience[key3] === value
-    ) || client.mode === "standalone" && (fallbackConnectionId ? client.execution?.connectionId === fallbackConnectionId : !audience)) && client.profileId === scope.profileId && client.repositoryKey === scope.repositoryKey && client.worktreeKey === scope.worktreeKey;
-  };
-  const merged = /* @__PURE__ */ new Map();
-  for (const core of reports) {
-    if (!belongs(core) || !core.finishedAt) continue;
-    const report = projectCommitDefender(core);
-    merged.set(core.runId, {
-      id: core.runId,
-      timestamp: new Date(core.finishedAt),
-      report,
-      repoRoot,
-      label: `${reviewExecutionLabel(core.identity.client)} \xB7 ${OUTCOME_META[reviewStatus(report.review)].label} \xB7 ${report.staged_files.length} file(s)`,
-      scope: core.identity.source.kind === "index" ? "staged" : "selection"
-    });
-  }
-  for (const entry of current) {
-    if (entry.report.gcr && belongs(entry.report.gcr.report))
-      merged.set(entry.id, { ...entry, repoRoot });
-  }
-  return [...merged.values()].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 20);
-}
-
-// src/historyProvider.ts
 var HistoryProvider = class {
   _history = [];
   _blocks = [];
@@ -23348,7 +23603,7 @@ function chatError(error2) {
 function runReviewChatWorker(workerFile, target, action, settings, signal, progress = () => {
 }) {
   if (signal.aborted) return Promise.reject(new ReviewChatError("cancelled"));
-  return new Promise((resolve3, reject) => {
+  return new Promise((resolve4, reject) => {
     const worker = new import_node_worker_threads2.Worker(workerFile, {
       workerData: { target, action, settings }
     });
@@ -23368,7 +23623,7 @@ function runReviewChatWorker(workerFile, target, action, settings, signal, progr
     });
     worker.on("exit", (code3) => {
       signal.removeEventListener("abort", abort);
-      if (code3 === 0 && result && !failure2) resolve3(result);
+      if (code3 === 0 && result && !failure2) resolve4(result);
       else
         reject(
           failure2 ?? new ReviewChatError(signal.aborted ? "cancelled" : "worker-failed")
@@ -24209,7 +24464,9 @@ function submissionError(error2) {
 // src/extension.ts
 var ALL_FILES = { scheme: "file" };
 var settleExecutions;
-function activate(context) {
+async function activate(context) {
+  const backgroundOpenedAt = Date.now();
+  let lastManualStartedAt = 0;
   reviewNavigation.register(context);
   let lastConfiguredProvider = getConfig().aiProvider;
   let providerUpdateFromWizard;
@@ -24684,6 +24941,7 @@ function activate(context) {
     vscode19.workspace.onDidOpenTextDocument(invalidateChangedSource)
   );
   async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback) {
+    if (!automatic) lastManualStartedAt = Date.now();
     const cfg2 = getConfig();
     let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
     try {
@@ -25254,6 +25512,8 @@ function activate(context) {
   })));
   const automaticReviews = new AutomaticReviews(context, {
     pauseHooks: () => backgroundHooks.pauseAll(),
+    backgroundStage: (root2) => backgroundHooks.watchesStage(root2),
+    backgroundSave: (root2, event) => backgroundHooks.saveEvent(root2, event),
     configureHooks: async (root2, automatic) => {
       const initial = getStandaloneReviewSettings(2, root2);
       const scope = knowledgeScope({ repoRoot: root2, profileId: initial.profileId, scope: "repository" });
@@ -25262,7 +25522,7 @@ function activate(context) {
       try {
         await backgroundHooks.configure(root2, automatic, settings, cfg2.inspect("serviceNodePath")?.globalValue ?? "node", (cfg2.inspect("hookReviewWaitSeconds")?.globalValue ?? 0) * 1e3);
       } catch (error2) {
-        getOutputChannel().appendLine("[Commit Defender] Background hook setup did not complete: " + (error2 instanceof Error ? error2.message : "unavailable"));
+        getOutputChannel().appendLine("[Commit Defender] Background review setup did not complete: " + (error2 instanceof Error ? error2.message : "unavailable"));
         throw error2;
       }
     },
@@ -25279,6 +25539,40 @@ function activate(context) {
   context.subscriptions.push(automaticReviews);
   let backgroundPolling = false;
   const observedBackgroundResults = /* @__PURE__ */ new Set();
+  const displayBackgroundResult = async (job) => {
+    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode19.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
+    const canonicalRoot = fs10.realpathSync(job.root);
+    const folder = vscode19.workspace.workspaceFolders?.find((folder2) => {
+      if (folder2.uri.scheme !== "file") return false;
+      const root2 = fs10.realpathSync(folder2.uri.fsPath);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path37.sep) || canonicalRoot.startsWith(root2 + path37.sep);
+    });
+    if (!folder) return;
+    const displayRoot = path37.resolve(folder.uri.fsPath, path37.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
+    if (scope.kind !== "repository") return;
+    const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
+    const history = await readSelectedHistory({ repoRoot: job.root, profileId: job.profileId, scope: "repository" }, selection);
+    const entry = mergeLocalHistory([], history.reports, job.root, scope, history.audience, history.fallbackConnectionId).find((entry2) => entry2.id === job.result.runId);
+    const core = entry?.report.gcr?.report;
+    if (!entry || !core || !core.finishedAt || Date.parse(core.finishedAt) < backgroundOpenedAt || Date.parse(core.startedAt ?? core.requestedAt) < lastManualStartedAt) return;
+    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode19.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
+    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode19.workspace.textDocuments.find((document3) => {
+      if (document3.uri.scheme !== "file") return false;
+      try {
+        return fs10.realpathSync(document3.uri.fsPath) === path37.join(canonicalRoot, file);
+      } catch {
+        return path37.resolve(document3.uri.fsPath) === path37.resolve(displayRoot, file);
+      }
+    })?.getText());
+    findingsStore.update(entry.report, displayRoot, blocks);
+    historyProvider.updateFindings(blocks);
+    panelProvider.updateFindings(blocks, displayRoot, entry.report);
+    applyDiagnostics(blocks, displayRoot, diagnostics);
+    commentManager.apply(blocks, displayRoot, commentCtrl, entry.report);
+    statusBar.setReport(entry.report);
+    return true;
+  };
   const backgroundPoll = setInterval(() => {
     if (backgroundPolling) return;
     backgroundPolling = true;
@@ -25290,9 +25584,14 @@ function activate(context) {
       if (finished.length) {
         finished.forEach((job) => observedBackgroundResults.add(job.id));
         await refreshLocalHistory();
-        if (!pending.length && !interrupted.length && !execution.isRunning) statusBar.setIdle("Background review finished. Results are available in review history.");
+        let displayed = false;
+        for (const job of finished.sort((a, b) => a.createdAt - b.createdAt)) displayed = !!await displayBackgroundResult(job) || displayed;
+        if (!displayed && !pending.length && !interrupted.length && !execution.isRunning) statusBar.setIdle("Background review finished. Results are available in review history.");
       }
       if (interrupted.length && !pending.length && !execution.isRunning) statusBar.setBackgroundInterrupted(interrupted.length);
+      const watches = await backgroundHooks.watchStatus();
+      if (!pending.length && !execution.isRunning && watches.some((watch) => watch.unclassifiedFiles.length))
+        statusBar.setError("An editor disconnected before classifying saved changes. Review the current files manually.");
     }).catch(() => {
     }).finally(() => {
       backgroundPolling = false;
@@ -25306,7 +25605,9 @@ function activate(context) {
     await settlePrevious?.();
     await automaticReviews.settled();
     await backgroundHooks.settled();
+    await backgroundHooks.detachEditors();
   };
+  await automaticReviews.refresh();
 }
 async function deactivate() {
   await settleReviewChats();

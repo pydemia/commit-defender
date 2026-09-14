@@ -463,4 +463,4 @@ When Stage reviews remain enabled for a worktree, Commit Defender remembers its 
 
 The pending observation is cleared only after both the report and the shared request completion are confirmed. If that final observation write fails, reopening can reuse the saved review without another model call. Stage off, pause, profile or execution-selection changes discard the old automatic pending observation. First-time enablement establishes a baseline; changes that predate that baseline are not inferred as missed Stage events.
 
-This catch-up covers Stage events. Save events while the host is closed, headless file watching, and partial-hunk unstage classification remain separate work.
+Save and Stage now also use the independent service. Accepted saves continue after the host closes; new external writes require the external-change option. See [automatic reviews](docs/automatic-reviews.md) for editor handoff, unclassified crash-time writes, and remaining partial-hunk/startup limitations.

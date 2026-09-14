@@ -30,7 +30,6 @@ import {
 import { AutomaticReviews } from "../src/automaticReviews.js";
 import { BackgroundHooks } from "../src/backgroundHooks.js";
 import type { SelectionStore } from "../src/centralConnection.js";
-import { prepareStandaloneReview } from "../src/standaloneReview.js";
 import type { StandaloneReviewSettings } from "../src/standaloneReviewProtocol.js";
 import { fixture } from "./helpers/review-fixture.js";
 import {
@@ -227,6 +226,7 @@ for (let mask = 0; mask < 16; mask++) {
                 }),
             });
             assert.equal(result.persisted && result.recorded, true);
+            completed.push(job.trigger);
             return {
               status: result.report.status,
               runId: result.report.runId,
@@ -303,22 +303,12 @@ for (let mask = 0; mask < 16; mask++) {
           configureHooks: (repo, automatic) =>
             hooks.configure(repo, automatic, settings, process.execPath, 0),
           pauseHooks: () => hooks.pauseAll(),
-          run: async (request, task) => {
-            const prepared = await prepareStandaloneReview(
-              request,
-              settings,
-              task.signal,
-              { ...storage, prepareExecutor: async () => executor },
+          backgroundStage: (root) => hooks.watchesStage(root),
+          backgroundSave: (root, event) => hooks.saveEvent(root, event),
+          run: async () => {
+            assert.fail(
+              "Automatic Save/Stage must execute in the background service.",
             );
-            try {
-              const result = await prepared.run(task.signal);
-              assert.equal(result.reviewCompletionConfirmed, true);
-              assert.equal(result.report.gcr!.report.status, "completed");
-              completed.push(request.automatic!.reason);
-              return { completionConfirmed: true };
-            } finally {
-              await prepared.dispose?.();
-            }
           },
         },
       );
@@ -362,14 +352,8 @@ for (let mask = 0; mask < 16; mask++) {
             );
       };
       const advance = async () => {
-        // Let asynchronous file/index observation finish while the scheduler clock is frozen.
-        const beforeClockAdvance = calls.length;
+        // Editor observation finishes here; the service uses its real polling/debounce clock.
         await controller!.settled();
-        assert.equal(
-          calls.length,
-          beforeClockAdvance,
-          "debounced model cannot start before clock advance",
-        );
         now += 2000;
         events.focus.fire({ focused: true });
         await controller!.settled();
@@ -404,7 +388,10 @@ for (let mask = 0; mask < 16; mask++) {
         f.git("ls-remote", "origin", "refs/heads/main").trim().split(/\s+/)[0],
       );
       const expectedJobs =
-        (enabled("commit") ? 3 : 0) + (enabled("push") ? 3 : 0);
+        Number(enabled("save")) +
+        Number(enabled("stage")) +
+        (enabled("commit") ? 3 : 0) +
+        (enabled("push") ? 3 : 0);
       await until(async () => {
         const s = await status();
         assert.ok(
@@ -415,7 +402,7 @@ for (let mask = 0; mask < 16; mask++) {
           s.jobs.length === expectedJobs &&
           s.jobs.every((job) => job.state === "finished")
         );
-      }, "all hook receipts completed");
+      }, "all automatic receipts completed");
       await delay(100);
       const requests = await ReviewRequests.open({ ...storage, scope });
       try {
@@ -450,7 +437,7 @@ for (let mask = 0; mask < 16; mask++) {
           const row = rows.find((r) => r.key === job.execution?.key);
           assert.ok(
             row,
-            "every finished hook receipt binds to the durable broker",
+            "every finished automatic receipt binds to the durable broker",
           );
           assert.equal(job.result?.status, "completed");
           assert.equal(job.result?.runId, row.resultId);
@@ -468,7 +455,7 @@ for (let mask = 0; mask < 16; mask++) {
             mask,
             enabled: fields.filter(enabled),
             calls: calls.length,
-            hookJobs: expectedJobs,
+            serviceJobs: expectedJobs,
             requests: rows.map((row) => ({
               reasons: row.reasons,
               sourceKind: row.identity.source.kind,

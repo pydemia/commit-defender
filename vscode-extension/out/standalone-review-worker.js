@@ -1322,7 +1322,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.28",
+  version: "0.1.0-alpha.30",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6739,14 +6739,28 @@ async function workingTreeChanged(root, file) {
   ]) || !!await git(root, ["ls-files", "--others", "--exclude-standard", "-z", "--", file]);
 }
 async function observeAutomaticFile(root, file, excludes = []) {
+  return readAutomaticFile(await (0, import_promises5.realpath)(root), file, excludes);
+}
+async function readAutomaticFile(root, file, excludes, knownChanged = false) {
   file = sourcePath(file);
-  root = await (0, import_promises5.realpath)(root);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path11.default.join(root, file), parent = await (0, import_promises5.realpath)(import_node_path11.default.dirname(absolute)).catch(() => void 0);
-  if (!parent || parent !== import_node_path11.default.dirname(absolute) || parent !== root && !parent.startsWith(root + import_node_path11.default.sep))
+  const absolute = import_node_path11.default.join(root, file);
+  let parent = import_node_path11.default.dirname(absolute);
+  for (; ; ) {
+    try {
+      if (await (0, import_promises5.realpath)(parent) !== parent)
+        return void 0;
+      break;
+    } catch (error2) {
+      if (error2.code !== "ENOENT" || parent === root)
+        return void 0;
+      parent = import_node_path11.default.dirname(parent);
+    }
+  }
+  if (parent !== root && !parent.startsWith(root + import_node_path11.default.sep))
     return void 0;
-  const ignored = await git(root, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
+  const ignored = knownChanged ? "" : await git(root, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
     return void 0;
   let handle;
@@ -6768,11 +6782,11 @@ async function observeAutomaticFile(root, file, excludes = []) {
       return void 0;
     if (buffer.subarray(0, length).includes(0))
       return void 0;
-    const changed = await workingTreeChanged(root, file);
+    const changed = knownChanged || await workingTreeChanged(root, file);
     return { hash: (0, import_node_crypto13.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
-      const changed = await workingTreeChanged(root, file);
+      const changed = knownChanged || await workingTreeChanged(root, file);
       return { hash: null, changed };
     }
     return void 0;
@@ -7069,7 +7083,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.28",
+  version: "0.1.0-alpha.30",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7943,7 +7957,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.28",
+  version: "0.1.0-alpha.30",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

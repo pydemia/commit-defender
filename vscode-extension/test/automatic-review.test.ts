@@ -37,6 +37,12 @@ function setup(
   run?: (
     task: AutomaticTask<ReviewRequest>,
   ) => Promise<void | { completionConfirmed?: boolean }>,
+  bridge: Partial<
+    Pick<
+      ConstructorParameters<typeof AutomaticReviews>[1],
+      "configureHooks" | "backgroundStage" | "backgroundSave"
+    >
+  > = {},
 ) {
   reset();
   const f = fixture();
@@ -59,6 +65,7 @@ function setup(
   const runtime = { busy: false };
   const transitions: Array<{ phase: string; reason?: string }> = [];
   const ports = {
+    ...bridge,
     busy: () => runtime.busy,
     debounceMs: 25,
     storage: {
@@ -237,6 +244,73 @@ test("external watching cannot turn a rejected Auto Save into an authorized revi
   external.change.fire(uri);
   await until(() => f.calls.length === 1);
   assert.equal(f.calls[0].automatic?.reason, "save");
+});
+test("background Save forwards editor provenance once and never falls back to a foreground model", async (t) => {
+  const forwarded: Array<{
+    file: string;
+    hash?: string | null;
+    reason: string;
+  }> = [];
+  const f = setup(
+    t,
+    { runOnSave: true, reviewAutoSaves: false, reviewExternalChanges: true },
+    undefined,
+    {
+      configureHooks: async () => {},
+      backgroundSave: async (_root, input) => {
+        forwarded.push(input);
+        return { status: input.reason === "auto" ? "suppressed" : "pending" };
+      },
+    },
+  );
+  await f.controller.refresh();
+  f.write("a.ts", "export const auto=2;\n");
+  f.save("a.ts", 2);
+  await f.controller.settled();
+  const watcher = watchers.find(
+    (w) => !w.disposed && w.pattern.pattern === "**/*",
+  )!;
+  watcher.change.fire(Uri.file(path.join(f.root, "a.ts")));
+  await new Promise((resolve) => setTimeout(resolve, 3700));
+  assert.deepEqual(
+    forwarded.map((event) => event.reason),
+    ["auto"],
+  );
+  f.write("a.ts", "export const manual=3;\n");
+  f.save("a.ts", 1);
+  await f.controller.settled();
+  events.change.fire({
+    document: { uri: Uri.file(path.join(f.root, "a.ts")), isDirty: true },
+    contentChanges: [{}],
+  });
+  await f.controller.settled();
+  assert.deepEqual(
+    forwarded.map((event) => event.reason),
+    ["auto", "manual", "dirty"],
+  );
+  assert.equal(f.calls.length, 0);
+});
+test("background Stage owns execution and an unavailable Save service does not start a replacement model", async (t) => {
+  const f = setup(t, { runOnSave: true, runOnStage: true }, undefined, {
+    configureHooks: async () => {},
+    backgroundStage: () => true,
+    backgroundSave: async () => {
+      throw Error("submission outcome unknown");
+    },
+  });
+  await f.controller.refresh();
+  f.write("a.ts", "export const stage=2;\n");
+  f.git("add", "a.ts");
+  f.stageEvent();
+  f.save("a.ts");
+  await f.controller.settled();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(f.calls.length, 0);
+  assert(
+    f.transitions.some(
+      (state) => state.reason === "background-save-unavailable",
+    ),
+  );
 });
 test("multiple workspace roots include the linked worktree index and keep its paths separate", async (t) => {
   const f = setup(t, { runOnStage: true });

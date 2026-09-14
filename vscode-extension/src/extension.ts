@@ -10,7 +10,8 @@ import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope } from './localKnowledge.js';
 import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
 import { AutomaticReviews } from './automaticReviews.js';
-import { BackgroundHooks } from './backgroundHooks.js';
+import { BackgroundHooks, type BackgroundReviewJob } from './backgroundHooks.js';
+import { mergeLocalHistory } from './historyEntries.js';
 import { recoverBackgroundReview } from './backgroundRecovery.js';
 import type { AutomaticTask } from '@gcr/client-core';
 import { clientReviewReport } from '@gcr/client-contract';
@@ -44,7 +45,9 @@ const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 let settleExecutions: (() => Promise<void>) | undefined;
 
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  const backgroundOpenedAt = Date.now();
+  let lastManualStartedAt = 0;
   reviewNavigation.register(context);
   let lastConfiguredProvider = getConfig().aiProvider;
   let providerUpdateFromWizard: AccountProvider | undefined;
@@ -516,6 +519,7 @@ export function activate(context: vscode.ExtensionContext): void {
     automatic?: AutomaticTask<ReviewRequest>,
     feedback?: { connectionId: string; profileId: string; snapshotId: string; signal: AbortSignal; current: () => boolean },
   ): Promise<void | { retryAt?: number; completionConfirmed?: boolean }> {
+    if (!automatic) lastManualStartedAt = Date.now();
     const cfg = getConfig();
     let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
     try {
@@ -1105,6 +1109,8 @@ export function activate(context: vscode.ExtensionContext): void {
   })));
   const automaticReviews = new AutomaticReviews(context, {
     pauseHooks: () => backgroundHooks.pauseAll(),
+    backgroundStage: root => backgroundHooks.watchesStage(root),
+    backgroundSave: (root, event) => backgroundHooks.saveEvent(root, event),
     configureHooks: async (root, automatic) => {
       const initial = getStandaloneReviewSettings(2, root);
       const scope = knowledgeScope({ repoRoot: root, profileId: initial.profileId, scope: 'repository' });
@@ -1113,7 +1119,7 @@ export function activate(context: vscode.ExtensionContext): void {
       try {
         await backgroundHooks.configure(root, automatic, settings, cfg.inspect<string>('serviceNodePath')?.globalValue ?? 'node', (cfg.inspect<number>('hookReviewWaitSeconds')?.globalValue ?? 0) * 1000);
       } catch (error) {
-        getOutputChannel().appendLine('[Commit Defender] Background hook setup did not complete: ' + (error instanceof Error ? error.message : 'unavailable'));
+        getOutputChannel().appendLine('[Commit Defender] Background review setup did not complete: ' + (error instanceof Error ? error.message : 'unavailable'));
         throw error;
       }
     },
@@ -1130,6 +1136,42 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(automaticReviews);
   let backgroundPolling = false;
   const observedBackgroundResults = new Set<string>();
+  const displayBackgroundResult = async (job: BackgroundReviewJob) => {
+    if (!job.currentRegistration || !['save', 'stage'].includes(job.trigger) || !job.result?.runId ||
+      !vscode.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
+    const canonicalRoot = fs.realpathSync(job.root);
+    const folder = vscode.workspace.workspaceFolders?.find(folder => {
+      if (folder.uri.scheme !== 'file') return false;
+      const root = fs.realpathSync(folder.uri.fsPath);
+      return root === canonicalRoot || root.startsWith(canonicalRoot + path.sep) || canonicalRoot.startsWith(root + path.sep);
+    });
+    if (!folder) return;
+    const displayRoot = path.resolve(folder.uri.fsPath, path.relative(fs.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: 'repository' });
+    if (scope.kind !== 'repository') return;
+    const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
+    const history = await readSelectedHistory({ repoRoot: job.root, profileId: job.profileId, scope: 'repository' }, selection);
+    const entry = mergeLocalHistory([], history.reports, job.root, scope, history.audience, history.fallbackConnectionId)
+      .find(entry => entry.id === job.result!.runId);
+    const core = entry?.report.gcr?.report;
+    if (!entry || !core || !core.finishedAt || Date.parse(core.finishedAt) < backgroundOpenedAt ||
+      Date.parse(core.startedAt ?? core.requestedAt) < lastManualStartedAt) return;
+    if ((await checkLocalContextFreshness(core)).status !== 'current' || intent !== reviewIntent || execution.isRunning ||
+      localProfile() !== job.profileId || !vscode.workspace.isTrusted ||
+      JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
+    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), file =>
+      vscode.workspace.textDocuments.find(document => {
+        if (document.uri.scheme !== 'file') return false;
+        try { return fs.realpathSync(document.uri.fsPath) === path.join(canonicalRoot, file); }
+        catch { return path.resolve(document.uri.fsPath) === path.resolve(displayRoot, file); }
+      })?.getText());
+    findingsStore.update(entry.report, displayRoot, blocks);
+    historyProvider.updateFindings(blocks); panelProvider.updateFindings(blocks, displayRoot, entry.report);
+    applyDiagnostics(blocks, displayRoot, diagnostics);
+    commentManager.apply(blocks, displayRoot, commentCtrl, entry.report);
+    statusBar.setReport(entry.report);
+    return true;
+  };
   const backgroundPoll = setInterval(() => {
     if (backgroundPolling) return;
     backgroundPolling = true;
@@ -1141,15 +1183,21 @@ export function activate(context: vscode.ExtensionContext): void {
       if (finished.length) {
         finished.forEach(job => observedBackgroundResults.add(job.id));
         await refreshLocalHistory();
-        if (!pending.length && !interrupted.length && !execution.isRunning) statusBar.setIdle('Background review finished. Results are available in review history.');
+        let displayed = false;
+        for (const job of finished.sort((a, b) => a.createdAt - b.createdAt)) displayed = !!await displayBackgroundResult(job) || displayed;
+        if (!displayed && !pending.length && !interrupted.length && !execution.isRunning) statusBar.setIdle('Background review finished. Results are available in review history.');
       }
       if (interrupted.length && !pending.length && !execution.isRunning) statusBar.setBackgroundInterrupted(interrupted.length);
+      const watches = await backgroundHooks.watchStatus();
+      if (!pending.length && !execution.isRunning && watches.some(watch => watch.unclassifiedFiles.length))
+        statusBar.setError('An editor disconnected before classifying saved changes. Review the current files manually.');
     }).catch(() => { /* A stopped service does not invalidate saved history. */ }).finally(() => { backgroundPolling = false; });
   }, 15000);
   backgroundPoll.unref();
   context.subscriptions.push({ dispose: () => clearInterval(backgroundPoll) });
   const settlePrevious = settleExecutions;
-  settleExecutions = async () => { automaticReviews.dispose(); await settlePrevious?.(); await automaticReviews.settled(); await backgroundHooks.settled(); };
+  settleExecutions = async () => { automaticReviews.dispose(); await settlePrevious?.(); await automaticReviews.settled(); await backgroundHooks.settled(); await backgroundHooks.detachEditors(); };
+  await automaticReviews.refresh();
 }
 
 export async function deactivate(): Promise<void> {

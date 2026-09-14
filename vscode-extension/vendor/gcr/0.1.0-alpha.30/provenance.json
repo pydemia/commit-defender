@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "git-code-reviewer",
+  "sourceCommit": "479240a9da187f82fd71a3109317b70cea2c5021",
+  "packageVersion": "0.1.0-alpha.30",
+  "manifestSha256": "d03cfddce5cf466a2536ce13f1b911a2cf02992c46bb20bfc3c4911556127ad8"
+}
