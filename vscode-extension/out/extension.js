@@ -14,9 +14,9 @@ var __export = (target, all2) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key4 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key4) && key4 !== except)
-        __defProp(to, key4, { get: () => from[key4], enumerable: !(desc = __getOwnPropDesc(from, key4)) || desc.enumerable });
+    for (let key3 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key3) && key3 !== except)
+        __defProp(to, key3, { get: () => from[key3], enumerable: !(desc = __getOwnPropDesc(from, key3)) || desc.enumerable });
   }
   return to;
 };
@@ -51,7 +51,7 @@ var require_ignore = __commonJS({
       TMP_KEY_IGNORE = Symbol.for("node-ignore");
     }
     var KEY_IGNORE = TMP_KEY_IGNORE;
-    var define = (object2, key4, value) => Object.defineProperty(object2, key4, { value });
+    var define = (object2, key3, value) => Object.defineProperty(object2, key3, { value });
     var REGEX_REGEXP_RANGE = /([0-z])-([0-z])/g;
     var RETURN_FALSE = () => false;
     var sanitizeRange = (range) => range.replace(
@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message, Ctor) => {
       throw new Ctor(message);
     };
-    var checkPath = (path43, originalPath, doThrow) => {
-      if (!isString(path43)) {
+    var checkPath = (path37, originalPath, doThrow) => {
+      if (!isString(path37)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path43) {
+      if (!path37) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path43)) {
+      if (checkPath.isNotRelative(path37)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path43) => REGEX_TEST_INVALID_PATH.test(path43);
+    var isNotRelative = (path37) => REGEX_TEST_INVALID_PATH.test(path37);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path43, checkUnignored) {
+      _testOne(path37, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path43);
+          const matched = rule.regex.test(path37);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path43 = originalPath && checkPath.convert(originalPath);
+        const path37 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path43,
+          path37,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path43, cache, checkUnignored, slices);
+        return this._t(path37, cache, checkUnignored, slices);
       }
-      _t(path43, cache, checkUnignored, slices) {
-        if (path43 in cache) {
-          return cache[path43];
+      _t(path37, cache, checkUnignored, slices) {
+        if (path37 in cache) {
+          return cache[path37];
         }
         if (!slices) {
-          slices = path43.split(SLASH);
+          slices = path37.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path43] = this._testOne(path43, checkUnignored);
+          return cache[path37] = this._testOne(path37, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path43] = parent.ignored ? parent : this._testOne(path43, checkUnignored);
+        return cache[path37] = parent.ignored ? parent : this._testOne(path37, checkUnignored);
       }
-      ignores(path43) {
-        return this._test(path43, this._ignoreCache, false).ignored;
+      ignores(path37) {
+        return this._test(path37, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path43) => !this.ignores(path43);
+        return (path37) => !this.ignores(path37);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path43) {
-        return this._test(path43, this._testCache, true);
+      test(path37) {
+        return this._test(path37, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path43) => checkPath(path43 && checkPath.convert(path43), path43, RETURN_FALSE);
+    var isPathValid = (path37) => checkPath(path37 && checkPath.convert(path37), path37, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path43) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path43) || isNotRelative(path43);
+      checkPath.isNotRelative = (path37) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path37) || isNotRelative(path37);
     }
   }
 });
@@ -425,8 +425,8 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var fs10 = __toESM(require("fs"));
-var path42 = __toESM(require("path"));
-var vscode20 = __toESM(require("vscode"));
+var path36 = __toESM(require("path"));
+var vscode18 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
 function reviewStatus(review) {
@@ -900,28 +900,28 @@ function validLine(line, count) {
   return typeof line === "number" && Number.isSafeInteger(line) && line >= 0 && line <= count;
 }
 var SourceViewCache = class {
-  constructor(limit2 = 8 * 1024 * 1024) {
-    this.limit = limit2;
-    if (!Number.isSafeInteger(limit2) || limit2 < 1)
+  constructor(limit = 8 * 1024 * 1024) {
+    this.limit = limit;
+    if (!Number.isSafeInteger(limit) || limit < 1)
       throw new Error("Invalid source cache limit");
   }
   values = /* @__PURE__ */ new Map();
   bytes = 0;
   put(text7) {
-    const hash5 = sourceHash(text7);
+    const hash4 = sourceHash(text7);
     const size = Buffer.byteLength(text7);
-    if (size > this.limit || this.values.has(hash5)) return hash5;
+    if (size > this.limit || this.values.has(hash4)) return hash4;
     while (this.bytes + size > this.limit) {
       const first = this.values.keys().next().value;
       this.bytes -= Buffer.byteLength(this.values.get(first));
       this.values.delete(first);
     }
-    this.values.set(hash5, text7);
+    this.values.set(hash4, text7);
     this.bytes += size;
-    return hash5;
+    return hash4;
   }
-  get(hash5) {
-    return this.values.get(hash5);
+  get(hash4) {
+    return this.values.get(hash4);
   }
 };
 var sourceViews = new SourceViewCache();
@@ -4046,11 +4046,11 @@ function compile(options) {
     }
     slice[0][1]._loose = loose;
   }
-  function setData(key4, value) {
-    data[key4] = value;
+  function setData(key3, value) {
+    data[key3] = value;
   }
-  function getData(key4) {
-    return data[key4];
+  function getData(key3) {
+    return data[key3];
   }
   function buffer() {
     buffers.push([]);
@@ -4406,7 +4406,7 @@ function compile(options) {
 
 // node_modules/micromark-factory-space/index.js
 function factorySpace(effects, ok3, type, max) {
-  const limit2 = max ? max - 1 : Number.POSITIVE_INFINITY;
+  const limit = max ? max - 1 : Number.POSITIVE_INFINITY;
   let size = 0;
   return start;
   function start(code3) {
@@ -4417,7 +4417,7 @@ function factorySpace(effects, ok3, type, max) {
     return ok3(code3);
   }
   function prefix(code3) {
-    if (markdownSpace(code3) && size++ < limit2) {
+    if (markdownSpace(code3) && size++ < limit) {
       effects.consume(code3);
       return prefix;
     }
@@ -5859,7 +5859,7 @@ function tokenizeContinuation(effects, ok3, nok) {
 
 // node_modules/micromark-factory-destination/index.js
 function factoryDestination(effects, ok3, nok, type, literalType, literalMarkerType, rawType, stringType, max) {
-  const limit2 = max || Number.POSITIVE_INFINITY;
+  const limit = max || Number.POSITIVE_INFINITY;
   let balance = 0;
   return start;
   function start(code3) {
@@ -5924,7 +5924,7 @@ function factoryDestination(effects, ok3, nok, type, literalType, literalMarkerT
       effects.exit(type);
       return ok3(code3);
     }
-    if (balance < limit2 && code3 === 40) {
+    if (balance < limit && code3 === 40) {
       effects.consume(code3);
       balance++;
       return raw;
@@ -8998,29 +8998,29 @@ function configure(combined, extensions3) {
   }
 }
 function extension(combined, extension2) {
-  let key4;
-  for (key4 in extension2) {
-    if (own2.call(extension2, key4)) {
-      switch (key4) {
+  let key3;
+  for (key3 in extension2) {
+    if (own2.call(extension2, key3)) {
+      switch (key3) {
         case "canContainEols": {
-          const right = extension2[key4];
+          const right = extension2[key3];
           if (right) {
-            combined[key4].push(...right);
+            combined[key3].push(...right);
           }
           break;
         }
         case "transforms": {
-          const right = extension2[key4];
+          const right = extension2[key3];
           if (right) {
-            combined[key4].push(...right);
+            combined[key3].push(...right);
           }
           break;
         }
         case "enter":
         case "exit": {
-          const right = extension2[key4];
+          const right = extension2[key3];
           if (right) {
-            Object.assign(combined[key4], right);
+            Object.assign(combined[key3], right);
           }
           break;
         }
@@ -9047,13 +9047,13 @@ function defaultOnError(left, right) {
 
 // node_modules/zwitch/index.js
 var own3 = {}.hasOwnProperty;
-function zwitch(key4, options) {
+function zwitch(key3, options) {
   const settings = options || {};
   function one2(value, ...parameters) {
     let fn = one2.invalid;
     const handlers = one2.handlers;
-    if (value && own3.call(value, key4)) {
-      const id4 = String(value[key4]);
+    if (value && own3.call(value, key3)) {
+      const id4 = String(value[key3]);
       fn = own3.call(handlers, id4) ? handlers[id4] : one2.unknown;
     }
     if (fn) {
@@ -9070,32 +9070,32 @@ function zwitch(key4, options) {
 var own4 = {}.hasOwnProperty;
 function configure2(base, extension2) {
   let index2 = -1;
-  let key4;
+  let key3;
   if (extension2.extensions) {
     while (++index2 < extension2.extensions.length) {
       configure2(base, extension2.extensions[index2]);
     }
   }
-  for (key4 in extension2) {
-    if (own4.call(extension2, key4)) {
-      switch (key4) {
+  for (key3 in extension2) {
+    if (own4.call(extension2, key3)) {
+      switch (key3) {
         case "extensions": {
           break;
         }
         case "unsafe": {
-          list2(base[key4], extension2[key4]);
+          list2(base[key3], extension2[key3]);
           break;
         }
         case "join": {
-          list2(base[key4], extension2[key4]);
+          list2(base[key3], extension2[key3]);
           break;
         }
         case "handlers": {
-          map(base[key4], extension2[key4]);
+          map(base[key3], extension2[key3]);
           break;
         }
         default: {
-          base.options[key4] = extension2[key4];
+          base.options[key3] = extension2[key3];
         }
       }
     }
@@ -9489,9 +9489,9 @@ function propertiesFactory(check) {
       /** @type {unknown} */
       node2
     );
-    let key4;
-    for (key4 in check) {
-      if (nodeAsRecord[key4] !== checkAsRecord[key4]) return false;
+    let key3;
+    for (key3 in check) {
+      if (nodeAsRecord[key3] !== checkAsRecord[key3]) return false;
     }
     return true;
   }
@@ -9766,7 +9766,7 @@ function imageReference(node2, _, state, info) {
   const stack = state.stack;
   state.stack = [];
   subexit = state.enter("reference");
-  const reference2 = state.safe(state.associationId(node2), {
+  const reference = state.safe(state.associationId(node2), {
     before: value,
     after: "]",
     ...tracker.current()
@@ -9774,8 +9774,8 @@ function imageReference(node2, _, state, info) {
   subexit();
   state.stack = stack;
   exit2();
-  if (type === "full" || !alt || alt !== reference2) {
-    value += tracker.move(reference2 + "]");
+  if (type === "full" || !alt || alt !== reference) {
+    value += tracker.move(reference + "]");
   } else if (type === "shortcut") {
     value = value.slice(0, -1);
   } else {
@@ -9931,7 +9931,7 @@ function linkReference(node2, _, state, info) {
   const stack = state.stack;
   state.stack = [];
   subexit = state.enter("reference");
-  const reference2 = state.safe(state.associationId(node2), {
+  const reference = state.safe(state.associationId(node2), {
     before: value,
     after: "]",
     ...tracker.current()
@@ -9939,8 +9939,8 @@ function linkReference(node2, _, state, info) {
   subexit();
   state.stack = stack;
   exit2();
-  if (type === "full" || !text7 || text7 !== reference2) {
-    value += tracker.move(reference2 + "]");
+  if (type === "full" || !text7 || text7 !== reference) {
+    value += tracker.move(reference + "]");
   } else if (type === "shortcut") {
     value = value.slice(0, -1);
   } else {
@@ -11260,7 +11260,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path43, match) {
+function findUrl(_, protocol, domain2, path37, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -11273,7 +11273,7 @@ function findUrl(_, protocol, domain2, path43, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path43);
+  const parts2 = splitUrl(domain2 + path37);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -11334,15 +11334,15 @@ function previous2(match, email) {
 
 // src/reviewMarkdown.ts
 function safeMarkdown(input, resolveLink) {
-  const limit2 = 1e5;
-  const tree = fromMarkdown(input.slice(0, limit2), {
+  const limit = 1e5;
+  const tree = fromMarkdown(input.slice(0, limit), {
     extensions: [gfmAutolinkLiteral()],
     mdastExtensions: [gfmAutolinkLiteralFromMarkdown()]
   });
   const definitions = /* @__PURE__ */ new Map();
-  const key4 = (value) => value.toLowerCase().replace(/\s+/g, " ").trim();
+  const key3 = (value) => value.toLowerCase().replace(/\s+/g, " ").trim();
   function collect(node2) {
-    if (node2.type === "definition") definitions.set(key4(node2.identifier), node2);
+    if (node2.type === "definition") definitions.set(key3(node2.identifier), node2);
     if ("children" in node2) node2.children.forEach((child) => collect(child));
   }
   collect(tree);
@@ -11360,7 +11360,7 @@ function safeMarkdown(input, resolveLink) {
       );
     }
     if (node2.type === "link" || node2.type === "linkReference") {
-      const definition4 = node2.type === "linkReference" ? definitions.get(key4(node2.identifier)) : node2;
+      const definition4 = node2.type === "linkReference" ? definitions.get(key3(node2.identifier)) : node2;
       const destination = definition4 && resolveLink(definition4.url);
       if (!destination) return node2.children;
       return [
@@ -11377,7 +11377,7 @@ function safeMarkdown(input, resolveLink) {
   tree.children = tree.children.flatMap(
     (node2) => clean(node2, tree)
   );
-  if (input.length > limit2)
+  if (input.length > limit)
     tree.children.push({
       type: "paragraph",
       children: [
@@ -11411,9 +11411,9 @@ function webLink(raw) {
 
 // src/reviewLinks.ts
 var ReviewLinks = class {
-  constructor(limit2 = 4096) {
-    this.limit = limit2;
-    if (!Number.isSafeInteger(limit2) || limit2 < 1)
+  constructor(limit = 4096) {
+    this.limit = limit;
+    if (!Number.isSafeInteger(limit) || limit < 1)
       throw new Error("Invalid review link limit");
   }
   targets = /* @__PURE__ */ new Map();
@@ -11482,10 +11482,10 @@ function reviewMessage(value, viewId, allowed) {
   if (!value || typeof value !== "object") return void 0;
   const message = value;
   if (message.viewId !== viewId) return void 0;
-  if (message.command === "showJson" && Object.keys(message).every((key4) => ["command", "viewId"].includes(key4)))
+  if (message.command === "showJson" && Object.keys(message).every((key3) => ["command", "viewId"].includes(key3)))
     return { command: "showJson" };
   if (message.command === "open" && typeof message.id === "string" && allowed.has(message.id) && Object.keys(message).every(
-    (key4) => ["command", "viewId", "id"].includes(key4)
+    (key3) => ["command", "viewId", "id"].includes(key3)
   ))
     return { command: "open", id: message.id };
   return void 0;
@@ -11505,7 +11505,7 @@ var SummaryView = class {
   message(value) {
     if (this.report.gcr && value && typeof value === "object" && !Array.isArray(value)) {
       const message = value;
-      if ((message.command === "discuss" || message.command === "submit") && message.viewId === this.id && Object.keys(message).every((key4) => ["command", "viewId"].includes(key4))) return { command: message.command };
+      if (message.command === "discuss" && message.viewId === this.id && Object.keys(message).every((key3) => ["command", "viewId"].includes(key3))) return { command: message.command };
     }
     return reviewMessage(value, this.id, this.allowed);
   }
@@ -11608,14 +11608,13 @@ function buildSummaryHtml(report, view, palette) {
     <div class="header">
       <div class="header-row">
         <h1>\u{1F6E1} Commit Defender &nbsp;${headerBadge} ${gradeBadge} &nbsp;${worstBadge}</h1>
-        ${report.gcr ? `${report.gcr.report.identity.executor.id === "central" ? "" : '<button class="json-btn" id="btnDiscuss">Discuss review</button>'}<button class="json-btn" id="btnSubmit">Submit feedback</button>` : ""}
+        ${report.gcr ? '<button class="json-btn" id="btnDiscuss">Discuss review</button>' : ""}
         <button class="json-btn" id="btnShowJson" title="Open raw JSON report in editor">{ } Raw JSON</button>
       </div>
       <div class="meta">${metaParts.map(esc).join(" &nbsp;\xB7&nbsp; ")}</div>
     </div>`;
   if (report.gcr) {
     const core = report.gcr.report;
-    if (core.identity.executor.id === "central") body2 += `<section><h2>Central model execution</h2><p>Model: ${esc(core.identity.executor.model)}. Source-read evidence was produced by the central worker. Open Central Model Requests to inspect the server job. Follow-up model chat for this execution is not available yet.</p></section>`;
     if (core.problems.length) {
       body2 += `<section><h2>Review problems</h2><ul>${core.problems.map((problem) => `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
@@ -11810,8 +11809,7 @@ ${body2}
       if (/^#review-link-[a-f0-9]{32}$/.test(href)) {
         vscode.postMessage({ command: 'open', viewId: '${view.id}', id: href.slice(13) });
       }
-    } else if (e.target.closest('#btnSubmit')) {
-      vscode.postMessage({ command: 'submit', viewId: '${view.id}' });
+
     } else if (e.target.closest('#btnDiscuss')) {
       vscode.postMessage({ command: 'discuss', viewId: '${view.id}' });
     } else if (e.target.closest('#btnShowJson')) {
@@ -12615,12 +12613,12 @@ async function callClaudeCodeCli(req) {
   if (req.model.trim()) {
     args.push("--model", req.model.trim());
   }
-  const env4 = { ...process.env };
-  delete env4.ANTHROPIC_API_KEY;
-  delete env4.ANTHROPIC_AUTH_TOKEN;
-  env4.CLAUDE_AGENT_SDK_CLIENT_APP = env4.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  const env3 = { ...process.env };
+  delete env3.ANTHROPIC_API_KEY;
+  delete env3.ANTHROPIC_AUTH_TOKEN;
+  env3.CLAUDE_AGENT_SDK_CLIENT_APP = env3.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env4);
+    const result = await runCli(command, args, req.userMessage, req, env3);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
     }
@@ -12660,13 +12658,13 @@ async function callGeminiCli(req) {
   if (req.model.trim()) {
     args.unshift("--model", req.model.trim());
   }
-  const env4 = { ...process.env };
-  delete env4.GEMINI_API_KEY;
-  delete env4.GOOGLE_API_KEY;
-  delete env4.GOOGLE_GENAI_USE_VERTEXAI;
-  env4.GOOGLE_GENAI_USE_GCA = "true";
+  const env3 = { ...process.env };
+  delete env3.GEMINI_API_KEY;
+  delete env3.GOOGLE_API_KEY;
+  delete env3.GOOGLE_GENAI_USE_VERTEXAI;
+  env3.GOOGLE_GENAI_USE_GCA = "true";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env4);
+    const result = await runCli(command, args, req.userMessage, req, env3);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
     }
@@ -12787,7 +12785,7 @@ async function withSchemaFile(schema, fn) {
     await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
-function runCli(command, args, stdin, req, env4) {
+function runCli(command, args, stdin, req, env3) {
   return new Promise((resolve4, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
@@ -12795,7 +12793,7 @@ function runCli(command, args, stdin, req, env4) {
     }
     const child = (0, import_child_process3.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
-      env: env4,
+      env: env3,
       shell: false,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"]
@@ -13734,9 +13732,9 @@ function prepareStandaloneWorker(workerFile, request, settings, preparationSigna
               const abort = () => cancel(signal);
               signal.addEventListener("abort", abort, { once: true });
               removeRunAbort = () => signal.removeEventListener("abort", abort);
-              return new Promise((done, fail4) => {
+              return new Promise((done, fail2) => {
                 settleRun = done;
-                rejectRun = fail4;
+                rejectRun = fail2;
                 worker.postMessage({
                   type: "run",
                   aborted: signal.aborted,
@@ -14017,9 +14015,9 @@ var ReviewExecutionOwner = class {
 };
 
 // src/localKnowledge.ts
-var import_node_crypto16 = require("node:crypto");
-var import_promises8 = require("node:fs/promises");
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_crypto13 = require("node:crypto");
+var import_promises7 = require("node:fs/promises");
+var import_node_path11 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -14067,14 +14065,14 @@ var object = (shape) => (value, at = "$") => {
   if (!value || typeof value !== "object" || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
     return fail(at, "expected JSON object");
   const record2 = value;
-  for (const key4 of Object.keys(record2))
-    if (!Object.hasOwn(shape, key4))
-      fail(`${at}.${key4}`, "unknown field");
+  for (const key3 of Object.keys(record2))
+    if (!Object.hasOwn(shape, key3))
+      fail(`${at}.${key3}`, "unknown field");
   const result = {};
-  for (const [key4, decode2] of Object.entries(shape)) {
-    const parsed = decode2(Object.hasOwn(record2, key4) ? record2[key4] : void 0, `${at}.${key4}`);
+  for (const [key3, decode2] of Object.entries(shape)) {
+    const parsed = decode2(Object.hasOwn(record2, key3) ? record2[key3] : void 0, `${at}.${key3}`);
     if (parsed !== void 0)
-      Object.defineProperty(result, key4, {
+      Object.defineProperty(result, key3, {
         value: parsed,
         enumerable: true,
         configurable: true,
@@ -14277,8 +14275,8 @@ var executionIdentity = refined(object({
   if (client.mode === "standalone" && (context.centralSnapshot || context.entries.some((entry) => entry.origin === "central")))
     fail(at, "standalone identity contains central context");
   if (client.mode === "centralized" && context.centralSnapshot) {
-    for (const key4 of ["serverId", "tenantId", "userId", "repositoryId"])
-      if (client.audience[key4] !== context.centralSnapshot.audience[key4])
+    for (const key3 of ["serverId", "tenantId", "userId", "repositoryId"])
+      if (client.audience[key3] !== context.centralSnapshot.audience[key3])
         fail(at, "central audience mismatch");
   }
   for (const entry of context.entries)
@@ -14833,7 +14831,7 @@ function canonicalKnowledgeJson(value) {
     if (Array.isArray(item))
       return "[" + Array.from(item, visit2).join(",") + "]";
     if (item && typeof item === "object" && [Object.prototype, null].includes(Object.getPrototypeOf(item)))
-      return "{" + Object.keys(item).sort().map((key4) => JSON.stringify(key4) + ":" + visit2(item[key4])).join(",") + "}";
+      return "{" + Object.keys(item).sort().map((key3) => JSON.stringify(key3) + ":" + visit2(item[key3])).join(",") + "}";
     return fail("$", "expected finite JSON data");
   };
   return visit2(value);
@@ -14985,7 +14983,7 @@ var centralCredentialIdentity = object({
   displayName: text5(1e3),
   tenantId: id,
   repositoryIds: list4(id, 100),
-  scopes: list4(choice(["knowledge:read", "reviews:submit", "feedback:submit", "ai:invoke"]), 4, 1),
+  scopes: list4(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
   expiresAt: timestamp
@@ -15137,8 +15135,8 @@ var localReviewConversation = refined(object({
       fail(at, "unfinished earlier turn");
     if (chat.closed && ["queued", "running", "awaiting_input"].includes(turn.status))
       fail(at, "closed conversation is active");
-    for (const key4 of ["modelCalls", "durationMs", "sourceBytes", "toolCalls"])
-      if (turn.usage[key4] > chat.limits[key4])
+    for (const key3 of ["modelCalls", "durationMs", "sourceBytes", "toolCalls"])
+      if (turn.usage[key3] > chat.limits[key3])
         fail(at, "usage exceeds limit");
   }
 });
@@ -15261,205 +15259,11 @@ var reviewSubmissionStatus = refined(object({
 });
 var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
-// node_modules/@gcr/client-contract/dist/remote-review.js
-var REMOTE_REVIEW_MAX_BYTES = 8 * 1024 * 1024;
-var remoteEffort = choice(["none", "minimal", "low", "medium", "high", "xhigh"]);
-var remoteReviewModels = object({
-  schemaVersion: literal(1),
-  audience: centralAudience,
-  clientId: choice(["commit-defender", "gcr-cli"]),
-  enabled: boolean,
-  outputTokenLimit: literal(false),
-  limits: object({
-    modelCalls: integer(1, 10),
-    durationMs: integer(1e3, 6e5),
-    uploadBytes: integer(1, REMOTE_REVIEW_MAX_BYTES),
-    userHourlyCalls: integer(1),
-    repositoryHourlyCalls: integer(1)
-  }),
-  models: list4(refined(object({
-    accountId: id,
-    accountName: text5(256, 1),
-    name: text5(256, 1),
-    displayName: text5(256, 1),
-    allowedEfforts: list4(remoteEffort, 6, 1),
-    defaultEffort: remoteEffort
-  }), (value, at) => {
-    if (!value.allowedEfforts.includes(value.defaultEffort))
-      fail(at, "default effort unavailable");
-  }), 1024)
-});
-var remoteReviewDocument = object({
-  id,
-  kind: choice(["instructions", "memory", "skill"]),
-  text: text5(262144, 1),
-  hash: sha256
-});
-var remoteReviewResolvedContext = object({
-  version: literal(1),
-  client: clientIdentity,
-  sourceHash: sha256,
-  originalContextHash: sha256,
-  builtin: object({ id, revision: integer(1), hash: sha256 }),
-  knowledge: list4(localKnowledge, 128),
-  requiredSources: list4(object({ path: sourcePath, side: choice(["source", "base"]) }), 512),
-  validUntil: union(timestamp, literal(null)),
-  central: optional(object({
-    manifest: signedKnowledgeManifest,
-    selection: object({
-      now: timestamp,
-      byteLimit: integer(0, 1048576),
-      branch: union(sourcePath, literal(null))
-    }),
-    selectionHash: sha256
-  }))
-});
-var remoteReviewChange = refined(object({
-  path: sourcePath,
-  side: choice(["base", "source"]),
-  status: choice(["A", "M", "D", "R", "T"]),
-  oldPath: optional(sourcePath),
-  base: choice(["uploaded", "absent", "unavailable"])
-}), (value, at) => {
-  if (value.status === "D" !== (value.side === "base"))
-    fail(at, "change side mismatch");
-  if (value.status === "R" !== (value.oldPath !== void 0) || value.oldPath === value.path)
-    fail(at, "rename path mismatch");
-  if (value.status === "A" && value.base !== "absent" || value.status === "D" && value.base !== "uploaded" || value.status === "R" && value.base === "absent")
-    fail(at, "change base mismatch");
-});
-var remoteReviewPayload = refined(object({
-  schemaVersion: literal(1),
-  requestId: id,
-  audience: centralAudience,
-  clientId: choice(["commit-defender", "gcr-cli"]),
-  client: clientIdentity,
-  executor: literal("central"),
-  model: object({
-    accountId: id,
-    name: text5(256, 1),
-    reasoningEffort: choice(["none", "minimal", "low", "medium", "high", "xhigh"])
-  }),
-  source: object({
-    provenance: literal("client-captured"),
-    snapshot: snapshotIdentity,
-    files: list4(object({ metadata: sourceFile, text: text5(2 * 1024 * 1024) }), 512, 1),
-    selected: list4(object({ path: sourcePath, side: choice(["base", "source"]) }), 512, 1),
-    // Legacy receipts remain decodable; execution requires this approved description.
-    review: optional(object({ changes: list4(remoteReviewChange, 200, 1), incomplete: boolean }))
-  }),
-  context: object({
-    provenance: literal("client-supplied"),
-    documents: list4(remoteReviewDocument, 128),
-    resolved: optional(remoteReviewResolvedContext)
-  }),
-  budget: object({
-    modelCalls: integer(1, 10),
-    durationMs: integer(1e3, 6e5),
-    sourceBytes: integer(1, 33554432),
-    toolCalls: integer(1, 1e3),
-    outputTokensPerCall: optional(integer(1, 32768))
-  }),
-  retention: object({
-    sourceSeconds: integer(60, 86400),
-    resultSeconds: integer(60, 2592e3)
-  })
-}), (value, at) => {
-  const key4 = (file) => `${file.side}:${file.path}`;
-  unique(value.source.files.map((file) => key4(file.metadata)), `${at}.source.files`);
-  unique(value.source.selected.map(key4), `${at}.source.selected`);
-  unique(value.context.documents.map((document3) => document3.id), `${at}.context.documents`);
-  const files = new Set(value.source.files.map((file) => key4(file.metadata)));
-  if (value.source.selected.some((file) => !files.has(key4(file))))
-    fail(at, "selected source is not uploaded");
-  const review = value.source.review;
-  if (review) {
-    unique(review.changes.map((change) => change.path), `${at}.source.review.changes`);
-    const selected = new Set(value.source.selected.map(key4));
-    if (review.changes.length !== selected.size || review.changes.some((change) => !selected.has(key4(change))))
-      fail(at, "change selection mismatch");
-    for (const change of review.changes) {
-      if (files.has(`base:${change.oldPath ?? change.path}`) !== (change.base === "uploaded"))
-        fail(at, "base upload mismatch");
-      if (change.status === "D" && files.has(`source:${change.path}`))
-        fail(at, "deleted source is uploaded");
-    }
-  }
-  const client = value.client;
-  if (client.mode === "centralized" && ["serverId", "tenantId", "userId", "repositoryId"].some((key5) => value.audience[key5] !== client.audience[key5]))
-    fail(at, "central knowledge and model audiences differ");
-  if (value.retention.sourceSeconds * 1e3 < value.budget.durationMs)
-    fail(at, "source retention is shorter than the execution budget");
-  if (value.retention.resultSeconds < value.retention.sourceSeconds)
-    fail(at, "result retention is shorter than source retention");
-});
-var remoteReviewRequest = object({
-  payload: remoteReviewPayload,
-  approval: object({ payloadHash: sha256, approvedAt: timestamp })
-});
-var remoteReviewHandle = object({
-  schemaVersion: literal(1),
-  requestId: id,
-  audience: centralAudience,
-  clientId: choice(["commit-defender", "gcr-cli"]),
-  payloadHash: sha256,
-  client: clientIdentity,
-  source: snapshotIdentity,
-  sourceFiles: list4(sourceFile, 512, 1),
-  selected: list4(object({ path: sourcePath, side: choice(["base", "source"]) }), 512, 1),
-  contextHash: sha256,
-  model: text5(256, 1),
-  executorConfigHash: sha256,
-  sourceSeconds: integer(60, 86400),
-  resultSeconds: integer(60, 2592e3)
-});
-var receipt = {
-  schemaVersion: literal(1),
-  requestId: id,
-  audience: centralAudience,
-  clientId: choice(["commit-defender", "gcr-cli"]),
-  payloadHash: sha256,
-  receivedAt: timestamp,
-  sourceExpiresAt: timestamp,
-  resultExpiresAt: timestamp
-};
-var remoteReviewStatus = refined(union(object({ ...receipt, state: choice(["queued", "running", "cancel-requested"]) }), object({ ...receipt, state: literal("completed"), reportHash: sha256 }), object({
-  ...receipt,
-  state: literal("failed"),
-  reason: choice([
-    "authorization-revoked",
-    "account-unavailable",
-    "budget-exhausted",
-    "model-failed",
-    "invalid-output",
-    "context-unavailable"
-  ])
-}), object({ ...receipt, state: literal("cancelled"), reason: literal("cancelled") }), object({ ...receipt, state: literal("uncertain"), reason: literal("execution-lost") }), object({
-  ...receipt,
-  state: literal("expired"),
-  reason: choice(["source-expired", "result-expired"])
-})), (value, at) => {
-  if (value.sourceExpiresAt <= value.receivedAt || value.resultExpiresAt <= value.receivedAt)
-    fail(at, "retention deadline precedes receipt");
-});
-var remoteReviewCancel = object({
-  schemaVersion: literal(1),
-  requestId: id,
-  payloadHash: sha256
-});
-var remoteReviewResult = refined(object({
-  status: remoteReviewStatus,
-  report: clientReviewReport
-}), (value, at) => {
-  if (value.status.state !== "completed")
-    fail(at, "non-completed job has a report");
-});
-
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.33",
+  version: "0.1.0-alpha.35",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -15512,10 +15316,10 @@ function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
         throw new LocalStoreError("corrupt-storage", "Expected a plain JSON object.");
       add("{");
       add("}");
-      const entries = Object.keys(entry).sort().map((key4) => {
-        add(JSON.stringify(key4));
+      const entries = Object.keys(entry).sort().map((key3) => {
+        add(JSON.stringify(key3));
         add(":");
-        return `${JSON.stringify(key4)}:${visit2(entry[key4], depth + 1)}`;
+        return `${JSON.stringify(key3)}:${visit2(entry[key3], depth + 1)}`;
       });
       if (entries.length > 1)
         add(",".repeat(entries.length - 1));
@@ -15572,26 +15376,26 @@ var run2 = (file, args, input) => new Promise((resolve4, reject) => {
   const stderr = [];
   let bytes = 0;
   let rejected = false;
-  const fail4 = () => {
+  const fail2 = () => {
     if (rejected)
       return;
     rejected = true;
     child.kill("SIGKILL");
     reject(new LocalStoreError("credential-unavailable", "OS credential store is unavailable or locked."));
   };
-  const timer = setTimeout(fail4, 5e3);
+  const timer = setTimeout(fail2, 5e3);
   const collect = (chunks) => (chunk) => {
     bytes += chunk.length;
     if (bytes > 16 * 1024) {
-      fail4();
+      fail2();
       return;
     }
     chunks.push(chunk);
   };
   child.stdout.on("data", collect(stdout));
   child.stderr.on("data", collect(stderr));
-  child.stdin.on("error", fail4);
-  child.on("error", fail4);
+  child.stdin.on("error", fail2);
+  child.on("error", fail2);
   child.on("close", (code3) => {
     clearTimeout(timer);
     if (!rejected)
@@ -15621,31 +15425,31 @@ var PlatformLocalKeyStore = class {
     if (!["darwin", "linux"].includes(platform))
       throw new LocalStoreError("unsupported-platform", "No supported OS credential store adapter.");
   }
-  async invoke(operation, reference2, key4) {
-    token(reference2);
+  async invoke(operation, reference, key3) {
+    token(reference);
     if (this.platform === "darwin") {
       if (operation === "write") {
-        if (key4?.byteLength !== 32)
+        if (key3?.byteLength !== 32)
           throw unavailable();
-        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference2} -s ${this.service} -w ${Buffer.from(key4).toString("base64")}
+        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference} -s ${this.service} -w ${Buffer.from(key3).toString("base64")}
 `);
       }
       return this.command("/usr/bin/security", [
         operation === "read" ? "find-generic-password" : "delete-generic-password",
         "-a",
-        reference2,
+        reference,
         "-s",
         this.service,
         ...operation === "read" ? ["-w"] : []
       ]);
     }
     const args = operation === "read" ? ["lookup"] : operation === "remove" ? ["clear"] : ["store", "--label=Commit Defender local data key"];
-    if (operation === "write" && key4?.byteLength !== 32)
+    if (operation === "write" && key3?.byteLength !== 32)
       throw unavailable();
-    return this.command("/usr/bin/secret-tool", [...args, "service", this.service, "account", reference2], operation === "write" ? Buffer.from(key4).toString("base64") : void 0);
+    return this.command("/usr/bin/secret-tool", [...args, "service", this.service, "account", reference], operation === "write" ? Buffer.from(key3).toString("base64") : void 0);
   }
-  async read(reference2) {
-    const result = await this.invoke("read", reference2);
+  async read(reference) {
+    const result = await this.invoke("read", reference);
     if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
@@ -15653,25 +15457,25 @@ var PlatformLocalKeyStore = class {
     const text7 = result.stdout.trim();
     if (!/^[A-Za-z0-9+/]{43}=$/.test(text7))
       throw unavailable();
-    const key4 = Buffer.from(text7, "base64");
-    if (key4.length !== 32 || key4.toString("base64") !== text7)
+    const key3 = Buffer.from(text7, "base64");
+    if (key3.length !== 32 || key3.toString("base64") !== text7)
       throw unavailable();
-    return key4;
+    return key3;
   }
-  async write(reference2, key4) {
-    const result = await this.invoke("write", reference2, key4);
+  async write(reference, key3) {
+    const result = await this.invoke("write", reference, key3);
     if (result.code !== 0)
       throw unavailable();
-    const stored = await this.read(reference2);
+    const stored = await this.read(reference);
     try {
-      if (!stored || !stored.equals(Buffer.from(key4)))
+      if (!stored || !stored.equals(Buffer.from(key3)))
         throw unavailable();
     } finally {
       stored?.fill(0);
     }
   }
-  async remove(reference2) {
-    const result = await this.invoke("remove", reference2);
+  async remove(reference) {
+    const result = await this.invoke("remove", reference);
     if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44))
       throw unavailable();
   }
@@ -15691,18 +15495,18 @@ var PlatformCentralCredentialStore = class {
     if (!["darwin", "linux"].includes(platform))
       throw unavailable();
   }
-  invoke(operation, reference2, secret) {
-    token(reference2);
+  invoke(operation, reference, secret) {
+    token(reference);
     if (secret !== void 0)
       validateCentralApiKey(secret);
     if (this.platform === "darwin") {
       if (operation === "write")
-        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference2} -s ${this.service} -w ${secret}
+        return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference} -s ${this.service} -w ${secret}
 `);
       return this.command("/usr/bin/security", [
         operation === "read" ? "find-generic-password" : "delete-generic-password",
         "-a",
-        reference2,
+        reference,
         "-s",
         this.service,
         ...operation === "read" ? ["-w"] : []
@@ -15714,23 +15518,23 @@ var PlatformCentralCredentialStore = class {
       "service",
       this.service,
       "account",
-      reference2
+      reference
     ], secret);
   }
-  async read(reference2) {
-    const result = await this.invoke("read", reference2);
+  async read(reference) {
+    const result = await this.invoke("read", reference);
     if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
     return validateCentralApiKey(result.stdout.trim());
   }
-  async write(reference2, secret) {
-    if ((await this.invoke("write", reference2, secret)).code !== 0 || await this.read(reference2) !== secret)
+  async write(reference, secret) {
+    if ((await this.invoke("write", reference, secret)).code !== 0 || await this.read(reference) !== secret)
       throw unavailable();
   }
-  async remove(reference2) {
-    const result = await this.invoke("remove", reference2);
+  async remove(reference) {
+    const result = await this.invoke("remove", reference);
     if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44) && !(this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim()))
       throw unavailable();
   }
@@ -15897,14 +15701,14 @@ async function profileKey(directory, profileId, keys2) {
     const bytes = await readPrivateFile(referenceFile, 1024);
     if (!bytes)
       return void 0;
-    const reference3 = parse2(bytes);
-    onlyFields(reference3, ["formatVersion", "profileId", "id"]);
-    if (reference3.formatVersion !== 1 || reference3.profileId !== profileId || typeof reference3.id !== "string" || !/^[a-f0-9-]{36}$/.test(reference3.id))
+    const reference2 = parse2(bytes);
+    onlyFields(reference2, ["formatVersion", "profileId", "id"]);
+    if (reference2.formatVersion !== 1 || reference2.profileId !== profileId || typeof reference2.id !== "string" || !/^[a-f0-9-]{36}$/.test(reference2.id))
       throw corrupt();
-    const key4 = await keys2.read(`${profileId}.${reference3.id}`);
-    if (!key4 || key4.length !== 32)
+    const key3 = await keys2.read(`${profileId}.${reference2.id}`);
+    if (!key3 || key3.length !== 32)
       throw new LocalStoreError("credential-unavailable", "The OS key for existing local data is unavailable.");
-    return key4;
+    return key3;
   };
   const existing = await read();
   if (existing)
@@ -15916,11 +15720,11 @@ async function profileKey(directory, profileId, keys2) {
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
   const id4 = (0, import_node_crypto3.randomUUID)();
-  const reference2 = `${profileId}.${id4}`;
+  const reference = `${profileId}.${id4}`;
   const candidate = (0, import_node_crypto3.randomBytes)(32);
   let preserve = false;
   try {
-    await keys2.write(reference2, candidate);
+    await keys2.write(reference, candidate);
     preserve = await publishImmutable(referenceFile, Buffer.from(canonicalJson({ formatVersion: 1, profileId, id: id4 })));
     if (preserve)
       return candidate;
@@ -15935,7 +15739,7 @@ async function profileKey(directory, profileId, keys2) {
   } finally {
     if (!preserve) {
       candidate.fill(0);
-      await keys2.remove(reference2).catch(() => void 0);
+      await keys2.remove(reference).catch(() => void 0);
     }
   }
 }
@@ -15944,10 +15748,10 @@ var LocalRecordStore = class _LocalRecordStore {
   directory;
   closed = false;
   #key;
-  constructor(scope, directory, key4) {
+  constructor(scope, directory, key3) {
     this.scope = scope;
     this.directory = directory;
-    this.#key = key4;
+    this.#key = key3;
   }
   static async open(options) {
     const scope = Object.freeze(localScope(options.scope));
@@ -15955,7 +15759,7 @@ var LocalRecordStore = class _LocalRecordStore {
     const profiles = await privateDirectory(root2, "profiles");
     const profile = await privateDirectory(profiles, scope.profileId);
     const local = await privateDirectory(profile, "local");
-    const key4 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
+    const key3 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
     try {
       let directory = local;
       if (scope.kind === "repository") {
@@ -15964,9 +15768,9 @@ var LocalRecordStore = class _LocalRecordStore {
         directory = await privateDirectory(directory, scope.worktreeKey);
       } else
         directory = await privateDirectory(directory, "profile");
-      return new _LocalRecordStore(scope, directory, key4);
+      return new _LocalRecordStore(scope, directory, key3);
     } catch (error2) {
-      key4.fill(0);
+      key3.fill(0);
       throw error2;
     }
   }
@@ -16174,8 +15978,8 @@ function withHash(value) {
 }
 function verify(value) {
   const item = localKnowledge(value);
-  const { hash: hash5, ...body2 } = item;
-  if (hash5 !== contentHash(body2))
+  const { hash: hash4, ...body2 } = item;
+  if (hash4 !== contentHash(body2))
     throw new LocalStoreError("corrupt-storage", "Local knowledge content does not match its hash.");
   return item;
 }
@@ -16252,7 +16056,7 @@ var LocalKnowledgeStore = class {
     return current;
   }
   async replace(current, changes) {
-    const body2 = Object.fromEntries(Object.entries(current).filter(([key4]) => key4 !== "hash"));
+    const body2 = Object.fromEntries(Object.entries(current).filter(([key3]) => key3 !== "hash"));
     const next = {
       ...body2,
       ...changes,
@@ -16276,7 +16080,7 @@ var LocalKnowledgeStore = class {
       "expiresAt",
       ...current.kind === "memory" ? ["rationale", "counterEvidence"] : []
     ]);
-    if (Object.keys(copied).some((key4) => immutable.has(key4) || !allowed.has(key4)))
+    if (Object.keys(copied).some((key3) => immutable.has(key3) || !allowed.has(key3)))
       throw new LocalStoreError("corrupt-storage", "Knowledge edit contains a field that cannot be changed.");
     return this.replace(current, copied);
   }
@@ -16305,7 +16109,7 @@ var LocalKnowledgeStore = class {
   }
   async importKnowledge(value) {
     const item = verify(value);
-    const draft = Object.fromEntries(Object.entries(item).filter(([key4]) => !["id", "scope", "revision", "hash", "state", "createdAt", "updatedAt"].includes(key4)));
+    const draft = Object.fromEntries(Object.entries(item).filter(([key3]) => !["id", "scope", "revision", "hash", "state", "createdAt", "updatedAt"].includes(key3)));
     draft.sources = [
       ...item.sources,
       { kind: "import", label: "Explicit local knowledge import", hash: contentHash(item) }
@@ -16324,7 +16128,7 @@ function record(value, keys2) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw invalid2();
   const result = value;
-  if (Object.keys(result).length !== keys2.length || keys2.some((key4) => !Object.hasOwn(result, key4)))
+  if (Object.keys(result).length !== keys2.length || keys2.some((key3) => !Object.hasOwn(result, key3)))
     throw invalid2();
   return result;
 }
@@ -16345,13 +16149,13 @@ function timestamp2(value) {
 }
 function retention(value) {
   const policy = record(value, ["reviews", "chats"]);
-  const limit2 = (value2) => {
+  const limit = (value2) => {
     const part = record(value2, ["maxAgeDays", "maxEntries"]);
     if (!Number.isSafeInteger(part.maxAgeDays) || Number(part.maxAgeDays) < 1 || Number(part.maxAgeDays) > 3650 || !Number.isSafeInteger(part.maxEntries) || Number(part.maxEntries) < 1 || Number(part.maxEntries) > 1e4)
       throw invalid2();
     return { maxAgeDays: Number(part.maxAgeDays), maxEntries: Number(part.maxEntries) };
   };
-  return { reviews: limit2(policy.reviews), chats: limit2(policy.chats) };
+  return { reviews: limit(policy.reviews), chats: limit(policy.chats) };
 }
 function localChatArchive(value) {
   const chat = record(value, [
@@ -16711,7 +16515,7 @@ function compilePathPatterns(patterns = []) {
   return (file) => matchers.some((match) => match(file));
 }
 function sourcePathPolicy(patterns = []) {
-  const matches2 = compilePathPatterns(patterns);
+  const matches = compilePathPatterns(patterns);
   return (file) => {
     try {
       sourcePath(file);
@@ -16726,290 +16530,17 @@ function sourcePathPolicy(patterns = []) {
       return "generated";
     if (binary2.has(import_node_path4.default.posix.extname(name)))
       return "binary";
-    if (matches2(file))
+    if (matches(file))
       return "user-excluded";
     return void 0;
   };
 }
 
 // node_modules/@gcr/client-core/dist/source-snapshot.js
-var import_node_crypto6 = require("node:crypto");
-var import_node_fs4 = require("node:fs");
-var import_node_path6 = __toESM(require("node:path"), 1);
-
-// node_modules/@gcr/client-core/dist/source-git.js
-var import_node_child_process3 = require("node:child_process");
-var import_node_fs3 = require("node:fs");
-var import_node_os2 = require("node:os");
-var import_node_path5 = __toESM(require("node:path"), 1);
-var SourceGit = class {
-  deadline;
-  directory = (0, import_node_fs3.mkdtempSync)(import_node_path5.default.join((0, import_node_os2.tmpdir)(), "gcr-source-"));
-  root;
-  index;
-  objectFormat;
-  initialHead;
-  initialBranch;
-  repository;
-  environment;
-  constructor(cwd, deadline, indexFile = process.env.GIT_INDEX_FILE) {
-    this.deadline = deadline;
-    this.root = cwd;
-    this.index = import_node_path5.default.join(this.directory, "index");
-    this.environment = {
-      PATH: process.env.PATH,
-      LC_ALL: "C",
-      HOME: this.directory,
-      GIT_CONFIG_NOSYSTEM: "1",
-      GIT_CONFIG_GLOBAL: "/dev/null",
-      GIT_TERMINAL_PROMPT: "0",
-      GIT_NO_LAZY_FETCH: "1",
-      GIT_OPTIONAL_LOCKS: "0",
-      GIT_LFS_SKIP_SMUDGE: "1",
-      GIT_ALLOW_PROTOCOL: "",
-      ...indexFile ? { GIT_INDEX_FILE: import_node_path5.default.resolve(cwd, indexFile) } : {}
-    };
-    try {
-      this.root = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--show-toplevel"]).trim());
-      const format = this.text(["rev-parse", "--show-object-format"]).trim();
-      if (format !== "sha1" && format !== "sha256")
-        throw new SourceCaptureError("source-unavailable");
-      this.objectFormat = format;
-      const common3 = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim());
-      const directory = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-dir"]).trim());
-      this.repository = {
-        repositoryKey: contentHash({ version: 1, commonDirectory: common3 }),
-        worktreeKey: contentHash({
-          version: 1,
-          commonDirectory: common3,
-          gitDirectory: directory,
-          root: this.root
-        })
-      };
-      this.initialHead = this.head();
-      this.initialBranch = this.branch();
-      const originalIndex = this.text([
-        "rev-parse",
-        "--path-format=absolute",
-        "--git-path",
-        "index"
-      ]).trim();
-      const objects = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-path", "objects"]).trim());
-      const objectDirectory = import_node_path5.default.join(this.directory, "objects");
-      (0, import_node_fs3.mkdirSync)(objectDirectory, { mode: 448 });
-      (0, import_node_fs3.mkdirSync)(import_node_path5.default.join(this.directory, "empty-worktree"), { mode: 448 });
-      this.environment.GIT_OBJECT_DIRECTORY = objectDirectory;
-      this.environment.GIT_ALTERNATE_OBJECT_DIRECTORIES = JSON.stringify(objects);
-      this.environment.GIT_INDEX_FILE = this.index;
-      if (indexFile === null) {
-        this.text(["read-tree", "--empty"]);
-        return;
-      }
-      try {
-        const fd = (0, import_node_fs3.openSync)(originalIndex, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW | import_node_fs3.constants.O_NONBLOCK);
-        try {
-          const before = (0, import_node_fs3.fstatSync)(fd);
-          if (!before.isFile() || before.size > 64 * 1024 * 1024)
-            throw new SourceCaptureError("capture-limit");
-          const buffer = Buffer.alloc(before.size + 1);
-          let length = 0;
-          while (length < buffer.length) {
-            const received = (0, import_node_fs3.readSync)(fd, buffer, length, buffer.length - length, null);
-            if (!received)
-              break;
-            length += received;
-          }
-          const after = (0, import_node_fs3.fstatSync)(fd);
-          if (length !== before.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs)
-            throw new SourceCaptureError("snapshot-changed");
-          (0, import_node_fs3.writeFileSync)(this.index, buffer.subarray(0, length), { mode: 384 });
-        } finally {
-          (0, import_node_fs3.closeSync)(fd);
-        }
-      } catch (error2) {
-        if (error2.code !== "ENOENT")
-          throw error2;
-        this.text(["read-tree", "--empty"]);
-      }
-    } catch (error2) {
-      this.close();
-      if (error2 instanceof SourceCaptureError)
-        throw error2;
-      throw new SourceCaptureError("source-unavailable");
-    }
-  }
-  run(args, input, maxBuffer = 8 * 1024 * 1024, accepted = [0]) {
-    const remaining = this.deadline - Date.now();
-    if (remaining <= 0)
-      throw new SourceCaptureError("capture-limit");
-    try {
-      return (0, import_node_child_process3.execFileSync)("git", [
-        "--no-replace-objects",
-        ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
-        "-C",
-        args[0] === "check-ignore" && this.environment.GIT_WORK_TREE ? this.environment.GIT_WORK_TREE : this.root,
-        "-c",
-        "core.fsmonitor=false",
-        "-c",
-        "core.hooksPath=/dev/null",
-        "-c",
-        "protocol.allow=never",
-        "-c",
-        "submodule.recurse=false",
-        "-c",
-        "core.attributesFile=/dev/null",
-        "-c",
-        "core.autocrlf=false",
-        "-c",
-        "diff.external=",
-        "-c",
-        "diff.autoRefreshIndex=false",
-        "-c",
-        "maintenance.auto=false",
-        ...args
-      ], {
-        // Even tree-only commands can refresh/smudge a racy index and invoke
-        // a clean filter. Index writes/diffs see an empty worktree, never source.
-        env: ["read-tree", "write-tree", "update-index", "diff"].includes(args[0] ?? "") ? { ...this.environment, GIT_WORK_TREE: import_node_path5.default.join(this.directory, "empty-worktree") } : this.environment,
-        input,
-        maxBuffer,
-        timeout: Math.min(remaining, 1e4),
-        stdio: ["pipe", "pipe", "pipe"]
-      });
-    } catch (error2) {
-      const failure2 = error2;
-      if (accepted.includes(failure2.status ?? -1))
-        return failure2.stdout ?? Buffer.alloc(0);
-      throw new SourceCaptureError("source-unavailable");
-    }
-  }
-  text(args, input, maxBuffer, accepted) {
-    try {
-      return new TextDecoder("utf-8", { fatal: true }).decode(this.run(args, input, maxBuffer, accepted));
-    } catch (error2) {
-      if (error2 instanceof SourceCaptureError)
-        throw error2;
-      throw new SourceCaptureError("source-unavailable");
-    }
-  }
-  oid(value) {
-    if (!(this.objectFormat === "sha1" ? /^[a-f0-9]{40}$/ : /^[a-f0-9]{64}$/).test(value))
-      throw new SourceCaptureError("source-unavailable");
-    return value;
-  }
-  head() {
-    const value = this.text(["rev-parse", "--verify", "--quiet", "HEAD"], void 0, void 0, [0, 1]).trim();
-    if (value)
-      return this.oid(this.text(["rev-parse", "--verify", `${this.oid(value)}^{commit}`]).trim());
-    this.text(["symbolic-ref", "--quiet", "HEAD"]);
-    return null;
-  }
-  branch() {
-    const value = this.text(["symbolic-ref", "--quiet", "HEAD"], void 0, void 0, [0, 1]).trim();
-    if (!value)
-      return null;
-    if (!value.startsWith("refs/heads/"))
-      throw new SourceCaptureError("source-unavailable");
-    return value.slice("refs/heads/".length);
-  }
-  tree(oid, maxEntries) {
-    const tree = /* @__PURE__ */ new Map();
-    for (const record2 of this.text(["ls-tree", "-r", "-z", "--long", this.oid(oid)]).split("\0").filter(Boolean)) {
-      const tab = record2.indexOf("	");
-      const match = /^(\d{6}) (blob|commit) ([a-f0-9]+) +([0-9]+|-)\s*$/.exec(record2.slice(0, tab));
-      if (tab < 0 || !match || tree.has(record2.slice(tab + 1)))
-        throw new SourceCaptureError("source-unavailable");
-      const size = match[4] === "-" ? null : Number(match[4]);
-      if (size !== null && !Number.isSafeInteger(size))
-        throw new SourceCaptureError("source-unavailable");
-      tree.set(record2.slice(tab + 1), {
-        mode: match[1],
-        type: match[2],
-        oid: this.oid(match[3]),
-        size
-      });
-      if (tree.size > maxEntries)
-        throw new SourceCaptureError("capture-limit");
-    }
-    return tree;
-  }
-  /** Literal exact entries prevent file-to-directory pathspecs from exposing excluded children. */
-  selectedTree(entries) {
-    this.text(["read-tree", "--empty"]);
-    if (entries.size)
-      this.text(["update-index", "-z", "--index-info"], [...entries].map(([file, entry]) => `${entry.mode} ${entry.oid}	${file}\0`).join(""));
-    return this.oid(this.text(["write-tree"]).trim());
-  }
-  /** Evaluate only .gitignore files from an immutable tree, without checking out source. */
-  ignoredInTree(tree, files) {
-    if (!files.length)
-      return [];
-    const directory = (0, import_node_fs3.mkdtempSync)(import_node_path5.default.join(this.directory, "ignore-"));
-    let bytes = 0;
-    for (const [file, entry] of tree) {
-      if (import_node_path5.default.posix.basename(file) !== ".gitignore" || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))
-        continue;
-      const prefix = import_node_path5.default.posix.dirname(file);
-      if (prefix !== "." && !files.some((candidate) => candidate.startsWith(prefix + "/")))
-        continue;
-      if (entry.size === null || entry.size > 1048576 || (bytes += entry.size) > 4194304)
-        throw new SourceCaptureError("capture-limit");
-      const target = import_node_path5.default.resolve(directory, file);
-      if (!target.startsWith(directory + import_node_path5.default.sep))
-        throw new SourceCaptureError("source-unavailable");
-      (0, import_node_fs3.mkdirSync)(import_node_path5.default.dirname(target), { recursive: true, mode: 448 });
-      (0, import_node_fs3.writeFileSync)(target, this.run(["cat-file", "blob", this.oid(entry.oid)], void 0, 1048577), { mode: 384 });
-    }
-    this.environment.GIT_DIR = this.text(["rev-parse", "--absolute-git-dir"]).trim();
-    this.environment.GIT_WORK_TREE = directory;
-    try {
-      return this.text(["check-ignore", "--no-index", "-z", "--stdin"], files.map((file) => `./${file}\0`).join(""), void 0, [0, 1]).split("\0").filter(Boolean).map((file) => file.replace(/^\.\//, ""));
-    } finally {
-      delete this.environment.GIT_WORK_TREE;
-      delete this.environment.GIT_DIR;
-      (0, import_node_fs3.rmSync)(directory, { recursive: true, force: true });
-    }
-  }
-  close() {
-    (0, import_node_fs3.rmSync)(this.directory, { recursive: true, force: true });
-  }
-};
-
-// node_modules/@gcr/client-core/dist/review-source.js
 var import_node_crypto5 = require("node:crypto");
-function fixedSourceLines(result, startLine, endLine) {
-  if (!Number.isSafeInteger(startLine) || !Number.isSafeInteger(endLine) || startLine < 1 || endLine < startLine)
-    throw new SourceCaptureError("invalid-source-request");
-  if (result.status !== "available")
-    return result;
-  const lines2 = result.text.split("\n");
-  if (startLine > lines2.length)
-    throw new SourceCaptureError("invalid-source-request");
-  const end = Math.min(endLine, startLine + 199, lines2.length);
-  const full = lines2.slice(startLine - 1, end).join("\n");
-  const text7 = full.slice(0, 24e3);
-  return {
-    status: "available",
-    source: result.source,
-    startLine,
-    endLine: startLine + text7.split("\n").length - 1,
-    text: text7,
-    excerptHash: (0, import_node_crypto5.createHash)("sha256").update(text7).digest("hex"),
-    truncated: text7.length !== full.length || end < Math.min(endLine, lines2.length)
-  };
-}
-
-// node_modules/@gcr/client-core/dist/source-snapshot.js
-var hash = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
-var blobId = (bytes, format) => (0, import_node_crypto6.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+var hash = (bytes) => (0, import_node_crypto5.createHash)("sha256").update(bytes).digest("hex");
+var blobId = (bytes, format) => (0, import_node_crypto5.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 var key = (side, file) => `${side}:${file}`;
-var limit = (value, fallback, maximum) => {
-  if (value === void 0)
-    return fallback;
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
-    throw new SourceCaptureError("invalid-source-request");
-  return value;
-};
 function paths(values = []) {
   if (!Array.isArray(values) || values.length > 1e4)
     throw new SourceCaptureError("invalid-source-request");
@@ -17079,10 +16610,6 @@ var LocalSourceSnapshot = class {
     this.open();
     return structuredClone(this.#limitations);
   }
-  get incomplete() {
-    this.open();
-    return this.#limitations.some((item) => ["unreadable", "unsupported-source"].includes(item.reason));
-  }
   get diff() {
     this.open();
     return this.#diff;
@@ -17120,7 +16647,26 @@ var LocalSourceSnapshot = class {
     return reason ? { status: "unavailable", reason, detail: reason } : { status: "absent" };
   }
   readLines(file, side = "source", startLine = 1, endLine = startLine + 159) {
-    return fixedSourceLines(this.readFile(file, side), startLine, endLine);
+    const result = this.readFile(file, side);
+    if (!Number.isSafeInteger(startLine) || !Number.isSafeInteger(endLine) || startLine < 1 || endLine < startLine)
+      throw new SourceCaptureError("invalid-source-request");
+    if (result.status !== "available")
+      return result;
+    const lines2 = result.text.split("\n");
+    if (startLine > lines2.length)
+      throw new SourceCaptureError("invalid-source-request");
+    const end = Math.min(endLine, startLine + 199, lines2.length);
+    const full = lines2.slice(startLine - 1, end).join("\n");
+    const text7 = full.slice(0, 24e3);
+    return {
+      status: "available",
+      source: result.source,
+      startLine,
+      endLine: startLine + text7.split("\n").length - 1,
+      text: text7,
+      excerptHash: hash(text7),
+      truncated: text7.length !== full.length || end < Math.min(endLine, lines2.length)
+    };
   }
   /** Literal text candidates, not a semantic call graph or proof that a defect exists. */
   search(query, side = "source", prefix = "") {
@@ -17129,18 +16675,18 @@ var LocalSourceSnapshot = class {
       throw new SourceCaptureError("invalid-source-request");
     if (prefix)
       paths([prefix]);
-    const matches2 = [];
+    const matches = [];
     let truncated = false;
     for (const file of this.#files.values()) {
       if (file.source.side !== side || prefix && file.source.path !== prefix && !file.source.path.startsWith(`${prefix}/`))
         continue;
       for (const [index2, line] of file.text.split("\n").entries())
         if (line.includes(query)) {
-          if (matches2.length === 100) {
+          if (matches.length === 100) {
             truncated = true;
             break;
           }
-          matches2.push({
+          matches.push({
             source: structuredClone(file.source),
             line: index2 + 1,
             text: line.slice(0, 300),
@@ -17151,7 +16697,7 @@ var LocalSourceSnapshot = class {
         break;
     }
     return {
-      matches: matches2,
+      matches,
       truncated,
       omitted: this.#limitations.filter((item) => item.side === side).length,
       method: "literal-text",
@@ -17224,389 +16770,6 @@ function restoreLocalSource(input) {
     invalid7();
   return new LocalSourceSnapshot(identity, value.repository, value.headCommit, value.branchName, files, value.selected, value.limitations, value.diff, value.sourceTree, [...value.excludePatterns]);
 }
-function captureLocalSource(input) {
-  const options = structuredClone(input);
-  if (!["index", "working-tree", "commit-tree"].includes(options.kind))
-    throw new SourceCaptureError("invalid-source-request");
-  const committed = options.kind === "commit-tree";
-  const validOid = (value) => typeof value === "string" && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
-  if (committed ? !validOid(options.sourceCommit) || !(options.baseCommit === null || validOid(options.baseCommit)) || options.baseRef !== void 0 || options.indexFile !== void 0 : options.sourceCommit !== void 0 || options.baseCommit !== void 0 || options.targetBranch !== void 0)
-    throw new SourceCaptureError("invalid-source-request");
-  const selectedPaths = options.paths === void 0 ? void 0 : paths(options.paths);
-  const untracked = paths(options.includeUntracked);
-  if (options.kind !== "working-tree" && untracked.length)
-    throw new SourceCaptureError("invalid-source-request");
-  const policy = sourcePathPolicy(options.excludePatterns);
-  const fileLimit = limit(options.limits?.fileBytes, 1048576, 4194304);
-  const byteLimit = limit(options.limits?.totalBytes, 33554432, 134217728);
-  const fileCount = limit(options.limits?.files, 1e4, 1e4);
-  const entryLimit = limit(options.limits?.entries, 5e4, 5e4);
-  const deadline = Date.now() + limit(options.limits?.durationMs, 3e4, 12e4);
-  if (options.baseRef !== void 0 && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/.test(options.baseRef))
-    throw new SourceCaptureError("invalid-source-request");
-  const git3 = new SourceGit(options.cwd, deadline, committed ? null : options.indexFile);
-  try {
-    const exactCommit = (oid) => {
-      const exact = git3.oid(oid);
-      if (git3.text(["cat-file", "-t", exact]).trim() !== "commit")
-        throw new SourceCaptureError("source-unavailable");
-      return exact;
-    };
-    const headCommit = committed ? exactCommit(options.sourceCommit) : git3.initialHead;
-    let baseCommit = committed ? options.baseCommit === null ? null : exactCommit(options.baseCommit) : headCommit;
-    if (options.targetBranch !== void 0) {
-      if (!options.targetBranch || options.targetBranch.length > 1024)
-        throw new SourceCaptureError("invalid-source-request");
-      git3.text(["check-ref-format", `refs/heads/${options.targetBranch}`]);
-    }
-    if (options.baseRef) {
-      if (!headCommit)
-        throw new SourceCaptureError("source-unavailable");
-      const ref = git3.oid(git3.text(["rev-parse", "--verify", "--end-of-options", `${options.baseRef}^{commit}`]).trim());
-      baseCommit = git3.oid(git3.text(["merge-base", headCommit, ref]).trim());
-    }
-    const baseTree = git3.oid(git3.text(baseCommit ? ["rev-parse", "--verify", `${baseCommit}^{tree}`] : ["hash-object", "-w", "-t", "tree", "--stdin"], "").trim());
-    const sourceTree = git3.oid(git3.text(committed ? ["rev-parse", "--verify", `${headCommit}^{tree}`] : ["write-tree"]).trim());
-    const base = git3.tree(baseTree, entryLimit);
-    const source = git3.tree(sourceTree, entryLimit);
-    const skipWorktree = new Set(git3.text(["ls-files", "-t", "-z"]).split("\0").filter((entry) => entry.startsWith("S ")).map((entry) => entry.slice(2)));
-    const allPaths = [
-      .../* @__PURE__ */ new Set([...base.keys(), ...source.keys(), ...untracked, ...selectedPaths ?? []])
-    ].sort();
-    if (allPaths.length > entryLimit)
-      throw new SourceCaptureError("capture-limit");
-    const limitations = [];
-    const denied2 = /* @__PURE__ */ new Set();
-    const exclude = (file, side, reason, detail = reason) => {
-      if (denied2.has(key(side, file)))
-        return;
-      denied2.add(key(side, file));
-      limitations.push({ path: file, side, reason, detail });
-    };
-    const eligible = allPaths.filter((file) => {
-      if (Date.now() > deadline)
-        throw new SourceCaptureError("capture-limit");
-      const reason = policy(file);
-      if (!reason)
-        return true;
-      for (const side of ["base", "source"])
-        exclude(file, side, reason);
-      return false;
-    });
-    const ignoreInputs = eligible.filter((file) => {
-      const parts2 = file.split("/");
-      for (let index2 = 1; index2 < parts2.length; index2++) {
-        try {
-          const stat = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git3.root, ...parts2.slice(0, index2)));
-          if (stat.isSymbolicLink()) {
-            for (const side of ["base", "source"])
-              exclude(file, side, "symlink", "ignore-path-symlink");
-            return false;
-          }
-          if (!stat.isDirectory())
-            break;
-        } catch (error2) {
-          if (!["ENOENT", "ENOTDIR"].includes(error2.code ?? "")) {
-            for (const side of ["base", "source"])
-              exclude(file, side, "unreadable", "ignore-policy-unavailable");
-            return false;
-          }
-          break;
-        }
-      }
-      return true;
-    });
-    let frozenIgnore = "";
-    const checkIgnore = () => ignoreInputs.length ? git3.text(["check-ignore", "--no-index", "-z", "--stdin"], ignoreInputs.map((file) => `./${file}\0`).join(""), void 0, [0, 1]) : "";
-    if (ignoreInputs.length) {
-      const ignored = checkIgnore();
-      frozenIgnore = ignored;
-      for (const file of ignored.split("\0").filter(Boolean).map((file2) => file2.replace(/^\.\//, "")))
-        for (const side of ["base", "source"])
-          exclude(file, side, "git-ignored");
-    }
-    if (committed) {
-      for (const file of /* @__PURE__ */ new Set([
-        ...git3.ignoredInTree(base, eligible),
-        ...git3.ignoredInTree(source, eligible)
-      ]))
-        for (const side of ["base", "source"])
-          exclude(file, side, "git-ignored");
-    }
-    const files = /* @__PURE__ */ new Map();
-    const known = { base: new Set(base.keys()), source: new Set(source.keys()) };
-    if (options.kind === "working-tree")
-      for (const file of untracked)
-        known.source.add(file);
-    let bytes = 0, count = 0;
-    const admit = (file, side, size) => {
-      if (size > fileLimit) {
-        exclude(file, side, "unsupported-source", "file-size-limit");
-        return false;
-      }
-      if (bytes + size > byteLimit || count >= fileCount) {
-        exclude(file, side, "unsupported-source", "snapshot-size-limit");
-        return false;
-      }
-      bytes += size;
-      count++;
-      return true;
-    };
-    const add = (file, side, body2, entry) => {
-      if (body2.includes(0)) {
-        exclude(file, side, "binary");
-        return;
-      }
-      let text7;
-      try {
-        text7 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(body2);
-      } catch {
-        exclude(file, side, "unsupported-source", "invalid-utf8");
-        return;
-      }
-      if (/^version https:\/\/git-lfs.github.com\/spec\/v1(?:\r?\n|$)/.test(text7)) {
-        exclude(file, side, "unsupported-source", "lfs-pointer");
-        return;
-      }
-      if (blobId(body2, git3.objectFormat) !== entry.oid)
-        throw new SourceCaptureError("source-unavailable");
-      files.set(key(side, file), {
-        source: sourceFile({
-          path: file,
-          side,
-          hash: hash(body2),
-          byteLength: body2.length,
-          lineCount: text7.split("\n").length,
-          gitBlob: entry.oid
-        }),
-        text: text7,
-        mode: entry.mode
-      });
-    };
-    const candidates = [];
-    const workingWrites = [];
-    const observations = [];
-    const signature = (stat) => `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.mode}`;
-    const ordered = selectedPaths ? [...selectedPaths, ...eligible.filter((file) => !selectedPaths.includes(file))] : eligible;
-    for (const file of ordered) {
-      if (Date.now() > deadline)
-        throw new SourceCaptureError("capture-limit");
-      for (const side of ["source", "base"]) {
-        if (denied2.has(key(side, file)))
-          continue;
-        const tree = side === "base" ? base : source;
-        const entry = tree.get(file);
-        if (entry && (side === "base" || options.kind !== "working-tree" || entry.mode === "160000") && (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))) {
-          exclude(file, side, entry.mode === "120000" ? "symlink" : "unsupported-source", entry.mode === "160000" ? "submodule" : "unsupported-mode");
-          continue;
-        }
-        if (side === "source" && options.kind === "working-tree" && known.source.has(file)) {
-          let fd;
-          try {
-            const parts2 = file.split("/");
-            for (let index2 = 1; index2 <= parts2.length; index2++) {
-              const stat = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git3.root, ...parts2.slice(0, index2)));
-              if (stat.isSymbolicLink()) {
-                exclude(file, side, "symlink");
-                break;
-              }
-              if (index2 < parts2.length ? !stat.isDirectory() : !stat.isFile()) {
-                exclude(file, side, "not-file");
-                break;
-              }
-            }
-            if (denied2.has(key(side, file)))
-              continue;
-            const absolute = import_node_path6.default.join(git3.root, file);
-            fd = (0, import_node_fs4.openSync)(absolute, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
-            const opened = (0, import_node_fs4.fstatSync)(fd);
-            if (!opened.isFile() || (0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== signature(opened))
-              throw new SourceCaptureError("snapshot-changed");
-            if (!admit(file, side, opened.size))
-              continue;
-            const buffer = Buffer.alloc(opened.size + 1);
-            let length = 0;
-            while (length < buffer.length) {
-              const received = (0, import_node_fs4.readSync)(fd, buffer, length, buffer.length - length, null);
-              if (!received)
-                break;
-              length += received;
-            }
-            const body2 = buffer.subarray(0, length);
-            if (body2.length !== opened.size || signature((0, import_node_fs4.fstatSync)(fd)) !== signature(opened))
-              throw new SourceCaptureError("snapshot-changed");
-            observations.push({ file, signature: signature(opened) });
-            const captured = {
-              mode: opened.mode & 73 ? "100755" : "100644",
-              type: "blob",
-              size: body2.length,
-              oid: blobId(body2, git3.objectFormat)
-            };
-            add(file, side, body2, captured);
-            if (files.has(key(side, file)))
-              workingWrites.push({ file, body: body2, entry: captured });
-          } catch (error2) {
-            if (error2 instanceof SourceCaptureError)
-              throw error2;
-            if (["ENOENT", "ENOTDIR"].includes(error2.code ?? "")) {
-              if (skipWorktree.has(file))
-                exclude(file, side, "unsupported-source", "sparse-worktree");
-              else if (untracked.includes(file))
-                exclude(file, side, "unreadable", "requested-file-missing");
-              else
-                known.source.delete(file);
-            } else
-              exclude(file, side, "unreadable");
-          } finally {
-            if (fd !== void 0)
-              (0, import_node_fs4.closeSync)(fd);
-          }
-        } else if (entry) {
-          if (entry.size === null)
-            exclude(file, side, "unsupported-source", "missing-object");
-          else if (admit(file, side, entry.size))
-            candidates.push({ file, side, entry });
-        }
-      }
-    }
-    if (candidates.length) {
-      const output = git3.run(["cat-file", "--batch"], candidates.map(({ entry }) => `${entry.oid}
-`).join(""), byteLimit + candidates.length * 160);
-      let offset = 0;
-      for (const { file, side, entry } of candidates) {
-        const newline = output.indexOf(10, offset);
-        if (newline < 0)
-          throw new SourceCaptureError("source-unavailable");
-        const header2 = output.subarray(offset, newline).toString("ascii");
-        offset = newline + 1;
-        if (header2 === `${entry.oid} missing`) {
-          exclude(file, side, "unsupported-source", "missing-object");
-          continue;
-        }
-        if (header2 !== `${entry.oid} blob ${entry.size}`)
-          throw new SourceCaptureError("source-unavailable");
-        const body2 = output.subarray(offset, offset + entry.size);
-        offset += entry.size;
-        if (body2.length !== entry.size || output[offset++] !== 10)
-          throw new SourceCaptureError("source-unavailable");
-        add(file, side, body2, entry);
-      }
-      if (offset !== output.length)
-        throw new SourceCaptureError("source-unavailable");
-    }
-    for (const observation of observations) {
-      try {
-        const absolute = import_node_path6.default.join(git3.root, observation.file);
-        if ((0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== observation.signature)
-          throw new SourceCaptureError("snapshot-changed");
-      } catch {
-        throw new SourceCaptureError("snapshot-changed");
-      }
-    }
-    if (!committed && (git3.head() !== headCommit || git3.branch() !== git3.initialBranch) || checkIgnore() !== frozenIgnore)
-      throw new SourceCaptureError("snapshot-changed");
-    if (workingWrites.length) {
-      const names = workingWrites.map(({ body: body2 }, index2) => {
-        const name = import_node_path6.default.join(git3.directory, `blob-${index2}`);
-        (0, import_node_fs4.writeFileSync)(name, body2, { mode: 384 });
-        return JSON.stringify(name);
-      });
-      const oids = git3.text(["hash-object", "-w", "--no-filters", "--stdin-paths"], `${names.join("\n")}
-`).trim().split("\n");
-      if (oids.length !== workingWrites.length || oids.some((oid, index2) => oid !== workingWrites[index2].entry.oid))
-        throw new SourceCaptureError("source-unavailable");
-    }
-    const comparable = new Set(eligible.filter((file) => ["base", "source"].every((side) => !denied2.has(key(side, file)) && (!known[side].has(file) || files.has(key(side, file))))));
-    const filtered = (side) => new Map([...files.values()].filter((file) => file.source.side === side && comparable.has(file.source.path)).map((file) => [
-      file.source.path,
-      {
-        mode: file.mode,
-        type: "blob",
-        oid: file.source.gitBlob,
-        size: file.source.byteLength
-      }
-    ]));
-    const left = git3.selectedTree(filtered("base"));
-    const right = git3.selectedTree(filtered("source"));
-    const records = git3.text([
-      "diff",
-      "--no-ext-diff",
-      "--no-textconv",
-      "--no-color",
-      "--name-status",
-      "-z",
-      "-M",
-      left,
-      right
-    ]).split("\0");
-    const changes = [];
-    for (let index2 = 0; records[index2]; ) {
-      const status = records[index2++];
-      const first = records[index2++];
-      const oldPath = status.startsWith("R") ? first : void 0;
-      const file = oldPath ? records[index2++] : first;
-      if (!comparable.has(file) || oldPath && !comparable.has(oldPath) || !/^(?:[AMDT]|R\d+)$/.test(status))
-        throw new SourceCaptureError("source-unavailable");
-      changes.push({
-        path: file,
-        ...oldPath ? { oldPath } : {},
-        status: status[0],
-        side: status === "D" ? "base" : "source"
-      });
-    }
-    const selected = selectedPaths === void 0 ? changes : selectedPaths.flatMap((file) => {
-      if (!comparable.has(file))
-        return [];
-      const change = changes.find((change2) => change2.path === file);
-      if (change)
-        return [change];
-      return files.has(key("source", file)) ? [{ path: file, status: "M", side: "source" }] : [];
-    });
-    for (const file of selectedPaths ?? [])
-      if (!selected.some((entry) => entry.path === file) && !limitations.some((item) => item.path === file))
-        exclude(file, "source", "unreadable", "requested-file-not-captured");
-    const patchPaths = new Set(selected.flatMap((change) => [change.path, ...change.oldPath ? [change.oldPath] : []]));
-    const patchTree = (side) => git3.selectedTree(new Map([...filtered(side)].filter(([file]) => patchPaths.has(file))));
-    const diff = selected.length ? git3.text([
-      "diff",
-      "--no-ext-diff",
-      "--no-textconv",
-      "--no-color",
-      "-M",
-      patchTree("base"),
-      patchTree("source")
-    ], void 0, byteLimit * 2 + 1048576) : "";
-    const canonicalFiles = new Map([...files.entries()].sort(([left2], [right2]) => left2 < right2 ? -1 : left2 > right2 ? 1 : 0));
-    const identity = snapshotIdentity({
-      kind: options.kind,
-      objectFormat: git3.objectFormat,
-      baseCommit,
-      baseTree,
-      ...options.kind !== "working-tree" ? { sourceTree } : {},
-      ...committed ? { sourceCommit: headCommit } : {},
-      hash: contentHash({
-        version: 1,
-        kind: options.kind,
-        headCommit,
-        baseCommit,
-        baseTree,
-        sourceTree,
-        ...committed ? { targetBranch: options.targetBranch ?? null } : {},
-        sourceFiles: [...canonicalFiles.values()].map((file) => ({
-          ...file.source,
-          mode: file.mode
-        })),
-        selected,
-        limitations,
-        policy: options.excludePatterns ?? [],
-        diffHash: hash(diff)
-      })
-    });
-    return new LocalSourceSnapshot(identity, git3.repository, headCommit, committed ? options.targetBranch ?? null : git3.initialBranch, canonicalFiles, selected, limitations, diff, sourceTree, [...options.excludePatterns ?? []]);
-  } finally {
-    git3.close();
-  }
-}
 
 // node_modules/@gcr/client-core/dist/builtin-review.js
 var body = `Review the selected immutable source and its fixed base. Examine affected callers, tests and boundary conditions using only the authorized source read port. If required source or knowledge is absent or a tool cannot inspect it, report incomplete work and ask a concrete question rather than guessing.
@@ -17619,75 +16782,12 @@ Report defects with the triggering conditions, affected source, impact and a spe
 var definition3 = { id: "gcr-standalone-review", revision: 1, reviewOnly: true, body };
 var builtinReviewSkill = Object.freeze({ ...definition3, hash: contentHash(definition3) });
 
-// node_modules/@gcr/client-core/dist/review-mode.js
-function resolveReviewMode(settings = {}) {
-  const requested = settings.mode;
-  const mode = clientMode(requested === void 0 ? "standalone" : requested);
-  return {
-    mode,
-    supported: mode === "standalone",
-    centralRequests: "forbidden",
-    problems: mode === "standalone" ? [] : [
-      {
-        code: "policy-unavailable",
-        message: "Centralized review is not available in this client version."
-      }
-    ]
-  };
-}
-
-// node_modules/@gcr/client-core/dist/source-language.js
-var import_node_path7 = __toESM(require("node:path"), 1);
-var languages = {
-  ".py": "python",
-  ".pyi": "python",
-  ".ts": "typescript",
-  ".tsx": "typescript",
-  ".mts": "typescript",
-  ".cts": "typescript",
-  ".js": "javascript",
-  ".jsx": "javascript",
-  ".mjs": "javascript",
-  ".cjs": "javascript",
-  ".rs": "rust",
-  ".go": "go",
-  ".java": "java",
-  ".kt": "kotlin",
-  ".kts": "kotlin",
-  ".swift": "swift",
-  ".c": "c",
-  ".h": "c",
-  ".cpp": "cpp",
-  ".hpp": "cpp",
-  ".cc": "cpp",
-  ".cs": "csharp",
-  ".rb": "ruby",
-  ".php": "php",
-  ".sh": "shell",
-  ".bash": "shell",
-  ".zsh": "shell",
-  ".sql": "sql",
-  ".json": "json",
-  ".yaml": "yaml",
-  ".yml": "yaml",
-  ".toml": "toml",
-  ".html": "html",
-  ".css": "css",
-  ".vue": "vue",
-  ".svelte": "svelte",
-  ".md": "markdown"
-};
-function sourceLanguage(file) {
-  sourcePath(file);
-  return languages[import_node_path7.default.posix.extname(file).toLowerCase()];
-}
-
 // node_modules/@gcr/client-core/dist/central-cache.js
-var import_node_crypto9 = require("node:crypto");
-var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_crypto8 = require("node:crypto");
+var import_node_path5 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/central-binding.js
-var import_node_crypto7 = require("node:crypto");
+var import_node_crypto6 = require("node:crypto");
 var KnowledgeSyncError = class extends Error {
   code;
   constructor(code3, message) {
@@ -17741,12 +16841,12 @@ var TrustedCentralBinding = class {
       for (const [id4, value] of input.trustedKeys) {
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id4))
           throw invalid3();
-        const key4 = typeof value === "string" ? (0, import_node_crypto7.createPublicKey)(value) : value;
-        if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
+        const key3 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
+        if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
           throw invalid3();
-        this.#keys.set(id4, (0, import_node_crypto7.createPublicKey)(key4.export({ type: "spki", format: "pem" })));
+        this.#keys.set(id4, (0, import_node_crypto6.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
       }
-      this.id = (0, import_node_crypto7.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
+      this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
       Object.freeze(this);
     } catch {
       throw invalid3();
@@ -17758,7 +16858,7 @@ var TrustedCentralBinding = class {
 };
 
 // node_modules/@gcr/client-core/dist/knowledge-signature.js
-var import_node_crypto8 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 function verifyKnowledgeManifest(value, options) {
   const manifest = signedKnowledgeManifest(value);
   const payload = manifest.payload;
@@ -17770,11 +16870,11 @@ function verifyKnowledgeManifest(value, options) {
   const trusted = options.trustedKeys.get(payload.signingKeyId);
   if (!trusted)
     throw Error("Untrusted knowledge signing key");
-  const key4 = typeof trusted === "string" ? (0, import_node_crypto8.createPublicKey)(trusted) : trusted;
-  if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
+  const key3 = typeof trusted === "string" ? (0, import_node_crypto7.createPublicKey)(trusted) : trusted;
+  if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
     throw Error("Invalid knowledge verification key");
   const bytes = canonicalKnowledgeJson(payload);
-  if ((0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto8.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key4, Buffer.from(manifest.signature, "base64url")))
+  if ((0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto7.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key3, Buffer.from(manifest.signature, "base64url")))
     throw Error("Invalid knowledge manifest signature");
   const issued = Date.parse(payload.issuedAt), until = Date.parse(options.mode === "online" ? payload.refreshAfter : payload.offlineValidUntil);
   if (!Number.isFinite(options.now) || issued > options.now + 3e4 || options.now >= until)
@@ -17791,7 +16891,7 @@ function verifyKnowledgeManifest(value, options) {
 
 // node_modules/@gcr/client-core/dist/central-cache.js
 var parts = ["policy", "collective", "personal"];
-var hash2 = (bytes) => (0, import_node_crypto9.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
 var error = (code3) => new KnowledgeSyncError(code3, {
   "invalid-binding": "Invalid central binding.",
   busy: "Another process owns the current synchronization.",
@@ -17824,7 +16924,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("invalid-binding");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path8.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
+      dataDirectory: import_node_path5.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
     });
     return new _CentralKnowledgeCache(records, options.binding, options.now ?? Date.now);
   }
@@ -17998,7 +17098,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     if (options.signal?.aborted)
       cancel();
     const timer = setTimeout(() => controller.abort("timeout"), timeout);
-    const token2 = (0, import_node_crypto9.randomUUID)();
+    const token2 = (0, import_node_crypto8.randomUUID)();
     let generation;
     let authorizationUncertain = false;
     try {
@@ -18108,7 +17208,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         const bundle = this.bundle(parsed, part, manifest);
         this.check(controller.signal);
         await this.owned(token2, generation);
-        const id4 = (0, import_node_crypto9.randomUUID)();
+        const id4 = (0, import_node_crypto8.randomUUID)();
         await this.records.write("knowledge", id4, bundle, 0);
         refs[part] = id4;
       }
@@ -18291,695 +17391,6 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
   }
 };
 
-// node_modules/@gcr/client-core/dist/central-selection.js
-var reference = (item) => `central:${item.component}:${item.kind}:${item.id}`;
-var key2 = (target) => `${target.side}:${target.path}`;
-var compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-function matches(scope, file, branch) {
-  if (scope.branches.length && (!branch || !compilePathPatterns(scope.branches)(branch)))
-    return false;
-  return (!scope.filePaths.length || compilePathPatterns(scope.filePaths)(file.source.path)) && (!scope.languages.length || scope.languages.some((language) => language.toLowerCase() === sourceLanguage(file.source.path))) && (!scope.symbols.length || scope.symbols.some((symbol) => file.text.includes(symbol))) && (!scope.contracts.length || scope.contracts.some((contract) => file.text.includes(contract)));
-}
-function selectCentralKnowledge(input) {
-  const policy = centralKnowledgeBundle(input.bundles.policy), collective = centralKnowledgeBundle(input.bundles.collective), personal = centralKnowledgeBundle(input.bundles.personal);
-  if (policy.component !== "policy" || collective.component !== "collective" || personal.component !== "personal" || [policy, collective, personal].some((b) => b.schemaVersion !== 2))
-    throw Error("central-precedence-contract-required");
-  if (!Number.isSafeInteger(input.byteLimit) || input.byteLimit < 0 || input.byteLimit > 1048576 || !Number.isFinite(Date.parse(input.now)) || new Date(input.now).toISOString() !== input.now)
-    throw Error("invalid-central-selection");
-  if ([collective, personal].some((b) => b.tenantId !== policy.tenantId || b.repositoryId !== policy.repositoryId))
-    throw Error("central-scope-mismatch");
-  const result = {
-    items: [],
-    entries: [],
-    omissions: [],
-    precedence: [],
-    required: [],
-    bytes: 0,
-    validUntil: null
-  };
-  const boundaries = [];
-  const targets = input.selected.map(({ source }) => ({
-    path: source.path,
-    side: source.side,
-    hash: source.hash
-  }));
-  const candidates = [];
-  const requiredFailures = /* @__PURE__ */ new Set();
-  const applicability = (scope) => input.selected.filter((file) => matches(scope, file, input.branch)).map(({ source }) => ({ path: source.path, side: source.side, hash: source.hash }));
-  for (const skill2 of policy.skills.skills) {
-    const item = {
-      component: "policy",
-      kind: "skill",
-      id: skill2.name,
-      revision: skill2.version,
-      hash: skill2.contentHash,
-      targets,
-      required: true,
-      role: "authoritative",
-      value: skill2
-    };
-    if (skill2.enabled)
-      candidates.push(item);
-    else
-      result.omissions.push({ reference: reference(item), reason: "disabled", targets });
-  }
-  for (const criterion2 of policy.criteria) {
-    const item = {
-      component: "policy",
-      kind: "policy",
-      id: criterion2.id,
-      revision: criterion2.revision,
-      hash: criterion2.contentHash,
-      targets: [],
-      required: true,
-      role: "authoritative",
-      value: criterion2
-    };
-    try {
-      item.targets = applicability(criterion2.document.appliesTo);
-      if (!item.targets.length) {
-        result.omissions.push({
-          reference: reference(item),
-          reason: "not-applicable",
-          targets: []
-        });
-        continue;
-      }
-      for (const exception of criterion2.exceptions) {
-        const affected = applicability(exception.appliesTo);
-        if (!affected.some((t) => item.targets.some((c) => key2(c) === key2(t))))
-          continue;
-        if (exception.startsAt > input.now)
-          boundaries.push(exception.startsAt);
-        else if (exception.expiresAt > input.now) {
-          boundaries.push(exception.expiresAt);
-          const excluded = item.targets.filter((t) => affected.some((a) => key2(a) === key2(t)));
-          item.targets = item.targets.filter((t) => !affected.some((a) => key2(a) === key2(t)));
-          result.omissions.push({
-            reference: `${reference(item)}:exception:${exception.id}`,
-            reason: "exception",
-            targets: excluded
-          });
-        }
-      }
-      if (item.targets.length)
-        candidates.push(item);
-    } catch {
-      requiredFailures.add(reference(item));
-      result.omissions.push({
-        reference: reference(item),
-        reason: "unsupported-scope",
-        targets: []
-      });
-    }
-  }
-  const relevant = [];
-  const seen = /* @__PURE__ */ new Set();
-  for (const bundle of [collective, personal])
-    for (const memory2 of bundle.memories) {
-      if (seen.has(memory2.id))
-        throw Error("duplicate-central-memory");
-      seen.add(memory2.id);
-      const ref = reference({ component: bundle.component, kind: "memory", id: memory2.id });
-      if (memory2.content.expiresAt && memory2.content.expiresAt <= input.now) {
-        result.omissions.push({ reference: ref, reason: "expired", targets: [] });
-        continue;
-      }
-      try {
-        const applicable2 = applicability(memory2.content.appliesTo);
-        if (!applicable2.length) {
-          result.omissions.push({ reference: ref, reason: "not-applicable", targets: [] });
-          continue;
-        }
-        relevant.push({ component: bundle.component, memory: memory2, targets: applicable2 });
-      } catch {
-        result.omissions.push({ reference: ref, reason: "unsupported-scope", targets: [] });
-      }
-    }
-  const shared = relevant.filter((item) => item.component === "collective");
-  for (const item of relevant) {
-    let selected = item.targets;
-    const supplements = [];
-    if (item.component === "personal") {
-      selected = [];
-      for (const target of item.targets) {
-        const overrides = shared.filter((other) => other.memory.aggregationKey === item.memory.aggregationKey && other.targets.some((t) => key2(t) === key2(target))).map((other) => other.memory.id).sort(compare);
-        if (!overrides.length)
-          selected.push(target);
-        else {
-          result.precedence.push({
-            personalId: item.memory.id,
-            collectiveIds: overrides,
-            target,
-            retained: "sources-and-counter-evidence"
-          });
-          supplements.push({
-            target,
-            collectiveIds: overrides,
-            sources: item.memory.sources,
-            counterEvidence: item.memory.content.counterEvidence
-          });
-        }
-      }
-    }
-    candidates.push({
-      component: item.component,
-      kind: "memory",
-      id: item.memory.id,
-      revision: item.memory.revision,
-      hash: item.memory.contentHash,
-      targets: selected,
-      required: false,
-      role: item.component === "collective" ? "authoritative" : "supplement",
-      value: {
-        ...selected.length ? { memory: item.memory } : {},
-        ...supplements.length ? { supplements } : {}
-      }
-    });
-  }
-  candidates.sort((a, b) => Number(b.required) - Number(a.required) || compare(a.component, b.component) || compare(a.kind, b.kind) || compare(a.id, b.id));
-  const selectedIds = /* @__PURE__ */ new Set();
-  for (const item of candidates) {
-    const size = Buffer.byteLength(canonicalKnowledgeJson(item));
-    if (result.bytes + size > input.byteLimit) {
-      result.omissions.push({
-        reference: reference(item),
-        reason: "budget",
-        targets: item.targets
-      });
-      if (item.required)
-        requiredFailures.add(reference(item));
-      continue;
-    }
-    if (item.component === "personal" && result.precedence.some((p) => p.personalId === item.id && p.collectiveIds.some((id4) => !selectedIds.has(id4)))) {
-      result.omissions.push({
-        reference: reference(item),
-        reason: "budget",
-        targets: item.targets
-      });
-      continue;
-    }
-    result.items.push(item);
-    result.bytes += size;
-    selectedIds.add(item.id);
-    result.entries.push({
-      origin: "central",
-      kind: item.kind,
-      id: item.id,
-      revision: item.revision,
-      hash: item.hash,
-      component: item.component
-    });
-    const memory2 = relevant.find((m) => m.memory.id === item.id)?.memory;
-    if (memory2?.content.expiresAt)
-      boundaries.push(memory2.content.expiresAt);
-  }
-  for (const item of candidates.filter((item2) => item2.required))
-    result.required.push({
-      kind: "policy",
-      reference: reference(item),
-      available: !requiredFailures.has(reference(item)),
-      reason: requiredFailures.has(reference(item)) ? "Required central instructions exceed the context budget." : ""
-    });
-  for (const ref of requiredFailures)
-    if (!result.required.some((item) => item.reference === ref))
-      result.required.push({
-        kind: "policy",
-        reference: ref,
-        available: false,
-        reason: "Required central scope could not be interpreted."
-      });
-  result.omissions.sort((a, b) => compare(a.reference, b.reference));
-  result.precedence.sort((a, b) => compare(a.personalId, b.personalId) || compare(key2(a.target), key2(b.target)));
-  result.validUntil = boundaries.sort()[0] ?? null;
-  return result;
-}
-
-// node_modules/@gcr/client-core/dist/review-context.js
-var LocalReviewContext = class {
-  authority;
-  #data;
-  constructor(data, authority) {
-    this.authority = authority;
-    this.#data = structuredClone(data);
-  }
-  get central() {
-    return this.#data.central ? structuredClone(this.#data.central) : null;
-  }
-  async observeCentralSnapshot() {
-    if (!this.authority)
-      return "current";
-    if (this.#data.validUntil && this.#data.validUntil <= (/* @__PURE__ */ new Date()).toISOString())
-      throw Error("central-context-expired");
-    if (typeof this.authority === "function")
-      return this.authority();
-    await this.authority.assertConnection?.();
-    return this.authority.cache.observeSnapshot(this.authority.manifest, this.authority.mode);
-  }
-  get documents() {
-    return structuredClone(this.#data.documents ?? []);
-  }
-  /** Export only selected material; omitted local identifiers and store paths stay local. */
-  toRemoteContext() {
-    if (this.#data.transferable !== true || !this.#data.builtin || this.#data.identity.required.some((item) => !item.available) || this.#data.sources.some((item) => !item.available) || this.#data.validUntil && this.#data.validUntil <= (/* @__PURE__ */ new Date()).toISOString() || this.#data.client.mode === "centralized" && !this.#data.centralTransfer)
-      throw Error("context-not-transferable");
-    const builtin = this.#data.builtin;
-    return {
-      provenance: "client-supplied",
-      documents: this.documents,
-      resolved: remoteReviewResolvedContext({
-        version: 1,
-        client: this.client,
-        sourceHash: this.sourceHash,
-        originalContextHash: this.identity.hash,
-        builtin: { id: builtin.id, revision: builtin.revision, hash: builtin.hash },
-        knowledge: this.knowledge,
-        requiredSources: this.sources.map(({ path: path43, side }) => ({ path: path43, side })),
-        validUntil: this.validUntil,
-        ...this.#data.centralTransfer ? { central: this.#data.centralTransfer } : {}
-      })
-    };
-  }
-  get client() {
-    return structuredClone(this.#data.client);
-  }
-  get sourceHash() {
-    return this.#data.sourceHash;
-  }
-  get identity() {
-    return structuredClone(this.#data.identity);
-  }
-  get knowledge() {
-    return structuredClone(this.#data.knowledge);
-  }
-  get builtin() {
-    return structuredClone(this.#data.builtin);
-  }
-  get bytes() {
-    return this.#data.bytes;
-  }
-  get omissions() {
-    return structuredClone(this.#data.omissions);
-  }
-  get sources() {
-    return structuredClone(this.#data.sources);
-  }
-  get validUntil() {
-    return this.#data.validUntil;
-  }
-};
-var bounded = (value, fallback, maximum) => {
-  if (value === void 0)
-    return fallback;
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
-    throw Error("invalid-context-budget");
-  return value;
-};
-var compare2 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-function inScope(item, client) {
-  return item.scope.profileId === client.profileId && (item.scope.kind === "profile" || item.scope.repositoryKey === client.repositoryKey && item.scope.worktreeKey === client.worktreeKey);
-}
-function applicable(item, sources, branch) {
-  const { paths: paths2, languages: requiredLanguages, symbols, branches } = item.appliesTo;
-  if ([paths2, requiredLanguages, symbols, branches].some((values) => values.length > 128) || symbols.some((symbol) => symbol.length > 128))
-    throw Error("unsupported-scope");
-  const pathMatches = paths2.length ? compilePathPatterns(paths2) : () => true;
-  if (branches.length && (!branch || !compilePathPatterns(branches)(branch)))
-    return false;
-  return sources.some(({ source, text: text7 }) => pathMatches(source.path) && (!requiredLanguages.length || requiredLanguages.includes(sourceLanguage(source.path) ?? "")) && (!symbols.length || symbols.some((symbol) => text7.includes(symbol))));
-}
-function knowledgeReference(id4) {
-  return `knowledge:${id4}`;
-}
-async function resolveLocalContext(input) {
-  const mode = resolveReviewMode(input.settings);
-  if (!mode.supported)
-    return { status: "unavailable", problems: mode.problems };
-  try {
-    const client = clientIdentity(input.client);
-    if (client.mode !== "standalone")
-      return {
-        status: "unavailable",
-        problems: [
-          {
-            code: "policy-unavailable",
-            message: "Standalone context requires a local client identity."
-          }
-        ]
-      };
-    const sourceHash2 = input.snapshot.identity.hash;
-    const repository = input.snapshot.repository;
-    if (repository.repositoryKey !== client.repositoryKey || repository.worktreeKey !== client.worktreeKey)
-      throw Error("source-scope-mismatch");
-    const selected = input.snapshot.selected;
-    const branch = input.branch === void 0 ? input.snapshot.branchName === null ? void 0 : { name: input.snapshot.branchName, headCommit: input.snapshot.headCommit } : { name: input.branch.name, headCommit: input.branch.headCommit };
-    if (branch && (branch.headCommit !== input.snapshot.headCommit || branch.name !== input.snapshot.branchName || !branch.name || branch.name.length > 1024))
-      throw Error("branch-mismatch");
-    if (branch)
-      sourcePath(branch.name);
-    const now = (input.now ?? /* @__PURE__ */ new Date()).toISOString();
-    const byteLimit = bounded(input.knowledgeBytes, 65536, 1048576);
-    const scanLimit = bounded(input.scanBytes, 16777216, 67108864);
-    const itemLimit = bounded(input.scanItems, 5e3, 1e4);
-    const requiredIds = [...new Set(Array.from(input.requiredKnowledgeIds ?? []))].sort(compare2);
-    if (requiredIds.length > 1e3 || requiredIds.some((id4) => typeof id4 !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(id4)))
-      throw Error("invalid-required-knowledge");
-    const requiredSet = new Set(requiredIds);
-    const requestedSources = Array.from(input.requiredSources ?? [], (source) => ({
-      path: source.path,
-      side: source.side
-    }));
-    if (requestedSources.length > 1e3)
-      throw Error("invalid-required-source");
-    const primary = [];
-    for (const file of selected) {
-      requestedSources.push({ path: file.path, side: file.side });
-      const read = input.snapshot.readFile(file.path, file.side);
-      if (read.status === "available")
-        primary.push(read);
-      const basePath = file.oldPath ?? file.path;
-      if (file.side === "source" && input.snapshot.readFile(basePath, "base").status !== "absent")
-        requestedSources.push({ path: basePath, side: "base" });
-    }
-    const sources = [];
-    for (const request of requestedSources) {
-      sourcePath(request.path);
-      if (request.side !== "base" && request.side !== "source")
-        throw Error("invalid-required-source");
-      const reference2 = `source:${contentHash(request)}`;
-      if (sources.some((source) => source.reference === reference2))
-        continue;
-      const read = input.snapshot.readFile(request.path, request.side);
-      sources.push({
-        ...request,
-        reference: reference2,
-        available: read.status === "available",
-        reason: read.status === "available" ? "" : read.status === "absent" ? "Source is absent from the captured view." : `Source is unavailable: ${read.reason}.`
-      });
-    }
-    sources.sort((a, b) => compare2(a.reference, b.reference));
-    const omissions = [];
-    const candidates = /* @__PURE__ */ new Map();
-    const seen = /* @__PURE__ */ new Set();
-    const problems = [];
-    let scannedBytes = 0, scanned = 0;
-    if (input.stores.length > 2)
-      throw Error("unexpected-knowledge-stores");
-    scan: for (const store of [...input.stores])
-      for await (const value of store.entries()) {
-        if (++scanned > itemLimit) {
-          problems.push({
-            code: "context-truncated",
-            message: "Local knowledge scan exceeds its entry budget."
-          });
-          break scan;
-        }
-        const item = localKnowledge(value);
-        if (!inScope(item, client) || seen.has(item.id))
-          throw Error("knowledge-scope-mismatch");
-        seen.add(item.id);
-        const { hash: hash5, ...body2 } = item;
-        if (hash5 !== contentHash(body2))
-          throw Error("knowledge-hash-mismatch");
-        const bytes2 = Buffer.byteLength(canonicalJson(item));
-        scannedBytes += bytes2;
-        if (scannedBytes > scanLimit) {
-          problems.push({
-            code: "context-truncated",
-            message: "Local knowledge scan exceeds its byte budget."
-          });
-          break scan;
-        }
-        let reason;
-        if (item.state !== "active")
-          reason = "inactive";
-        else if (item.expiresAt && item.expiresAt <= now)
-          reason = "expired";
-        else if (bytes2 > byteLimit)
-          reason = "budget";
-        else {
-          try {
-            if (!applicable(item, primary, branch?.name))
-              reason = "not-applicable";
-          } catch {
-            reason = "unsupported-scope";
-          }
-        }
-        if (reason) {
-          omissions.push({ id: item.id, reason });
-          continue;
-        }
-        candidates.set(item.id, { item, bytes: bytes2 });
-      }
-    const builtinBytes = Buffer.byteLength(canonicalJson(builtinReviewSkill));
-    const builtin = builtinBytes <= byteLimit ? builtinReviewSkill : null;
-    let bytes = builtin ? builtinBytes : 0;
-    const knowledge = [];
-    const ordered = [...candidates.values()].sort((a, b) => Number(requiredSet.has(b.item.id)) - Number(requiredSet.has(a.item.id)) || Number(b.item.scope.kind === "repository") - Number(a.item.scope.kind === "repository") || compare2(a.item.id, b.item.id));
-    for (const candidate of ordered) {
-      if (bytes + candidate.bytes > byteLimit) {
-        omissions.push({ id: candidate.item.id, reason: "budget" });
-        continue;
-      }
-      bytes += candidate.bytes;
-      knowledge.push(candidate.item);
-    }
-    omissions.sort((a, b) => compare2(a.id, b.id));
-    const required = [
-      {
-        kind: "knowledge",
-        reference: `builtin:${builtinReviewSkill.id}`,
-        available: !!builtin,
-        reason: builtin ? "" : "Required built-in review instructions exceed the context budget."
-      },
-      ...sources.map((source) => ({
-        kind: "source",
-        reference: source.reference,
-        available: source.available,
-        reason: source.reason
-      })),
-      ...requiredIds.map((id4) => ({
-        kind: "knowledge",
-        reference: knowledgeReference(id4),
-        available: knowledge.some((item) => item.id === id4),
-        reason: knowledge.some((item) => item.id === id4) ? "" : `Required local knowledge is unavailable: ${omissions.find((entry) => entry.id === id4)?.reason ?? "missing"}.`
-      }))
-    ];
-    if (!selected.length)
-      problems.push({
-        code: "missing-context",
-        message: "No reviewable source was selected in the captured view."
-      });
-    if (required.some((item) => !item.available))
-      problems.push({
-        code: "missing-context",
-        message: "Required review context is unavailable or exceeds the context budget."
-      });
-    const entries = [
-      ...builtin ? [
-        {
-          origin: "builtin",
-          kind: "skill",
-          id: builtin.id,
-          revision: builtin.revision,
-          hash: builtin.hash
-        }
-      ] : [],
-      ...knowledge.map((item) => ({
-        origin: "local",
-        kind: item.kind,
-        id: item.id,
-        revision: item.revision,
-        hash: item.hash,
-        scope: item.scope
-      }))
-    ];
-    const identity = contextIdentity({
-      entries,
-      required,
-      hash: contentHash({
-        version: 1,
-        client,
-        sourceHash: sourceHash2,
-        branch: branch ?? null,
-        entries,
-        required,
-        omissions,
-        scanComplete: !problems.some((item) => item.code === "context-truncated")
-      })
-    });
-    const expiry = knowledge.flatMap((item) => item.expiresAt ? [item.expiresAt] : []).sort();
-    return {
-      status: problems.length ? "needs-context" : "ready",
-      problems,
-      context: new LocalReviewContext({
-        client,
-        sourceHash: sourceHash2,
-        identity,
-        knowledge,
-        builtin,
-        bytes,
-        omissions,
-        sources,
-        validUntil: expiry[0] ?? null,
-        transferable: problems.length === 0
-      })
-    };
-  } catch {
-    return {
-      status: "unavailable",
-      problems: [
-        {
-          code: "missing-context",
-          message: "Local review context could not be validated or loaded."
-        }
-      ]
-    };
-  }
-}
-async function resolveCentralContext(input) {
-  try {
-    const client = clientIdentity(input.client);
-    if (client.mode !== "centralized" || !(input.cache instanceof CentralKnowledgeCache) || !["online", "offline"].includes(input.freshness))
-      throw Error("invalid-central-context");
-    const scope = input.cache.scope;
-    if (scope.kind !== "repository" || scope.profileId !== client.profileId || scope.repositoryKey !== client.repositoryKey || scope.worktreeKey !== client.worktreeKey || canonicalJson(client.audience) !== canonicalJson(input.cache.binding.audience))
-      throw Error("central-context-scope");
-    await input.assertConnection?.();
-    const pinned = await input.cache.read(input.freshness);
-    const local = await resolveLocalContext({
-      ...input,
-      client: {
-        mode: "standalone",
-        profileId: client.profileId,
-        repositoryKey: client.repositoryKey,
-        worktreeKey: client.worktreeKey
-      }
-    });
-    if (local.status === "unavailable")
-      return local;
-    const ctx = local.context;
-    const limit2 = bounded(input.knowledgeBytes, 65536, 1048576);
-    const builtinBytes = ctx.builtin ? Buffer.byteLength(canonicalJson(ctx.builtin)) : 0;
-    const requiredIds = new Set(input.requiredKnowledgeIds ?? []);
-    const localItems = ctx.knowledge;
-    const requiredLocalBytes = localItems.filter((item) => requiredIds.has(item.id)).reduce((sum, item) => sum + Buffer.byteLength(canonicalJson(item)), 0);
-    const selected = input.snapshot.selected.flatMap((file) => {
-      const read = input.snapshot.readFile(file.path, file.side);
-      return read.status === "available" ? [read] : [];
-    });
-    const selection = {
-      branch: input.snapshot.branchName,
-      now: (input.now ?? /* @__PURE__ */ new Date()).toISOString(),
-      byteLimit: Math.max(0, limit2 - builtinBytes - requiredLocalBytes)
-    };
-    const central = selectCentralKnowledge({ bundles: pinned.bundles, selected, ...selection });
-    let bytes = builtinBytes + central.bytes;
-    const knowledge = [];
-    const omissions = ctx.omissions;
-    for (const item of localItems) {
-      const size = Buffer.byteLength(canonicalJson(item));
-      if (bytes + size > limit2)
-        omissions.push({ id: item.id, reason: "budget" });
-      else {
-        knowledge.push(item);
-        bytes += size;
-      }
-    }
-    omissions.sort((a, b) => compare2(a.id, b.id));
-    const required = [
-      ...ctx.identity.required.map((item) => {
-        if (item.kind !== "knowledge" || !item.reference.startsWith("knowledge:"))
-          return item;
-        const available = knowledge.some((k) => knowledgeReference(k.id) === item.reference);
-        return {
-          ...item,
-          available,
-          reason: available ? "" : item.reason || "Required local knowledge exceeds the context budget."
-        };
-      }),
-      ...central.required
-    ];
-    const centralSnapshot = {
-      id: pinned.manifest.payload.snapshotId,
-      hash: pinned.manifest.manifestHash,
-      audience: client.audience,
-      authorizationRevision: String(pinned.manifest.payload.authorizationRevision),
-      offlineValidUntil: pinned.manifest.payload.offlineValidUntil
-    };
-    const entries = [
-      ...ctx.identity.entries.filter((e) => e.origin !== "local" || knowledge.some((k) => k.id === e.id)),
-      ...central.entries
-    ];
-    const identity = contextIdentity({
-      entries,
-      required,
-      centralSnapshot,
-      hash: contentHash({
-        version: 2,
-        client,
-        sourceHash: ctx.sourceHash,
-        localContextHash: ctx.identity.hash,
-        entries,
-        required,
-        centralSnapshot,
-        central,
-        omissions
-      })
-    });
-    const problems = [...local.problems];
-    if (central.required.some((item) => !item.available))
-      problems.push({
-        code: "missing-context",
-        message: "Required central review instructions are unavailable or exceed the context budget."
-      });
-    const validUntil = [
-      ctx.validUntil,
-      central.validUntil,
-      input.freshness === "online" ? pinned.manifest.payload.refreshAfter : pinned.manifest.payload.offlineValidUntil
-    ].filter((v) => v !== null).sort()[0];
-    if (await input.cache.observeSnapshot(pinned.manifest, input.freshness) !== "current")
-      throw Error("central-context-changed");
-    return {
-      status: problems.length ? "needs-context" : "ready",
-      problems,
-      context: new LocalReviewContext({
-        client,
-        sourceHash: ctx.sourceHash,
-        identity,
-        knowledge,
-        builtin: ctx.builtin,
-        bytes,
-        omissions,
-        sources: ctx.sources,
-        validUntil,
-        transferable: problems.length === 0,
-        central,
-        centralTransfer: {
-          manifest: pinned.manifest,
-          selection,
-          selectionHash: contentHash(central)
-        }
-      }, {
-        cache: input.cache,
-        manifest: pinned.manifest,
-        mode: input.freshness,
-        ...input.assertConnection ? { assertConnection: input.assertConnection } : {}
-      })
-    };
-  } catch {
-    return {
-      status: "unavailable",
-      problems: [
-        {
-          code: "missing-context",
-          message: "A complete authorized central review context could not be validated or loaded."
-        }
-      ]
-    };
-  }
-}
-
 // node_modules/@gcr/client-core/dist/review-policy.js
 var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"]);
 
@@ -18987,186 +17398,6 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
 var import_promises4 = require("node:timers/promises");
-
-// node_modules/@gcr/client-core/dist/remote-review.js
-var import_node_crypto10 = require("node:crypto");
-var hash3 = (text7) => (0, import_node_crypto10.createHash)("sha256").update(text7).digest("hex");
-var RemoteReviewValidationError = class extends Error {
-  code;
-  constructor(code3) {
-    super(code3);
-    this.code = code3;
-    this.name = "RemoteReviewValidationError";
-  }
-};
-function validateRemoteReviewPayload(input) {
-  try {
-    canonicalJson(input, REMOTE_REVIEW_MAX_BYTES);
-    const payload = remoteReviewPayload(input);
-    const excluded = sourcePathPolicy();
-    for (const file of payload.source.files) {
-      const { metadata, text: text7 } = file;
-      const bytes = Buffer.from(text7, "utf8");
-      if (excluded(metadata.path) || bytes.length > 2 * 1024 * 1024 || text7.includes("\0") || bytes.toString("utf8") !== text7 || bytes.length !== metadata.byteLength || text7.split("\n").length !== metadata.lineCount || hash3(text7) !== metadata.hash)
-        throw Error("invalid-upload");
-      if (metadata.gitBlob) {
-        const oid = (0, import_node_crypto10.createHash)(payload.source.snapshot.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
-        if (oid !== metadata.gitBlob)
-          throw Error("invalid-upload");
-      }
-    }
-    for (const document3 of payload.context.documents) {
-      if (hash3(document3.text) !== document3.hash || Buffer.from(document3.text, "utf8").toString("utf8") !== document3.text)
-        throw Error("invalid-upload");
-    }
-    for (const change of payload.source.review?.changes ?? []) {
-      if (excluded(change.path) || change.oldPath && excluded(change.oldPath))
-        throw Error("invalid-upload");
-    }
-    const resolved = payload.context.resolved;
-    if (resolved) {
-      if (contentHash(resolved.client) !== contentHash(payload.client) || resolved.sourceHash !== payload.source.snapshot.hash || payload.client.mode === "centralized" !== (resolved.central !== void 0) || new Set(resolved.knowledge.map((item) => item.id)).size !== resolved.knowledge.length)
-        throw Error("invalid-upload");
-      for (const item of resolved.knowledge) {
-        const { hash: hash5, ...body2 } = item;
-        if (hash5 !== contentHash(body2) || item.scope.profileId !== payload.client.profileId || item.scope.kind === "repository" && (item.scope.repositoryKey !== payload.client.repositoryKey || item.scope.worktreeKey !== payload.client.worktreeKey))
-          throw Error("invalid-upload");
-      }
-      if (resolved.central && contentHash(resolved.central.manifest.payload.audience) !== contentHash(payload.audience))
-        throw Error("invalid-upload");
-    }
-    return payload;
-  } catch {
-    throw new RemoteReviewValidationError("invalid-upload");
-  }
-}
-function prepareRemoteReview(input) {
-  const { snapshot, sourceFiles, ...fields } = input;
-  if (snapshot.repository.repositoryKey !== fields.client.repositoryKey || snapshot.repository.worktreeKey !== fields.client.worktreeKey)
-    throw new RemoteReviewValidationError("invalid-upload");
-  const files = sourceFiles.map((metadata) => {
-    const file = snapshot.readFile(metadata.path, metadata.side);
-    if (file.status !== "available" || contentHash(file.source) !== contentHash(metadata))
-      throw new RemoteReviewValidationError("invalid-upload");
-    return { metadata, text: file.text };
-  }).sort((a, b) => {
-    const left = `${a.metadata.side}:${a.metadata.path}`, right = `${b.metadata.side}:${b.metadata.path}`;
-    return left < right ? -1 : left > right ? 1 : 0;
-  });
-  const payload = validateRemoteReviewPayload({
-    ...fields,
-    source: {
-      provenance: "client-captured",
-      snapshot: snapshot.identity,
-      files,
-      selected: snapshot.selected.map(({ path: path43, side }) => ({ path: path43, side })),
-      review: {
-        incomplete: snapshot.incomplete,
-        changes: snapshot.selected.map((change) => {
-          const basePath = change.oldPath ?? change.path;
-          const base = snapshot.readFile(basePath, "base");
-          return {
-            ...change,
-            base: base.status === "absent" ? "absent" : files.some((file) => file.metadata.path === basePath && file.metadata.side === "base") ? "uploaded" : "unavailable"
-          };
-        })
-      }
-    }
-  });
-  const json = canonicalJson(payload, REMOTE_REVIEW_MAX_BYTES);
-  return { payload, payloadHash: hash3(json), bytes: Buffer.byteLength(json) };
-}
-function validateRemoteReviewRequest(input, expected) {
-  let request;
-  try {
-    canonicalJson(input, REMOTE_REVIEW_MAX_BYTES + 1024);
-    request = remoteReviewRequest(input);
-  } catch {
-    throw new RemoteReviewValidationError("invalid-upload");
-  }
-  request.payload = validateRemoteReviewPayload(request.payload);
-  if (request.approval.payloadHash !== contentHash(request.payload))
-    throw new RemoteReviewValidationError("approval-mismatch");
-  if (request.payload.clientId !== expected.clientId || ["serverId", "tenantId", "userId", "repositoryId"].some((key4) => request.payload.audience[key4] !== expected.audience[key4]))
-    throw new RemoteReviewValidationError("audience-mismatch");
-  return request;
-}
-function assertFreshRemoteReviewApproval(request, now = Date.now()) {
-  const age = now - Date.parse(request.approval.approvedAt);
-  if (!Number.isFinite(age) || age < -6e4 || age > 3e5)
-    throw new RemoteReviewValidationError("approval-expired");
-}
-function remoteReviewContextHash(payload) {
-  return contentHash({
-    version: 3,
-    client: payload.client,
-    sourceHash: payload.source.snapshot.hash,
-    context: payload.context
-  });
-}
-function centralReviewExecutorConfigHash(model, modelCalls) {
-  return contentHash({
-    accountId: model.accountId,
-    model: model.name,
-    reasoningEffort: model.reasoningEffort,
-    modelCalls
-  });
-}
-function prepareRemoteReviewHandle(input) {
-  const { payload: p, approval } = validateRemoteReviewRequest(input, input.payload);
-  return remoteReviewHandle({
-    schemaVersion: 1,
-    requestId: p.requestId,
-    audience: p.audience,
-    clientId: p.clientId,
-    payloadHash: approval.payloadHash,
-    client: p.client,
-    source: p.source.snapshot,
-    sourceFiles: p.source.files.map((f) => f.metadata),
-    selected: p.source.selected,
-    contextHash: remoteReviewContextHash(p),
-    model: p.model.name,
-    executorConfigHash: centralReviewExecutorConfigHash(p.model, p.budget.modelCalls),
-    sourceSeconds: p.retention.sourceSeconds,
-    resultSeconds: p.retention.resultSeconds
-  });
-}
-var RemoteReviewDeliveryError = class extends Error {
-  code;
-  statusCode;
-  authorityFailure;
-  constructor(code3, statusCode, authorityFailure) {
-    super(code3);
-    this.code = code3;
-    this.statusCode = statusCode;
-    this.authorityFailure = authorityFailure;
-    this.name = "RemoteReviewDeliveryError";
-  }
-};
-function verifyRemoteReviewStatus(handle2, input, previous3) {
-  try {
-    const h = remoteReviewHandle(handle2), s = remoteReviewStatus(input);
-    if (s.requestId !== h.requestId || s.payloadHash !== h.payloadHash || s.clientId !== h.clientId || contentHash(s.audience) !== contentHash(h.audience) || Date.parse(s.sourceExpiresAt) - Date.parse(s.receivedAt) !== h.sourceSeconds * 1e3 || Date.parse(s.resultExpiresAt) - Date.parse(s.receivedAt) !== h.resultSeconds * 1e3 || previous3 && (s.receivedAt !== previous3.receivedAt || s.sourceExpiresAt !== previous3.sourceExpiresAt || s.resultExpiresAt !== previous3.resultExpiresAt || previous3.state === "completed" && s.state === "completed" && s.reportHash !== previous3.reportHash))
-      throw Error("mismatch");
-    return s;
-  } catch {
-    throw new RemoteReviewDeliveryError("response-mismatch");
-  }
-}
-function verifyRemoteReviewResult(handle2, input, previous3) {
-  try {
-    const h = remoteReviewHandle(handle2), result = remoteReviewResult(input);
-    const s = verifyRemoteReviewStatus(h, result.status, previous3), r = result.report;
-    const hashes = (values) => contentHash(values.map((v) => contentHash(v)).sort());
-    if (s.state !== "completed" || s.reportHash !== contentHash(r) || !["completed", "partial", "needs-context"].includes(r.status) || !r.finishedAt || contentHash(r.identity.client) !== contentHash(h.client) || contentHash(r.identity.source) !== contentHash(h.source) || r.identity.context.hash !== h.contextHash || r.identity.executor.id !== "central" || r.identity.executor.model !== h.model || r.identity.executor.configHash !== h.executorConfigHash || hashes(r.sourceFiles) !== hashes(h.sourceFiles) || hashes(r.files.map((f) => ({ path: f.source.path, side: f.source.side }))) !== hashes(h.selected))
-      throw Error("mismatch");
-    return result;
-  } catch {
-    throw new RemoteReviewDeliveryError("response-mismatch");
-  }
-}
-
-// node_modules/@gcr/client-core/dist/knowledge-http.js
 var unavailable2 = () => new KnowledgeSyncError("unavailable", "Central HTTP request failed.");
 var KnowledgeHttpTransport = class {
   binding;
@@ -19179,7 +17410,7 @@ var KnowledgeHttpTransport = class {
     if (!(binding instanceof TrustedCentralBinding) || credential.bindingId !== binding.id)
       throw new KnowledgeSyncError("invalid-binding", "Credential binding does not match the selected server and audience.");
   }
-  async get(relative4, signal, etag, body2) {
+  async get(relative4, signal, etag) {
     if (signal.aborted)
       throw unavailable2();
     if (this.credential.bindingId !== this.binding.id)
@@ -19203,19 +17434,18 @@ var KnowledgeHttpTransport = class {
     return new Promise((resolve4, reject) => {
       const request = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
       const req = request(target, {
-        method: body2 === void 0 ? "GET" : "POST",
+        method: "GET",
         signal,
         ...target.protocol === "https:" ? { rejectUnauthorized: true, ...this.ca ? { ca: this.ca } : {} } : {},
         headers: {
           authorization: `Bearer ${token2}`,
           "x-gcr-server-id": this.binding.audience.serverId,
           accept: "application/json",
-          ...body2 === void 0 ? {} : { "content-type": "application/json", "content-length": Buffer.byteLength(body2) },
           ...etag ? { "if-none-match": etag } : {}
         }
       }, resolve4);
       req.on("error", () => reject(unavailable2()));
-      req.end(body2);
+      req.end();
     });
   }
   async failure(response) {
@@ -19294,25 +17524,17 @@ var KnowledgeHttpTransport = class {
       response.destroy();
     }
   }
-  /** Explicit write only. Its failures never mutate the knowledge cache. */
-  async submitReview(value, signal) {
-    const input = reviewSubmission(value);
-    if (contentHash(input.audience) !== contentHash(this.binding.audience))
-      throw new Error("submission-binding-mismatch");
-    const response = await this.get(`api/v1/repositories/${encodeURIComponent(input.audience.repositoryId)}/review-submissions/${input.kind === "result" ? "results" : "feedback"}`, signal, void 0, JSON.stringify(input));
-    const body2 = await this.submissionJson(response, [200, 201]);
-    const receipt2 = reviewSubmissionReceipt(body2);
-    if (receipt2.requestId !== input.id || receipt2.payloadHash !== contentHash(input) || contentHash(receipt2.audience) !== contentHash(input.audience) || receipt2.clientId !== input.clientId || receipt2.kind !== input.kind)
-      throw new ReviewSubmissionDeliveryError(503);
-    return receipt2;
+  /** Compatibility entry for old outboxes. Central propagation is read-only; no request is made. */
+  async submitReview(_value, _signal) {
+    throw new ReviewSubmissionDeliveryError(405);
   }
   async submissionStatus(value, signal) {
-    const receipt2 = reviewSubmissionReceipt(value);
-    if (contentHash(receipt2.audience) !== contentHash(this.binding.audience))
+    const receipt = reviewSubmissionReceipt(value);
+    if (contentHash(receipt.audience) !== contentHash(this.binding.audience))
       throw new Error("submission-binding-mismatch");
-    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt2.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt2.id)}/status`, signal);
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt.id)}/status`, signal);
     const result = reviewSubmissionStatus(await this.submissionJson(response, [200]));
-    if (contentHash(result.receipt) !== contentHash(receipt2))
+    if (contentHash(result.receipt) !== contentHash(receipt))
       throw new ReviewSubmissionDeliveryError(503);
     return result;
   }
@@ -19366,79 +17588,6 @@ var KnowledgeHttpTransport = class {
       response.destroy();
     }
   }
-  remoteRoute(handle2) {
-    const h = remoteReviewHandle(handle2);
-    if (contentHash(h.audience) !== contentHash(this.binding.audience))
-      throw new RemoteReviewDeliveryError("response-mismatch");
-    return `api/v1/repositories/${encodeURIComponent(h.audience.repositoryId)}/remote-reviews`;
-  }
-  async remoteJson(route, signal, body2) {
-    let response;
-    try {
-      response = await this.get(route, signal, void 0, body2);
-      const status = response.statusCode ?? 503;
-      const success = status === 200 || body2 !== void 0 && status === 201;
-      const chunks = [];
-      let size = 0;
-      for await (const chunk of response) {
-        const bytes = Buffer.from(chunk);
-        size += bytes.length;
-        if (size > (success && route.endsWith("/result") ? 16 * 1024 * 1024 + 65536 : success && route.endsWith("/models") ? 2 * 1024 * 1024 : 32768))
-          throw new RemoteReviewDeliveryError("delivery-unconfirmed");
-        chunks.push(bytes);
-      }
-      let value;
-      try {
-        value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
-      } catch {
-        throw new RemoteReviewDeliveryError(success ? "response-mismatch" : "http-error", status);
-      }
-      if (!success) {
-        const code3 = value?.error?.code;
-        const authority = status === 401 && code3 === "CLIENT_AUTHENTICATION_REQUIRED" ? "authentication-required" : status === 403 && code3 === "CLIENT_ACCESS_REVOKED" ? "revoked" : status === 503 && code3 === "IDENTITY_UNAVAILABLE" ? "identity-unavailable" : void 0;
-        throw new RemoteReviewDeliveryError("http-error", status, authority);
-      }
-      return value;
-    } catch (error2) {
-      if (error2 instanceof RemoteReviewDeliveryError)
-        throw error2;
-      throw new RemoteReviewDeliveryError("delivery-unconfirmed");
-    } finally {
-      response?.destroy();
-    }
-  }
-  async remoteReviewModels(clientId, signal) {
-    const raw = await this.remoteJson(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/remote-reviews/models`, signal);
-    try {
-      const result = remoteReviewModels(raw);
-      if (result.clientId !== clientId || contentHash(result.audience) !== contentHash(this.binding.audience))
-        throw new Error("mismatch");
-      return result;
-    } catch {
-      throw new RemoteReviewDeliveryError("response-mismatch");
-    }
-  }
-  async submitRemoteReview(value, signal) {
-    const input = validateRemoteReviewRequest(value, {
-      audience: this.binding.audience,
-      clientId: value.payload.clientId
-    });
-    const handle2 = prepareRemoteReviewHandle(input);
-    return verifyRemoteReviewStatus(handle2, await this.remoteJson(this.remoteRoute(handle2), signal, JSON.stringify(input)));
-  }
-  async remoteReviewStatus(handle2, signal) {
-    return verifyRemoteReviewStatus(handle2, await this.remoteJson(`${this.remoteRoute(handle2)}/${encodeURIComponent(handle2.requestId)}/status`, signal));
-  }
-  async remoteReviewResult(handle2, signal) {
-    return verifyRemoteReviewResult(handle2, await this.remoteJson(`${this.remoteRoute(handle2)}/${encodeURIComponent(handle2.requestId)}/result`, signal));
-  }
-  async cancelRemoteReview(handle2, signal) {
-    return verifyRemoteReviewStatus(handle2, await this.remoteJson(`${this.remoteRoute(handle2)}/${encodeURIComponent(handle2.requestId)}/cancel`, signal, JSON.stringify({
-      schemaVersion: 1,
-      requestId: handle2.requestId,
-      payloadHash: handle2.payloadHash
-    })));
-  }
   async bundle({ snapshotId, bundleId, signal }) {
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/bundles/${encodeURIComponent(bundleId)}?snapshotId=${encodeURIComponent(snapshotId)}`, signal);
     if (response.statusCode !== 200)
@@ -19462,7 +17611,7 @@ var ReviewSubmissionDeliveryError = class extends Error {
   statusCode;
   authorityFailure;
   constructor(statusCode, authorityFailure) {
-    super("Review submission was not confirmed.");
+    super(statusCode === 405 ? "Central integration is read-only. Local review data stays local." : "Review submission was not confirmed.");
     this.statusCode = statusCode;
     this.authorityFailure = authorityFailure;
     this.name = "ReviewSubmissionDeliveryError";
@@ -19470,8 +17619,8 @@ var ReviewSubmissionDeliveryError = class extends Error {
 };
 
 // node_modules/@gcr/client-core/dist/central-connection.js
-var import_node_path9 = __toESM(require("node:path"), 1);
-var import_node_crypto11 = require("node:crypto");
+var import_node_path6 = __toESM(require("node:path"), 1);
+var import_node_crypto9 = require("node:crypto");
 var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
 var CentralConnectionSetupError = class extends KnowledgeSyncError {
   connectionId;
@@ -19496,7 +17645,7 @@ var CentralConnections = class _CentralConnections {
       throw denied();
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
+      dataDirectory: import_node_path6.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
     });
     return new _CentralConnections(records, options, options.credentials ?? new PlatformCentralCredentialStore());
   }
@@ -19606,13 +17755,13 @@ var CentralConnections = class _CentralConnections {
       status: "pending",
       serverUrl: binding.serverUrl,
       audience: binding.audience,
-      trustedKeys: [...binding.verificationKeys()].map(([id4, key4]) => ({
+      trustedKeys: [...binding.verificationKeys()].map(([id4, key3]) => ({
         id: id4,
-        pem: key4.export({ type: "spki", format: "pem" }).toString()
+        pem: key3.export({ type: "spki", format: "pem" }).toString()
       })),
       ca: config.ca,
       offlineBehavior: behavior,
-      credentialReference: "gcr-" + (0, import_node_crypto11.randomUUID)(),
+      credentialReference: "gcr-" + (0, import_node_crypto9.randomUUID)(),
       keyId: identity.keyId,
       clientId,
       expiresAt: identity.expiresAt
@@ -19677,37 +17826,12 @@ var CentralConnections = class _CentralConnections {
     return this.submissionOperation(state, (transport, s) => transport.submitReview(input, s), signal);
   }
   async submissionStatus(id4, value, signal) {
-    const receipt2 = reviewSubmissionReceipt(value);
+    const receipt = reviewSubmissionReceipt(value);
     const state = await this.state(id4);
     await this.assert(state);
-    if (receipt2.clientId !== state.value.clientId)
+    if (receipt.clientId !== state.value.clientId)
       throw denied();
-    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt2, s), signal);
-  }
-  async remoteReviewModels(id4, signal) {
-    const state = await this.state(id4);
-    await this.assert(state);
-    return this.submissionOperation(state, (transport, s) => transport.remoteReviewModels(state.value.clientId, s), signal);
-  }
-  async submitRemoteReview(id4, value, signal) {
-    value = validateRemoteReviewRequest(value, value.payload);
-    return this.remoteOperation(id4, prepareRemoteReviewHandle(value), (t, s) => t.submitRemoteReview(value, s), signal);
-  }
-  async remoteReviewStatus(id4, handle2, signal) {
-    return this.remoteOperation(id4, handle2, (t, s) => t.remoteReviewStatus(handle2, s), signal);
-  }
-  async remoteReviewResult(id4, handle2, signal) {
-    return this.remoteOperation(id4, handle2, (t, s) => t.remoteReviewResult(handle2, s), signal);
-  }
-  async cancelRemoteReview(id4, handle2, signal) {
-    return this.remoteOperation(id4, handle2, (t, s) => t.cancelRemoteReview(handle2, s), signal);
-  }
-  async remoteOperation(id4, value, work, signal) {
-    const handle2 = remoteReviewHandle(value), state = await this.state(id4);
-    await this.assert(state);
-    if (handle2.clientId !== state.value.clientId || handle2.client.profileId !== this.options.scope.profileId || this.options.scope.kind !== "repository" || handle2.client.repositoryKey !== this.options.scope.repositoryKey || handle2.client.worktreeKey !== this.options.scope.worktreeKey)
-      throw denied();
-    return this.submissionOperation(state, work, signal);
+    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt, s), signal);
   }
   async submissionOperation(state, work, signal) {
     const cache = await this.cache(state.value);
@@ -19717,7 +17841,7 @@ var CentralConnections = class _CentralConnections {
       await this.assert(state);
       return result;
     } catch (error2) {
-      if ((error2 instanceof ReviewSubmissionDeliveryError || error2 instanceof RemoteReviewDeliveryError) && error2.authorityFailure) {
+      if (error2 instanceof ReviewSubmissionDeliveryError && error2.authorityFailure) {
         await this.assert(state);
         try {
           await cache.rejectAuthority(generation, error2.authorityFailure);
@@ -19953,8 +18077,8 @@ var KnowledgeSyncLoop = class {
 };
 
 // node_modules/@gcr/client-core/dist/review-requests.js
-var import_node_path10 = __toESM(require("node:path"), 1);
-var import_node_crypto12 = require("node:crypto");
+var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_crypto10 = require("node:crypto");
 var ReviewRequestError = class extends Error {
   code;
   retryAt;
@@ -19991,7 +18115,7 @@ var ReviewRequests = class _ReviewRequests {
       throw new ReviewRequestError("request-invalid");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
+      dataDirectory: import_node_path7.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
     });
     return new _ReviewRequests(records, options.now ?? Date.now);
   }
@@ -20009,16 +18133,16 @@ var ReviewRequests = class _ReviewRequests {
     if (scope.kind !== "repository" || scope.profileId !== client.profileId || scope.repositoryKey !== client.repositoryKey || scope.worktreeKey !== client.worktreeKey)
       throw new ReviewRequestError("request-invalid");
   }
-  async state(key4) {
-    if (!/^[a-f0-9]{64}$/.test(key4))
+  async state(key3) {
+    if (!/^[a-f0-9]{64}$/.test(key3))
       throw new ReviewRequestError("request-invalid");
-    const row = await this.records.read("settings", key4);
+    const row = await this.records.read("settings", key3);
     if (!row || row.deleted)
       return void 0;
     const value = reviewRequestRecord(row.value);
     this.checkIdentity(value.identity);
     this.time(value.updatedAt);
-    if (value.key !== key4 || reviewRequestKey(value.identity) !== key4)
+    if (value.key !== key3 || reviewRequestKey(value.identity) !== key3)
       throw new ReviewRequestError("request-invalid");
     return { revision: row.revision, value };
   }
@@ -20057,7 +18181,7 @@ var ReviewRequests = class _ReviewRequests {
   /** A caller renews its priority while waiting for or executing a manual review.
    * Expiration releases scheduling priority only; it never retries an unknown model. */
   async prioritizeManual(token2) {
-    const selected = token2 ?? (0, import_node_crypto12.randomUUID)();
+    const selected = token2 ?? (0, import_node_crypto10.randomUUID)();
     return this.retry(async () => {
       const state = await this.priorityState();
       const existing = state.value.holders.find((holder) => holder.token === selected);
@@ -20096,9 +18220,9 @@ var ReviewRequests = class _ReviewRequests {
     const identity = executionIdentity(input);
     this.checkIdentity(identity);
     reviewTrigger(reason);
-    const key4 = reviewRequestKey(identity);
+    const key3 = reviewRequestKey(identity);
     return this.retry(async () => {
-      const state = await this.state(key4);
+      const state = await this.state(key3);
       if (state) {
         if (state.value.reasons.includes(reason))
           return state.value;
@@ -20111,7 +18235,7 @@ var ReviewRequests = class _ReviewRequests {
       const now = this.time();
       return this.put(void 0, {
         formatVersion: 1,
-        key: key4,
+        key: key3,
         identity,
         reasons: [reason],
         state: "queued",
@@ -20123,8 +18247,8 @@ var ReviewRequests = class _ReviewRequests {
       });
     });
   }
-  async get(key4) {
-    return (await this.state(key4))?.value;
+  async get(key3) {
+    return (await this.state(key3))?.value;
   }
   async list() {
     const rows = [];
@@ -20137,12 +18261,12 @@ var ReviewRequests = class _ReviewRequests {
     }
     return rows.sort((a, b) => b.updatedAt - a.updatedAt);
   }
-  async claim(key4, options = {}) {
+  async claim(key3, options = {}) {
     const leaseMs = options.leaseMs ?? 3e4;
     if (!Number.isInteger(leaseMs) || leaseMs < 1e3 || leaseMs > 12e4)
       throw new ReviewRequestError("request-invalid");
     return this.retry(async () => {
-      const state = await this.state(key4);
+      const state = await this.state(key3);
       if (!state)
         throw new ReviewRequestError("request-invalid");
       const now = this.time(state.value.updatedAt);
@@ -20163,7 +18287,7 @@ var ReviewRequests = class _ReviewRequests {
         return { kind: "interrupted", request: state.value };
       if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
         return { kind: "finished", request: state.value };
-      const token2 = (0, import_node_crypto12.randomUUID)(), generation = state.value.generation + 1;
+      const token2 = (0, import_node_crypto10.randomUUID)(), generation = state.value.generation + 1;
       const request = await this.put(state, {
         ...state.value,
         state: "claimed",
@@ -20172,7 +18296,7 @@ var ReviewRequests = class _ReviewRequests {
         owner: { token: token2, deadline: now + leaseMs },
         resultId: null
       });
-      return { kind: "acquired", request, lease: { key: key4, token: token2, generation } };
+      return { kind: "acquired", request, lease: { key: key3, token: token2, generation } };
     });
   }
   async owned(lease) {
@@ -20277,11 +18401,11 @@ var ReviewRequests = class _ReviewRequests {
   /** Reattach only this attempt's terminal report. Never claim or run a model.
    * A missing receipt/history leaves interruption visible; lease expiry alone
    * does not establish that an external executor stopped. */
-  async reconcile(key4, generation, input) {
+  async reconcile(key3, generation, input) {
     if (!Number.isSafeInteger(generation) || generation < 1)
       throw new ReviewRequestError("request-invalid");
     return this.retry(async () => {
-      let state = await this.state(key4);
+      let state = await this.state(key3);
       if (!state || state.value.generation !== generation)
         throw new ReviewRequestError("request-invalid");
       const now = this.time(state.value.updatedAt);
@@ -20294,29 +18418,29 @@ var ReviewRequests = class _ReviewRequests {
           owner: null,
           updatedAt: now
         });
-        state = await this.state(key4);
+        state = await this.state(key3);
         if (state.value.generation !== generation || state.value.state !== value.state)
           throw new ReviewRequestError("request-lost");
       }
       if (!["interrupted", "finished"].includes(state.value.state))
         return { request: state.value };
       await input.assertValid();
-      const row = await this.records.read("chats", `completion_${key4}_${generation}`);
-      const receipt2 = row && !row.deleted ? row.value : void 0;
-      if (receipt2 && (receipt2.version !== 1 || receipt2.key !== key4 || receipt2.generation !== generation || typeof receipt2.reportId !== "string" || typeof receipt2.reportHash !== "string" || !/^[a-f0-9]{64}$/.test(receipt2.reportHash)))
+      const row = await this.records.read("chats", `completion_${key3}_${generation}`);
+      const receipt = row && !row.deleted ? row.value : void 0;
+      if (receipt && (receipt.version !== 1 || receipt.key !== key3 || receipt.generation !== generation || typeof receipt.reportId !== "string" || typeof receipt.reportHash !== "string" || !/^[a-f0-9]{64}$/.test(receipt.reportHash)))
         throw new ReviewRequestError("request-invalid");
-      if (!receipt2 && state.value.state !== "finished")
+      if (!receipt && state.value.state !== "finished")
         return { request: state.value };
-      const id4 = state.value.resultId ?? String(receipt2.reportId);
+      const id4 = state.value.resultId ?? String(receipt.reportId);
       const report = await input.loadReport(id4);
       if (!report)
         return { request: state.value };
       const parsed = clientReviewReport(report);
-      if (parsed.runId !== id4 || !parsed.finishedAt || reviewRequestKey(parsed.identity) !== key4 || receipt2 && (receipt2.reportId !== id4 || receipt2.reportHash !== contentHash(parsed)))
+      if (parsed.runId !== id4 || !parsed.finishedAt || reviewRequestKey(parsed.identity) !== key3 || receipt && (receipt.reportId !== id4 || receipt.reportHash !== contentHash(parsed)))
         throw new ReviewRequestError("request-invalid");
       await input.assertValid();
       if (state.value.state === "finished") {
-        if ((await this.state(key4))?.revision !== state.revision)
+        if ((await this.state(key3))?.revision !== state.revision)
           throw new ReviewRequestError("request-lost");
         return { request: state.value, report: parsed };
       }
@@ -20357,32 +18481,32 @@ var AutomaticReviewScheduler = class {
   now() {
     return (this.options.now ?? Date.now)();
   }
-  submit(key4, value, options = {}) {
+  submit(key3, value, options = {}) {
     if (this.stopped)
       return;
     const debounce = options.debounceMs ?? 3e3;
     if (!Number.isFinite(debounce) || debounce < 0 || debounce > 36e5)
       throw Error("Invalid automatic review debounce");
-    const generation = (this.generations.get(key4) ?? 0) + 1;
-    this.generations.set(key4, generation);
-    if (this.active?.key === key4)
+    const generation = (this.generations.get(key3) ?? 0) + 1;
+    this.generations.set(key3, generation);
+    if (this.active?.key === key3)
       this.active.controller.abort("superseded");
     const at = this.now() + debounce;
-    this.pending.set(key4, { key: key4, generation, value, at, priority: options.priority ?? 0 });
-    this.options.onState?.({ key: key4, phase: "waiting", reason: "debounce", retryAt: at });
+    this.pending.set(key3, { key: key3, generation, value, at, priority: options.priority ?? 0 });
+    this.options.onState?.({ key: key3, phase: "waiting", reason: "debounce", retryAt: at });
     this.wake();
   }
-  cancel(key4) {
-    this.generations.set(key4, (this.generations.get(key4) ?? 0) + 1);
-    this.pending.delete(key4);
-    if (this.active?.key === key4)
+  cancel(key3) {
+    this.generations.set(key3, (this.generations.get(key3) ?? 0) + 1);
+    this.pending.delete(key3);
+    if (this.active?.key === key3)
       this.active.controller.abort("cancelled");
-    this.options.onState?.({ key: key4, phase: "cancelled" });
+    this.options.onState?.({ key: key3, phase: "cancelled" });
     this.wake();
   }
   clear() {
-    for (const key4 of this.generations.keys())
-      this.cancel(key4);
+    for (const key3 of this.generations.keys())
+      this.cancel(key3);
   }
   dispose() {
     this.stopped = true;
@@ -20453,14 +18577,14 @@ var AutomaticReviewScheduler = class {
 };
 
 // node_modules/@gcr/client-core/dist/automatic-source.js
-var import_node_child_process4 = require("node:child_process");
-var import_node_fs5 = require("node:fs");
+var import_node_child_process3 = require("node:child_process");
+var import_node_fs3 = require("node:fs");
 var import_promises5 = require("node:fs/promises");
-var import_node_path11 = __toESM(require("node:path"), 1);
-var import_node_crypto13 = require("node:crypto");
+var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_crypto11 = require("node:crypto");
 async function git(cwd, args, input, allow = [0]) {
   return new Promise((resolve4, reject) => {
-    const child = (0, import_node_child_process4.execFile)("git", [
+    const child = (0, import_node_child_process3.execFile)("git", [
       ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
       "-c",
       "core.fsmonitor=false",
@@ -20571,8 +18695,8 @@ async function newlyStagedPaths(previous3, current) {
   const distance = async (left, right) => {
     if (left === right)
       return 0;
-    const key4 = [left, right].sort().join(":");
-    const cached = distances.get(key4);
+    const key3 = [left, right].sort().join(":");
+    const cached = distances.get(key3);
     if (cached !== void 0)
       return cached;
     const leftLines = await lines2(left), rightLines = await lines2(right);
@@ -20596,7 +18720,7 @@ async function newlyStagedPaths(previous3, current) {
     if (!row)
       throw new SourceCaptureError("source-unavailable");
     const value = Number(row[1]) + Number(row[2]);
-    distances.set(key4, value);
+    distances.set(key3, value);
     return value;
   };
   const added = [];
@@ -20638,8 +18762,8 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
   file = sourcePath(file);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path11.default.join(root2, file);
-  let parent = import_node_path11.default.dirname(absolute);
+  const absolute = import_node_path8.default.join(root2, file);
+  let parent = import_node_path8.default.dirname(absolute);
   for (; ; ) {
     try {
       if (await (0, import_promises5.realpath)(parent) !== parent)
@@ -20648,17 +18772,17 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     } catch (error2) {
       if (error2.code !== "ENOENT" || parent === root2)
         return void 0;
-      parent = import_node_path11.default.dirname(parent);
+      parent = import_node_path8.default.dirname(parent);
     }
   }
-  if (parent !== root2 && !parent.startsWith(root2 + import_node_path11.default.sep))
+  if (parent !== root2 && !parent.startsWith(root2 + import_node_path8.default.sep))
     return void 0;
   const ignored = knownChanged ? "" : await git(root2, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
     return void 0;
   let handle2;
   try {
-    handle2 = await (0, import_promises5.open)(absolute, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW | import_node_fs5.constants.O_NONBLOCK);
+    handle2 = await (0, import_promises5.open)(absolute, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW | import_node_fs3.constants.O_NONBLOCK);
     const before = await handle2.stat();
     if (!before.isFile() || before.size > 2 * 1024 * 1024)
       return void 0;
@@ -20676,7 +18800,7 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     if (buffer.subarray(0, length).includes(0))
       return void 0;
     const changed = knownChanged || await workingTreeChanged(root2, file);
-    return { hash: (0, import_node_crypto13.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
+    return { hash: (0, import_node_crypto11.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       const changed = knownChanged || await workingTreeChanged(root2, file);
@@ -20689,9 +18813,9 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
 }
 
 // node_modules/@gcr/client-core/dist/service-jobs.js
-var import_node_path12 = __toESM(require("node:path"), 1);
+var import_node_path9 = __toESM(require("node:path"), 1);
 var import_promises6 = require("node:fs/promises");
-var import_node_crypto14 = require("node:crypto");
+var import_node_crypto12 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/service-watch.js
 var uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -20754,7 +18878,7 @@ var invalid4 = () => new LocalServiceError("service-invalid");
 function reviewOptions(input) {
   const value = structuredClone(input);
   value.maximumReviewsPerHour ??= 6;
-  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path12.default.isAbsolute(value.executorPath)))
+  if (!value || !["standalone", "centralized"].includes(value.mode) || value.model !== "gpt-6-astra" || value.reasoningEffort !== "xhigh" || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path9.default.isAbsolute(value.executorPath)))
     throw invalid4();
   for (const [field, max] of [
     ["durationMs", 6e5],
@@ -20786,7 +18910,7 @@ var ServiceJobs = class _ServiceJobs {
       throw invalid4();
     return new _ServiceJobs(await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path12.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
+      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
     }), options.scope.profileId, options);
   }
   close() {
@@ -20838,7 +18962,7 @@ var ServiceJobs = class _ServiceJobs {
             throw new LocalServiceError("service-busy");
         }
       }
-      const token2 = (0, import_node_crypto14.randomUUID)();
+      const token2 = (0, import_node_crypto12.randomUUID)();
       try {
         await this.records.write("settings", "owner", { version: 1, pid: process.pid, token: token2 }, row?.revision ?? 0);
         return token2;
@@ -20863,15 +18987,15 @@ var ServiceJobs = class _ServiceJobs {
   async register(root2, triggers, options) {
     root2 = await (0, import_promises6.realpath)(root2);
     const identity = discoverLocalIdentity(root2, this.profileId);
-    const key4 = contentHash({
+    const key3 = contentHash({
       repositoryKey: identity.repositoryKey,
       worktreeKey: identity.worktreeKey
     });
     const allowed = [...new Set(triggers.map((t) => reviewTrigger(t)))].sort();
-    const row = await this.records.read("settings", `repo_${key4}`);
+    const row = await this.records.read("settings", `repo_${key3}`);
     const registration = {
       version: 1,
-      key: key4,
+      key: key3,
       root: root2,
       repositoryKey: identity.repositoryKey,
       worktreeKey: identity.worktreeKey,
@@ -20879,17 +19003,17 @@ var ServiceJobs = class _ServiceJobs {
       triggers: allowed,
       options: reviewOptions(options)
     };
-    await this.records.write("settings", `repo_${key4}`, registration, row?.revision ?? 0);
+    await this.records.write("settings", `repo_${key3}`, registration, row?.revision ?? 0);
     return registration;
   }
-  async registration(key4) {
-    if (!/^[a-f0-9]{64}$/.test(key4))
+  async registration(key3) {
+    if (!/^[a-f0-9]{64}$/.test(key3))
       throw invalid4();
-    const row = await this.records.read("settings", `repo_${key4}`);
+    const row = await this.records.read("settings", `repo_${key3}`);
     if (!row || row.deleted)
       return;
     const value = row.value;
-    if (value.version !== 1 || value.key !== key4 || value.revision !== row.revision || !import_node_path12.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key4 || !Array.isArray(value.triggers))
+    if (value.version !== 1 || value.key !== key3 || value.revision !== row.revision || !import_node_path9.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key3 || !Array.isArray(value.triggers))
       throw invalid4();
     value.triggers.forEach((t) => reviewTrigger(t));
     reviewOptions(value.options);
@@ -20922,14 +19046,14 @@ var ServiceJobs = class _ServiceJobs {
     return value;
   }
   async list() {
-    const jobs2 = [];
+    const jobs = [];
     for (const id4 of await this.records.listIds("settings"))
       if (id4.startsWith("job_")) {
         const job = await this.job(id4.slice(4));
         if (job)
-          jobs2.push(job);
+          jobs.push(job);
       }
-    return jobs2.sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+    return jobs.sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
   }
   async submit(input) {
     if (!validId(input.id))
@@ -21159,16 +19283,16 @@ var ServiceJobs = class _ServiceJobs {
 
 // node_modules/@gcr/client-core/dist/local-service.js
 var import_node_net = __toESM(require("node:net"), 1);
-var import_node_path13 = __toESM(require("node:path"), 1);
-var import_node_os3 = __toESM(require("node:os"), 1);
+var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_os2 = __toESM(require("node:os"), 1);
 var maximumFrame = 9 * 1024 * 1024;
 async function localServiceAddress(options) {
   if (process.platform === "win32")
     throw new LocalServiceError("service-unavailable");
-  const directory = await privateRoot(import_node_path13.default.join(import_node_os3.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
-  const data = await privateRoot(import_node_path13.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
-  const key4 = contentHash({ profile: options.profileId, data });
-  const socket = import_node_path13.default.join(directory, key4.slice(0, 24));
+  const directory = await privateRoot(import_node_path10.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
+  const data = await privateRoot(import_node_path10.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
+  const key3 = contentHash({ profile: options.profileId, data });
+  const socket = import_node_path10.default.join(directory, key3.slice(0, 24));
   if (Buffer.byteLength(socket) > 100)
     throw new LocalServiceError("service-unavailable");
   return socket;
@@ -21181,24 +19305,24 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
   return new Promise((resolve4, reject) => {
     const socket = import_node_net.default.createConnection(address);
     let received = Buffer.alloc(0), settled = false;
-    const fail4 = () => {
+    const fail2 = () => {
       if (!settled) {
         settled = true;
         reject(new LocalServiceError("service-unavailable"));
       }
       socket.destroy();
     };
-    socket.setTimeout(timeoutMs, fail4);
-    socket.on("error", fail4);
+    socket.setTimeout(timeoutMs, fail2);
+    socket.on("error", fail2);
     socket.on("end", () => {
       if (!settled)
-        fail4();
+        fail2();
     });
     socket.on("connect", () => socket.write(body2));
     socket.on("data", (chunk) => {
       received = Buffer.concat([received, chunk]);
       if (received.length > maximumFrame) {
-        fail4();
+        fail2();
         return;
       }
       const end = received.indexOf(10);
@@ -21222,456 +19346,16 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
           ].includes(reply.error) ? reply.error : "service-invalid"));
         socket.destroy();
       } catch {
-        fail4();
+        fail2();
       }
     });
   });
 }
 
-// node_modules/@gcr/client-core/dist/review-submissions.js
-var import_node_path14 = __toESM(require("node:path"), 1);
-var import_node_crypto15 = require("node:crypto");
-var ReviewSubmissionQueueError = class extends Error {
-  code;
-  constructor(code3) {
-    super(code3);
-    this.code = code3;
-    this.name = "ReviewSubmissionQueueError";
-  }
-};
-var fail2 = (code3) => {
-  throw new ReviewSubmissionQueueError(code3);
-};
-function reviewSubmissionPolicyState(status, snapshot, now = Date.now()) {
-  if (contentHash(status.receipt.audience) !== contentHash(snapshot.manifest.payload.audience))
-    return fail2("selection-changed");
-  const d = status.decision;
-  if (!d || d.action === "dismiss")
-    return "no-adoption";
-  const rule = d.rule;
-  if (rule.state !== "active")
-    return "not-active";
-  const feedback = d.feedback;
-  if (feedback && !feedback.resolution)
-    return "pending-feedback";
-  if (feedback?.resolution?.action === "reject")
-    return "feedback-rejected";
-  if (feedback?.kind === "correction" && rule.revision <= feedback.revision)
-    return "acknowledged-only";
-  const exception = feedback?.exception;
-  if (exception) {
-    if (exception.revision !== rule.revision)
-      return "outdated-exception";
-    if (exception.revoked || Date.parse(exception.startsAt) > now || Date.parse(exception.expiresAt) <= now)
-      return "exception-inactive";
-  }
-  const policy = snapshot.bundles.policy;
-  const item = policy.component === "policy" ? policy.criteria.find((x) => x.id === rule.id && x.revision === rule.revision && x.sourceContentHash === rule.contentHash) : void 0;
-  if (!item || exception && !item.exceptions.some((x) => x.id === exception.id))
-    return "awaiting-publication";
-  return exception ? "exception-current" : "criterion-current";
-}
-var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
-  records;
-  connectionId;
-  connections;
-  now;
-  constructor(records, connectionId, connections, now) {
-    this.records = records;
-    this.connectionId = connectionId;
-    this.connections = connections;
-    this.now = now;
-  }
-  static async open(options) {
-    centralConnectionReference(options.connectionId);
-    if (options.scope.kind !== "repository")
-      fail2("repository-required");
-    const records = await LocalRecordStore.open({
-      ...options,
-      dataDirectory: import_node_path14.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-submissions", options.connectionId)
-    });
-    const queue = new _ReviewSubmissionQueue(records, options.connectionId, options.connections, options.now ?? (() => /* @__PURE__ */ new Date()));
-    try {
-      await queue.prune();
-      return queue;
-    } catch (error2) {
-      queue.close();
-      throw error2;
-    }
-  }
-  close() {
-    this.records.close();
-  }
-  async selected(payload) {
-    const identity = await this.connections.historyIdentity(this.connectionId);
-    const state = await this.connections.status(this.connectionId);
-    if (identity.id !== this.connectionId || state.status !== "connected" || state.clientId !== payload.clientId || contentHash(identity.audience) !== contentHash(payload.audience))
-      fail2("selection-changed");
-  }
-  async entry(id4, authorize = true) {
-    const row = await this.records.read("submissions", id4);
-    if (!row || row.deleted)
-      return fail2("missing");
-    const value = row.value;
-    if (!value || value.formatVersion !== 1 || value.connectionId !== this.connectionId || !["pending", "sending", "submitted", "rejected", "cancelled"].includes(value.status) || !Number.isSafeInteger(value.attempts) || value.attempts < 0)
-      return fail2("invalid-record");
-    const payload = reviewSubmission(value.payload);
-    if (payload.id !== id4 || value.payloadHash !== contentHash(payload))
-      return fail2("invalid-record");
-    if (value.status === "sending" && (!value.lease || !Number.isFinite(Date.parse(value.lease.until))))
-      return fail2("invalid-record");
-    if (value.receipt)
-      this.verifyReceipt(payload, value.receipt);
-    if (authorize)
-      await this.selected(payload);
-    return { revision: row.revision, value };
-  }
-  verifyReceipt(payload, raw) {
-    const value = reviewSubmissionReceipt(raw);
-    if (value.requestId !== payload.id || value.payloadHash !== contentHash(payload) || value.kind !== payload.kind || value.clientId !== payload.clientId || contentHash(value.audience) !== contentHash(payload.audience))
-      fail2("receipt-mismatch");
-    return value;
-  }
-  async get(id4) {
-    return this.entry(id4);
-  }
-  async list() {
-    const values = [];
-    for (const id4 of await this.records.listIds("submissions")) {
-      const row = await this.records.read("submissions", id4);
-      if (row && !row.deleted)
-        values.push(await this.entry(id4));
-    }
-    return values;
-  }
-  async enqueue(raw, confirmedPayloadHash) {
-    const payload = reviewSubmission(raw), hash5 = contentHash(payload);
-    if (confirmedPayloadHash !== hash5)
-      fail2("confirmation-required");
-    const approved = Date.parse(payload.approvedAt), now = this.now().getTime();
-    if (approved > now + 6e4 || approved < now - REVIEW_SUBMISSION_RETENTION_MS)
-      fail2("approval-expired");
-    await this.selected(payload);
-    const previous3 = await this.records.read("submissions", payload.id);
-    if (previous3) {
-      if (previous3.deleted)
-        fail2("request-retired");
-      const row = await this.entry(payload.id);
-      if (row.value.payloadHash !== hash5)
-        fail2("id-conflict");
-      return row;
-    }
-    if ((await this.list()).length >= 1e3)
-      fail2("queue-full");
-    const value = {
-      formatVersion: 1,
-      connectionId: this.connectionId,
-      payload,
-      payloadHash: hash5,
-      status: "pending",
-      attempts: 0,
-      lease: null,
-      receipt: null,
-      lastError: null
-    };
-    await this.records.write("submissions", payload.id, value, 0);
-    return this.entry(payload.id);
-  }
-  async send(id4, signal, retryRejected = false) {
-    const row = await this.entry(id4), now = this.now();
-    if (row.value.status === "submitted")
-      return row;
-    if (row.value.status === "cancelled")
-      fail2("cancelled");
-    if (row.value.status === "rejected" && !retryRejected)
-      fail2("explicit-retry-required");
-    if (Date.parse(row.value.payload.approvedAt) + REVIEW_SUBMISSION_RETENTION_MS <= now.getTime())
-      fail2("approval-expired");
-    if (row.value.status === "sending" && Date.parse(row.value.lease.until) > now.getTime())
-      fail2("busy");
-    if (signal?.aborted)
-      fail2("cancelled");
-    const value = {
-      ...row.value,
-      status: "sending",
-      attempts: row.value.attempts + 1,
-      lease: { owner: (0, import_node_crypto15.randomUUID)(), until: new Date(now.getTime() + 6e4).toISOString() },
-      lastError: null
-    };
-    const claim = await this.records.write("submissions", id4, value, row.revision);
-    let result;
-    try {
-      const receipt2 = this.verifyReceipt(value.payload, await this.connections.submitReview(this.connectionId, value.payload, signal));
-      await this.selected(value.payload);
-      result = { ...value, status: "submitted", lease: null, receipt: receipt2 };
-    } catch (error2) {
-      const status = error2 instanceof ReviewSubmissionDeliveryError ? error2.statusCode : void 0;
-      const rejected = status !== void 0 && [400, 401, 403, 404, 409, 410, 413, 426].includes(status);
-      result = {
-        ...value,
-        status: rejected ? "rejected" : "pending",
-        lease: null,
-        lastError: rejected ? `http-${status}` : "delivery-unconfirmed"
-      };
-    }
-    await this.records.write("submissions", id4, result, claim.revision);
-    return this.entry(id4);
-  }
-  async cancel(id4) {
-    const row = await this.entry(id4);
-    if (row.value.status === "sending")
-      fail2("delivery-unconfirmed");
-    if (row.value.status === "submitted")
-      fail2("already-submitted");
-    await this.records.write("submissions", id4, {
-      ...row.value,
-      status: "cancelled",
-      lease: null,
-      lastError: row.value.attempts ? "server-outcome-unconfirmed" : null
-    }, row.revision);
-    return this.entry(id4);
-  }
-  async prune() {
-    let deleted = 0;
-    for (const id4 of await this.records.listIds("submissions")) {
-      const record2 = await this.records.read("submissions", id4);
-      if (!record2 || record2.deleted)
-        continue;
-      const row = await this.entry(id4, false);
-      if (Date.parse(row.value.payload.approvedAt) + REVIEW_SUBMISSION_RETENTION_MS > this.now().getTime())
-        continue;
-      if (row.value.lease && Date.parse(row.value.lease.until) > this.now().getTime())
-        continue;
-      await this.records.remove("submissions", row.value.payload.id, row.revision);
-      deleted++;
-    }
-    return { deleted };
-  }
-};
-function prepareReviewSubmission(input) {
-  const report = clientReviewReport(input.report), identity = report.identity;
-  if (identity.client.mode === "centralized" && contentHash(identity.client.audience) !== contentHash(input.audience))
-    fail2("selection-changed");
-  const common3 = {
-    schemaVersion: 1,
-    id: input.id,
-    audience: input.audience,
-    clientId: input.clientId,
-    approvedAt: input.approvedAt,
-    visibility: "repository-reviewers",
-    review: {
-      runId: report.runId,
-      mode: identity.client.mode,
-      sourceHash: identity.source.hash,
-      contextHash: identity.context.hash,
-      snapshot: identity.context.centralSnapshot ? { id: identity.context.centralSnapshot.id, hash: identity.context.centralSnapshot.hash } : null
-    }
-  };
-  const selection = input.selection;
-  let raw;
-  if (selection.kind === "result")
-    raw = {
-      ...common3,
-      kind: "result",
-      result: {
-        status: report.status,
-        fileCount: report.files.length,
-        findingCount: report.findings.length
-      }
-    };
-  else {
-    const finding = selection.findingId ? report.findings.find((f) => f.id === selection.findingId) : void 0;
-    if (selection.findingId && !finding)
-      fail2("finding-missing");
-    const rule = finding?.policy.ruleId ? identity.context.entries.find((e) => e.origin === "central" && e.kind === "policy" && e.id === finding.policy.ruleId && e.revision === finding.policy.ruleRevision) : void 0;
-    raw = {
-      ...common3,
-      kind: "feedback",
-      feedback: {
-        kind: selection.feedbackKind,
-        message: selection.message,
-        findingId: finding?.id ?? null,
-        rule: rule ? { id: rule.id, revision: rule.revision, hash: rule.hash } : null,
-        source: selection.includeSourceReference ? finding?.anchor ?? null : null
-      }
-    };
-  }
-  const submission = reviewSubmission(raw);
-  return { submission, payloadHash: contentHash(submission) };
-}
-
-// node_modules/@gcr/client-core/dist/remote-review-client.js
-var import_node_path15 = __toESM(require("node:path"), 1);
-var import_promises7 = require("node:timers/promises");
-var RemoteReviewClientError = class extends Error {
-  code;
-  constructor(code3) {
-    super(code3);
-    this.code = code3;
-    this.name = "RemoteReviewClientError";
-  }
-};
-var RemoteReviewClient = class _RemoteReviewClient {
-  records;
-  connectionId;
-  connections;
-  constructor(records, connectionId, connections) {
-    this.records = records;
-    this.connectionId = connectionId;
-    this.connections = connections;
-  }
-  static async open(options) {
-    centralConnectionReference(options.connectionId);
-    if (options.scope.kind !== "repository")
-      throw new RemoteReviewClientError("repository-required");
-    const records = await LocalRecordStore.open({
-      ...options,
-      dataDirectory: import_node_path15.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "remote-review-receipts", options.connectionId)
-    });
-    return new _RemoteReviewClient(records, options.connectionId, options.connections);
-  }
-  close() {
-    this.records.close();
-  }
-  async selected(h) {
-    const state = await this.connections.status(this.connectionId), scope = this.records.scope;
-    if (state.status !== "connected" || state.id !== this.connectionId || state.clientId !== h.clientId || contentHash(state.audience) !== contentHash(h.audience) || scope.kind !== "repository" || scope.profileId !== h.client.profileId || scope.repositoryKey !== h.client.repositoryKey || scope.worktreeKey !== h.client.worktreeKey)
-      throw new RemoteReviewClientError("remote-selection-changed");
-  }
-  async entry(id4) {
-    const row = await this.records.read("submissions", id4);
-    if (!row || row.deleted)
-      throw new RemoteReviewClientError("remote-request-missing");
-    const value = row.value, h = remoteReviewHandle(value?.handle);
-    if (value.formatVersion !== 1 || h.requestId !== id4 || typeof value.cancellationRequested !== "boolean" || !Number.isFinite(Date.parse(value.approvedAt)) || value.status !== null && !verifyRemoteReviewStatus(h, value.status))
-      throw new RemoteReviewClientError("invalid-remote-record");
-    await this.selected(h);
-    return { revision: row.revision, value: { ...value, handle: h } };
-  }
-  async get(id4) {
-    return (await this.entry(id4)).value;
-  }
-  async list() {
-    const result = [];
-    for (const id4 of await this.records.listIds("submissions"))
-      result.push(await this.get(id4));
-    return result;
-  }
-  /** Existing IDs are lookup-only, even if the previous process died before sending. */
-  async submit(input, signal) {
-    input = validateRemoteReviewRequest(input, input.payload);
-    const handle2 = prepareRemoteReviewHandle(input);
-    await this.selected(handle2);
-    const previous3 = await this.records.read("submissions", handle2.requestId);
-    if (previous3) {
-      const entry = await this.get(handle2.requestId);
-      if (contentHash(entry.handle) !== contentHash(handle2))
-        throw new RemoteReviewClientError("remote-request-conflict");
-      return this.refresh(handle2.requestId, signal);
-    }
-    assertFreshRemoteReviewApproval(input);
-    const value = {
-      formatVersion: 1,
-      handle: handle2,
-      approvedAt: input.approval.approvedAt,
-      cancellationRequested: false,
-      status: null
-    };
-    await this.records.write("submissions", handle2.requestId, value, 0);
-    return this.send(input, signal);
-  }
-  /** Explicit recovery can resend only the original approved request, with the same idempotency key.
-   * A 404, failed transport or cancelled local wait never authorizes this automatically. */
-  async retrySubmission(input, signal) {
-    input = validateRemoteReviewRequest(input, input.payload);
-    const handle2 = prepareRemoteReviewHandle(input), entry = await this.get(handle2.requestId);
-    if (contentHash(entry.handle) !== contentHash(handle2) || entry.approvedAt !== input.approval.approvedAt)
-      throw new RemoteReviewClientError("remote-request-conflict");
-    if (entry.cancellationRequested)
-      throw new RemoteReviewClientError("remote-cancellation-requested");
-    if (entry.status)
-      return this.refresh(handle2.requestId, signal);
-    return this.send(input, signal);
-  }
-  async send(input, signal) {
-    const entry = await this.get(input.payload.requestId);
-    if (entry.cancellationRequested)
-      throw new RemoteReviewClientError("remote-cancellation-requested");
-    const status = await this.connections.submitRemoteReview(this.connectionId, input, signal);
-    return this.saveStatus(entry.handle, status);
-  }
-  async saveStatus(handle2, status) {
-    const row = await this.entry(handle2.requestId);
-    const verified = verifyRemoteReviewStatus(handle2, status, row.value.status ?? void 0);
-    const old = row.value.status;
-    if (old && !["queued", "running", "cancel-requested"].includes(old.state) && !(old.state === "completed" && verified.state === "expired" && verified.reason === "result-expired"))
-      return row.value;
-    if (old?.state === "cancel-requested" && ["queued", "running"].includes(verified.state))
-      return row.value;
-    if (old?.state === "running" && verified.state === "queued")
-      return row.value;
-    const value = { ...row.value, status: verified };
-    await this.records.write("submissions", handle2.requestId, value, row.revision);
-    return value;
-  }
-  async refresh(id4, signal) {
-    const entry = await this.get(id4);
-    const status = await this.connections.remoteReviewStatus(this.connectionId, entry.handle, signal);
-    return this.saveStatus(entry.handle, status);
-  }
-  /** Bounded read-only polling. Stopping the wait never asserts server cancellation. */
-  async wait(id4, options = {}) {
-    const timeoutMs = options.timeoutMs ?? 6e5, intervalMs = options.intervalMs ?? 1e3;
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 6e5 || !Number.isSafeInteger(intervalMs) || intervalMs < 10 || intervalMs > 6e4)
-      throw new RemoteReviewClientError("invalid-wait-budget");
-    const controller = new AbortController(), abort = () => controller.abort();
-    options.signal?.addEventListener("abort", abort, { once: true });
-    if (options.signal?.aborted)
-      abort();
-    const timer = setTimeout(abort, timeoutMs);
-    try {
-      while (!controller.signal.aborted) {
-        try {
-          const entry = await this.refresh(id4, controller.signal);
-          if (entry.status && !["queued", "running", "cancel-requested"].includes(entry.status.state))
-            return entry;
-        } catch (error2) {
-          if (!(error2 instanceof RemoteReviewDeliveryError) || error2.authorityFailure || !(error2.code === "delivery-unconfirmed" || error2.code === "http-error" && [409, 429, 500, 502, 503, 504].includes(error2.statusCode ?? 0)))
-            throw error2;
-        }
-        await (0, import_promises7.setTimeout)(intervalMs, void 0, { signal: controller.signal });
-      }
-      throw new RemoteReviewDeliveryError("delivery-unconfirmed");
-    } catch (error2) {
-      if (controller.signal.aborted)
-        throw new RemoteReviewDeliveryError("delivery-unconfirmed");
-      throw error2;
-    } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener("abort", abort);
-    }
-  }
-  async result(id4, signal) {
-    const entry = await this.get(id4);
-    const result = verifyRemoteReviewResult(entry.handle, await this.connections.remoteReviewResult(this.connectionId, entry.handle, signal), entry.status ?? void 0);
-    const saved = await this.saveStatus(entry.handle, result.status);
-    if (saved.status?.state !== "completed")
-      throw new RemoteReviewClientError("remote-result-no-longer-available");
-    return result;
-  }
-  async cancel(id4, signal) {
-    const row = await this.entry(id4);
-    if (!row.value.cancellationRequested)
-      await this.records.write("submissions", id4, { ...row.value, cancellationRequested: true }, row.revision);
-    const status = await this.connections.cancelRemoteReview(this.connectionId, row.value.handle, signal);
-    return this.saveStatus(row.value.handle, status);
-  }
-};
-
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.33",
+  version: "0.1.0-alpha.35",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -21702,7 +19386,7 @@ function knowledgeEditorValues(value) {
     "expiresAt"
   ];
   const data = value;
-  if (Object.keys(data).length !== keys2.length || keys2.some((key4) => typeof data[key4] !== "string") || JSON.stringify(value).length > 1e6)
+  if (Object.keys(data).length !== keys2.length || keys2.some((key3) => typeof data[key3] !== "string") || JSON.stringify(value).length > 1e6)
     throw Error("Invalid editor message.");
   if (!data.title.trim()) throw Error("Enter a title.");
   if (!data.body.trim()) throw Error("Enter the knowledge body.");
@@ -21802,7 +19486,7 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
     title: update.title,
     body: update.body,
     appliesTo: update.appliesTo,
-    sources: [{ kind: "user-note", id: (0, import_node_crypto16.randomUUID)() }],
+    sources: [{ kind: "user-note", id: (0, import_node_crypto13.randomUUID)() }],
     ...update.expiresAt ? { expiresAt: update.expiresAt } : {}
   };
   const draft = kind === "memory" ? {
@@ -21817,7 +19501,7 @@ async function readLocalHistory(location2, ports = {}) {
   const scope = knowledgeScope(location2);
   const dataDirectory = ports.dataDirectory ?? defaultLocalDataDirectory();
   try {
-    await (0, import_promises8.lstat)(import_node_path16.default.join(dataDirectory, "profiles", scope.profileId));
+    await (0, import_promises7.lstat)(import_node_path11.default.join(dataDirectory, "profiles", scope.profileId));
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "code" in error2 && error2.code === "ENOENT")
       return [];
@@ -21842,10 +19526,10 @@ async function checkLocalContextFreshness(report, ports = {}, now = /* @__PURE__
   const scopes = /* @__PURE__ */ new Map();
   for (const entry of report.identity.context.entries) {
     if (entry.origin !== "local") continue;
-    const key4 = JSON.stringify(entry.scope);
-    const group = scopes.get(key4) ?? { scope: entry.scope, entries: [] };
+    const key3 = JSON.stringify(entry.scope);
+    const group = scopes.get(key3) ?? { scope: entry.scope, entries: [] };
     group.entries.push(entry);
-    scopes.set(key4, group);
+    scopes.set(key3, group);
   }
   try {
     for (const { scope, entries } of scopes.values()) {
@@ -21871,7 +19555,7 @@ async function checkLocalContextFreshness(report, ports = {}, now = /* @__PURE__
 }
 
 // src/centralConnection.ts
-var import_node_path17 = __toESM(require("node:path"));
+var import_node_path12 = __toESM(require("node:path"));
 function selectionKey(scope) {
   if (scope.kind !== "repository")
     throw new StandaloneReviewError("central-connection-required");
@@ -21936,7 +19620,7 @@ async function readCentralHistory(location2, selection, ports = {}) {
       const records = await LocalRecordStore.open({
         scope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path17.default.join(
+        dataDirectory: import_node_path12.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id
@@ -21980,12 +19664,12 @@ async function readSelectedHistory(location2, selection, ports = {}) {
 
 // src/automaticReviews.ts
 var vscode3 = __toESM(require("vscode"));
-var import_node_path19 = __toESM(require("node:path"));
-var import_promises10 = require("node:fs/promises");
+var import_node_path14 = __toESM(require("node:path"));
+var import_promises9 = require("node:fs/promises");
 
 // src/config.ts
 var fs4 = __toESM(require("fs"));
-var path26 = __toESM(require("path"));
+var path21 = __toESM(require("path"));
 var vscode2 = __toESM(require("vscode"));
 function getStandaloneReviewSettings(fileCount, repoRoot) {
   const cfg = vscode2.workspace.getConfiguration("commitDefender", repoRoot ? vscode2.Uri.file(repoRoot) : void 0);
@@ -22048,7 +19732,7 @@ function resolveCodexPath(configured2) {
   const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
     for (const name of names) {
-      const candidate = path26.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      const candidate = path21.join(extensionPath, "bin", `${platform}-${arch}`, name);
       if (fs4.existsSync(candidate)) {
         return candidate;
       }
@@ -22062,24 +19746,24 @@ function resolveExternalCliPath(configured2, name) {
   }
   const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   const candidates = [];
-  for (const dir of (process.env.PATH ?? "").split(path26.delimiter).filter(Boolean)) {
+  for (const dir of (process.env.PATH ?? "").split(path21.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
-      candidates.push(path26.join(dir, executable));
+      candidates.push(path21.join(dir, executable));
     }
   }
   const userHome = process.env.HOME || process.env.USERPROFILE;
   if (userHome) {
     for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
       for (const executable of executableNames) {
-        candidates.push(path26.join(userHome, dir, executable));
+        candidates.push(path21.join(userHome, dir, executable));
       }
     }
-    const nvmVersions = path26.join(userHome, ".nvm", "versions", "node");
+    const nvmVersions = path21.join(userHome, ".nvm", "versions", "node");
     try {
       const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
       for (const version of versions) {
         for (const executable of executableNames) {
-          candidates.push(path26.join(nvmVersions, version, "bin", executable));
+          candidates.push(path21.join(nvmVersions, version, "bin", executable));
         }
       }
     } catch {
@@ -22087,14 +19771,14 @@ function resolveExternalCliPath(configured2, name) {
   }
   for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
     for (const executable of executableNames) {
-      candidates.push(path26.join(dir, executable));
+      candidates.push(path21.join(dir, executable));
     }
   }
   return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured2;
 }
 function getAutomaticUserSettings() {
   const cfg = vscode2.workspace.getConfiguration("commitDefender");
-  return (key4) => cfg.inspect(key4)?.globalValue;
+  return (key3) => cfg.inspect(key3)?.globalValue;
 }
 
 // src/automaticSettings.ts
@@ -22170,8 +19854,8 @@ function readAutomaticOverride(store, scope) {
 }
 
 // src/automaticStageCheckpoint.ts
-var import_node_path18 = __toESM(require("node:path"));
-var import_promises9 = require("node:fs/promises");
+var import_node_path13 = __toESM(require("node:path"));
+var import_promises8 = require("node:fs/promises");
 var id3 = "automatic-stage-observation-v1";
 var invalid5 = () => new Error("Saved automatic stage observation is invalid.");
 var AutomaticStageCheckpoint = class {
@@ -22181,8 +19865,8 @@ var AutomaticStageCheckpoint = class {
   async records(root2, profileId, create, work) {
     if (!create) {
       try {
-        await (0, import_promises9.lstat)(
-          import_node_path18.default.join(
+        await (0, import_promises8.lstat)(
+          import_node_path13.default.join(
             this.ports.dataDirectory ?? defaultLocalDataDirectory(),
             "profiles",
             profileId
@@ -22320,10 +20004,10 @@ var AutomaticReviews = class {
         }
         if (!result?.retryAt && task.isCurrent() && task.value.automatic?.reason === "save") {
           const root2 = this.roots.get(task.value.repoRoot);
-          for (const [file, hash5] of Object.entries(
+          for (const [file, hash4] of Object.entries(
             task.value.automatic.files ?? {}
           ))
-            if (root2?.files.get(file) === hash5) root2.files.delete(file);
+            if (root2?.files.get(file) === hash4) root2.files.delete(file);
         }
         return result;
       }
@@ -22347,8 +20031,8 @@ var AutomaticReviews = class {
       vscode3.workspace.onDidChangeTextDocument((e) => {
         if (!e.document.isDirty || !e.contentChanges.length) return;
         for (const [root2, value] of this.roots)
-          if (e.document.uri.fsPath.startsWith(root2 + import_node_path19.default.sep)) {
-            const file = import_node_path19.default.relative(root2, e.document.uri.fsPath).split(import_node_path19.default.sep).join("/");
+          if (e.document.uri.fsPath.startsWith(root2 + import_node_path14.default.sep)) {
+            const file = import_node_path14.default.relative(root2, e.document.uri.fsPath).split(import_node_path14.default.sep).join("/");
             if (value.backgroundReady && this.ports.backgroundSave)
               void this.track(
                 this.ports.backgroundSave(root2, { file, reason: "dirty" })
@@ -22531,7 +20215,7 @@ var AutomaticReviews = class {
           "aiProvider",
           "codexPath",
           "reviewReasoningEffort"
-        ].map((key4) => [key4, user(key4) ?? null])
+        ].map((key3) => [key3, user(key3) ?? null])
       ),
       connection: readSelection(this.context.globalState, scope) ?? null
     });
@@ -22569,8 +20253,8 @@ var AutomaticReviews = class {
     if (settings.paused || !settings.save && !settings.stage) return value;
     const watcher = vscode3.workspace.createFileSystemWatcher(
       new vscode3.RelativePattern(
-        vscode3.Uri.file(import_node_path19.default.dirname(observed.indexPath)),
-        import_node_path19.default.basename(observed.indexPath)
+        vscode3.Uri.file(import_node_path14.default.dirname(observed.indexPath)),
+        import_node_path14.default.basename(observed.indexPath)
       ),
       false,
       false,
@@ -22594,18 +20278,18 @@ var AutomaticReviews = class {
       );
       const changed = (uri) => {
         if (sourcePathPolicy(this.excludes())(
-          import_node_path19.default.relative(observed.root, uri.fsPath).split(import_node_path19.default.sep).join("/")
+          import_node_path14.default.relative(observed.root, uri.fsPath).split(import_node_path14.default.sep).join("/")
         ))
           return;
-        const key4 = uri.toString();
-        clearTimeout(this.externalTimers.get(key4));
+        const key3 = uri.toString();
+        clearTimeout(this.externalTimers.get(key3));
         const timer = setTimeout(() => {
-          this.externalTimers.delete(key4);
-          if (!this.editorWrites.has(key4))
+          this.externalTimers.delete(key3);
+          if (!this.editorWrites.has(key3))
             void this.track(this.saved(uri, "external"));
         }, 3e3);
         timer.unref?.();
-        this.externalTimers.set(key4, timer);
+        this.externalTimers.set(key3, timer);
       };
       value.watches.push(
         files,
@@ -22675,11 +20359,11 @@ var AutomaticReviews = class {
     const generation = this.generation, fileKey = uri.toString(), fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      let absolute = import_node_path19.default.resolve(uri.fsPath);
-      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path19.default.sep)).sort((a, b) => b.length - a.length)[0];
+      let absolute = import_node_path14.default.resolve(uri.fsPath);
+      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path14.default.sep)).sort((a, b) => b.length - a.length)[0];
       if (!root2) {
-        const directory = await (0, import_promises10.realpath)(import_node_path19.default.dirname(absolute));
-        absolute = import_node_path19.default.join(directory, import_node_path19.default.basename(absolute));
+        const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(absolute));
+        absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(absolute));
         const observed2 = await observeAutomaticRepository(
           directory,
           this.excludes()
@@ -22703,7 +20387,7 @@ var AutomaticReviews = class {
       const state = this.roots.get(root2);
       if (state.settings.paused || !state.settings.save || !state.backgroundReady)
         return;
-      const file = import_node_path19.default.relative(root2, absolute).split(import_node_path19.default.sep).join("/");
+      const file = import_node_path14.default.relative(root2, absolute).split(import_node_path14.default.sep).join("/");
       await this.scan(root2);
       const observed = await observeAutomaticFile(root2, file, this.excludes());
       if (generation !== this.generation || this.fileGeneration.get(fileKey) !== fileGeneration || !observed)
@@ -22795,7 +20479,7 @@ var AutomaticReviews = class {
   }
   async manage() {
     const choices = [...this.roots.keys()].map((root2) => ({
-      label: import_node_path19.default.basename(root2),
+      label: import_node_path14.default.basename(root2),
       description: root2,
       root: root2
     }));
@@ -22808,7 +20492,7 @@ var AutomaticReviews = class {
       profileId: this.profile(),
       scope: "repository"
     });
-    const key4 = automaticSelectionKey(scope);
+    const key3 = automaticSelectionKey(scope);
     const settings = this.settings(selected.root);
     const choices2 = [
       "save",
@@ -22844,10 +20528,10 @@ var AutomaticReviews = class {
         vscode3.ConfigurationTarget.Global
       );
     else if (choice2.field === "reset")
-      await this.context.globalState.update(key4, void 0);
+      await this.context.globalState.update(key3, void 0);
     else {
       const current = readAutomaticOverride(this.context.globalState, scope);
-      await this.context.globalState.update(key4, {
+      await this.context.globalState.update(key3, {
         ...current,
         version: 1,
         [choice2.field]: !settings[choice2.field]
@@ -22872,27 +20556,27 @@ var AutomaticReviews = class {
 };
 
 // src/backgroundHooks.ts
-var import_promises12 = __toESM(require("node:fs/promises"));
-var import_node_path21 = __toESM(require("node:path"));
-var import_node_os4 = __toESM(require("node:os"));
-var import_node_crypto18 = require("node:crypto");
-var import_node_child_process6 = require("node:child_process");
+var import_promises11 = __toESM(require("node:fs/promises"));
+var import_node_path16 = __toESM(require("node:path"));
+var import_node_os3 = __toESM(require("node:os"));
+var import_node_crypto15 = require("node:crypto");
+var import_node_child_process5 = require("node:child_process");
 var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
-var import_promises11 = __toESM(require("node:fs/promises"));
-var import_node_path20 = __toESM(require("node:path"));
-var import_node_crypto17 = require("node:crypto");
-var import_node_child_process5 = require("node:child_process");
-var digest2 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
+var import_promises10 = __toESM(require("node:fs/promises"));
+var import_node_path15 = __toESM(require("node:path"));
+var import_node_crypto14 = require("node:crypto");
+var import_node_child_process4 = require("node:child_process");
+var digest2 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
 var quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
 function git2(root2, args, missing = false) {
-  const env4 = { ...process.env };
-  for (const key4 of Object.keys(env4))
-    if (key4.startsWith("GIT_")) delete env4[key4];
+  const env3 = { ...process.env };
+  for (const key3 of Object.keys(env3))
+    if (key3.startsWith("GIT_")) delete env3[key3];
   try {
-    return (0, import_node_child_process5.execFileSync)("git", ["-C", root2, ...args], {
-      env: env4,
+    return (0, import_node_child_process4.execFileSync)("git", ["-C", root2, ...args], {
+      env: env3,
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15e3
@@ -22904,33 +20588,33 @@ function git2(root2, args, missing = false) {
   }
 }
 async function privateDirectory2(directory) {
-  await import_promises11.default.mkdir(directory, { recursive: true, mode: 448 });
-  const stat = await import_promises11.default.lstat(directory);
+  await import_promises10.default.mkdir(directory, { recursive: true, mode: 448 });
+  const stat = await import_promises10.default.lstat(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw new Error(
       "Hook storage must be a private directory owned by this OS user."
     );
-  return import_promises11.default.realpath(directory);
+  return import_promises10.default.realpath(directory);
 }
 async function writeJson(file, value) {
-  const tmp = `${file}.${(0, import_node_crypto17.randomUUID)()}`;
+  const tmp = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
   try {
-    await import_promises11.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
+    await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
       flag: "wx",
       mode: 384
     });
-    await import_promises11.default.rename(tmp, file);
+    await import_promises10.default.rename(tmp, file);
   } finally {
-    await import_promises11.default.rm(tmp, { force: true });
+    await import_promises10.default.rm(tmp, { force: true });
   }
 }
 async function readState(file) {
   try {
-    const stat = await import_promises11.default.lstat(file);
+    const stat = await import_promises10.default.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63 || stat.size > 1048576)
       throw Error("Invalid hook state.");
     const state = JSON.parse(
-      await import_promises11.default.readFile(file, "utf8")
+      await import_promises10.default.readFile(file, "utf8")
     );
     if (state.version !== 1 || !state.routes || !state.files || !Array.isArray(state.previous))
       throw Error("Invalid hook state.");
@@ -22941,16 +20625,16 @@ async function readState(file) {
   }
 }
 async function lock(directory) {
-  const file = import_node_path20.default.join(directory, "owner.lock");
+  const file = import_node_path15.default.join(directory, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const handle2 = await import_promises11.default.open(file, "wx", 384);
+      const handle2 = await import_promises10.default.open(file, "wx", 384);
       await handle2.writeFile(JSON.stringify({ pid: process.pid }));
       await handle2.close();
-      return () => import_promises11.default.unlink(file);
+      return () => import_promises10.default.unlink(file);
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
-      const raw = await import_promises11.default.readFile(file, "utf8"), row = JSON.parse(raw);
+      const raw = await import_promises10.default.readFile(file, "utf8"), row = JSON.parse(raw);
       if (!Number.isSafeInteger(row.pid) || row.pid < 1)
         throw Error("Hook installation lock is invalid.");
       try {
@@ -22959,9 +20643,9 @@ async function lock(directory) {
       } catch (failure2) {
         if (failure2.code !== "ESRCH") throw failure2;
       }
-      if (await import_promises11.default.readFile(file, "utf8") !== raw)
+      if (await import_promises10.default.readFile(file, "utf8") !== raw)
         throw Error("Hook installation lock changed.");
-      await import_promises11.default.unlink(file);
+      await import_promises10.default.unlink(file);
     }
   }
   throw Error("Hook installation is busy.");
@@ -22997,7 +20681,7 @@ var hookNames = [
   "post-index-change"
 ];
 async function location(root2, dataDirectory) {
-  root2 = await import_promises11.default.realpath(git2(root2, ["rev-parse", "--show-toplevel"]));
+  root2 = await import_promises10.default.realpath(git2(root2, ["rev-parse", "--show-toplevel"]));
   const worktree = git2(
     root2,
     ["config", "--bool", "--get", "extensions.worktreeConfig"],
@@ -23010,14 +20694,14 @@ async function location(root2, dataDirectory) {
     worktree ? "config.worktree" : "config"
   ]);
   const base = await privateDirectory2(
-    import_node_path20.default.join(dataDirectory, "managed-hooks")
+    import_node_path15.default.join(dataDirectory, "managed-hooks")
   );
-  const directory = await privateDirectory2(import_node_path20.default.join(base, digest2(config)));
+  const directory = await privateDirectory2(import_node_path15.default.join(base, digest2(config)));
   return {
     root: root2,
     config,
     directory,
-    stateFile: import_node_path20.default.join(directory, "state.json")
+    stateFile: import_node_path15.default.join(directory, "state.json")
   };
 }
 var configured = (root2, config) => {
@@ -23029,11 +20713,11 @@ var configured = (root2, config) => {
   return raw === void 0 ? [] : raw.split("\0").filter((_, i, all2) => i < all2.length - 1);
 };
 async function verifyFiles(state) {
-  for (const [name, hash5] of Object.entries(state.files)) {
+  for (const [name, hash4] of Object.entries(state.files)) {
     if (!/^[a-z][a-z0-9-]*$/.test(name))
       throw Error("Invalid managed hook name.");
-    const file = import_node_path20.default.join(state.directory, name), stat = await import_promises11.default.lstat(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises11.default.readFile(file)) !== hash5)
+    const file = import_node_path15.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises10.default.readFile(file)) !== hash4)
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved."
       );
@@ -23092,7 +20776,7 @@ async function configureManagedHooks(options) {
           "This worktree has hooks registered to another profile. Disable that registration first."
         );
       if (![route2.node, route2.cli, route2.dataDirectory, options.adapter].every(
-        import_node_path20.default.isAbsolute
+        import_node_path15.default.isAbsolute
       ) || !Number.isInteger(route2.waitMs) || route2.waitMs < 0 || route2.waitMs > 6e5 || !route2.triggers.length || route2.triggers.some((t) => !["commit", "push"].includes(t)))
         throw Error("Invalid hook route.");
       state.routes[loc.root] = structuredClone(route2);
@@ -23123,8 +20807,8 @@ async function configureManagedHooks(options) {
     const route = options.route ?? Object.values(state.routes)[0];
     const names = new Set(hookNames);
     try {
-      for (const name of await import_promises11.default.readdir(
-        import_node_path20.default.resolve(loc.root, state.original)
+      for (const name of await import_promises10.default.readdir(
+        import_node_path15.default.resolve(loc.root, state.original)
       ))
         if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
     } catch (error2) {
@@ -23134,7 +20818,7 @@ async function configureManagedHooks(options) {
         throw error2;
     }
     for (const name of names) {
-      const original = import_node_path20.default.join(state.original, name);
+      const original = import_node_path15.default.join(state.original, name);
       const text7 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
@@ -23143,16 +20827,16 @@ fi
 ` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi
 exit 0
 `;
-      const file = import_node_path20.default.join(loc.directory, name);
+      const file = import_node_path15.default.join(loc.directory, name);
       if (!state.files[name]) {
-        await import_promises11.default.writeFile(file, text7, { flag: "wx", mode: 448 });
+        await import_promises10.default.writeFile(file, text7, { flag: "wx", mode: 448 });
       } else {
-        const temporary = `${file}.${(0, import_node_crypto17.randomUUID)()}`;
+        const temporary = `${file}.${(0, import_node_crypto14.randomUUID)()}`;
         try {
-          await import_promises11.default.writeFile(temporary, text7, { flag: "wx", mode: 448 });
-          await import_promises11.default.rename(temporary, file);
+          await import_promises10.default.writeFile(temporary, text7, { flag: "wx", mode: 448 });
+          await import_promises10.default.rename(temporary, file);
         } finally {
-          await import_promises11.default.rm(temporary, { force: true });
+          await import_promises10.default.rm(temporary, { force: true });
         }
       }
       state.files[name] = digest2(text7);
@@ -23185,22 +20869,22 @@ exit 0
 }
 
 // src/backgroundHooks.ts
-var key3 = "background-hooks.v1";
-var hash4 = (value) => (0, import_node_crypto18.createHash)("sha256").update(value).digest("hex");
+var key2 = "background-hooks.v1";
+var hash3 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
 async function privateCopy(source, directory, name) {
-  const bytes = await import_promises12.default.readFile(source), targetDir = import_node_path21.default.join(directory, hash4(bytes));
-  await import_promises12.default.mkdir(targetDir, { recursive: true, mode: 448 });
-  const stat = await import_promises12.default.lstat(targetDir);
+  const bytes = await import_promises11.default.readFile(source), targetDir = import_node_path16.default.join(directory, hash3(bytes));
+  await import_promises11.default.mkdir(targetDir, { recursive: true, mode: 448 });
+  const stat = await import_promises11.default.lstat(targetDir);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw Error("Service installation directory is not private.");
-  const target = import_node_path21.default.join(targetDir, name);
+  const target = import_node_path16.default.join(targetDir, name);
   try {
-    await import_promises12.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
+    await import_promises11.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
   } catch (error2) {
     if (error2.code !== "EEXIST") throw error2;
   }
-  const installed = await import_promises12.default.lstat(target);
-  if (!installed.isFile() || installed.isSymbolicLink() || hash4(await import_promises12.default.readFile(target)) !== hash4(bytes))
+  const installed = await import_promises11.default.lstat(target);
+  if (!installed.isFile() || installed.isSymbolicLink() || hash3(await import_promises11.default.readFile(target)) !== hash3(bytes))
     throw Error("Installed service artifact does not match this extension.");
   return target;
 }
@@ -23210,7 +20894,7 @@ var BackgroundHooks = class {
     this.store = store;
     this.call = call;
   }
-  sessionId = (0, import_node_crypto18.randomUUID)();
+  sessionId = (0, import_node_crypto15.randomUUID)();
   epoch = 0;
   generations = /* @__PURE__ */ new Map();
   pending = Promise.resolve();
@@ -23220,7 +20904,7 @@ var BackgroundHooks = class {
     return next;
   }
   owned() {
-    return this.store.get(key3) ?? [];
+    return this.store.get(key2) ?? [];
   }
   async disable(owned) {
     const location2 = {
@@ -23245,16 +20929,16 @@ var BackgroundHooks = class {
     } catch (error2) {
       if (error2.code !== "service-unavailable")
         throw error2;
-      const jobs2 = await ServiceJobs.open({
+      const jobs = await ServiceJobs.open({
         scope: { kind: "profile", profileId: owned.profileId },
         dataDirectory: owned.dataDirectory
       });
       let owner;
       try {
-        owner = await jobs2.acquireOwner();
-        registration = (await jobs2.registrations()).find((r) => r.root === owned.root) ?? null;
+        owner = await jobs.acquireOwner();
+        registration = (await jobs.registrations()).find((r) => r.root === owned.root) ?? null;
         if (registration)
-          await jobs2.register(
+          await jobs.register(
             owned.root,
             registration.triggers.filter(
               (t) => !(owned.triggers ?? ["commit", "push"]).includes(t)
@@ -23263,18 +20947,18 @@ var BackgroundHooks = class {
           );
       } finally {
         try {
-          if (owner) await jobs2.releaseOwner(owner);
+          if (owner) await jobs.releaseOwner(owner);
         } finally {
-          jobs2.close();
+          jobs.close();
         }
       }
     }
     await configureManagedHooks({
       root: owned.root,
-      adapter: import_node_path21.default.join(this.extensionPath, "out/advisory-hook.cjs")
+      adapter: import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs")
     });
     await this.store.update(
-      key3,
+      key2,
       this.owned().filter(
         (row) => row.root !== owned.root || row.profileId !== owned.profileId
       )
@@ -23443,34 +21127,34 @@ var BackgroundHooks = class {
           "Background reviews require trusted user-selected Codex gpt-6-astra/xhigh settings and an online central connection when selected."
         );
       }
-      const env4 = { ...process.env };
-      for (const k of Object.keys(env4)) if (k.startsWith("GIT_")) delete env4[k];
+      const env3 = { ...process.env };
+      for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
       const node2 = JSON.parse(
-        (await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+        (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
           nodePath,
           [
             "-p",
             'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})'
           ],
-          { cwd: import_node_os4.default.homedir(), env: env4, timeout: 1e4 }
+          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4 }
         )).stdout
       );
-      if (node2.major < 22 || !import_node_path21.default.isAbsolute(node2.path))
+      if (node2.major < 22 || !import_node_path16.default.isAbsolute(node2.path))
         throw Error("Background review service requires Node.js 22 or newer.");
       const dataDirectory = defaultLocalDataDirectory(), location2 = { profileId: settings.profileId, dataDirectory };
-      const programs = import_node_path21.default.join(dataDirectory, "service-programs");
-      await import_promises12.default.mkdir(programs, { recursive: true, mode: 448 });
+      const programs = import_node_path16.default.join(dataDirectory, "service-programs");
+      await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
       const cli = await privateCopy(
-        import_node_path21.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
+        import_node_path16.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
         "gcr.mjs"
       );
       const adapter = await privateCopy(
-        import_node_path21.default.join(this.extensionPath, "out/advisory-hook.cjs"),
+        import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs"),
         programs,
         "advisory.cjs"
       );
-      const started = await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+      const started = await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         node2.path,
         [
           cli,
@@ -23481,7 +21165,7 @@ var BackgroundHooks = class {
           "--data-dir",
           dataDirectory
         ],
-        { cwd: import_node_os4.default.homedir(), env: env4, timeout: 65e3 }
+        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3 }
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -23498,10 +21182,10 @@ var BackgroundHooks = class {
         throw Error(
           "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
         );
-      const executorPath = import_node_path21.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+      const executorPath = import_node_path16.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
-        { env: env4, cwd: import_node_os4.default.homedir(), timeout: 1e4 }
+        { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
       )).stdout.trim();
       const options = {
         mode: settings.mode,
@@ -23539,7 +21223,7 @@ var BackgroundHooks = class {
         configHash,
         triggers
       };
-      await this.store.update(key3, [
+      await this.store.update(key2, [
         ...this.owned().filter((row) => row.root !== root2),
         owned
       ]);
@@ -23619,7 +21303,7 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallback
   const belongs = (report) => {
     const client = report.identity.client;
     return (client.mode === "centralized" && audience && Object.entries(audience).every(
-      ([key4, value]) => client.audience[key4] === value
+      ([key3, value]) => client.audience[key3] === value
     ) || client.mode === "standalone" && (fallbackConnectionId ? client.execution?.connectionId === fallbackConnectionId : !audience)) && client.profileId === scope.profileId && client.repositoryKey === scope.repositoryKey && client.worktreeKey === scope.worktreeKey;
   };
   const merged = /* @__PURE__ */ new Map();
@@ -23644,21 +21328,21 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallback
 
 // src/backgroundRecovery.ts
 var vscode4 = __toESM(require("vscode"));
-var import_node_path22 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
   try {
-    const jobs2 = (await hooks.status()).filter(
+    const jobs = (await hooks.status()).filter(
       (job2) => job2.state === "interrupted"
     );
-    if (!jobs2.length) {
+    if (!jobs.length) {
       await vscode4.window.showInformationMessage(
         "No interrupted background reviews were found."
       );
       return;
     }
     const selected = await vscode4.window.showQuickPick(
-      jobs2.map((job2) => ({
-        label: `${import_node_path22.default.basename(job2.root)} \xB7 ${job2.trigger}`,
+      jobs.map((job2) => ({
+        label: `${import_node_path17.default.basename(job2.root)} \xB7 ${job2.trigger}`,
         description: `${new Date(job2.createdAt).toLocaleString()} \xB7 ${job2.profileId}`,
         detail: `${job2.root} \xB7 ${job2.id}${job2.supportsRecovery ? "" : " \xB7 Service restart required"}`,
         job: job2
@@ -23715,13 +21399,13 @@ var CentralSynchronization = class {
         id: selected.connectionId
       });
     }
-    for (const [key4, loop] of this.loops) {
-      if (wanted.has(key4)) continue;
+    for (const [key3, loop] of this.loops) {
+      if (wanted.has(key3)) continue;
       this.retire(loop);
-      this.loops.delete(key4);
+      this.loops.delete(key3);
     }
-    for (const [key4, { scope, id: id4 }] of wanted) {
-      if (this.loops.has(key4)) continue;
+    for (const [key3, { scope, id: id4 }] of wanted) {
+      if (this.loops.has(key3)) continue;
       const loop = new KnowledgeSyncLoop({
         synchronize: async (signal) => {
           if (this.options.synchronize)
@@ -23738,9 +21422,9 @@ var CentralSynchronization = class {
             this.options.ports
           );
         },
-        onState: (state) => this.options.onState?.(key4, state)
+        onState: (state) => this.options.onState?.(key3, state)
       });
-      this.loops.set(key4, loop);
+      this.loops.set(key3, loop);
       loop.start();
     }
   }
@@ -23767,9 +21451,9 @@ var CentralSynchronization = class {
 
 // src/centralConnectionView.ts
 var vscode5 = __toESM(require("vscode"));
-var import_node_fs6 = require("node:fs");
-var import_promises13 = require("node:fs/promises");
-var import_node_crypto19 = require("node:crypto");
+var import_node_fs4 = require("node:fs");
+var import_promises12 = require("node:fs/promises");
+var import_node_crypto16 = require("node:crypto");
 var esc2 = (value) => String(value).replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
@@ -23809,9 +21493,9 @@ function centralStatusHtml(value) {
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>Online reviews refresh expired knowledge. Offline reviews require an unexpired signed lease and active connection. Model availability is checked separately when a review starts.</p><table>${rows.map(([label, item]) => `<tr><th>${esc2(label)}</th><td>${esc2(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. Local Memory and Skills remain editable in their own view.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function readConfig(file) {
-  const handle2 = await (0, import_promises13.open)(
+  const handle2 = await (0, import_promises12.open)(
     file,
-    import_node_fs6.constants.O_RDONLY | import_node_fs6.constants.O_NONBLOCK | import_node_fs6.constants.O_NOFOLLOW
+    import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NONBLOCK | import_node_fs4.constants.O_NOFOLLOW
   );
   try {
     if (!(await handle2.stat()).isFile())
@@ -23828,16 +21512,16 @@ async function readConfig(file) {
 }
 var activeViews = /* @__PURE__ */ new Set();
 async function manageCentralConnection(context, scope, actions, ports = {}) {
-  const key4 = selectionKey(scope);
+  const key3 = selectionKey(scope);
   const withManager = (work) => withCentralConnection(scope, work, ports);
-  if (activeViews.has(key4)) return;
-  activeViews.add(key4);
+  if (activeViews.has(key3)) return;
+  activeViews.add(key3);
   let selection;
   const select = async (value) => {
     actions.assertCurrent();
     await actions.invalidate();
     actions.assertCurrent();
-    await context.globalState.update(key4, value);
+    await context.globalState.update(key3, value);
     selection = value;
     await actions.refresh();
   };
@@ -23928,7 +21612,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const config = await readConfig(files[0].fsPath);
       config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
       const pins = config.trustedKeys.map(
-        (k) => `${k.id}: ${(0, import_node_crypto19.createHash)("sha256").update(k.pem).digest("hex")}`
+        (k) => `${k.id}: ${(0, import_node_crypto16.createHash)("sha256").update(k.pem).digest("hex")}`
       ).join(" \xB7 ");
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       const confirmed = await vscode5.window.showInformationMessage(
@@ -24100,431 +21784,18 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
   } catch (error2) {
     void vscode5.window.showErrorMessage(standaloneError(error2).message);
   } finally {
-    activeViews.delete(key4);
+    activeViews.delete(key3);
   }
-}
-
-// src/remoteModelView.ts
-var vscode6 = __toESM(require("vscode"));
-var import_node_crypto21 = require("node:crypto");
-
-// src/remoteModelReview.ts
-var import_node_crypto20 = require("node:crypto");
-var RemoteModelReviewError = class extends Error {
-  constructor(code3, requestId) {
-    super(
-      `Central review: ${code3}.${requestId ? ` Request ${requestId}. Open Central Model Requests to inspect or cancel it.` : ""}`
-    );
-    this.code = code3;
-    this.requestId = requestId;
-    this.name = "RemoteModelReviewError";
-  }
-};
-async function prepareRemoteModelReview(request, settings, choice2, signal, approval, ports = {}) {
-  const opened = [];
-  let snapshot;
-  let disposed = false;
-  const dispose = () => {
-    if (!disposed) {
-      disposed = true;
-      snapshot?.close();
-      opened.reverse().forEach((x) => x.close());
-    }
-  };
-  const current = () => {
-    approval.assertCurrent();
-    if (signal.aborted)
-      throw new RemoteModelReviewError("preparation-cancelled");
-  };
-  try {
-    current();
-    if (!settings.workspaceTrusted || request.automatic || !request.files.length)
-      throw new RemoteModelReviewError("manual-trusted-review-required");
-    if (!["standalone", "centralized"].includes(settings.mode) || settings.mode === "centralized" && settings.connectionId !== choice2.connectionId)
-      throw new RemoteModelReviewError("knowledge-connection-mismatch");
-    const client = discoverLocalIdentity(request.repoRoot, settings.profileId);
-    const scope = {
-      kind: "repository",
-      profileId: client.profileId,
-      repositoryKey: client.repositoryKey,
-      worktreeKey: client.worktreeKey
-    };
-    const manager = await CentralConnections.open({ scope, ...ports });
-    opened.push(manager);
-    const status = await manager.status(choice2.connectionId);
-    if (status.clientId !== "commit-defender" || status.status !== "connected")
-      throw new RemoteModelReviewError("connection-unavailable");
-    const catalog = await manager.remoteReviewModels(
-      choice2.connectionId,
-      signal
-    );
-    const model = catalog.models.find(
-      (m) => m.accountId === choice2.accountId && m.name === choice2.name
-    );
-    if (!catalog.enabled || !model?.allowedEfforts.includes(choice2.reasoningEffort))
-      throw new RemoteModelReviewError("model-no-longer-authorized");
-    current();
-    snapshot = captureLocalSource({
-      cwd: request.repoRoot,
-      kind: request.scope === "staged" ? "index" : "working-tree",
-      paths: request.files,
-      includeUntracked: request.scope === "staged" ? [] : request.files,
-      excludePatterns: settings.excludePatterns
-    });
-    const stores = [];
-    for (const localScope2 of [
-      scope,
-      { kind: "profile", profileId: client.profileId }
-    ]) {
-      const record2 = await LocalRecordStore.open({
-        scope: localScope2,
-        ...ports
-      });
-      opened.push(record2);
-      stores.push(new LocalKnowledgeStore(record2));
-    }
-    const query = { client, snapshot, stores };
-    const context = settings.mode === "centralized" ? await resolveCentralContext({
-      ...query,
-      ...await manager.review(choice2.connectionId, "online", signal)
-    }) : await resolveLocalContext(query);
-    if (context.status !== "ready" || context.context.client.mode !== settings.mode)
-      throw new RemoteModelReviewError("context-unavailable");
-    if (settings.requiredCentralSnapshot && context.context.identity.centralSnapshot?.id !== settings.requiredCentralSnapshot)
-      throw new RemoteModelReviewError("central-snapshot-changed");
-    current();
-    const proposal = prepareRemoteReview({
-      schemaVersion: 1,
-      requestId: (0, import_node_crypto20.randomUUID)(),
-      audience: status.audience,
-      clientId: "commit-defender",
-      client: context.context.client,
-      executor: "central",
-      model: {
-        accountId: choice2.accountId,
-        name: choice2.name,
-        reasoningEffort: choice2.reasoningEffort
-      },
-      snapshot,
-      sourceFiles: snapshot.sourceFiles,
-      context: context.context.toRemoteContext(),
-      budget: {
-        modelCalls: Math.min(4, catalog.limits.modelCalls),
-        durationMs: Math.min(settings.durationMs, catalog.limits.durationMs),
-        sourceBytes: 1048576,
-        toolCalls: 100
-      },
-      retention: { sourceSeconds: 3600, resultSeconds: 86400 }
-    });
-    const confirmed = await approval.confirm(
-      { ...proposal, serverUrl: status.serverUrl, catalog },
-      signal
-    );
-    current();
-    if (confirmed !== proposal.payloadHash)
-      throw new RemoteModelReviewError("upload-not-approved");
-    if (await context.context.observeCentralSnapshot() !== "current")
-      throw new RemoteModelReviewError("context-changed");
-    const approvedAt = (/* @__PURE__ */ new Date()).toISOString();
-    const remote = await RemoteReviewClient.open({
-      scope,
-      ...ports,
-      connectionId: choice2.connectionId,
-      connections: manager
-    });
-    opened.push(remote);
-    const fixed = snapshot;
-    return {
-      backendId: "gcr-central-model",
-      key: proposal.payloadHash,
-      dispose,
-      async run(runSignal, progress) {
-        if (disposed) throw new RemoteModelReviewError("preparation-disposed");
-        approval.assertCurrent();
-        if (runSignal.aborted)
-          throw new RemoteModelReviewError("execution-cancelled");
-        const id4 = proposal.payload.requestId;
-        try {
-          progress?.(0, 1, "Submitting approved central review");
-          await remote.submit(
-            {
-              payload: proposal.payload,
-              approval: { payloadHash: confirmed, approvedAt }
-            },
-            runSignal
-          );
-          progress?.(0, 1, `Central request ${id4}`);
-          const state = await remote.wait(id4, {
-            signal: runSignal,
-            timeoutMs: 6e5
-          });
-          approval.assertCurrent();
-          if (state.status?.state !== "completed")
-            throw new RemoteModelReviewError(
-              state.status?.state ?? "outcome-unconfirmed",
-              id4
-            );
-          const result = await remote.result(id4, runSignal);
-          approval.assertCurrent();
-          progress?.(1, 1, "Central review result verified");
-          return {
-            report: projectCommitDefender(result.report),
-            reviewCompletionConfirmed: true,
-            capturedSources: Object.fromEntries(
-              result.report.files.flatMap(({ source }) => {
-                const read = fixed.readFile(source.path, source.side);
-                return read.status === "available" ? [[source.path, read.text]] : [];
-              })
-            ),
-            stderr: "Central execution result. Source-read receipts were produced by the server; no local model or test runner was invoked.",
-            timedOut: false,
-            cancelled: false
-          };
-        } catch (error2) {
-          if (runSignal.aborted) {
-            try {
-              const cancelled = await remote.cancel(id4);
-              throw new RemoteModelReviewError(
-                cancelled.status?.state ?? "cancellation-unconfirmed",
-                id4
-              );
-            } catch (cancelError) {
-              if (cancelError instanceof RemoteModelReviewError)
-                throw cancelError;
-              throw new RemoteModelReviewError("cancellation-unconfirmed", id4);
-            }
-          }
-          if (error2 instanceof RemoteModelReviewError) throw error2;
-          throw new RemoteModelReviewError("outcome-unconfirmed", id4);
-        }
-      }
-    };
-  } catch (error2) {
-    dispose();
-    throw error2;
-  }
-}
-
-// src/remoteModelView.ts
-var esc3 = (value) => String(value).replace(
-  /[&<>"']/g,
-  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
-);
-function remoteApprovalHtml(proposal, nonce) {
-  const p = proposal.payload;
-  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'"><style>
-body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px;max-width:1000px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--vscode-textCodeBlock-background);padding:16px}button{padding:10px 18px;margin:12px 12px 12px 0;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:0;cursor:pointer}dt{font-weight:600;margin-top:10px}dd{margin:4px 0;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:8px;border-bottom:1px solid var(--vscode-panel-border)}</style></head><body>
-<h1>Approve central model review</h1><p>Review the exact upload below. Approval sends these source and knowledge bytes to the selected server and authorizes this account to run the review.</p>
-<dl><dt>Server</dt><dd>${esc3(proposal.serverUrl)}</dd><dt>Repository / user</dt><dd>${esc3(p.audience.repositoryId)} / ${esc3(p.audience.userId)}</dd>
-<dt>Account / model / effort</dt><dd>${esc3(p.model.accountId)} / ${esc3(p.model.name)} / ${esc3(p.model.reasoningEffort)}</dd>
-<dt>Knowledge mode</dt><dd>${esc3(p.client.mode)}</dd><dt>Execution budget</dt><dd>${p.budget.modelCalls} model calls \xB7 ${p.budget.durationMs / 1e3} seconds \xB7 ${p.budget.toolCalls} tool calls \xB7 ${p.budget.sourceBytes} source-tool bytes. Output token cap is unsupported.</dd>
-<dt>Server retention</dt><dd>Source ${p.retention.sourceSeconds} seconds; result ${p.retention.resultSeconds} seconds from admission.</dd>
-<dt>Upload</dt><dd>${proposal.bytes} bytes \xB7 ${p.source.files.length} file sides</dd><dt>Approved hash</dt><dd>${esc3(proposal.payloadHash)}</dd></dl>
-<table><thead><tr><th>Path</th><th>Side</th><th>Bytes</th></tr></thead><tbody>${p.source.files.map((f) => `<tr><td>${esc3(f.metadata.path)}</td><td>${esc3(f.metadata.side)}</td><td>${f.metadata.byteLength}</td></tr>`).join("")}</tbody></table>
-<details><summary>Full source, knowledge, model and budget payload</summary><pre>${esc3(JSON.stringify(p, null, 2))}</pre></details>
-<p>Closing this preview makes no submission. After submission, stopping the local wait does not prove server cancellation. Central Model Requests can inspect or cancel the recorded request.</p>
-<button id="approve">Approve upload and run</button><button id="cancel">Cancel</button>
-<script nonce="${nonce}">const api=acquireVsCodeApi();document.getElementById('approve').onclick=()=>{api.postMessage({action:'approve',hash:${JSON.stringify(proposal.payloadHash)}});document.getElementById('approve').disabled=true;};document.getElementById('cancel').onclick=()=>api.postMessage({action:'cancel'});</script></body></html>`;
-}
-function confirmRemote(proposal, signal) {
-  if (signal.aborted) return Promise.resolve(void 0);
-  const panel = vscode6.window.createWebviewPanel(
-    "commitDefender.remoteApproval",
-    "Approve Central Review",
-    vscode6.ViewColumn.Active,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: false,
-      localResourceRoots: []
-    }
-  );
-  panel.webview.html = remoteApprovalHtml(
-    proposal,
-    (0, import_node_crypto21.randomBytes)(18).toString("base64")
-  );
-  return new Promise((resolve4) => {
-    let settled = false;
-    const finish = (hash5) => {
-      if (settled) return;
-      settled = true;
-      signal.removeEventListener("abort", abort);
-      message.dispose();
-      closed.dispose();
-      panel.dispose();
-      resolve4(hash5);
-    };
-    const abort = () => finish();
-    const message = panel.webview.onDidReceiveMessage((value) => {
-      if (value?.action === "approve" && value.hash === proposal.payloadHash)
-        finish(value.hash);
-      else if (value?.action === "cancel") finish();
-    });
-    const closed = panel.onDidDispose(() => finish());
-    signal.addEventListener("abort", abort, { once: true });
-    if (signal.aborted) abort();
-  });
-}
-async function prepareRemoteWithUi(request, settings, scope, signal, assertCurrent, ports = {}) {
-  const cancellation = new vscode6.CancellationTokenSource();
-  const abort = () => cancellation.cancel();
-  signal.addEventListener("abort", abort, { once: true });
-  if (signal.aborted) abort();
-  try {
-    const choice2 = await withCentralConnection(
-      scope,
-      async (manager) => {
-        const entries = (await manager.list()).filter(
-          (c) => c.status === "connected" && c.clientId === "commit-defender" && (settings.mode !== "centralized" || c.id === settings.connectionId)
-        );
-        const connection = await vscode6.window.showQuickPick(
-          entries.map((c) => ({
-            label: c.serverUrl,
-            description: c.audience.repositoryId,
-            detail: `User ${c.audience.userId}`,
-            id: c.id
-          })),
-          {
-            title: "Central execution connection",
-            placeHolder: "Choose the server authorized to receive this review"
-          },
-          cancellation.token
-        );
-        if (!connection)
-          throw new RemoteModelReviewError("selection-cancelled");
-        assertCurrent();
-        const catalog = await manager.remoteReviewModels(connection.id, signal);
-        if (!catalog.enabled || !catalog.models.length)
-          throw new RemoteModelReviewError("no-authorized-central-model");
-        const model = await vscode6.window.showQuickPick(
-          catalog.models.map((m) => ({
-            label: m.displayName,
-            description: m.accountName,
-            detail: m.name,
-            model: m
-          })),
-          {
-            title: "Central account and model",
-            placeHolder: "Registry authorization is checked again before execution"
-          },
-          cancellation.token
-        );
-        if (!model) throw new RemoteModelReviewError("selection-cancelled");
-        const effort = await vscode6.window.showQuickPick(
-          model.model.allowedEfforts.map((value) => ({
-            label: value,
-            description: value === model.model.defaultEffort ? "Account default" : "",
-            value
-          })),
-          { title: "Reasoning effort" },
-          cancellation.token
-        );
-        if (!effort) throw new RemoteModelReviewError("selection-cancelled");
-        return {
-          connectionId: connection.id,
-          accountId: model.model.accountId,
-          name: model.model.name,
-          reasoningEffort: effort.value
-        };
-      },
-      ports
-    );
-    assertCurrent();
-    return await prepareRemoteModelReview(
-      request,
-      settings,
-      choice2,
-      signal,
-      { confirm: confirmRemote, assertCurrent },
-      ports
-    );
-  } finally {
-    signal.removeEventListener("abort", abort);
-    cancellation.dispose();
-  }
-}
-async function manageRemoteRequests(scope, assertCurrent, ports = {}) {
-  return withCentralConnection(
-    scope,
-    async (manager) => {
-      const entries = (await manager.list()).filter(
-        (c) => c.status === "connected" && c.clientId === "commit-defender"
-      );
-      const selected = await vscode6.window.showQuickPick(
-        entries.map((c) => ({
-          label: c.serverUrl,
-          description: c.audience.repositoryId,
-          id: c.id
-        })),
-        { title: "Central Model Requests: connection" }
-      );
-      if (!selected) return;
-      assertCurrent();
-      const client = await RemoteReviewClient.open({
-        scope,
-        ...ports,
-        connectionId: selected.id,
-        connections: manager
-      });
-      try {
-        const rows = await client.list();
-        const row = await vscode6.window.showQuickPick(
-          rows.map((r) => ({
-            label: r.handle.requestId,
-            description: r.status?.state ?? "unconfirmed",
-            detail: `${r.handle.model} \xB7 ${r.handle.selected.length} files`,
-            value: r
-          })),
-          {
-            title: "Central Model Requests",
-            placeHolder: "Choose an existing request; no new review will be submitted"
-          }
-        );
-        if (!row) return;
-        const action = await vscode6.window.showQuickPick(
-          [
-            { label: "Refresh status", action: "status" },
-            { label: "Read verified result", action: "result" },
-            { label: "Request cancellation", action: "cancel" }
-          ],
-          { title: row.label }
-        );
-        if (!action) return;
-        assertCurrent();
-        if (action.action === "result") {
-          const result = await client.result(row.label);
-          assertCurrent();
-          return projectCommitDefender(result.report);
-        }
-        if (action.action === "cancel") {
-          const confirmed = await vscode6.window.showWarningMessage(
-            `Cancel central review ${row.label}?`,
-            { modal: true },
-            "Request cancellation"
-          );
-          if (confirmed !== "Request cancellation") return;
-          assertCurrent();
-        }
-        const state = action.action === "cancel" ? await client.cancel(row.label) : await client.refresh(row.label);
-        assertCurrent();
-        void vscode6.window.showInformationMessage(
-          `Central request ${row.label}: ${state.status?.state ?? "unconfirmed"}${state.cancellationRequested ? "; cancellation was requested" : ""}.`
-        );
-      } finally {
-        client.close();
-      }
-    },
-    ports
-  );
 }
 
 // src/localKnowledgeView.ts
-var import_node_crypto22 = require("node:crypto");
-var vscode7 = __toESM(require("vscode"));
+var import_node_crypto17 = require("node:crypto");
+var vscode6 = __toESM(require("vscode"));
 async function showLocalKnowledge(context, scope, changed) {
-  const panel = vscode7.window.createWebviewPanel(
+  const panel = vscode6.window.createWebviewPanel(
     "commitDefender.localKnowledge",
     "Local Memory and Skills",
-    vscode7.ViewColumn.Active,
+    vscode6.ViewColumn.Active,
     {
       enableScripts: true,
       localResourceRoots: [],
@@ -24545,7 +21816,7 @@ async function showLocalKnowledge(context, scope, changed) {
   });
   const render = (notice = "") => {
     if (closed) return;
-    nonce = (0, import_node_crypto22.randomBytes)(16).toString("hex");
+    nonce = (0, import_node_crypto17.randomBytes)(16).toString("hex");
     panel.webview.html = localKnowledgeHtml(
       nonce,
       `${scope.profileId} \xB7 ${scope.kind === "profile" ? "All repositories in this profile" : "This repository and worktree"}`,
@@ -24564,7 +21835,7 @@ async function showLocalKnowledge(context, scope, changed) {
   const reportError = (error2) => {
     const code3 = errorCode(error2);
     const message = code3 === "revision-conflict" ? "This entry changed in another process. Refresh before editing again. Your attempted revision was not saved." : code3 === "credential-unavailable" ? "The OS credential store is unavailable. No plaintext fallback was used." : code3 === "commit-unknown" ? "Storage could not confirm this change. Refresh and verify the current revision before retrying." : "The operation could not be completed. Check the fields and local storage, then refresh before retrying.";
-    void vscode7.window.showErrorMessage(message);
+    void vscode6.window.showErrorMessage(message);
   };
   panel.webview.onDidReceiveMessage(async (message) => {
     if (closed || busy || !message || typeof message !== "object") return;
@@ -24608,7 +21879,7 @@ async function showLocalKnowledge(context, scope, changed) {
         await refresh();
       } else if (action === "delete" && selected) {
         const entry = selected;
-        const answer = await vscode7.window.showWarningMessage(
+        const answer = await vscode6.window.showWarningMessage(
           `Delete local ${entry.kind} \u201C${entry.title}\u201D?`,
           { modal: true },
           "Delete"
@@ -24625,7 +21896,7 @@ async function showLocalKnowledge(context, scope, changed) {
         );
       } else if (action === "export" && selected) {
         const entry = selected;
-        const uri = await vscode7.window.showSaveDialog({
+        const uri = await vscode6.window.showSaveDialog({
           title: "Export local knowledge as a new plaintext JSON file",
           filters: { JSON: ["json"] }
         });
@@ -24638,7 +21909,7 @@ async function showLocalKnowledge(context, scope, changed) {
           "Exported a plaintext copy to the selected file. Existing files are never overwritten."
         );
       } else if (action === "import") {
-        const uris = await vscode7.window.showOpenDialog({
+        const uris = await vscode6.window.showOpenDialog({
           title: "Import an exported local knowledge JSON file",
           canSelectMany: false,
           filters: { JSON: ["json"] }
@@ -24685,8 +21956,8 @@ async function showLocalKnowledge(context, scope, changed) {
 }
 
 // src/modelCredentials.ts
-var import_promises14 = require("node:fs/promises");
-var import_node_path23 = __toESM(require("node:path"));
+var import_promises13 = require("node:fs/promises");
+var import_node_path18 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code3) {
@@ -24702,8 +21973,8 @@ var unavailable3 = () => new ModelCredentialError("credential-unavailable");
 function usesModelApiKey(provider) {
   return ["aoai", "openai", "anthropic", "gemini"].includes(provider);
 }
-function boundedText(value, limit2) {
-  return typeof value === "string" && value.length <= limit2 && !/[\u0000-\u001f\u007f]/.test(value);
+function boundedText(value, limit) {
+  return typeof value === "string" && value.length <= limit && !/[\u0000-\u001f\u007f]/.test(value);
 }
 function modelCredentialBinding(config) {
   if (!usesModelApiKey(config.aiProvider) || !boundedText(config.endpoint, 4096) || !boundedText(config.model, 512) || !boundedText(config.apiVersion, 128))
@@ -24754,36 +22025,36 @@ function parseModelCredentialReference(value) {
   return { version: 1, profileId: r.profileId, id: r.id };
 }
 function checkedReference(value, binding) {
-  const reference2 = parseModelCredentialReference(value);
-  if (canonicalJson(reference2) !== canonicalJson(modelCredentialReference(reference2.profileId, binding)))
+  const reference = parseModelCredentialReference(value);
+  if (canonicalJson(reference) !== canonicalJson(modelCredentialReference(reference.profileId, binding)))
     throw invalid6();
-  return reference2;
+  return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path23.default.join(
+  return import_node_path18.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
   );
 }
-async function openStore(reference2, create, ports) {
+async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path23.default.join(
+    const file = import_node_path18.default.join(
       dataDirectory,
       "profiles",
-      reference2.profileId,
+      reference.profileId,
       "local",
       "key-ref.json"
     );
     try {
-      await (0, import_promises14.lstat)(file);
+      await (0, import_promises13.lstat)(file);
     } catch {
       throw unavailable3();
     }
   }
   return LocalRecordStore.open({
-    scope: profileScope(reference2.profileId),
+    scope: profileScope(reference.profileId),
     dataDirectory,
     keys: ports.keys ?? new PlatformLocalKeyStore(MODEL_CREDENTIAL_SERVICE)
   });
@@ -24796,12 +22067,12 @@ function recordValue(record2, binding) {
   return value.secret;
 }
 async function resolveModelCredential(referenceValue, binding, ports = {}) {
-  const reference2 = checkedReference(referenceValue, binding);
+  const reference = checkedReference(referenceValue, binding);
   try {
-    const store = await openStore(reference2, false, ports);
+    const store = await openStore(reference, false, ports);
     try {
       const secret = recordValue(
-        await store.read("settings", reference2.id),
+        await store.read("settings", reference.id),
         binding
       );
       if (!secret) throw unavailable3();
@@ -24829,12 +22100,12 @@ async function modelCredentialRevision(profileId, binding, ports = {}) {
   }
 }
 async function saveModelCredential(profileId, binding, secret, ports = {}, replaceRevision) {
-  const reference2 = modelCredentialReference(profileId, binding);
+  const reference = modelCredentialReference(profileId, binding);
   if (!boundedText(secret, 16384) || !secret.length) throw invalid6();
   try {
-    const store = await openStore(reference2, true, ports);
+    const store = await openStore(reference, true, ports);
     try {
-      const existing = await store.read("settings", reference2.id);
+      const existing = await store.read("settings", reference.id);
       const previous3 = recordValue(existing, binding);
       if (previous3 !== secret) {
         if (previous3 !== void 0 && replaceRevision !== existing?.revision)
@@ -24843,7 +22114,7 @@ async function saveModelCredential(profileId, binding, secret, ports = {}, repla
           throw new ModelCredentialError("credential-conflict");
         await store.write(
           "settings",
-          reference2.id,
+          reference.id,
           {
             formatVersion: 1,
             kind: "model-api-key",
@@ -24856,9 +22127,9 @@ async function saveModelCredential(profileId, binding, secret, ports = {}, repla
     } finally {
       store.close();
     }
-    if (await resolveModelCredential(reference2, binding, ports) !== secret)
+    if (await resolveModelCredential(reference, binding, ports) !== secret)
       throw unavailable3();
-    return reference2;
+    return reference;
   } catch (error2) {
     if (error2 instanceof ModelCredentialError) throw error2;
     throw unavailable3();
@@ -24879,32 +22150,32 @@ async function resolveModelRuntimeConfig(cfg, profileId, ports = {}) {
 }
 
 // src/modelCredentialView.ts
-var vscode8 = __toESM(require("vscode"));
+var vscode7 = __toESM(require("vscode"));
 
 // src/modelCredentialSettings.ts
 async function migrateSettingsModelCredential(profileId, binding, expectedSecret, settings, ports = {}) {
   const unchanged = () => settings.isCurrent() && settings.readLegacy() === expectedSecret;
   if (!unchanged()) throw new ModelCredentialError("credential-conflict");
-  const reference2 = await saveModelCredential(
+  const reference = await saveModelCredential(
     profileId,
     binding,
     expectedSecret,
     ports
   );
   if (!unchanged()) throw new ModelCredentialError("credential-conflict");
-  await settings.writeReference(reference2);
-  if (canonicalJson(settings.readReference()) !== canonicalJson(reference2) || await resolveModelCredential(reference2, binding, ports) !== expectedSecret || !unchanged())
+  await settings.writeReference(reference);
+  if (canonicalJson(settings.readReference()) !== canonicalJson(reference) || await resolveModelCredential(reference, binding, ports) !== expectedSecret || !unchanged())
     throw new ModelCredentialError("credential-conflict");
   await settings.removeLegacy();
   if (settings.readLegacy() !== void 0 && settings.readLegacy() !== "")
     throw new ModelCredentialError("credential-conflict");
-  return reference2;
+  return reference;
 }
 
 // src/hook/config.ts
-var import_node_fs7 = __toESM(require("node:fs"));
-var import_node_path24 = __toESM(require("node:path"));
-var import_node_crypto23 = require("node:crypto");
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path19 = __toESM(require("node:path"));
+var import_node_crypto18 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
     super(
@@ -24917,10 +22188,10 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path24.default.join(import_node_fs7.default.realpathSync(repoRoot), ".commit-defender");
-  if (create) import_node_fs7.default.mkdirSync(dir, { recursive: true, mode: 448 });
+  const dir = import_node_path19.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
+  if (create) import_node_fs5.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
-    const stat = import_node_fs7.default.lstatSync(dir);
+    const stat = import_node_fs5.default.lstatSync(dir);
     if (!stat.isDirectory() || stat.isSymbolicLink() || process.getuid && stat.uid !== process.getuid())
       throw failure();
   } catch (error2) {
@@ -24934,20 +22205,20 @@ function readHookConfigSnapshot(repoRoot) {
   const dir = safeDirectory(repoRoot, false);
   let fd;
   try {
-    fd = import_node_fs7.default.openSync(
-      import_node_path24.default.join(dir, "hook.json"),
-      import_node_fs7.default.constants.O_RDONLY | import_node_fs7.default.constants.O_NOFOLLOW | import_node_fs7.default.constants.O_NONBLOCK
+    fd = import_node_fs5.default.openSync(
+      import_node_path19.default.join(dir, "hook.json"),
+      import_node_fs5.default.constants.O_RDONLY | import_node_fs5.default.constants.O_NOFOLLOW | import_node_fs5.default.constants.O_NONBLOCK
     );
   } catch (error2) {
     if (error2.code === "ENOENT") return void 0;
     throw failure();
   }
   try {
-    const stat = import_node_fs7.default.fstatSync(fd);
+    const stat = import_node_fs5.default.fstatSync(fd);
     if (!stat.isFile() || stat.size > 1e6 || process.getuid && stat.uid !== process.getuid())
       throw failure();
     const bytes = Buffer.alloc(1000001);
-    const length = import_node_fs7.default.readSync(fd, bytes, 0, bytes.length, 0);
+    const length = import_node_fs5.default.readSync(fd, bytes, 0, bytes.length, 0);
     if (length > 1e6) throw failure();
     const text7 = bytes.subarray(0, length).toString("utf8");
     const raw = JSON.parse(text7);
@@ -24956,15 +22227,15 @@ function readHookConfigSnapshot(repoRoot) {
   } catch {
     throw failure();
   } finally {
-    import_node_fs7.default.closeSync(fd);
+    import_node_fs5.default.closeSync(fd);
   }
 }
-function configToHookJson(cfg, reference2) {
-  if (usesModelApiKey(cfg.aiProvider) && !reference2)
+function configToHookJson(cfg, reference) {
+  if (usesModelApiKey(cfg.aiProvider) && !reference)
     throw new HookCredentialMigrationRequired();
-  if (reference2) {
-    reference2 = parseModelCredentialReference(reference2);
-    if (modelCredentialReference(reference2.profileId, modelCredentialBinding(cfg)).id !== reference2.id)
+  if (reference) {
+    reference = parseModelCredentialReference(reference);
+    if (modelCredentialReference(reference.profileId, modelCredentialBinding(cfg)).id !== reference.id)
       throw failure();
   }
   return {
@@ -24973,7 +22244,7 @@ function configToHookJson(cfg, reference2) {
     model: cfg.model,
     endpoint: cfg.endpoint,
     apiVersion: cfg.apiVersion,
-    ...reference2 ? { modelCredentialRef: reference2 } : {},
+    ...reference ? { modelCredentialRef: reference } : {},
     codexPath: cfg.codexPath,
     claudeCodePath: cfg.claudeCodePath,
     geminiCliPath: cfg.geminiCliPath,
@@ -25052,39 +22323,39 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path24.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path24.default.join(dir, `.hook-lock-${(0, import_node_crypto23.randomUUID)()}`);
+  const lock2 = import_node_path19.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path19.default.join(dir, `.hook-lock-${(0, import_node_crypto18.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
-    nonce: (0, import_node_crypto23.randomUUID)()
+    nonce: (0, import_node_crypto18.randomUUID)()
   });
-  import_node_fs7.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs7.default.writeFileSync(import_node_path24.default.join(prepared, "owner.json"), owner, {
+  import_node_fs5.default.mkdirSync(prepared, { mode: 448 });
+  import_node_fs5.default.writeFileSync(import_node_path19.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        import_node_fs7.default.renameSync(prepared, lock2);
+        import_node_fs5.default.renameSync(prepared, lock2);
         break;
       } catch (error2) {
         if (!["ENOTEMPTY", "EEXIST"].includes(
           error2.code ?? ""
         ) || attempt)
           throw failure();
-        const stat = import_node_fs7.default.lstatSync(lock2);
+        const stat = import_node_fs5.default.lstatSync(lock2);
         if (!stat.isDirectory() || stat.isSymbolicLink() || process.getuid && stat.uid !== process.getuid())
           throw failure();
-        const entries = import_node_fs7.default.readdirSync(lock2);
+        const entries = import_node_fs5.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path24.default.join(lock2, "owner.json");
-        const ownerStat = import_node_fs7.default.lstatSync(ownerPath);
+        const ownerPath = import_node_path19.default.join(lock2, "owner.json");
+        const ownerStat = import_node_fs5.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
-        const prior = import_node_fs7.default.readFileSync(ownerPath, "utf8");
+        const prior = import_node_fs5.default.readFileSync(ownerPath, "utf8");
         const parsed = JSON.parse(prior);
         if (parsed.format !== 1 || !Number.isSafeInteger(parsed.pid) || parsed.pid <= 0 || typeof parsed.nonce !== "string")
           throw failure();
@@ -25095,61 +22366,61 @@ function acquireLock(dir) {
           if (error3.code !== "ESRCH")
             throw failure();
         }
-        if (import_node_fs7.default.lstatSync(lock2).ino !== stat.ino || import_node_fs7.default.readFileSync(ownerPath, "utf8") !== prior)
+        if (import_node_fs5.default.lstatSync(lock2).ino !== stat.ino || import_node_fs5.default.readFileSync(ownerPath, "utf8") !== prior)
           throw failure();
-        import_node_fs7.default.unlinkSync(ownerPath);
-        import_node_fs7.default.rmdirSync(lock2);
+        import_node_fs5.default.unlinkSync(ownerPath);
+        import_node_fs5.default.rmdirSync(lock2);
       }
     }
   } catch {
-    import_node_fs7.default.rmSync(prepared, { recursive: true, force: true });
+    import_node_fs5.default.rmSync(prepared, { recursive: true, force: true });
     throw failure();
   }
   return () => {
-    if (import_node_fs7.default.readFileSync(import_node_path24.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs5.default.readFileSync(import_node_path19.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs7.default.unlinkSync(import_node_path24.default.join(lock2, "owner.json"));
-    import_node_fs7.default.rmdirSync(lock2);
+    import_node_fs5.default.unlinkSync(import_node_path19.default.join(lock2, "owner.json"));
+    import_node_fs5.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path24.default.join(dir, `.hook-config-${(0, import_node_crypto23.randomUUID)()}`);
+  const temporary = import_node_path19.default.join(dir, `.hook-config-${(0, import_node_crypto18.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    const fd = import_node_fs7.default.openSync(
+    const fd = import_node_fs5.default.openSync(
       temporary,
-      import_node_fs7.default.constants.O_CREAT | import_node_fs7.default.constants.O_EXCL | import_node_fs7.default.constants.O_WRONLY,
+      import_node_fs5.default.constants.O_CREAT | import_node_fs5.default.constants.O_EXCL | import_node_fs5.default.constants.O_WRONLY,
       384
     );
     try {
-      import_node_fs7.default.writeFileSync(fd, JSON.stringify(cfg, null, 2) + "\n");
-      import_node_fs7.default.fsyncSync(fd);
+      import_node_fs5.default.writeFileSync(fd, JSON.stringify(cfg, null, 2) + "\n");
+      import_node_fs5.default.fsyncSync(fd);
     } finally {
-      import_node_fs7.default.closeSync(fd);
+      import_node_fs5.default.closeSync(fd);
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs7.default.renameSync(temporary, import_node_path24.default.join(dir, "hook.json"));
-    const directory = import_node_fs7.default.openSync(dir, import_node_fs7.default.constants.O_RDONLY);
+    import_node_fs5.default.renameSync(temporary, import_node_path19.default.join(dir, "hook.json"));
+    const directory = import_node_fs5.default.openSync(dir, import_node_fs5.default.constants.O_RDONLY);
     try {
-      import_node_fs7.default.fsyncSync(directory);
+      import_node_fs5.default.fsyncSync(directory);
     } finally {
-      import_node_fs7.default.closeSync(directory);
+      import_node_fs5.default.closeSync(directory);
     }
   } finally {
-    import_node_fs7.default.rmSync(temporary, { force: true });
+    import_node_fs5.default.rmSync(temporary, { force: true });
     release();
   }
 }
-async function writeHookConfig(repoRoot, cfg, reference2, ports = {}) {
+async function writeHookConfig(repoRoot, cfg, reference, ports = {}) {
   const before = readHookConfigSnapshot(repoRoot);
   if (before?.raw.apiKey) throw new HookCredentialMigrationRequired();
   const next = configToHookJson(
     cfg,
-    usesModelApiKey(cfg.aiProvider) ? reference2 : void 0
+    usesModelApiKey(cfg.aiProvider) ? reference : void 0
   );
   if (next.modelCredentialRef)
     await resolveModelCredential(
@@ -25186,7 +22457,7 @@ async function migrateHookModelCredential(repoRoot, profileId, ports = {}, expec
 
 // src/modelCredentialView.ts
 async function manageModelCredential(repoRoot) {
-  const settings = () => vscode8.workspace.getConfiguration("commitDefender");
+  const settings = () => vscode7.workspace.getConfiguration("commitDefender");
   const profile = () => settings().inspect("localProfile")?.globalValue ?? "default";
   const profileId = profile();
   const legacy = settings().inspect("apiKey");
@@ -25233,7 +22504,7 @@ async function manageModelCredential(repoRoot) {
       detail
     });
   }
-  const chosen = await vscode8.window.showQuickPick(choices, {
+  const chosen = await vscode7.window.showQuickPick(choices, {
     title: `Model API credential \xB7 ${profileId}`
   });
   if (!chosen) return;
@@ -25242,7 +22513,7 @@ async function manageModelCredential(repoRoot) {
     if (chosen.operation === "hook") {
       if (!repoRoot || !hook) throw Error("Hook changed.");
       await migrateHookModelCredential(repoRoot, profileId, {}, hook.text);
-      void vscode8.window.showInformationMessage(
+      void vscode7.window.showInformationMessage(
         "The hook now resolves its model API key from encrypted OS-backed storage. Other plaintext copies were preserved."
       );
       return;
@@ -25262,7 +22533,7 @@ async function manageModelCredential(repoRoot) {
       await settings().update(
         "modelCredentialRef",
         ref,
-        vscode8.ConfigurationTarget.Global
+        vscode7.ConfigurationTarget.Global
       );
     };
     if (chosen.operation === "reuse") {
@@ -25272,13 +22543,13 @@ async function manageModelCredential(repoRoot) {
         profileId
       );
       await writeReference(ref);
-      void vscode8.window.showInformationMessage(
+      void vscode7.window.showInformationMessage(
         "Verified stored model credential selected. Existing plaintext copies were preserved."
       );
       return;
     }
     if (chosen.operation === "enter") {
-      const secret = await vscode8.window.showInputBox({
+      const secret = await vscode7.window.showInputBox({
         title: "Store model API key",
         prompt: `${binding.provider} \xB7 ${binding.endpoint} \xB7 ${binding.model || "provider default model"}`,
         password: true,
@@ -25294,7 +22565,7 @@ async function manageModelCredential(repoRoot) {
         if (!(error2 instanceof ModelCredentialError) || error2.code !== "credential-conflict")
           throw error2;
         const revision = await modelCredentialRevision(profileId, binding);
-        const action2 = await vscode8.window.showWarningMessage(
+        const action2 = await vscode7.window.showWarningMessage(
           `Replace the stored key for ${binding.provider} at ${binding.endpoint} (${binding.model || "provider default model"}) in profile ${profileId}? Existing references for this destination will use the replacement.`,
           { modal: true },
           "Replace Key"
@@ -25312,19 +22583,19 @@ async function manageModelCredential(repoRoot) {
       await writeReference(ref);
       if ((await resolveModelRuntimeConfig(getConfig(), profileId)).apiKey !== secret)
         throw Error("Reference was not verified.");
-      void vscode8.window.showInformationMessage(
+      void vscode7.window.showInformationMessage(
         "Model API key saved and reopened successfully. Existing plaintext settings were preserved; migrate each copy when ready."
       );
       return;
     }
-    const target = chosen.operation === "user" ? vscode8.ConfigurationTarget.Global : vscode8.ConfigurationTarget.Workspace;
+    const target = chosen.operation === "user" ? vscode7.ConfigurationTarget.Global : vscode7.ConfigurationTarget.Workspace;
     const readLegacy = () => {
       const value = settings().inspect("apiKey");
       return chosen.operation === "user" ? value?.globalValue : value?.workspaceValue;
     };
     const expected = chosen.operation === "user" ? legacy?.globalValue : legacy?.workspaceValue;
     if (!expected) throw Error("Credential changed.");
-    const action = await vscode8.window.showWarningMessage(
+    const action = await vscode7.window.showWarningMessage(
       `Migrate the ${chosen.operation === "user" ? "User" : "Workspace"} API key for ${binding.provider} at ${binding.endpoint} (${binding.model || "provider default model"})? The selected plaintext value will be removed after verification.`,
       { modal: true },
       "Migrate"
@@ -25339,16 +22610,16 @@ async function manageModelCredential(repoRoot) {
         await settings().update("apiKey", void 0, target);
       }
     });
-    void vscode8.window.showInformationMessage(
+    void vscode7.window.showInformationMessage(
       "The selected API key setting was migrated and removed. Other plaintext copies were preserved."
     );
   } catch {
-    void vscode8.window.showErrorMessage(
+    void vscode7.window.showErrorMessage(
       "Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
       "Open User Settings"
     ).then((action) => {
       if (action === "Open User Settings")
-        return vscode8.commands.executeCommand(
+        return vscode7.commands.executeCommand(
           "workbench.action.openSettings",
           "@ext:pydemia.commit-defender"
         );
@@ -25357,16 +22628,16 @@ async function manageModelCredential(repoRoot) {
 }
 
 // src/codeLens.ts
-var vscode10 = __toESM(require("vscode"));
+var vscode9 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path34 = __toESM(require("path"));
-var vscode9 = __toESM(require("vscode"));
+var path29 = __toESM(require("path"));
+var vscode8 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
   _last;
   /** Fires whenever the store is updated or cleared. */
-  onDidChange = new vscode9.EventEmitter();
+  onDidChange = new vscode8.EventEmitter();
   /** Populate the store from a completed AnalysisReport. */
   update(report, repoRoot, displayBlocks) {
     const blocks = normalizeReport(report);
@@ -25376,8 +22647,8 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path34.join(repoRoot, b.file);
-      const uriKey = vscode9.Uri.file(absPath).toString();
+      const absPath = path29.join(repoRoot, b.file);
+      const uriKey = vscode8.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
       const bucket = set.byLine.get(line0) ?? [];
@@ -25414,9 +22685,9 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path35 = __toESM(require("path"));
+var path30 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
-  _onDidChangeCodeLenses = new vscode10.EventEmitter();
+  _onDidChangeCodeLenses = new vscode9.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
   constructor() {
     findingsStore.onDidChange.event(() => this._onDidChangeCodeLenses.fire());
@@ -25427,7 +22698,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path35.relative(last.repoRoot, document3.uri.fsPath).split(path35.sep).join("/");
+    const file = path30.relative(last.repoRoot, document3.uri.fsPath).split(path30.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -25446,7 +22717,7 @@ var SuggestionCodeLensProvider = class {
       const meta = metaForBlock(worst);
       const count = blocks.length;
       const first = blocks[0].comment.split("\n")[0];
-      lenses.push(new vscode10.CodeLens(new vscode10.Range(line0, 0, line0, 0), {
+      lenses.push(new vscode9.CodeLens(new vscode9.Range(line0, 0, line0, 0), {
         title: `${meta.emoji} ${count} finding${count > 1 ? "s" : ""}`,
         tooltip: first,
         command: "commitDefender.showLineSuggestion",
@@ -25458,8 +22729,8 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path36 = __toESM(require("path"));
-var vscode11 = __toESM(require("vscode"));
+var path31 = __toESM(require("path"));
+var vscode10 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
   clearAll() {
@@ -25491,9 +22762,9 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode11.Uri.file(path36.join(repoRoot, b.file));
+    const uri = vscode10.Uri.file(path31.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
-    const range = new vscode11.Range(line, 0, line, 0);
+    const range = new vscode10.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
     const pov = b.category && b.priority !== "P0" ? ` \xB7 ${formatCategory(b.category)}` : "";
     const header2 = `${meta.emoji} ${b.priority} ${meta.label}${pov}`;
@@ -25502,24 +22773,24 @@ var CommentManager = class {
     const comment = {
       author: { name: "Commit Defender" },
       body: md,
-      mode: vscode11.CommentMode.Preview
+      mode: vscode10.CommentMode.Preview
     };
     const thread = ctrl.createCommentThread(uri, range, [comment]);
     thread.label = header2;
-    thread.collapsibleState = vscode11.CommentThreadCollapsibleState.Expanded;
+    thread.collapsibleState = vscode10.CommentThreadCollapsibleState.Expanded;
     thread.canReply = false;
     this.threads.push(thread);
   }
 };
 
 // src/diagnostics.ts
-var path37 = __toESM(require("path"));
-var vscode12 = __toESM(require("vscode"));
+var path32 = __toESM(require("path"));
+var vscode11 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
-  P3: vscode12.DiagnosticSeverity.Error,
-  P2: vscode12.DiagnosticSeverity.Warning,
-  P1: vscode12.DiagnosticSeverity.Information,
-  P0: vscode12.DiagnosticSeverity.Hint
+  P3: vscode11.DiagnosticSeverity.Error,
+  P2: vscode11.DiagnosticSeverity.Warning,
+  P1: vscode11.DiagnosticSeverity.Information,
+  P0: vscode11.DiagnosticSeverity.Hint
 };
 function applyDiagnostics(blocks, repoRoot, collection) {
   collection.clear();
@@ -25533,17 +22804,17 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode12.Uri.file(path37.join(repoRoot, relFile));
+    const uri = vscode11.Uri.file(path32.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
-      const range = new vscode12.Range(line, col, line, col);
+      const range = new vscode11.Range(line, col, line, col);
       const cat = b.category ? formatCategory(b.category) : "";
       const catPart = cat ? `\xB7${cat}` : "";
       const prefix = `[${b.priority}${catPart}]`;
       const body2 = b.comment.split("\n")[0].trim();
       const message = b.source === "lint" && b.rule ? `${prefix} ${b.rule} \u2014 ${body2}` : `${prefix} ${body2}`;
-      const diag = new vscode12.Diagnostic(range, message, PRIORITY_SEVERITY[b.priority]);
+      const diag = new vscode11.Diagnostic(range, message, PRIORITY_SEVERITY[b.priority]);
       diag.source = `commit-defender \xB7 ${b.source}`;
       if (b.source === "lint" && b.rule) {
         diag.code = b.rule;
@@ -25556,11 +22827,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path38 = __toESM(require("path"));
+var path33 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path38.relative(path38.resolve(repoRoot), path38.resolve(file)).split(path38.sep).join("/");
+  const relative4 = (file) => path33.relative(path33.resolve(repoRoot), path33.resolve(file)).split(path33.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -25575,18 +22846,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path38.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path33.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path38.join(dir, entry.name);
+      const absolute = path33.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path38.resolve(dirPath));
+  walk(path33.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -25603,14 +22874,14 @@ async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
 }
 
 // src/historyProvider.ts
-var vscode13 = __toESM(require("vscode"));
+var vscode12 = __toESM(require("vscode"));
 var HistoryProvider = class {
   _history = [];
   _blocks = [];
   _lastReport;
   _isRunning = false;
   _cfg;
-  _emitter = new vscode13.EventEmitter();
+  _emitter = new vscode12.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   constructor(cfg) {
     this._cfg = cfg;
@@ -25662,16 +22933,16 @@ var HistoryProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "section": {
-        const collapsed = node2.collapsed ? vscode13.TreeItemCollapsibleState.Collapsed : vscode13.TreeItemCollapsibleState.Expanded;
-        const item = new vscode13.TreeItem(node2.label, collapsed);
-        item.iconPath = new vscode13.ThemeIcon(node2.icon);
+        const collapsed = node2.collapsed ? vscode12.TreeItemCollapsibleState.Collapsed : vscode12.TreeItemCollapsibleState.Expanded;
+        const item = new vscode12.TreeItem(node2.label, collapsed);
+        item.iconPath = new vscode12.ThemeIcon(node2.icon);
         item.id = node2.id;
         return item;
       }
       case "command": {
-        const item = new vscode13.TreeItem(node2.label);
+        const item = new vscode12.TreeItem(node2.label);
         item.description = node2.desc;
-        item.iconPath = new vscode13.ThemeIcon(node2.icon);
+        item.iconPath = new vscode12.ThemeIcon(node2.icon);
         item.command = { command: node2.command, title: node2.label, arguments: node2.args };
         item.tooltip = node2.desc;
         item.id = node2.id;
@@ -25680,9 +22951,9 @@ var HistoryProvider = class {
       case "finding": {
         const meta = PRIORITY_META[node2.priority];
         const label = `${meta.emoji} ${node2.priority} ${meta.label}`;
-        const item = new vscode13.TreeItem(`${label}  \xD7${node2.count}`);
+        const item = new vscode12.TreeItem(`${label}  \xD7${node2.count}`);
         item.description = `${node2.count} finding${node2.count !== 1 ? "s" : ""}`;
-        item.iconPath = new vscode13.ThemeIcon(
+        item.iconPath = new vscode12.ThemeIcon(
           node2.priority === "P3" ? "error" : node2.priority === "P2" ? "warning" : node2.priority === "P1" ? "info" : "pass"
         );
         item.command = {
@@ -25694,9 +22965,9 @@ var HistoryProvider = class {
         return item;
       }
       case "status": {
-        const item = new vscode13.TreeItem(node2.label);
+        const item = new vscode12.TreeItem(node2.label);
         item.description = node2.value;
-        item.iconPath = new vscode13.ThemeIcon(node2.icon);
+        item.iconPath = new vscode12.ThemeIcon(node2.icon);
         item.tooltip = node2.tooltip ?? `${node2.label}: ${node2.value}`;
         if (node2.command) {
           item.command = { command: node2.command, title: node2.label };
@@ -25706,9 +22977,9 @@ var HistoryProvider = class {
       }
       case "entry": {
         const e = node2.entry;
-        const item = new vscode13.TreeItem(e.label, vscode13.TreeItemCollapsibleState.None);
+        const item = new vscode12.TreeItem(e.label, vscode12.TreeItemCollapsibleState.None);
         item.description = `${scopeTag(e.scope)} \xB7 ${formatTime(e.timestamp)}`;
-        item.iconPath = new vscode13.ThemeIcon(scopeIcon(e.scope));
+        item.iconPath = new vscode12.ThemeIcon(scopeIcon(e.scope));
         item.tooltip = `${e.timestamp.toLocaleString()}
 [${scopeTag(e.scope)}] ${e.report.review.summary.slice(0, 200)}`;
         item.contextValue = "historyEntry";
@@ -25721,8 +22992,8 @@ var HistoryProvider = class {
         return item;
       }
       default: {
-        const item = new vscode13.TreeItem(node2.label);
-        item.iconPath = new vscode13.ThemeIcon(node2.icon ?? "info");
+        const item = new vscode12.TreeItem(node2.label);
+        item.iconPath = new vscode12.ThemeIcon(node2.icon ?? "info");
         item.id = node2.id;
         return item;
       }
@@ -25920,15 +23191,15 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path39 = __toESM(require("path"));
-var vscode15 = __toESM(require("vscode"));
+var path34 = __toESM(require("path"));
+var vscode14 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
-var vscode14 = __toESM(require("vscode"));
+var vscode13 = __toESM(require("vscode"));
 var _channel;
 function getOutputChannel() {
   if (!_channel) {
-    _channel = vscode14.window.createOutputChannel("Commit Defender", "ansi");
+    _channel = vscode13.window.createOutputChannel("Commit Defender", "ansi");
   }
   return _channel;
 }
@@ -25947,7 +23218,7 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path39.join(repoRoot, ".gitignore");
+  const gi = path34.join(repoRoot, ".gitignore");
   let text7 = "";
   try {
     text7 = fs9.readFileSync(gi, "utf8");
@@ -25962,7 +23233,7 @@ ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path39.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path34.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -25987,12 +23258,12 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path39.join(repoRoot, ".git", "hooks");
-  const hookPath = path39.join(hookDir, "pre-commit");
+  const hookDir = path34.join(repoRoot, ".git", "hooks");
+  const hookPath = path34.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
-    vscode15.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
+    vscode14.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
     return;
   }
   let existing = "";
@@ -26001,7 +23272,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   if (existing && !existing.includes(HOOK_SIGNATURE)) {
-    const action = await vscode15.window.showWarningMessage(
+    const action = await vscode14.window.showWarningMessage(
       "Commit Defender: A pre-commit hook already exists. Replacing it would discard the current contents.",
       { modal: true },
       "Replace",
@@ -26022,7 +23293,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   try {
     await writeHookConfig2(repoRoot, cfg);
   } catch {
-    void vscode15.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
+    void vscode14.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
     return;
   }
   fs9.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 493 });
@@ -26031,22 +23302,22 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   channel.appendLine(`[Commit Defender] Pre-commit hook installed at ${hookPath}`);
-  vscode15.window.showInformationMessage(
+  vscode14.window.showInformationMessage(
     "Commit Defender: Pre-commit hook installed. Commits in this repo will be reviewed automatically \u2014 even outside VS Code."
   );
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path39.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path34.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
   } catch {
-    vscode15.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
+    vscode14.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
     return;
   }
   if (!existing.includes(HOOK_SIGNATURE)) {
-    vscode15.window.showInformationMessage(
+    vscode14.window.showInformationMessage(
       "Commit Defender: Pre-commit hook was not installed by Commit Defender \u2014 skipping removal."
     );
     return;
@@ -26055,22 +23326,22 @@ async function uninstallHook(repoRoot) {
     fs9.unlinkSync(hookPath);
     channel.appendLine(`[Commit Defender] Removed pre-commit hook at ${hookPath}`);
   } catch (e) {
-    vscode15.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
+    vscode14.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
     return;
   }
-  vscode15.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
+  vscode14.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path39.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path34.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path40 = __toESM(require("path"));
-var vscode16 = __toESM(require("vscode"));
+var path35 = __toESM(require("path"));
+var vscode15 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
   P2: "warning",
@@ -26094,12 +23365,12 @@ var PanelProvider = class {
   _blocks = [];
   _repoRoot = "";
   _isRunning = false;
-  _emitter = new vscode16.EventEmitter();
+  _emitter = new vscode15.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   // Map decoration URIs → priority + optional badge so a single
   // FileDecorationProvider can paint every row.
   _decorations = /* @__PURE__ */ new Map();
-  _decoEmitter = new vscode16.EventEmitter();
+  _decoEmitter = new vscode15.EventEmitter();
   decorationProvider = {
     onDidChangeFileDecorations: this._decoEmitter.event,
     provideFileDecoration: (uri) => {
@@ -26110,7 +23381,7 @@ var PanelProvider = class {
       if (!entry) {
         return void 0;
       }
-      return new vscode16.FileDecoration(entry.badge, entry.tooltip);
+      return new vscode15.FileDecoration(entry.badge, entry.tooltip);
     }
   };
   _report;
@@ -26127,7 +23398,7 @@ var PanelProvider = class {
   }
   clear() {
     this._report = void 0;
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode16.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode15.Uri.parse(s));
     this._blocks = [];
     this._repoRoot = "";
     this._decorations.clear();
@@ -26139,17 +23410,17 @@ var PanelProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "file": {
-        const item = new vscode16.TreeItem(
-          path40.basename(node2.file),
-          vscode16.TreeItemCollapsibleState.Expanded
+        const item = new vscode15.TreeItem(
+          path35.basename(node2.file),
+          vscode15.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path40.dirname(node2.file);
+        const dir = path35.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
         item.tooltip = `${node2.file} \u2014 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}` + (worst ? ` (worst: ${worst})` : "") + summarizeCounts(counts);
-        item.iconPath = worst ? new vscode16.ThemeIcon(PRIORITY_ICON[worst], new vscode16.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode16.ThemeIcon("file");
+        item.iconPath = worst ? new vscode15.ThemeIcon(PRIORITY_ICON[worst], new vscode15.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode15.ThemeIcon("file");
         item.id = node2.id;
         return item;
       }
@@ -26161,27 +23432,27 @@ var PanelProvider = class {
         const body2 = b.comment.split("\n")[0].trim();
         const ruleTag = b.source === "lint" && b.rule ? `${b.rule} \u2014 ` : "";
         const label = `${emoji} @${author}: ${ruleTag}${body2}`;
-        const item = new vscode16.TreeItem(label);
+        const item = new vscode15.TreeItem(label);
         item.resourceUri = node2.uri;
-        item.iconPath = new vscode16.ThemeIcon(
+        item.iconPath = new vscode15.ThemeIcon(
           PRIORITY_ICON[b.priority],
-          new vscode16.ThemeColor(PRIORITY_COLOR_ID[b.priority])
+          new vscode15.ThemeColor(PRIORITY_COLOR_ID[b.priority])
         );
         const lineRef = b.line > 0 ? `Ln ${b.line}${b.col ? `, Col ${b.col}` : ""}` : "file-level";
         item.description = lineRef;
         const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** \xB7 _@${author}_
 
 ${b.comment}`;
-        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode16.MarkdownString(safeMarkdown(tooltip, () => void 0));
+        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode15.MarkdownString(safeMarkdown(tooltip, () => void 0));
         item.command = this._report ? reviewNavigation.sourceCommand(this._repoRoot, this._report, b.file, b.line) : void 0;
         item.id = node2.id;
         return item;
       }
       default: {
-        const item = new vscode16.TreeItem(node2.label);
-        item.iconPath = new vscode16.ThemeIcon(
+        const item = new vscode15.TreeItem(node2.label);
+        item.iconPath = new vscode15.ThemeIcon(
           this._isRunning ? "loading~spin" : "shield",
-          new vscode16.ThemeColor("charts.blue")
+          new vscode15.ThemeColor("charts.blue")
         );
         item.id = node2.id;
         return item;
@@ -26241,7 +23512,7 @@ ${b.comment}`;
         kind: "file",
         id: id4,
         file,
-        absPath: path40.join(this._repoRoot, file),
+        absPath: path35.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id4, blocks)
       };
@@ -26249,13 +23520,13 @@ ${b.comment}`;
   }
   // ── Decoration plumbing ───────────────────────────────────────────────────
   _fileUri(id4, blocks) {
-    return vscode16.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
+    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
   }
   _blockUri(id4) {
-    return vscode16.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
+    return vscode15.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
   }
   _rebuildDecorations() {
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode16.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode15.Uri.parse(s));
     this._decorations.clear();
     const byFile = /* @__PURE__ */ new Map();
     for (const b of this._blocks) {
@@ -26305,7 +23576,7 @@ ${b.comment}`;
         });
       });
     });
-    const newUris = Array.from(this._decorations.keys()).map((s) => vscode16.Uri.parse(s));
+    const newUris = Array.from(this._decorations.keys()).map((s) => vscode15.Uri.parse(s));
     const fired = [...oldUris, ...newUris];
     if (fired.length) {
       this._decoEmitter.fire(fired);
@@ -26341,11 +23612,11 @@ ${parts2.join(" ")}` : "";
 }
 
 // src/statusBar.ts
-var vscode17 = __toESM(require("vscode"));
+var vscode16 = __toESM(require("vscode"));
 var StatusBarManager = class {
   item;
   constructor() {
-    this.item = vscode17.window.createStatusBarItem(vscode17.StatusBarAlignment.Left, 100);
+    this.item = vscode16.window.createStatusBarItem(vscode16.StatusBarAlignment.Left, 100);
     this.item.command = "commitDefender.analyze";
     this.setIdle();
     this.item.show();
@@ -26388,13 +23659,13 @@ var StatusBarManager = class {
     this.item.tooltip = `${reviewCoverage(report)}. ${report.gcr ? "Standalone review is advisory" : `Legacy hook: ${resolveExitCode(report) ? "would block" : "allows commit"}`}. Click to re-analyze.`;
     this.item.command = "commitDefender.analyze";
     this.item.backgroundColor = void 0;
-    this.item.color = new vscode17.ThemeColor(meta.color);
+    this.item.color = new vscode16.ThemeColor(meta.color);
   }
   setError(message) {
     this.item.text = "$(warning) CD: Error";
     this.item.tooltip = `Commit Defender error: ${message}`;
     this.item.command = "commitDefender.analyze";
-    this.item.backgroundColor = new vscode17.ThemeColor("statusBarItem.warningBackground");
+    this.item.backgroundColor = new vscode16.ThemeColor("statusBarItem.warningBackground");
     this.item.color = void 0;
   }
   dispose() {
@@ -26403,18 +23674,18 @@ var StatusBarManager = class {
 };
 
 // src/reviewChat.ts
-var vscode18 = __toESM(require("vscode"));
-var import_node_crypto25 = require("node:crypto");
+var vscode17 = __toESM(require("vscode"));
+var import_node_crypto20 = require("node:crypto");
 
 // src/reviewChatView.ts
-var import_node_crypto24 = require("node:crypto");
-var esc4 = (text7) => text7.replace(
+var import_node_crypto19 = require("node:crypto");
+var esc3 = (text7) => text7.replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
 var markdown = (text7) => safeMarkdownHtml(text7, () => void 0);
 var ReviewChatView = class {
-  id = (0, import_node_crypto24.randomBytes)(16).toString("hex");
+  id = (0, import_node_crypto19.randomBytes)(16).toString("hex");
   revision = 0;
   sources = /* @__PURE__ */ new Map();
   findings = /* @__PURE__ */ new Map();
@@ -26459,20 +23730,20 @@ var ReviewChatView = class {
     const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
-      const id4 = (0, import_node_crypto24.randomBytes)(12).toString("hex");
+      const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
       this.findings.set(id4, `Explain finding ${f.id}: ${f.title}`);
-      return `<li><button class="link" data-finding="${id4}">${esc4(f.title)}</button></li>`;
+      return `<li><button class="link" data-finding="${id4}">${esc3(f.title)}</button></li>`;
     }).join("")}</ul></details>`;
     const turns = chat.turns.map((t) => {
       const questions = t.questions.map(
-        (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc4(q.question)}</p>${q.answer !== null ? `<div class="user">${esc4(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc4(option)}">${esc4(option)}</button>`).join("")}</div><small>Expires ${esc4(q.expiresAt)}</small>`}</section>`
+        (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc3(q.question)}</p>${q.answer !== null ? `<div class="user">${esc3(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc3(option)}">${esc3(option)}</button>`).join("")}</div><small>Expires ${esc3(q.expiresAt)}</small>`}</section>`
       ).join("");
       const citations = (t.response?.citations ?? []).map((c, index2) => {
-        const id4 = (0, import_node_crypto24.randomBytes)(12).toString("hex");
+        const id4 = (0, import_node_crypto19.randomBytes)(12).toString("hex");
         this.sources.set(id4, { turnId: t.id, citation: index2 });
-        return `<li><button class="link" data-source="${id4}">${esc4(c.location.side)} \xB7 ${esc4(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
+        return `<li><button class="link" data-source="${id4}">${esc3(c.location.side)} \xB7 ${esc3(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
       }).join("");
-      return `<article><div class="user">${esc4(t.content)}</div>${questions}${t.response ? `<div class="answer">${markdown(t.response.content)}</div>${citations ? `<details open><summary>Source evidence</summary><ul>${citations}</ul></details>` : ""}` : ""}<p class="turn-status">${esc4(t.status)}${t.error ? ` \xB7 ${esc4(t.error)}` : ""}${["running", "failed", "cancelled"].includes(t.status) ? " \xB7 budget reserved; final usage unconfirmed" : ` \xB7 ${t.usage.modelCalls} model call(s)`}</p></article>`;
+      return `<article><div class="user">${esc3(t.content)}</div>${questions}${t.response ? `<div class="answer">${markdown(t.response.content)}</div>${citations ? `<details open><summary>Source evidence</summary><ul>${citations}</ul></details>` : ""}` : ""}<p class="turn-status">${esc3(t.status)}${t.error ? ` \xB7 ${esc3(t.error)}` : ""}${["running", "failed", "cancelled"].includes(t.status) ? " \xB7 budget reserved; final usage unconfirmed" : ` \xB7 ${t.usage.modelCalls} model call(s)`}</p></article>`;
     }).join("");
     return {
       type: "state",
@@ -26590,7 +23861,7 @@ async function settleReviewChats() {
 }
 async function openReviewChat(report, repoRoot, context) {
   if (!report.gcr) {
-    void vscode18.window.showInformationMessage(
+    void vscode17.window.showInformationMessage(
       "Run a fixed-source review before starting a review conversation."
     );
     return;
@@ -26613,20 +23884,20 @@ async function openReviewChat(report, repoRoot, context) {
   );
   const initial = settings(), fingerprint = contentHash(initial);
   if (initial.profileId !== core.identity.client.profileId || !initial.workspaceTrusted || scope.kind !== "repository" || scope.repositoryKey !== core.identity.client.repositoryKey || scope.worktreeKey !== core.identity.client.worktreeKey) {
-    void vscode18.window.showErrorMessage(
+    void vscode17.window.showErrorMessage(
       "Reopen this review from the current trusted workspace and profile."
     );
     return;
   }
-  const key4 = contentHash({ target, fingerprint });
-  if (panels.has(key4)) {
-    panels.get(key4).reveal();
+  const key3 = contentHash({ target, fingerprint });
+  if (panels.has(key3)) {
+    panels.get(key3).reveal();
     return;
   }
-  const panel = vscode18.window.createWebviewPanel(
+  const panel = vscode17.window.createWebviewPanel(
     "commitDefenderReviewChat",
     "Commit Defender \u2014 Review conversation",
-    vscode18.ViewColumn.Beside,
+    vscode17.ViewColumn.Beside,
     {
       enableScripts: true,
       retainContextWhenHidden: true,
@@ -26637,7 +23908,7 @@ async function openReviewChat(report, repoRoot, context) {
   let closed = false, running, cancelRequested = false;
   const current = () => {
     try {
-      return !closed && vscode18.workspace.isTrusted && contentHash(settings()) === fingerprint;
+      return !closed && vscode17.workspace.isTrusted && contentHash(settings()) === fingerprint;
     } catch {
       return false;
     }
@@ -26700,13 +23971,13 @@ async function openReviewChat(report, repoRoot, context) {
     closed = true;
     clearInterval(timer);
     running?.controller.abort();
-    panels.delete(key4);
+    panels.delete(key3);
   });
   const lifetime = {
     reveal: () => panel.reveal(),
     dispose: () => panel.dispose()
   };
-  panels.set(key4, lifetime);
+  panels.set(key3, lifetime);
   context.subscriptions.push(panel);
   panel.webview.onDidReceiveMessage(
     async (value) => {
@@ -26752,7 +24023,7 @@ async function openReviewChat(report, repoRoot, context) {
         else if (view.state && (!turn || !["queued", "running"].includes(turn.status)))
           await execute({
             type: "send",
-            turnId: (0, import_node_crypto25.randomUUID)(),
+            turnId: (0, import_node_crypto20.randomUUID)(),
             content: message.content
           });
       }
@@ -26761,652 +24032,6 @@ async function openReviewChat(report, repoRoot, context) {
     context.subscriptions
   );
   panel.webview.html = view.html;
-}
-
-// src/reviewSubmissionPanel.ts
-var vscode19 = __toESM(require("vscode"));
-
-// src/reviewSubmissionSession.ts
-var import_node_path25 = __toESM(require("node:path"));
-var import_node_crypto26 = require("node:crypto");
-var SubmissionSessionError = class extends Error {
-  constructor(code3) {
-    super(code3);
-    this.code = code3;
-  }
-};
-var fail3 = (code3) => {
-  throw new SubmissionSessionError(code3);
-};
-var ReviewSubmissionSession = class _ReviewSubmissionSession {
-  constructor(options, report, connections, queue, binding, destination) {
-    this.options = options;
-    this.report = report;
-    this.connections = connections;
-    this.queue = queue;
-    this.binding = binding;
-    this.destination = destination;
-  }
-  preview;
-  closed = false;
-  busy = false;
-  localCandidates = /* @__PURE__ */ new Map();
-  followups = /* @__PURE__ */ new Map();
-  static async open(options) {
-    if (!options.current()) fail3("selection-changed");
-    const report = clientReviewReport(options.report);
-    const scope = knowledgeScope({ ...options, scope: "repository" });
-    const client = report.identity.client;
-    if (scope.kind !== "repository" || client.profileId !== scope.profileId || client.repositoryKey !== scope.repositoryKey || client.worktreeKey !== scope.worktreeKey)
-      fail3("report-mismatch");
-    const connections = await CentralConnections.open({
-      scope,
-      ...options.ports
-    });
-    let queue;
-    try {
-      const identity = await connections.historyIdentity(options.connectionId);
-      const status = await connections.status(options.connectionId);
-      if (status.status !== "connected" || status.clientId !== "commit-defender")
-        fail3("selection-changed");
-      if (client.mode === "centralized" && (contentHash(client.audience) !== contentHash(identity.audience) || client.execution?.connectionId !== options.connectionId))
-        fail3("report-mismatch");
-      if (client.mode === "standalone" && client.execution?.configuredMode === "centralized" && client.execution.connectionId !== options.connectionId)
-        fail3("report-mismatch");
-      const directory = options.ports?.dataDirectory ?? defaultLocalDataDirectory();
-      const records = await LocalRecordStore.open({
-        scope,
-        ...options.ports,
-        dataDirectory: client.mode === "centralized" ? import_node_path25.default.join(
-          directory,
-          "central-review-history",
-          options.connectionId
-        ) : directory
-      });
-      try {
-        const stored = await new LocalHistoryStore(
-          records,
-          void 0,
-          client.mode === "centralized" ? identity.audience : void 0
-        ).getReview(report.runId);
-        if (!stored || contentHash(stored) !== contentHash(report))
-          fail3("report-mismatch");
-      } finally {
-        records.close();
-      }
-      queue = await ReviewSubmissionQueue.open({
-        scope,
-        ...options.ports,
-        connectionId: options.connectionId,
-        connections
-      });
-      const session = new _ReviewSubmissionSession(
-        options,
-        report,
-        connections,
-        queue,
-        connectionBinding(status),
-        { serverUrl: status.serverUrl, audience: identity.audience }
-      );
-      await session.authorize();
-      return session;
-    } catch (error2) {
-      queue?.close();
-      connections.close();
-      throw error2;
-    }
-  }
-  close() {
-    this.closed = true;
-    this.queue.close();
-    this.connections.close();
-  }
-  async authorize() {
-    if (this.closed || !this.options.current()) fail3("selection-changed");
-    await this.connections.historyIdentity(this.options.connectionId);
-    const status = await this.connections.status(this.options.connectionId);
-    if (this.closed || !this.options.current() || connectionBinding(status) !== this.binding)
-      fail3("selection-changed");
-  }
-  async operation(work) {
-    if (this.busy) fail3("busy");
-    this.busy = true;
-    try {
-      await this.authorize();
-      const result = await work();
-      await this.authorize();
-      return result;
-    } finally {
-      this.busy = false;
-    }
-  }
-  belongs(entry) {
-    if (entry.payload.review.runId !== this.report.runId || entry.payload.review.sourceHash !== this.report.identity.source.hash || entry.payload.review.contextHash !== this.report.identity.context.hash)
-      fail3("report-mismatch");
-    return entry;
-  }
-  confirmed(hash5) {
-    if (!this.preview || this.preview.payloadHash !== hash5)
-      return fail3("confirmation-required");
-    return this.preview;
-  }
-  prepare(selection) {
-    return this.operation(async () => {
-      this.preview = prepareReviewSubmission({
-        report: this.report,
-        id: (0, import_node_crypto26.randomUUID)(),
-        audience: this.destination.audience,
-        clientId: "commit-defender",
-        approvedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        selection
-      });
-      return structuredClone(this.preview);
-    });
-  }
-  list() {
-    return this.operation(
-      async () => (await this.queue.list()).map((row) => row.value).filter((row) => row.payload.review.runId === this.report.runId).map((row) => this.belongs(row))
-    );
-  }
-  select(id4) {
-    return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id4)).value);
-      this.preview = {
-        submission: entry.payload,
-        payloadHash: entry.payloadHash
-      };
-      return structuredClone(this.preview);
-    });
-  }
-  save(hash5) {
-    return this.operation(async () => {
-      const preview = this.confirmed(hash5);
-      return (await this.queue.enqueue(preview.submission, hash5)).value;
-    });
-  }
-  send(hash5, signal) {
-    return this.operation(async () => {
-      const preview = this.confirmed(hash5);
-      if (signal.aborted) fail3("cancelled");
-      const entry = await this.queue.enqueue(preview.submission, hash5);
-      await this.authorize();
-      return (await this.queue.send(entry.value.payload.id, signal, true)).value;
-    });
-  }
-  cancel(id4) {
-    return this.operation(async () => {
-      this.belongs((await this.queue.get(id4)).value);
-      return (await this.queue.cancel(id4)).value;
-    });
-  }
-  async inspect(id4, signal, withCache) {
-    const entry = this.belongs((await this.queue.get(id4)).value);
-    if (!entry.receipt) return fail3("receipt-required");
-    const status = await this.connections.submissionStatus(
-      this.options.connectionId,
-      entry.receipt,
-      signal
-    );
-    let sync = null;
-    if (withCache) {
-      const selected = await this.connections.review(
-        this.options.connectionId,
-        "offline",
-        signal
-      );
-      const snapshot = await selected.cache.read("offline");
-      sync = {
-        snapshotId: snapshot.manifest.payload.snapshotId,
-        policyState: reviewSubmissionPolicyState(status, snapshot)
-      };
-    }
-    const result = { id: id4, status, sync };
-    this.followups.set(id4, result);
-    return structuredClone(result);
-  }
-  reviewStatus(id4, signal) {
-    return this.operation(() => this.inspect(id4, signal, false));
-  }
-  synchronizeStatus(id4, signal) {
-    return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id4)).value);
-      if (!entry.receipt) return fail3("receipt-required");
-      await this.connections.synchronize(this.options.connectionId, signal);
-      return this.inspect(id4, signal, true);
-    });
-  }
-  prepareRereview(id4, signal) {
-    return this.operation(async () => {
-      const prior = this.followups.get(id4)?.sync;
-      if (!prior || !["criterion-current", "exception-current"].includes(prior.policyState))
-        return fail3("synchronization-required");
-      const current = await this.inspect(id4, signal, true);
-      if (!current.sync || current.sync.snapshotId !== prior.snapshotId || !["criterion-current", "exception-current"].includes(
-        current.sync.policyState
-      ))
-        return fail3("synchronization-required");
-      return {
-        connectionId: this.options.connectionId,
-        profileId: this.options.profileId,
-        snapshotId: current.sync.snapshotId
-      };
-    });
-  }
-  centralReviewUrl(id4) {
-    return this.operation(async () => {
-      const entry = this.belongs((await this.queue.get(id4)).value);
-      if (!entry.receipt) return fail3("receipt-required");
-      const url = new URL("review-criteria", this.destination.serverUrl);
-      url.searchParams.set(
-        "repositoryId",
-        this.destination.audience.repositoryId
-      );
-      return url.toString();
-    });
-  }
-  saveLocalCandidate(hash5) {
-    return this.operation(async () => {
-      const { submission } = this.confirmed(hash5);
-      if (submission.kind !== "feedback") return fail3("feedback-required");
-      const previous3 = this.localCandidates.get(submission.id);
-      if (previous3) return { id: previous3 };
-      const scope = knowledgeScope({ ...this.options, scope: "repository" });
-      const memory2 = await withLocalKnowledge(
-        scope,
-        (store) => store.create({
-          kind: "memory",
-          title: submission.feedback.message.trim().slice(0, 120),
-          body: submission.feedback.message,
-          rationale: "User feedback on a saved review; pending local review.",
-          counterEvidence: [],
-          appliesTo: { paths: [], languages: [], symbols: [], branches: [] },
-          sources: [{ kind: "user-note", id: submission.id }]
-        }),
-        this.options.ports
-      );
-      this.localCandidates.set(submission.id, memory2.id);
-      return { id: memory2.id };
-    });
-  }
-};
-function connectionBinding(status) {
-  const { cache: _cache, ...binding } = status;
-  return contentHash(binding);
-}
-
-// src/reviewSubmissionView.ts
-var import_node_crypto27 = require("node:crypto");
-var ReviewSubmissionView = class {
-  id = (0, import_node_crypto27.randomBytes)(16).toString("hex");
-  message(raw) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return;
-    const v = raw;
-    const exact = (keys2) => Object.keys(v).length === keys2.length + 2 && Object.keys(v).every((k) => ["command", "viewId", ...keys2].includes(k));
-    if (v.viewId !== this.id) return;
-    if ((v.command === "ready" || v.command === "refresh") && exact([]))
-      return { command: v.command };
-    if ([
-      "select",
-      "cancel",
-      "review-status",
-      "synchronize",
-      "open-central"
-    ].includes(String(v.command)) && exact(["id"]) && typeof v.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id))
-      return {
-        command: v.command,
-        id: v.id
-      };
-    if (v.command === "rereview" && exact(["id", "confirmed"]) && v.confirmed === true && typeof v.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id))
-      return { command: "rereview", id: v.id };
-    if (["save", "send", "memory"].includes(String(v.command)) && exact(["hash", "confirmed"]) && v.confirmed === true && typeof v.hash === "string" && /^[a-f0-9]{64}$/.test(v.hash))
-      return { command: v.command, hash: v.hash };
-    if (v.command !== "prepare" || !exact(["selection"]) || !v.selection || typeof v.selection !== "object" || Array.isArray(v.selection))
-      return;
-    const s = v.selection;
-    if (s.kind === "result" && Object.keys(s).length === 1)
-      return { command: "prepare", selection: { kind: "result" } };
-    if (s.kind !== "feedback" || !["correction", "exception", "judgment"].includes(
-      String(s.feedbackKind)
-    ) || typeof s.message !== "string" || !s.message.trim() || s.message.length > 4e3 || typeof s.includeSourceReference !== "boolean" || s.findingId !== void 0 && (typeof s.findingId !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(s.findingId)) || Object.keys(s).some(
-      (k) => ![
-        "kind",
-        "feedbackKind",
-        "message",
-        "findingId",
-        "includeSourceReference"
-      ].includes(k)
-    ))
-      return;
-    return {
-      command: "prepare",
-      selection: {
-        kind: "feedback",
-        feedbackKind: s.feedbackKind,
-        message: s.message,
-        includeSourceReference: s.includeSourceReference,
-        ...s.findingId ? { findingId: s.findingId } : {}
-      }
-    };
-  }
-  html() {
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${this.id}'; script-src 'nonce-${this.id}';">
-<title>Review feedback</title><style nonce="${this.id}">
-body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);background:var(--vscode-editor-background);padding:20px;max-width:880px;margin:auto;line-height:1.5}
-h1{font-size:1.5em}h2{font-size:1.15em;margin-top:24px}label{display:block;margin:10px 0}select,textarea,button{font:inherit}textarea,select{box-sizing:border-box;width:100%;background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--vscode-input-border,var(--vscode-widget-border));padding:8px}textarea{resize:vertical;min-height:110px}button{cursor:pointer;margin:4px 8px 4px 0;padding:6px 10px;background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:1px solid transparent}button:disabled{opacity:.5;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--vscode-focusBorder);outline-offset:2px}.secondary{background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--vscode-textCodeBlock-background);padding:12px}#destination,#status,.entry{overflow-wrap:anywhere}.entry{border-top:1px solid var(--vscode-widget-border);padding:10px 0}#status{min-height:24px}#status.error{color:var(--vscode-errorForeground)}[hidden]{display:none!important}.hint{color:var(--vscode-descriptionForeground)}
-</style></head><body><h1>Submit review feedback</h1>
-<p id="destination">Checking the selected central connection\u2026</p>
-<p class="hint">Visible to authorized repository reviewers. Submissions are retained for 30 days and recorded as client-reported evidence. A receipt confirms delivery; it does not approve a rule or exception.</p>
-<fieldset id="editor" disabled><legend>Choose what to share</legend>
-<label>Submission type<select id="kind"><option value="feedback">Feedback</option><option value="result">Review status and counts</option></select></label>
-<div id="feedbackFields"><label>Feedback type<select id="feedbackKind"><option value="correction">Correction / false positive</option><option value="exception">Exception request</option><option value="judgment">New judgment</option></select></label>
-<label>Finding (optional)<select id="finding"><option value="">Review as a whole</option></select></label>
-<label>Feedback message<textarea id="message" maxlength="4000" placeholder="Describe the correction, exception, or judgment for repository reviewers."></textarea></label>
-<label><input id="source" type="checkbox"> Include the selected finding\u2019s file path, line range, and source hash</label></div>
-<button id="prepare" type="button">Preview submission</button></fieldset>
-<section id="previewSection" hidden><h2>Confirm the exact content</h2>
-<p class="hint">Only the fields below are sent. Check your message for private information before sharing. Source bodies, review prose, chat history, and local knowledge are not added automatically.</p>
-<pre id="payload"></pre><label><input id="confirmed" type="checkbox"> I have checked the destination, visibility, and content shown above.</label>
-<button id="send" disabled>Submit now</button><button id="save" class="secondary" disabled>Save to outbox</button><button id="memory" class="secondary" disabled>Save feedback as a local memory candidate</button>
-<p class="hint">Outbox entries are sent only when you choose Submit now. A local memory candidate stays on this device and requires activation in Local Knowledge.</p></section>
-<p id="status" role="status" aria-live="polite"></p>
-<h2>Outbox for this review</h2><button id="refresh" class="secondary" disabled>Refresh outbox</button>
-<p class="hint">If delivery is unconfirmed, retrying the same entry uses the same request ID. Cancelling stops local retries and cannot retract a submission already received by the server.</p><div id="outbox"></div>
-<section id="followupSection" hidden><h2>Central review status</h2><p id="followupTitle"></p><p id="followupState"></p><p id="followupNote"></p><p id="followupChecked" class="hint"></p><p id="syncState"></p>
-<button id="synchronize" class="secondary">Synchronize central policy</button><button id="rereview" disabled>Review these files again</button><p id="reviewScope" class="hint"></p></section>
-<script nonce="${this.id}">
-const vscode=acquireVsCodeApi(),viewId='${this.id}',el=id=>document.getElementById(id);
-let busy=true,preview=null,ready=false,followup=null;
-const post=(command,extra={})=>vscode.postMessage({command,viewId,...extra});
-function controls(){el('editor').disabled=busy||!ready;el('refresh').disabled=busy||!ready;for(const id of ['send','save','memory'])el(id).disabled=busy||!preview||!el('confirmed').checked||(id==='memory'&&preview.submission.kind!=='feedback');for(const b of el('outbox').querySelectorAll('button'))b.disabled=busy;el('confirmed').disabled=busy;el('synchronize').disabled=busy||!followup;el('rereview').disabled=busy||!followup?.rereviewAllowed;}
-function invalidate(){preview=null;el('confirmed').checked=false;el('previewSection').hidden=true;controls();}
-function request(command,extra={}){if(busy)return;busy=true;el('status').className='';el('status').textContent=command==='send'?'Submitting\u2026':'Checking\u2026';controls();post(command,extra);}
-el('editor').addEventListener('input',invalidate);
-el('kind').addEventListener('change',()=>{el('feedbackFields').hidden=el('kind').value==='result';invalidate();});
-el('confirmed').addEventListener('change',controls);
-el('prepare').onclick=()=>{const selection=el('kind').value==='result'?{kind:'result'}:{kind:'feedback',feedbackKind:el('feedbackKind').value,message:el('message').value,includeSourceReference:el('source').checked,...(el('finding').value?{findingId:el('finding').value}:{})};if(selection.kind==='feedback'&&!selection.message.trim()){el('status').textContent='Enter a feedback message.';return;}request('prepare',{selection});};
-for(const command of ['send','save','memory'])el(command).onclick=()=>{if(preview&&el('confirmed').checked){request(command,{hash:preview.payloadHash,confirmed:true});el('confirmed').checked=false;controls();}};
-el('refresh').onclick=()=>request('refresh');
-el('synchronize').onclick=()=>{if(followup)request('synchronize',{id:followup.id});};
-el('rereview').onclick=()=>{if(followup?.rereviewAllowed)request('rereview',{id:followup.id,confirmed:true});};
-window.addEventListener('message',event=>{const m=event.data;if(!m||m.viewId!==viewId)return;
-if(m.type==='state'){
-ready=true;
-if(m.destination){const a=m.destination.audience;el('destination').textContent='Server: '+m.destination.serverUrl+' | Repository: '+a.repositoryId+' | Tenant: '+a.tenantId+' | User: '+a.userId+' | Server ID: '+a.serverId;}
-if(m.reviewScope)el('reviewScope').textContent=m.reviewScope;
-if(m.followup){followup=m.followup;el('followupSection').hidden=false;el('followupTitle').textContent=followup.title;el('followupState').textContent=followup.state;el('followupNote').textContent=followup.note;el('followupChecked').textContent='Checked at '+new Date(followup.checkedAt).toLocaleString();el('syncState').textContent=followup.sync;}
-if(m.findings){el('finding').replaceChildren(new Option('Review as a whole',''));for(const f of m.findings)el('finding').append(new Option(f.title,f.id));}
-if(m.preview){preview=m.preview;el('payload').textContent=JSON.stringify(preview.submission,null,2);el('confirmed').checked=false;el('previewSection').hidden=false;}
-if(m.entries){el('outbox').replaceChildren();if(!m.entries.length)el('outbox').textContent='No saved submissions for this review.';for(const entry of m.entries){const row=document.createElement('div');row.className='entry';const p=document.createElement('p');p.textContent=entry.payload.kind+' \xB7 '+entry.status+' \xB7 '+entry.payload.id+(entry.receipt?' \xB7 Received '+entry.receipt.receivedAt+' \xB7 Expires '+entry.receipt.expiresAt:'')+(entry.lastError?' \xB7 '+entry.lastError:'');row.append(p);const b=document.createElement('button');b.textContent='View exact content';b.className='secondary';b.onclick=()=>request('select',{id:entry.payload.id});row.append(b);if(entry.receipt){for(const [command,label] of [['review-status','Check central review status'],['open-central','Open central criteria']]){const c=document.createElement('button');c.textContent=label;c.className='secondary';c.onclick=()=>request(command,{id:entry.payload.id});row.append(c);}}if(['pending','rejected'].includes(entry.status)){const c=document.createElement('button');c.textContent='Cancel local retries';c.className='secondary';c.onclick=()=>request('cancel',{id:entry.payload.id});row.append(c);}el('outbox').append(row);}}
-el('status').className='';el('status').textContent=m.message||'';
-}else if(m.type==='error'){followup=null;el('followupSection').hidden=true;el('status').className='error';el('status').textContent=m.message;}
-else return;
-busy=false;controls();
-});
-post('ready');
-</script></body></html>`;
-  }
-};
-
-// src/reviewSubmissionStatus.ts
-function submissionFollowupSummary(value) {
-  const d = value.status.decision, rule = d?.rule, feedback = d?.feedback;
-  const states = {
-    draft: "Draft",
-    evaluated: "Evaluated",
-    shadow: "Shadow",
-    active: "Active",
-    retired: "Retired"
-  };
-  let state = !d ? "Received; awaiting central review." : d.action === "dismiss" ? "Closed without a criterion change." : `${states[rule.state]} criterion \xB7 revision ${rule.revision}.`;
-  if (feedback) {
-    state += !feedback.resolution ? " Feedback awaits a central decision." : feedback.resolution.action === "reject" ? " Feedback was rejected." : feedback.resolution.action === "acknowledge" ? " Correction acknowledged; acknowledgement does not change the criterion." : " Exception approved for its recorded scope and revision.";
-    if (feedback.exception) {
-      const e = feedback.exception;
-      state += e.revoked ? " The exception has been revoked." : Date.parse(e.expiresAt) <= Date.now() ? " The exception has expired." : ` Exception period: ${e.startsAt} to ${e.expiresAt}.`;
-      if (e.revision !== rule.revision)
-        state += " It belongs to an older criterion revision.";
-    }
-  }
-  const syncLabels = {
-    "no-adoption": "No adopted criterion to synchronize.",
-    "not-active": "The criterion is not active; it is not an active review policy.",
-    "pending-feedback": "The feedback still needs a central decision.",
-    "feedback-rejected": "The feedback was rejected; no approved change is implied.",
-    "acknowledged-only": "Acknowledgement has not produced a newer criterion revision.",
-    "outdated-exception": "The approved exception belongs to an older criterion revision.",
-    "exception-inactive": "The exception is revoked, expired, or has not started.",
-    "awaiting-publication": "Synchronization finished, but the reviewed revision or exception is not in the signed policy yet. Try synchronizing after publication completes.",
-    "criterion-current": "The current criterion revision is present in the synchronized signed policy. Its source scope still determines where it applies.",
-    "exception-current": "The approved exception and current criterion revision are present in the synchronized signed policy. The exception applies only within its scope and period."
-  };
-  return {
-    id: value.id,
-    title: rule?.title ?? "Submission review",
-    state,
-    note: [d?.note, feedback?.resolution?.note].filter(Boolean).join("\n"),
-    checkedAt: value.status.checkedAt,
-    sync: value.sync ? syncLabels[value.sync.policyState] : "Synchronize to check whether the reviewed change is available locally.",
-    rereviewAllowed: !!value.sync && ["criterion-current", "exception-current"].includes(
-      value.sync.policyState
-    )
-  };
-}
-
-// src/reviewSubmissionPanel.ts
-var panels2 = /* @__PURE__ */ new Map();
-var jobs = /* @__PURE__ */ new Set();
-async function settleReviewSubmissions() {
-  for (const panel of panels2.values()) panel.dispose();
-  await Promise.allSettled([...jobs]);
-}
-async function openReviewSubmission(report, repoRoot, context, rereview) {
-  if (!report.gcr) {
-    void vscode19.window.showInformationMessage(
-      "Open a saved fixed-source review to submit feedback."
-    );
-    return;
-  }
-  const core = clientReviewReport(report.gcr.report);
-  const scope = knowledgeScope({
-    repoRoot,
-    profileId: core.identity.client.profileId,
-    scope: "repository"
-  });
-  const settings = () => selectedReviewSettings(
-    getStandaloneReviewSettings(
-      ["commit", "push"].includes(core.trigger) ? 2 : core.files.length,
-      repoRoot
-    ),
-    readSelection(context.globalState, scope)
-  );
-  const initial = settings(), fingerprint = contentHash(initial);
-  if (!initial.workspaceTrusted || !vscode19.workspace.isTrusted || initial.profileId !== scope.profileId || initial.mode !== "centralized" || !initial.connectionId) {
-    void vscode19.window.showInformationMessage(
-      "Select a central connection in this trusted workspace and profile before submitting feedback."
-    );
-    return;
-  }
-  const key4 = contentHash({ repoRoot, runId: core.runId, fingerprint });
-  if (panels2.has(key4)) {
-    panels2.get(key4).reveal();
-    return;
-  }
-  const panel = vscode19.window.createWebviewPanel(
-    "commitDefenderReviewSubmission",
-    "Commit Defender \u2014 Review feedback",
-    vscode19.ViewColumn.Beside,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: []
-    }
-  );
-  panels2.set(key4, panel);
-  const view = new ReviewSubmissionView();
-  const controller = new AbortController();
-  let closed = false, session, running;
-  const current = () => {
-    try {
-      return !closed && vscode19.workspace.isTrusted && contentHash(settings()) === fingerprint;
-    } catch {
-      return false;
-    }
-  };
-  const post = (value) => {
-    if (current())
-      void panel.webview.postMessage({ ...value, viewId: view.id });
-  };
-  const execute = async (message) => {
-    try {
-      if (!session)
-        session = await ReviewSubmissionSession.open({
-          repoRoot,
-          profileId: initial.profileId,
-          connectionId: initial.connectionId,
-          report: core,
-          current
-        });
-      if (!current()) return;
-      let preview, followup, entry, notice = "";
-      switch (message.command) {
-        case "review-status":
-          followup = submissionFollowupSummary(
-            await session.reviewStatus(message.id, controller.signal)
-          );
-          break;
-        case "synchronize":
-          followup = submissionFollowupSummary(
-            await session.synchronizeStatus(message.id, controller.signal)
-          );
-          break;
-        case "open-central": {
-          const url = await session.centralReviewUrl(message.id);
-          if (current()) await vscode19.env.openExternal(vscode19.Uri.parse(url));
-          break;
-        }
-        case "rereview": {
-          const pin = await session.prepareRereview(
-            message.id,
-            controller.signal
-          );
-          if (!rereview || !current()) return;
-          await rereview(pin, controller.signal, current);
-          break;
-        }
-        case "prepare":
-          preview = await session.prepare(message.selection);
-          break;
-        case "select":
-          preview = await session.select(message.id);
-          break;
-        case "save":
-          entry = await session.save(message.hash);
-          notice = entry.status === "pending" ? "Saved to the encrypted outbox. Nothing was sent by this action." : deliveryNotice(entry);
-          break;
-        case "send":
-          entry = await session.send(message.hash, controller.signal);
-          notice = deliveryNotice(entry);
-          break;
-        case "cancel":
-          entry = await session.cancel(message.id);
-          notice = "Local retries cancelled. Any prior server receipt remains valid.";
-          break;
-        case "memory": {
-          const memory2 = await session.saveLocalCandidate(message.hash);
-          notice = `Local memory candidate saved (${memory2.id}). Review and activate it in Local Knowledge.`;
-          break;
-        }
-      }
-      const entries = await session.list();
-      post({
-        type: "state",
-        destination: session.destination,
-        ...message.command === "ready" ? {
-          findings: core.findings.map((f) => ({
-            id: f.id,
-            title: f.title
-          })),
-          reviewScope: `${core.identity.source.kind === "index" ? "Current staged versions" : "Current working-tree versions"} of: ${core.files.map((f) => f.source.path).join(", ")}. Uses the selected model and the synchronized central policy.`
-        } : {},
-        ...preview ? { preview } : {},
-        ...followup ? {
-          followup: {
-            ...followup,
-            rereviewAllowed: followup.rereviewAllowed && !!rereview
-          }
-        } : {},
-        entries,
-        message: notice
-      });
-    } catch (error2) {
-      post({ type: "error", message: submissionError(error2) });
-    }
-  };
-  const timer = setInterval(() => {
-    if (!current()) panel.dispose();
-  }, 500);
-  panel.onDidDispose(() => {
-    closed = true;
-    clearInterval(timer);
-    controller.abort();
-    panels2.delete(key4);
-    if (!running) {
-      session?.close();
-      session = void 0;
-    }
-  });
-  panel.webview.onDidReceiveMessage(
-    (raw) => {
-      if (!current() || running) return;
-      const message = view.message(raw);
-      if (!message) return;
-      const promise = execute(message).finally(() => {
-        jobs.delete(promise);
-        running = void 0;
-        if (closed) {
-          session?.close();
-          session = void 0;
-        }
-      });
-      running = promise;
-      jobs.add(promise);
-    },
-    void 0,
-    context.subscriptions
-  );
-  context.subscriptions.push(panel);
-  panel.webview.html = view.html();
-}
-function deliveryNotice(entry) {
-  if (entry.status === "submitted")
-    return "Received by the server as client-reported evidence. Rule and exception approval is a separate step.";
-  if (entry.status === "rejected")
-    return "The server rejected this submission. Check the selected account and its submission permissions before explicitly retrying.";
-  if (entry.status === "cancelled")
-    return "This outbox entry is cancelled. Prepare a new submission if needed.";
-  return "Delivery is unconfirmed. Review the saved entry and choose Submit now to retry with the same request ID.";
-}
-function submissionError(error2) {
-  if (error2 instanceof ReviewSubmissionDeliveryError) {
-    if (error2.statusCode === 404 || error2.statusCode === 410)
-      return "This submission is no longer available for status checks. Its retention period may have ended; any adopted criterion has a separate history in Central Review Criteria.";
-    return "Central review status could not be verified. Check the connection and request the status again before synchronizing or reviewing.";
-  }
-  if (error2 instanceof SubmissionSessionError) {
-    if (error2.code === "report-mismatch")
-      return "This review does not match the saved history in the current workspace, profile, and connection.";
-    if (error2.code === "confirmation-required")
-      return "Preview the content again and confirm it before continuing.";
-    if (error2.code === "selection-changed")
-      return "The workspace or central connection changed. Reopen this review under the intended connection.";
-    if (error2.code === "synchronization-required")
-      return "The reviewed policy or snapshot changed. Check central review status and synchronize again before reviewing.";
-    if (error2.code === "receipt-required")
-      return "A confirmed server receipt is required to check central review status.";
-  }
-  return "The action could not be confirmed. Check the central connection and saved outbox before retrying; a prior server delivery may still have succeeded.";
 }
 
 // src/extension.ts
@@ -27419,7 +24044,7 @@ async function activate(context) {
   let lastConfiguredProvider = getConfig().aiProvider;
   let providerUpdateFromWizard;
   async function resolveRepoRoot() {
-    const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) {
       return void 0;
     }
@@ -27472,7 +24097,7 @@ async function activate(context) {
       detail: "Use any model name accepted by the selected local CLI and account.",
       custom: true
     });
-    const picked = await vscode20.window.showQuickPick(choices, {
+    const picked = await vscode18.window.showQuickPick(choices, {
       title: `Commit Defender: Select ${accountProviderName(provider)} model`,
       placeHolder: includeDefault ? "Choose the CLI default, an alias, or enter an exact model ID" : "Choose an alias or enter an exact model ID",
       ignoreFocusOut: true
@@ -27483,7 +24108,7 @@ async function activate(context) {
     if (!picked.custom) {
       return picked.model ?? "";
     }
-    return vscode20.window.showInputBox({
+    return vscode18.window.showInputBox({
       title: `Commit Defender: ${accountProviderName(provider)} model ID`,
       prompt: "Enter an exact model ID supported by the local CLI and authenticated account.",
       value: current.aiProvider === provider ? current.model : "",
@@ -27492,8 +24117,8 @@ async function activate(context) {
     }).then((value) => value?.trim());
   }
   async function applyAccountProvider(provider, model) {
-    const settings = vscode20.workspace.getConfiguration("commitDefender");
-    const target = vscode20.ConfigurationTarget.Global;
+    const settings = vscode18.workspace.getConfiguration("commitDefender");
+    const target = vscode18.ConfigurationTarget.Global;
     providerUpdateFromWizard = provider;
     await settings.update("model", model, target);
     if (provider === "codex") await settings.update("reviewReasoningEffort", "xhigh", target);
@@ -27504,7 +24129,7 @@ async function activate(context) {
       }
     }, 1e3);
     const modelLabel = model || "CLI default";
-    vscode20.window.showInformationMessage(
+    vscode18.window.showInformationMessage(
       `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`
     );
   }
@@ -27516,7 +24141,7 @@ async function activate(context) {
       return true;
     }
     const name = accountProviderName(provider);
-    const action = await vscode20.window.showInformationMessage(
+    const action = await vscode18.window.showInformationMessage(
       `Commit Defender: Use the ${name} CLI default model in user settings? Fixed-source standalone review is not yet supported by this provider.`,
       "Use CLI Default",
       "Choose Model\u2026"
@@ -27540,7 +24165,7 @@ async function activate(context) {
       return;
     }
     const name = accountProviderName(provider);
-    const action = await vscode20.window.showInformationMessage(
+    const action = await vscode18.window.showInformationMessage(
       `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} in user settings and change its model?`,
       "Use CLI Default",
       "Choose Model\u2026",
@@ -27562,7 +24187,7 @@ async function activate(context) {
       { label: "Gemini CLI", description: "Account login and commit messages; standalone review unavailable", provider: "geminicli" },
       { label: "Antigravity", description: "Account login and commit messages; standalone review unavailable", provider: "antigravity" }
     ];
-    const picked = await vscode20.window.showQuickPick(choices, {
+    const picked = await vscode18.window.showQuickPick(choices, {
       title: "Commit Defender: Select account provider",
       placeHolder: "Choose the authenticated CLI backbone",
       ignoreFocusOut: true
@@ -27579,30 +24204,30 @@ async function activate(context) {
     const isGeminiCli = provider === "geminicli";
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
-    const cwd = await resolveRepoRoot() ?? vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path42.isAbsolute(executable) && !fs10.existsSync(executable)) {
-      vscode20.window.showErrorMessage(
+    const cwd = await resolveRepoRoot() ?? vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    if (path36.isAbsolute(executable) && !fs10.existsSync(executable)) {
+      vscode18.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
       return false;
     }
     const shellArgs = isCodex ? ["login"] : isClaude ? ["auth", "login", "--claudeai"] : [];
-    const env4 = {};
+    const env3 = {};
     if (isClaude) {
-      env4.ANTHROPIC_API_KEY = null;
-      env4.ANTHROPIC_AUTH_TOKEN = null;
+      env3.ANTHROPIC_API_KEY = null;
+      env3.ANTHROPIC_AUTH_TOKEN = null;
     } else if (provider === "geminicli") {
-      env4.GEMINI_API_KEY = null;
-      env4.GOOGLE_API_KEY = null;
-      env4.GOOGLE_GENAI_USE_VERTEXAI = null;
-      env4.GOOGLE_GENAI_USE_GCA = "true";
+      env3.GEMINI_API_KEY = null;
+      env3.GOOGLE_API_KEY = null;
+      env3.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env3.GOOGLE_GENAI_USE_GCA = "true";
     }
-    const terminal = vscode20.window.createTerminal({
+    const terminal = vscode18.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
       cwd,
-      env: env4
+      env: env3
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
@@ -27610,35 +24235,35 @@ async function activate(context) {
     return true;
   }
   context.subscriptions.push(
-    vscode20.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
-    vscode20.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
-    vscode20.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
-    vscode20.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
-    vscode20.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
+    vscode18.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
+    vscode18.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
+    vscode18.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
+    vscode18.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
+    vscode18.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
   );
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.installPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode20.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode18.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await installHook(repoRoot, context.extensionPath, getConfig());
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.uninstallPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode20.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode18.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await uninstallHook(repoRoot);
     }
   ));
-  context.subscriptions.push(vscode20.workspace.onDidChangeConfiguration(async (e) => {
+  context.subscriptions.push(vscode18.workspace.onDidChangeConfiguration(async (e) => {
     if (e.affectsConfiguration("commitDefender")) {
       const nextConfig = getConfig();
       const previousProvider = lastConfiguredProvider;
@@ -27664,9 +24289,9 @@ async function activate(context) {
     if (e.affectsConfiguration("commitDefender.preCommitHook")) {
       const hook = getConfig().preCommitHook;
       if (hook === "enable") {
-        vscode20.commands.executeCommand("commitDefender.installPreCommitHook");
+        vscode18.commands.executeCommand("commitDefender.installPreCommitHook");
       } else {
-        vscode20.commands.executeCommand("commitDefender.uninstallPreCommitHook");
+        vscode18.commands.executeCommand("commitDefender.uninstallPreCommitHook");
       }
     }
     if (e.affectsConfiguration("commitDefender.colorPalette")) {
@@ -27683,8 +24308,8 @@ async function activate(context) {
       }
     });
   }
-  const diagnostics = vscode20.languages.createDiagnosticCollection("commit-defender");
-  const commentCtrl = vscode20.comments.createCommentController("commit-defender", "Commit Defender");
+  const diagnostics = vscode18.languages.createDiagnosticCollection("commit-defender");
+  const commentCtrl = vscode18.comments.createCommentController("commit-defender", "Commit Defender");
   const commentManager = new CommentManager();
   const statusBar = new StatusBarManager();
   const execution = new ReviewExecutionOwner();
@@ -27706,7 +24331,7 @@ async function activate(context) {
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider = new HistoryProvider(cfg);
   const panelProvider = new PanelProvider();
-  const localProfile = () => vscode20.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
+  const localProfile = () => vscode18.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
   const centralSynchronization = new CentralSynchronization({
     onState: (_key, state) => {
       if (state.phase === "ready") void refreshVisibleContext();
@@ -27719,14 +24344,14 @@ async function activate(context) {
   async function refreshCentralSynchronization() {
     const generation = ++syncDiscovery;
     if (syncManagement > 0) return;
-    if (!vscode20.workspace.isTrusted) {
+    if (!vscode18.workspace.isTrusted) {
       centralSynchronization.stop();
       return;
     }
     const profileId = localProfile();
     try {
-      const roots = await Promise.all((vscode20.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
-      if (generation !== syncDiscovery || !vscode20.workspace.isTrusted || localProfile() !== profileId) return;
+      const roots = await Promise.all((vscode18.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
+      if (generation !== syncDiscovery || !vscode18.workspace.isTrusted || localProfile() !== profileId) return;
       centralSynchronization.reconcile([...new Set(roots.filter((root2) => !!root2))].map((repoRoot) => {
         const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
         return { scope, selection: readSelection(context.globalState, scope) };
@@ -27750,7 +24375,7 @@ async function activate(context) {
     const generation = ++historyLoad;
     const profileId = localProfile();
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode20.workspace.isTrusted) return;
+    if (!repoRoot || !vscode18.workspace.isTrusted) return;
     try {
       const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
       if (scope.kind !== "repository") return;
@@ -27775,11 +24400,11 @@ async function activate(context) {
     renderSummary(view.report, view.repoRoot);
   }
   context.subscriptions.push(
-    vscode20.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
+    vscode18.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
       const repoRoot = await resolveRepoRoot();
       const profileId = localProfile();
-      if (!repoRoot || !vscode20.workspace.isTrusted) {
-        void vscode20.window.showWarningMessage("Open and trust a Git worktree before managing central review.");
+      if (!repoRoot || !vscode18.workspace.isTrusted) {
+        void vscode18.window.showWarningMessage("Open and trust a Git worktree before managing central review.");
         return;
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
@@ -27791,7 +24416,7 @@ async function activate(context) {
       try {
         await manageCentralConnection(context, scope, {
           assertCurrent() {
-            if (!vscode20.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
+            if (!vscode18.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
               throw Error("Connection selection changed.");
           },
           async invalidate() {
@@ -27801,7 +24426,7 @@ async function activate(context) {
             reviewIntent++;
             execution.invalidate();
             await execution.settled();
-            await vscode20.commands.executeCommand("commitDefender.clearFindings");
+            await vscode18.commands.executeCommand("commitDefender.clearFindings");
           },
           refresh: refreshLocalHistory
         });
@@ -27811,38 +24436,38 @@ async function activate(context) {
         await automaticReviews.refresh();
       }
     }),
-    vscode20.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
-    vscode20.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
-    vscode20.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
+    vscode18.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
+    vscode18.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
+    vscode18.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
       const repoRoot = await resolveRepoRoot();
       const choices = [
-        ...repoRoot && vscode20.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
+        ...repoRoot && vscode18.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
         { label: "Current profile", description: "Shared across repositories in this local profile", scope: "profile" }
       ];
-      const selected = await vscode20.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
+      const selected = await vscode18.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
       if (!selected) return;
       try {
         const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
         await showLocalKnowledge(context, scope, refreshVisibleContext);
       } catch {
-        void vscode20.window.showErrorMessage("Local knowledge could not be opened. Check the profile and OS credential store.");
+        void vscode18.window.showErrorMessage("Local knowledge could not be opened. Check the profile and OS credential store.");
       }
     }),
-    vscode20.window.onDidChangeWindowState((event) => {
+    vscode18.window.onDidChangeWindowState((event) => {
       if (event.focused) {
         void refreshVisibleContext();
         void refreshCentralSynchronization().then(() => centralSynchronization.wake());
       }
     }),
-    vscode20.workspace.onDidChangeWorkspaceFolders(() => {
+    vscode18.workspace.onDidChangeWorkspaceFolders(() => {
       syncDiscovery++;
       centralSynchronization.stop();
       void refreshCentralSynchronization();
     }),
-    vscode20.workspace.onDidGrantWorkspaceTrust(() => {
+    vscode18.workspace.onDidGrantWorkspaceTrust(() => {
       void refreshCentralSynchronization();
     }),
-    vscode20.workspace.onDidChangeConfiguration((event) => {
+    vscode18.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("commitDefender.localProfile") || event.affectsConfiguration("commitDefender.reviewMode")) {
         syncDiscovery++;
         centralSynchronization.stop();
@@ -27850,17 +24475,17 @@ async function activate(context) {
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
-        void vscode20.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
+        void vscode18.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
       }
     })
   );
   void refreshLocalHistory();
   void refreshCentralSynchronization();
-  const historyView = vscode20.window.createTreeView("commitDefender.history", {
+  const historyView = vscode18.window.createTreeView("commitDefender.history", {
     treeDataProvider: historyProvider,
     showCollapseAll: false
   });
-  const panelView = vscode20.window.createTreeView("commitDefender.panelView", {
+  const panelView = vscode18.window.createTreeView("commitDefender.panelView", {
     treeDataProvider: panelProvider,
     showCollapseAll: true
   });
@@ -27870,14 +24495,14 @@ async function activate(context) {
     statusBar.item,
     historyView,
     panelView,
-    vscode20.window.registerFileDecorationProvider(panelProvider.decorationProvider),
-    vscode20.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
+    vscode18.window.registerFileDecorationProvider(panelProvider.decorationProvider),
+    vscode18.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
   );
   const invalidateChangedSource = (document3) => {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path42.relative(last.repoRoot, document3.uri.fsPath).split(path42.sep).join("/");
+    const file = path36.relative(last.repoRoot, document3.uri.fsPath).split(path36.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -27885,10 +24510,10 @@ async function activate(context) {
     findingsStore.invalidateFile(document3.uri);
   };
   context.subscriptions.push(
-    vscode20.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
-    vscode20.workspace.onDidOpenTextDocument(invalidateChangedSource)
+    vscode18.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
+    vscode18.workspace.onDidOpenTextDocument(invalidateChangedSource)
   );
-  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback, centralModel = false) {
+  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback) {
     if (!automatic) lastManualStartedAt = Date.now();
     const cfg2 = getConfig();
     let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
@@ -27897,7 +24522,7 @@ async function activate(context) {
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope2));
     } catch (error2) {
       if (automatic) throw error2;
-      void vscode20.window.showErrorMessage(standaloneError(error2).message);
+      void vscode18.window.showErrorMessage(standaloneError(error2).message);
       return;
     }
     if (feedback) {
@@ -27905,8 +24530,6 @@ async function activate(context) {
         throw new StandaloneReviewError("central-connection-required");
       localSettings = { ...localSettings, freshness: "online", offlineBehavior: "pause", requiredCentralSnapshot: feedback.snapshotId };
     }
-    const remoteScope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: "repository" });
-    const remoteSelection = JSON.stringify(readSelection(context.globalState, remoteScope));
     const backend = createReviewBackend(cfg2, {
       workerFile: context.asAbsolutePath("out/standalone-review-worker.js"),
       settings: localSettings
@@ -27917,19 +24540,14 @@ async function activate(context) {
     const ownerSignal = automatic?.signal ?? feedback?.signal;
     await execution.prepare((signal) => withReviewSignals(signal, ownerSignal, async (combined) => {
       if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
-      const request = {
+      const job = await backend.prepareReview({
         repoRoot,
         files: relPaths,
         scope,
         scopeTarget,
         sourceExclusions,
         ...automatic?.value.automatic ? { automatic: automatic.value.automatic } : {}
-      };
-      const job = centralModel ? await prepareRemoteWithUi(request, localSettings, remoteScope, combined, () => {
-        if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
-        if (!vscode20.workspace.isTrusted || localProfile() !== localSettings.profileId || JSON.stringify(readSelection(context.globalState, remoteScope)) !== remoteSelection)
-          throw new StandaloneReviewError("central-connection-required");
-      }) : await backend.prepareReview(request, combined);
+      }, combined);
       return { ...job, run: (runSignal, progress) => withReviewSignals(runSignal, ownerSignal, (merged) => {
         if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
         return job.run(merged, progress);
@@ -27955,15 +24573,15 @@ async function activate(context) {
         const message = error2 instanceof Error ? error2.message : "Local review preparation failed.";
         statusBar.setError(message);
         getOutputChannel().appendLine(`[Commit Defender] ${message}`);
-        void vscode20.window.showErrorMessage(
+        void vscode18.window.showErrorMessage(
           error2 instanceof Error ? error2.message : "Local review preparation failed.",
           "Central Review Connection\u2026",
           "Choose Account and Model\u2026",
           "Open User Settings"
         ).then((action) => {
-          if (action === "Central Review Connection\u2026") return vscode20.commands.executeCommand("commitDefender.manageCentralConnection");
+          if (action === "Central Review Connection\u2026") return vscode18.commands.executeCommand("commitDefender.manageCentralConnection");
           if (action === "Choose Account and Model\u2026") return selectAccountProviderAndModel();
-          if (action === "Open User Settings") return vscode20.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
+          if (action === "Open User Settings") return vscode18.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
         });
       },
       finished: () => {
@@ -27985,8 +24603,8 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode20.Uri.file(path42.join(repoRoot, file)).toString();
-          return vscode20.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
+          const uri = vscode18.Uri.file(path36.join(repoRoot, file)).toString();
+          return vscode18.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
         historyProvider.push(result.report, repoRoot, scope, scopeTarget);
@@ -28003,15 +24621,15 @@ async function activate(context) {
           const provider = accountProvider(cfg2.aiProvider);
           const signIn2 = provider ? signInLabel(provider) : void 0;
           const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
-          void vscode20.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
-            if (action === signIn2 && provider) await vscode20.commands.executeCommand(signInCommand(provider));
+          void vscode18.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
+            if (action === signIn2 && provider) await vscode18.commands.executeCommand(signInCommand(provider));
             else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
             else if (action === "Show Output") getOutputChannel().show();
           });
         }
         if (automatic) return;
         showSummaryPanel(result.report, repoRoot, context);
-        await vscode20.commands.executeCommand("commitDefender.panelView.focus");
+        await vscode18.commands.executeCommand("commitDefender.panelView.focus");
         if (!isCurrent()) return;
         const srcFile = result.report.staged_files[0];
         const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
@@ -28025,50 +24643,7 @@ async function activate(context) {
     }
     if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.analyzeWithExecutor", async () => {
-    const intent = ++reviewIntent;
-    const selected = await vscode20.window.showQuickPick([
-      { label: "Local account executor", value: "local", detail: "Use the configured local review account." },
-      { label: "Central account executor", value: "central", detail: "Choose an authorized server model and approve the exact upload." }
-    ], { title: "Analyze staged files: executor" });
-    if (!selected || intent !== reviewIntent) return;
-    if (selected.value === "local") {
-      await vscode20.commands.executeCommand("commitDefender.analyze");
-      return;
-    }
-    const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode20.workspace.isTrusted) {
-      void vscode20.window.showWarningMessage("Open and trust a Git worktree before central review.");
-      return;
-    }
-    const config = getConfig();
-    const sourceExclusions = [];
-    const files = await getStagedFiles(repoRoot, config.excludePatterns, (entry) => sourceExclusions.push(entry));
-    if (!files.length) {
-      void vscode20.window.showInformationMessage("No staged files to review.");
-      return;
-    }
-    if (intent !== reviewIntent) return;
-    await analyze(files, repoRoot, "staged", void 0, sourceExclusions, void 0, void 0, true);
-  }));
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.centralModelRequests", async () => {
-    const repoRoot = await resolveRepoRoot(), profileId = localProfile();
-    if (!repoRoot || !vscode20.workspace.isTrusted) return;
-    const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
-    const assertCurrent = () => {
-      if (!vscode20.workspace.isTrusted || localProfile() !== profileId) throw new StandaloneReviewError("central-connection-required");
-    };
-    try {
-      const report = await manageRemoteRequests(scope, assertCurrent);
-      if (report) {
-        assertCurrent();
-        showSummaryPanel(report, repoRoot, context);
-      }
-    } catch {
-      void vscode20.window.showErrorMessage("Central request outcome could not be confirmed. Check the original connection and refresh the request; no new review was submitted.");
-    }
-  }));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.analyzeCurrentFile",
     async (uri) => {
       const intent = ++reviewIntent;
@@ -28076,14 +24651,14 @@ async function activate(context) {
       if (uri?.scheme === "file") {
         filePath = uri.fsPath;
       } else {
-        const editor = vscode20.window.activeTextEditor;
+        const editor = vscode18.window.activeTextEditor;
         if (!editor || editor.document.uri.scheme !== "file") {
-          vscode20.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
+          vscode18.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
           return;
         }
         filePath = editor.document.uri.fsPath;
       }
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -28097,7 +24672,7 @@ async function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path42.relative(resolvedRoot, resolvedFile);
+        const relPath = path36.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -28105,7 +24680,7 @@ async function activate(context) {
         channel.appendLine(`  rawRoot : ${rawRoot}`);
         channel.appendLine(`  relPath : ${relPath || "(empty)"}`);
         if (!relPath || relPath.startsWith("..")) {
-          vscode20.window.showWarningMessage("Commit Defender: File is outside the repository.");
+          vscode18.window.showWarningMessage("Commit Defender: File is outside the repository.");
           setPreflightIdle(void 0, intent);
           return;
         }
@@ -28116,11 +24691,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.analyzeDirectory",
     async (uri) => {
       const intent = ++reviewIntent;
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -28143,12 +24718,12 @@ async function activate(context) {
         if (relPaths.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No supported files found", intent);
-          vscode20.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+          vscode18.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
           return;
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path42.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path36.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -28157,13 +24732,13 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.analyze",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode20.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode18.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       try {
@@ -28175,11 +24750,11 @@ async function activate(context) {
         if (staged.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No staged files", intent);
-          vscode20.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
+          vscode18.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
         }
         if (cfg2.stagedFilesWarnThreshold > 0 && staged.length > cfg2.stagedFilesWarnThreshold) {
-          const answer = await vscode20.window.showWarningMessage(
+          const answer = await vscode18.window.showWarningMessage(
             `Commit Defender: ${staged.length} files are staged. Analyzing this many files may take a while.`,
             { modal: true },
             "Proceed to Analyze",
@@ -28188,12 +24763,12 @@ async function activate(context) {
           );
           if (answer === "Skip") {
             setPreflightIdle("Analysis skipped", intent);
-            vscode20.window.showInformationMessage("Commit Defender: Analysis skipped.");
+            vscode18.window.showInformationMessage("Commit Defender: Analysis skipped.");
             return;
           }
           if (answer === "Abort" || answer === void 0) {
             setPreflightIdle("Commit aborted", intent);
-            vscode20.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
+            vscode18.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
             return;
           }
         }
@@ -28207,11 +24782,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.analyzeRepository",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -28224,11 +24799,11 @@ async function activate(context) {
         if (allFiles.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No files found", intent);
-          vscode20.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+          vscode18.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
           return;
         }
         if (cfg2.repoAnalysisWarnThreshold > 0 && allFiles.length > cfg2.repoAnalysisWarnThreshold) {
-          const answer = await vscode20.window.showWarningMessage(
+          const answer = await vscode18.window.showWarningMessage(
             `Commit Defender: Found ${allFiles.length} files. The captured selection may exceed the review budget. Any unfinished file coverage will be reported as incomplete. Continue?`,
             { modal: true },
             "Analyze"
@@ -28248,11 +24823,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.cancel", () => {
+  context.subscriptions.push(vscode18.commands.registerCommand("commitDefender.cancel", () => {
     reviewIntent++;
     execution.cancel();
   }));
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.clearFindings", () => {
+  context.subscriptions.push(vscode18.commands.registerCommand("commitDefender.clearFindings", () => {
     reviewIntent++;
     execution.invalidate();
     _summaryPanel?.dispose();
@@ -28266,82 +24841,57 @@ async function activate(context) {
     panelProvider.clear();
     setPreflightIdle();
   }));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.showLineSuggestion",
     async (uri, line0) => {
-      if (!(uri instanceof vscode20.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
+      if (!(uri instanceof vscode18.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path42.relative(last.repoRoot, uri.fsPath).split(path42.sep).join("/");
+      const file = path36.relative(last.repoRoot, uri.fsPath).split(path36.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.showSummary",
     () => {
       const last = findingsStore.lastReport();
       if (!last) {
-        vscode20.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
+        vscode18.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
         return;
       }
       showSummaryPanel(last.report, last.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
+  context.subscriptions.push(vscode18.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
     const entry = arg?.kind === "entry" ? arg.entry : arg;
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) {
-      void vscode20.window.showInformationMessage("Select a saved review in history or run a review first.");
-      return;
-    }
-    if (selected.report.gcr?.report.identity.executor.id === "central") {
-      void vscode20.window.showInformationMessage("Follow-up chat for central model reviews is not available yet. Re-analyze the review to approve a new central request.");
+      void vscode18.window.showInformationMessage("Select a saved review in history or run a review first.");
       return;
     }
     try {
       await openReviewChat(selected.report, selected.repoRoot, context);
     } catch {
-      void vscode20.window.showErrorMessage("The review conversation could not be opened. Check the current workspace and review connection.");
+      void vscode18.window.showErrorMessage("The review conversation could not be opened. Check the current workspace and review connection.");
     }
   }));
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.submitReviewFeedback", async (arg) => {
-    const entry = arg?.kind === "entry" ? arg.entry : arg;
-    const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
-    if (!selected?.report || !selected.repoRoot) {
-      void vscode20.window.showInformationMessage("Select a saved review in history or run a review first.");
-      return;
-    }
-    const { report, repoRoot } = selected;
-    try {
-      await openReviewSubmission(report, repoRoot, context, async (pin, signal, current) => {
-        if (!current() || !report.gcr) return;
-        const core = clientReviewReport(report.gcr.report);
-        const files = [...new Set(core.files.map((file) => file.source.path))];
-        ++reviewIntent;
-        await analyze(files, repoRoot, core.identity.source.kind === "index" ? "staged" : files.length === 1 ? "file" : "directory", void 0, [], void 0, { ...pin, signal, current }, core.identity.executor.id === "central");
-      });
-    } catch {
-      void vscode20.window.showErrorMessage("The review feedback could not be opened. Check the current workspace and review connection.");
-    }
-  }));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.showHistoryEntry",
     (entry) => {
       showSummaryPanel(entry.report, entry.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.reanalyzeHistoryEntry",
     async (arg) => {
       const intent = ++reviewIntent;
       const histEntry = arg?.kind === "entry" ? arg.entry : arg?.report ? arg : void 0;
       if (!histEntry) {
-        vscode20.window.showWarningMessage("Commit Defender: Could not read history entry.");
+        vscode18.window.showWarningMessage("Commit Defender: Could not read history entry.");
         return;
       }
-      const centralModel = histEntry.report.gcr?.report.identity.executor.id === "central";
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -28357,33 +24907,33 @@ async function activate(context) {
             if (staged.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No staged files", intent);
-              vscode20.window.showInformationMessage("Commit Defender: No staged files to analyze.");
+              vscode18.window.showInformationMessage("Commit Defender: No staged files to analyze.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(staged, rawRoot, "staged", void 0, sourceExclusions, void 0, void 0, centralModel);
+            await analyze(staged, rawRoot, "staged", void 0, sourceExclusions);
             break;
           }
           case "selection":
           case "file": {
             const files = histEntry.report.staged_files;
             if (!files.length) {
-              vscode20.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
+              vscode18.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (file): ${files[0]}`);
             if (intent !== reviewIntent) return;
-            await analyze(files, histEntry.repoRoot, histEntry.scope, void 0, [], void 0, void 0, centralModel);
+            await analyze(files, histEntry.repoRoot, histEntry.scope);
             break;
           }
           case "directory": {
             const dirPath = histEntry.scopeTarget;
             if (!dirPath) {
-              vscode20.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
+              vscode18.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
@@ -28392,13 +24942,13 @@ async function activate(context) {
             if (relPaths.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No supported files found", intent);
-              vscode20.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+              vscode18.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path42.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path36.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions, void 0, void 0, centralModel);
+            await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
           }
           case "repository": {
@@ -28407,13 +24957,13 @@ async function activate(context) {
             if (allFiles.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No files found", intent);
-              vscode20.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+              vscode18.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
               return;
             }
             channel.appendLine(`
 [Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions, void 0, void 0, centralModel);
+            await analyze(allFiles, rawRoot, "repository", void 0, sourceExclusions);
             break;
           }
         }
@@ -28422,20 +24972,20 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode20.commands.registerCommand(
+  context.subscriptions.push(vscode18.commands.registerCommand(
     "commitDefender.generateCommitMessage",
     async () => {
       const intent = ++messageIntent;
-      const ws = vscode20.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode18.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode20.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode18.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       let repoRoot;
       try {
         repoRoot = await getRepoRoot(ws);
       } catch {
-        vscode20.window.showWarningMessage("Commit Defender: No git repository found.");
+        vscode18.window.showWarningMessage("Commit Defender: No git repository found.");
         return;
       }
       if (intent !== messageIntent) return;
@@ -28447,8 +24997,8 @@ async function activate(context) {
         const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot);
         return {
           ...prepared,
-          run: async (runSignal) => vscode20.window.withProgress(
-            { location: vscode20.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
+          run: async (runSignal) => vscode18.window.withProgress(
+            { location: vscode18.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
             () => prepared.run(runSignal)
           )
         };
@@ -28458,7 +25008,7 @@ async function activate(context) {
             handleError(error2, statusBar, !execution.isRunning);
             return;
           }
-          void vscode20.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Manage Model API Credential").then((action) => {
+          void vscode18.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Manage Model API Credential").then((action) => {
             if (action && intent === messageIntent) return manageModelCredential(repoRoot);
           });
         },
@@ -28466,32 +25016,32 @@ async function activate(context) {
           if (result.is_error || !result.commit_message) {
             const provider = accountProvider(cfg2.aiProvider);
             const signIn2 = provider ? signInLabel(provider) : void 0;
-            const action = await vscode20.window.showErrorMessage(
+            const action = await vscode18.window.showErrorMessage(
               `Commit Defender: ${result.error || "Failed to generate commit message"}`,
               ...signIn2 ? [signIn2] : []
             );
             if (action === signIn2 && provider) {
-              await vscode20.commands.executeCommand(signInCommand(provider));
+              await vscode18.commands.executeCommand(signInCommand(provider));
             }
             return;
           }
-          const gitExt = vscode20.extensions.getExtension("vscode.git");
+          const gitExt = vscode18.extensions.getExtension("vscode.git");
           const gitApi = gitExt?.exports?.getAPI?.(1);
-          const repo = gitApi?.getRepository?.(vscode20.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
+          const repo = gitApi?.getRepository?.(vscode18.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
           if (repo?.inputBox) {
             repo.inputBox.value = result.commit_message;
-            vscode20.window.showInformationMessage(
+            vscode18.window.showInformationMessage(
               "Commit Defender: Commit message inserted into the Source Control input box."
             );
           } else {
-            await vscode20.env.clipboard.writeText(result.commit_message);
+            await vscode18.env.clipboard.writeText(result.commit_message);
             if (!isCurrent()) return;
-            vscode20.window.showInformationMessage(
+            vscode18.window.showInformationMessage(
               "Commit Defender: Commit message copied to clipboard.",
               "Preview"
             ).then((action) => {
               if (action === "Preview") {
-                vscode20.window.showInputBox({
+                vscode18.window.showInputBox({
                   value: result.commit_message,
                   prompt: "Generated commit message (read-only preview)",
                   ignoreFocusOut: true
@@ -28504,12 +25054,12 @@ async function activate(context) {
     }
   ));
   const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);
-  context.subscriptions.push(vscode20.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
+  context.subscriptions.push(vscode18.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
     const originalRoot = fs10.realpathSync(job.root);
-    if (!vscode20.workspace.isTrusted || !vscode20.workspace.workspaceFolders?.some((folder) => {
+    if (!vscode18.workspace.isTrusted || !vscode18.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path42.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path36.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -28521,7 +25071,7 @@ async function activate(context) {
       const initial = getStandaloneReviewSettings(2, root2);
       const scope = knowledgeScope({ repoRoot: root2, profileId: initial.profileId, scope: "repository" });
       const settings = selectedReviewSettings(initial, readSelection(context.globalState, scope));
-      const cfg2 = vscode20.workspace.getConfiguration("commitDefender");
+      const cfg2 = vscode18.workspace.getConfiguration("commitDefender");
       try {
         await backgroundHooks.configure(root2, automatic, settings, cfg2.inspect("serviceNodePath")?.globalValue ?? "node", (cfg2.inspect("hookReviewWaitSeconds")?.globalValue ?? 0) * 1e3);
       } catch (error2) {
@@ -28543,15 +25093,15 @@ async function activate(context) {
   let backgroundPolling = false;
   const observedBackgroundResults = /* @__PURE__ */ new Set();
   const displayBackgroundResult = async (job) => {
-    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode20.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
+    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode18.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
     const canonicalRoot = fs10.realpathSync(job.root);
-    const folder = vscode20.workspace.workspaceFolders?.find((folder2) => {
+    const folder = vscode18.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
-      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path42.sep) || canonicalRoot.startsWith(root2 + path42.sep);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path36.sep) || canonicalRoot.startsWith(root2 + path36.sep);
     });
     if (!folder) return;
-    const displayRoot = path42.resolve(folder.uri.fsPath, path42.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const displayRoot = path36.resolve(folder.uri.fsPath, path36.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
     const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
     if (scope.kind !== "repository") return;
     const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
@@ -28559,13 +25109,13 @@ async function activate(context) {
     const entry = mergeLocalHistory([], history.reports, job.root, scope, history.audience, history.fallbackConnectionId).find((entry2) => entry2.id === job.result.runId);
     const core = entry?.report.gcr?.report;
     if (!entry || !core || !core.finishedAt || Date.parse(core.finishedAt) < backgroundOpenedAt || Date.parse(core.startedAt ?? core.requestedAt) < lastManualStartedAt) return;
-    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode20.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
-    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode20.workspace.textDocuments.find((document3) => {
+    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode18.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
+    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode18.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
-        return fs10.realpathSync(document3.uri.fsPath) === path42.join(canonicalRoot, file);
+        return fs10.realpathSync(document3.uri.fsPath) === path36.join(canonicalRoot, file);
       } catch {
-        return path42.resolve(document3.uri.fsPath) === path42.resolve(displayRoot, file);
+        return path36.resolve(document3.uri.fsPath) === path36.resolve(displayRoot, file);
       }
     })?.getText());
     findingsStore.update(entry.report, displayRoot, blocks);
@@ -28579,11 +25129,11 @@ async function activate(context) {
   const backgroundPoll = setInterval(() => {
     if (backgroundPolling) return;
     backgroundPolling = true;
-    void backgroundHooks.status().then(async (jobs2) => {
-      const pending = jobs2.filter((job) => job.state === "queued" || job.state === "running");
+    void backgroundHooks.status().then(async (jobs) => {
+      const pending = jobs.filter((job) => job.state === "queued" || job.state === "running");
       if (pending.length && !execution.isRunning) statusBar.setIdle(`Background reviews: ${pending.length} queued/running${pending.some((job) => job.waitingReason === "manual-priority") ? " (waiting for manual review)" : pending.some((job) => job.notBefore && job.notBefore > Date.now()) ? " (review budget)" : ""}.`);
-      const interrupted = jobs2.filter((job) => job.state === "interrupted");
-      const finished = jobs2.filter((job) => job.state === "finished" && job.result?.runId && !observedBackgroundResults.has(job.id));
+      const interrupted = jobs.filter((job) => job.state === "interrupted");
+      const finished = jobs.filter((job) => job.state === "finished" && job.result?.runId && !observedBackgroundResults.has(job.id));
       if (finished.length) {
         finished.forEach((job) => observedBackgroundResults.add(job.id));
         await refreshLocalHistory();
@@ -28614,7 +25164,6 @@ async function activate(context) {
 }
 async function deactivate() {
   await settleReviewChats();
-  await settleReviewSubmissions();
   await settleExecutions?.();
   settleExecutions = void 0;
   findingsStore.clear();
@@ -28635,7 +25184,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path42.relative(root2, current) || ".";
+    const rel = path36.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -28652,9 +25201,9 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path42.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path36.join(rel, name) });
     }
-    const picked = await vscode20.window.showQuickPick(items, {
+    const picked = await vscode18.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
       placeHolder: 'Navigate or choose "Analyze this directory"'
     });
@@ -28665,9 +25214,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path42.dirname(current);
+      current = path36.dirname(current);
     } else {
-      current = path42.join(current, picked.label.replace("$(folder) ", ""));
+      current = path36.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }
@@ -28675,7 +25224,7 @@ function handleError(err2, statusBar, updateStatus = true) {
   const message = err2 instanceof Error ? err2.message : String(err2);
   if (updateStatus) statusBar.setError(message);
   const firstLine = message.split("\n")[0];
-  vscode20.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
+  vscode18.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
     if (action === "Show Output") {
       getOutputChannel().show();
     }
@@ -28693,12 +25242,12 @@ function renderSummary(report, repoRoot) {
 }
 function showSummaryPanel(report, repoRoot, context) {
   if (_summaryPanel) {
-    _summaryPanel.reveal(vscode20.ViewColumn.Beside, true);
+    _summaryPanel.reveal(vscode18.ViewColumn.Beside, true);
   } else {
-    _summaryPanel = vscode20.window.createWebviewPanel(
+    _summaryPanel = vscode18.window.createWebviewPanel(
       "commitDefenderSummary",
       "Commit Defender \u2014 Summary",
-      { viewColumn: vscode20.ViewColumn.Beside, preserveFocus: true },
+      { viewColumn: vscode18.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] }
     );
     _summaryPanel.onDidDispose(() => {
@@ -28712,13 +25261,11 @@ function showSummaryPanel(report, repoRoot, context) {
         if (!view2 || !message) return;
         if (message.command === "open") {
           await reviewNavigation.open(message.id);
-        } else if (message.command === "submit") {
-          await vscode20.commands.executeCommand("commitDefender.submitReviewFeedback", { report: view2.report, repoRoot: view2.repoRoot });
         } else if (message.command === "discuss") {
-          await vscode20.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
+          await vscode18.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
         } else {
-          const doc = await vscode20.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
-          await vscode20.window.showTextDocument(doc, { preview: true, preserveFocus: false });
+          const doc = await vscode18.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
+          await vscode18.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
       },
       void 0,

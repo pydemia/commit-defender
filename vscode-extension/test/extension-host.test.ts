@@ -28,6 +28,8 @@ export async function run(): Promise<void> {
   );
   for (const command of declared)
     assert(commands.has(command), `Missing command: ${command}`);
+  for (const removed of ["commitDefender.analyzeWithExecutor", "commitDefender.centralModelRequests", "commitDefender.submitReviewFeedback"])
+    assert(!commands.has(removed), `One-way integration must not register ${removed}`);
   await vscode.commands.executeCommand("commitDefender.clearFindings");
   await vscode.commands.executeCommand("commitDefender.cancel");
   await vscode.commands.executeCommand("commitDefender.refreshLocalHistory");
@@ -58,6 +60,7 @@ export async function run(): Promise<void> {
     checks: [
       "activation",
       "command registration",
+      "central executor and upstream submission commands absent",
       "clear findings",
       "cancel without run",
       "no hook installed",

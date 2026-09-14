@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
-  "cliVersion": "0.1.0-alpha.31",
-  "clientVersion": "0.1.0-alpha.35",
+  "version": "0.1.0-alpha.35",
   "packages": [
     {
       "name": "@gcr/client-contract",
@@ -20,12 +19,6 @@
       "version": "0.1.0-alpha.35",
       "file": "gcr-client-executors-0.1.0-alpha.35.tgz",
       "sha256": "5499a710075a0d7868d8ed859219025abc1a40850f3aebda4927adda7683252e"
-    },
-    {
-      "name": "@gcr/cli",
-      "version": "0.1.0-alpha.31",
-      "file": "gcr-cli-0.1.0-alpha.31.tgz",
-      "sha256": "ac2c2d6249602fe5734d3ae1511a6f36763e19b8b31f634c6b214a20c69fa5d9"
     }
   ]
 }

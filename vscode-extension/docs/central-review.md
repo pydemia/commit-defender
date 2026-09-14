@@ -1,6 +1,8 @@
 # Central review in Commit Defender
 
-Manual reviews can use a signed GCR knowledge snapshot together with active local Memory and Skills. Source, base and related files are captured by the shared review core. The regular review commands run the model through the selected local Codex account; the central API key grants access to review knowledge. Version 2.9.0 also adds an explicit central model executor for manual staged reviews, described below.
+Central integration is one-way. The extension downloads central reviews, review knowledge and prompts and applies them with the configured local model. Local source, results, feedback, conversations and personal Memory stay on this computer. No central executor, result submission or feedback upload is offered. Historical encrypted outboxes are retained locally and cannot be sent by this client.
+
+Manual reviews can use a signed GCR knowledge snapshot together with active local Memory and Skills. Source, base and related files are captured by the shared review core. The model runs through the selected local Codex account; the central API key grants access to review knowledge.
 
 The current executor supports macOS, Codex CLI `0.153.4` or `0.154.0`, `gpt-6-astra` and `xhigh`. Choose the account and model in User Settings. New installations remain standalone until you select a central connection.
 
@@ -51,17 +53,3 @@ The macOS packaged worker has performed an actual Astra/xhigh central review usi
 Reports show configured and effective modes separately: `Centralized · online`, `Centralized · cached` or `Standalone · fallback: <reason>`. A fallback does not change the saved connection or switch the model provider. Local fallback history remains locally owned, contains no central snapshot or entries, and is labeled as advisory without establishing central policy compliance. The selected connection's fallback results remain readable after central access expires. Reconnection never reruns or relabels an existing local result.
 
 If identity verification succeeds but the first knowledge publication fails, a confirmed local fallback policy can retain the selected connection. The pending API key is removed; reconnect to restore central reviews. Cancelling connection setup never selects fallback automatically.
-
-## Run a model on the central server
-
-Use **Commit Defender: Analyze Staged Files: Choose Local or Central Executor** and choose **Central account executor**. Select a connected server, an authorized account/model and a reasoning effort. The server must enable remote reviews and grant your Commit Defender key `ai:invoke`; the profile page exposes a separate, unchecked permission for that capability. A knowledge-only key cannot run a central model. No provider credential is copied to this computer.
-
-Before submission, the approval panel shows the receiving server/repository/user, account/model/effort, execution limits, source/result retention, file sides, upload size and exact source/knowledge payload. **Approve upload and run** authorizes that frozen payload. Closing or cancelling the panel does not upload it. Files edited after approval do not replace the approved bytes.
-
-Knowledge selection and model execution remain separate. Standalone knowledge can use this explicit central executor. With centralized knowledge selected, execution must use the same connection and freshly verified central context; connection failure does not fall back to local execution. Repository settings cannot choose the account or authorize upload. Save, stage, commit and push triggers retain their existing local execution behavior.
-
-**Commit Defender: Central Model Requests** lists locally recorded requests for the selected connection. Refresh status, read a verified result, or explicitly request cancellation. These actions reuse the original request ID and never submit a replacement review. A timeout or lost response can leave the server running; cancellation is confirmed only by its returned state. Receipt metadata survives extension restarts. Result recovery depends on the server retaining the result and the original connection remaining authorized.
-
-Central results use the existing summary, findings and session history. Source-read receipts come from the central worker. The recovery command opens a verified summary after a restart; it does not recreate local captured source or a conversation store. Re-analyzing a central history entry, including after accepted feedback, requires a new central selection and upload approval. Follow-up model chat for this executor is not implemented yet.
-
-The new path is tested with an owned HTTPS fixture and synthetic model results. This does not establish successful execution with a real server account or PRISM deployment. The server executor remains disabled by default until deployment and actual-account verification are complete.
