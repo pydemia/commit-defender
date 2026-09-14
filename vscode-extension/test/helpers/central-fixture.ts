@@ -215,6 +215,23 @@ export async function centralFixture(
         res.end(JSON.stringify(manifest));
         return;
       }
+      if (
+        req.url === "/base/api/v1/client-repositories/repository" &&
+        req.method === "GET"
+      ) {
+        res.end(
+          JSON.stringify({
+            schemaVersion: 1,
+            ...audience,
+            userId: undefined,
+            instanceId: "github",
+            webBaseUrl: "https://github.example",
+            owner: "team",
+            name: "reviewer",
+          }),
+        );
+        return;
+      }
       const statusId = /\/review-submissions\/([^/]+)\/status$/.exec(
         req.url ?? "",
       )?.[1];

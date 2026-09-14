@@ -375,7 +375,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (generation !== syncDiscovery || !vscode.workspace.isTrusted || localProfile() !== profileId) return;
       centralSynchronization.reconcile([...new Set(roots.filter((root): root is string => !!root))].map(repoRoot => {
         const scope = knowledgeScope({ profileId, repoRoot, scope: 'repository' });
-        return { scope, selection: readSelection(context.globalState, scope) };
+        return { scope, repositoryRoot: repoRoot, selection: readSelection(context.globalState, scope) };
       }));
     } catch {
       if (generation === syncDiscovery) centralSynchronization.stop();
@@ -428,6 +428,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       syncManagement++; syncDiscovery++; centralSynchronization.stop();
       await centralSynchronization.settled();
       try { await manageCentralConnection(context, scope, {
+        repositoryRoot: repoRoot,
         assertCurrent() {
           if (!vscode.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: 'repository' })) !== selectionKey(scope))
             throw Error('Connection selection changed.');

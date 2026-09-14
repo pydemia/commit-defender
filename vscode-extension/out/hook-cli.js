@@ -1249,6 +1249,16 @@ var centralCacheIndex = object({
 
 // node_modules/@gcr/client-contract/dist/central-connection.js
 var keys = list(object({ id, pem: text(4096, 1) }), 16, 1);
+var centralRepositoryIdentity = object({
+  schemaVersion: literal(1),
+  serverId: id,
+  tenantId: id,
+  repositoryId: id,
+  instanceId: id,
+  webBaseUrl: text(4096, 1),
+  owner: text(100, 1),
+  name: text(100, 1)
+});
 var centralConnectionInput = object({
   serverUrl: text(4096, 1),
   serverId: id,
@@ -1278,6 +1288,10 @@ var centralConnectionRecord = object({
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
   offlineBehavior: optional(offlineBehavior),
+  repositoryBinding: optional(object({
+    identity: centralRepositoryIdentity,
+    remotesHash: sha256
+  })),
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
@@ -1543,7 +1557,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.35",
+  version: "0.1.0-alpha.36",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2189,7 +2203,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.35",
+  version: "0.1.0-alpha.36",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

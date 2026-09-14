@@ -875,6 +875,16 @@ var centralCacheIndex = object({
 
 // node_modules/@gcr/client-contract/dist/central-connection.js
 var keys = list(object({ id, pem: text(4096, 1) }), 16, 1);
+var centralRepositoryIdentity = object({
+  schemaVersion: literal(1),
+  serverId: id,
+  tenantId: id,
+  repositoryId: id,
+  instanceId: id,
+  webBaseUrl: text(4096, 1),
+  owner: text(100, 1),
+  name: text(100, 1)
+});
 var centralConnectionInput = object({
   serverUrl: text(4096, 1),
   serverId: id,
@@ -904,6 +914,10 @@ var centralConnectionRecord = object({
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
   offlineBehavior: optional(offlineBehavior),
+  repositoryBinding: optional(object({
+    identity: centralRepositoryIdentity,
+    remotesHash: sha256
+  })),
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
@@ -1192,7 +1206,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.35",
+  version: "0.1.0-alpha.36",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2886,6 +2900,7 @@ var parts = ["policy", "collective", "personal"];
 var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
 var error = (code) => new KnowledgeSyncError(code, {
   "invalid-binding": "Invalid central binding.",
+  "repository-mismatch": "Local Git remotes no longer match the selected repository.",
   busy: "Another process owns the current synchronization.",
   disabled: "Central connection is disabled.",
   "authentication-required": "Central authentication is required.",
@@ -4572,6 +4587,31 @@ var KnowledgeHttpTransport = class {
       response.destroy();
     }
   }
+  async repository(signal) {
+    const response = await this.get(`api/v1/client-repositories/${encodeURIComponent(this.binding.audience.repositoryId)}`, signal);
+    try {
+      if (response.statusCode !== 200) {
+        await this.failure(response);
+        throw unavailable3();
+      }
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of response) {
+        const bytes = Buffer.from(chunk);
+        size += bytes.length;
+        if (size > 16384)
+          throw unavailable3();
+        chunks.push(bytes);
+      }
+      const result = centralRepositoryIdentity(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks))));
+      const audience = this.binding.audience;
+      if (result.serverId !== audience.serverId || result.tenantId !== audience.tenantId || result.repositoryId !== audience.repositoryId)
+        throw new KnowledgeSyncError("invalid-binding", "Repository identity does not match the authenticated connection.");
+      return result;
+    } finally {
+      response.destroy();
+    }
+  }
   async bundle({ snapshotId, bundleId, signal }) {
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/bundles/${encodeURIComponent(bundleId)}?snapshotId=${encodeURIComponent(snapshotId)}`, signal);
     if (response.statusCode !== 200)
@@ -4605,6 +4645,87 @@ var ReviewSubmissionDeliveryError = class extends Error {
 // node_modules/@gcr/client-core/dist/central-connection.js
 var import_node_path7 = __toESM(require("node:path"), 1);
 var import_node_crypto10 = require("node:crypto");
+
+// node_modules/@gcr/client-core/dist/repository-binding.js
+var import_node_child_process3 = require("node:child_process");
+var mismatch = () => new KnowledgeSyncError("repository-mismatch", "Git remotes do not match the selected central repository. Check the repository and reconnect.");
+function canonicalRepositoryRemote(raw) {
+  try {
+    if (!raw || raw.length > 8192 || /[\s\\]/.test(raw))
+      return null;
+    let value = raw;
+    if (!value.includes("://")) {
+      const scp = /^(?:[^@/:]+@)?([^/:]+):(.+)$/.exec(value);
+      if (!scp || scp[2].startsWith("/"))
+        return null;
+      value = `ssh://${scp[1]}/${scp[2]}`;
+    }
+    const rawPath = /^[a-z]+:\/\/[^/?#]+([^?#]*)/i.exec(value)?.[1];
+    if (!rawPath)
+      return null;
+    const parts2 = rawPath.split("/").slice(1);
+    if (parts2.at(-1) === "")
+      parts2.pop();
+    if (parts2.some((x) => !x))
+      return null;
+    const segments = parts2.map(decodeURIComponent);
+    if (segments.some((x) => x === "." || x === ".." || /[\s/\\?#]/.test(x) || Array.from(x).some((c) => c.charCodeAt(0) < 32)))
+      return null;
+    const url = new URL(value);
+    if (!["https:", "http:", "ssh:"].includes(url.protocol) || segments.length < 2)
+      return null;
+    const port2 = url.protocol === "ssh:" && url.port === "22" ? "" : url.port;
+    const last = segments.at(-1).replace(/\.git$/i, "");
+    if (!last)
+      return null;
+    segments[segments.length - 1] = last;
+    return `${url.hostname.toLowerCase()}${port2 ? ":" + port2 : ""}/${segments.join("/").toLowerCase()}`;
+  } catch {
+    return null;
+  }
+}
+function localRepositoryRemotes(root) {
+  const git = (args) => {
+    try {
+      return (0, import_node_child_process3.execFileSync)("git", ["-C", root, "--no-optional-locks", ...args], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 1e4,
+        maxBuffer: 1024 * 1024,
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }
+      });
+    } catch {
+      throw mismatch();
+    }
+  };
+  const names = git(["remote"]).trim().split("\n").filter(Boolean);
+  if (names.length > 100)
+    throw mismatch();
+  return names.flatMap((name) => {
+    if (!/^[a-zA-Z0-9._/-]+$/.test(name) || name.startsWith("-"))
+      throw mismatch();
+    return git(["remote", "get-url", "--all", "--", name]).trim().split("\n").map((url) => ({
+      name,
+      canonical: canonicalRepositoryRemote(url) ?? "unsupported"
+    }));
+  }).sort((a, b) => a.name.localeCompare(b.name) || a.canonical.localeCompare(b.canonical));
+}
+function repositoryBinding(identity, remotes) {
+  const checked = centralRepositoryIdentity(identity);
+  const base = new URL(checked.webBaseUrl);
+  if (base.username || base.password || base.search || base.hash || !["https:", "http:"].includes(base.protocol) || !/^[a-zA-Z0-9_.-]+$/.test(checked.owner) || !/^[a-zA-Z0-9_.-]+$/.test(checked.name))
+    throw mismatch();
+  const expected = canonicalRepositoryRemote(`${base.href.replace(/\/$/, "")}/${checked.owner}/${checked.name}`);
+  if (!expected || !remotes.some((remote) => remote.canonical === expected))
+    throw mismatch();
+  return { identity: checked, remotesHash: contentHash(remotes) };
+}
+function assertRepositoryBinding(binding, root) {
+  if (!root || repositoryBinding(binding.identity, localRepositoryRemotes(root)).remotesHash !== binding.remotesHash)
+    throw mismatch();
+}
+
+// node_modules/@gcr/client-core/dist/central-connection.js
 var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
 var CentralConnectionSetupError = class extends KnowledgeSyncError {
   connectionId;
@@ -4659,6 +4780,8 @@ var CentralConnections = class _CentralConnections {
     return { revision: row.revision, value };
   }
   async assert(state, pending = false) {
+    if (state.value.repositoryBinding)
+      assertRepositoryBinding(state.value.repositoryBinding, this.options.repositoryRoot);
     if (this.invalid.has(state.value.credentialReference) || Date.parse(state.value.expiresAt) <= Date.now())
       throw denied();
     const current = await this.state(state.value.id);
@@ -4728,6 +4851,8 @@ var CentralConnections = class _CentralConnections {
       audience: { ...bootstrap.audience, userId: identity.userId },
       trustedKeys: bootstrap.verificationKeys()
     });
+    const remotes = this.options.repositoryRoot ? localRepositoryRemotes(this.options.repositoryRoot) : [];
+    const mapped = remotes.length ? repositoryBinding(await this.timed(signal, (s) => new KnowledgeHttpTransport(binding, { bindingId: binding.id, readToken: async () => apiKey }, config.ca ?? void 0).repository(s)), remotes) : void 0;
     const previous = await this.records.read("settings", binding.id);
     if (previous && (previous.deleted || centralConnectionRecord(previous.value).status !== "disconnected"))
       throw new KnowledgeSyncError("busy", "Disconnect the existing connection before registering another key.");
@@ -4745,6 +4870,7 @@ var CentralConnections = class _CentralConnections {
       })),
       ca: config.ca,
       offlineBehavior: behavior,
+      ...mapped ? { repositoryBinding: mapped } : {},
       credentialReference: "gcr-" + (0, import_node_crypto10.randomUUID)(),
       keyId: identity.keyId,
       clientId,
@@ -4796,6 +4922,7 @@ var CentralConnections = class _CentralConnections {
       serverUrl: value.serverUrl,
       audience: value.audience,
       offlineBehavior: value.offlineBehavior ?? "pause",
+      repositoryBinding: value.repositoryBinding ?? null,
       keyId: value.keyId,
       clientId: value.clientId,
       expiresAt: value.expiresAt
@@ -4920,6 +5047,11 @@ var CentralConnections = class _CentralConnections {
     await this.assert(state);
     const cache = await this.cache(state.value);
     try {
+      if (state.value.repositoryBinding) {
+        const identity = await this.timed(signal, (s) => this.transport(state).repository(s));
+        if (contentHash(identity) !== contentHash(state.value.repositoryBinding.identity))
+          throw new KnowledgeSyncError("repository-mismatch", "Central repository identity changed. Verify the Git remote and reconnect.");
+      }
       await cache.synchronize(this.transport(state), signal ? { signal } : {});
       await this.assert(state);
       return this.status(id3);
@@ -5541,7 +5673,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.35",
+  version: "0.1.0-alpha.36",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -5556,7 +5688,7 @@ var import_node_path11 = __toESM(require("node:path"), 1);
 var import_node_path8 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/process.js
-var import_node_child_process3 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 var ExecutorError = class extends Error {
   code;
   constructor(code) {
@@ -5574,7 +5706,7 @@ async function runManagedProcess(input) {
   if (!Number.isSafeInteger(input.timeoutMs) || input.timeoutMs < 1 || input.timeoutMs > 6e5 || !Number.isSafeInteger(maximum) || maximum < 1 || maximum > 16 * 1024 * 1024 || Buffer.byteLength(input.stdin) > 2 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
   return new Promise((resolve, reject) => {
-    const child = (0, import_node_child_process3.spawn)(input.command, [...input.args], {
+    const child = (0, import_node_child_process4.spawn)(input.command, [...input.args], {
       cwd: input.cwd,
       env: { ...input.env },
       detached: true,
@@ -6415,7 +6547,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.35",
+  version: "0.1.0-alpha.36",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6573,7 +6705,8 @@ async function reviewChatOperation(target, action, settings, signal, progress = 
         central: async (freshness) => {
           connections ??= await CentralConnections.open({
             scope,
-            ...ports
+            ...ports,
+            repositoryRoot: target.repoRoot
           });
           if ((await connections.status(settings.connectionId)).clientId !== "commit-defender")
             throw new ReviewChatError("selection-changed");

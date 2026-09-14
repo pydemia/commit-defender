@@ -287,6 +287,80 @@ test("cancelling server confirmation never stores a key or contacts the server",
   assert.deepEqual(ui.errors, []);
 });
 
+test("connection UI binds this Git worktree and blocks downloaded content after a remote change", async (t) => {
+  ui.reset();
+  const f = fixture(),
+    server = await centralFixture(f.root);
+  t.after(async () => {
+    ui.reset();
+    await server.close();
+    f.cleanup();
+  });
+  const scope = knowledgeScope({
+    profileId: "remote-ui",
+    repoRoot: f.repo,
+    scope: "repository",
+  });
+  if (scope.kind !== "repository") throw Error("scope");
+  const values = new Map<string, unknown>();
+  const context = {
+    subscriptions: [],
+    globalState: {
+      get<T>(key: string) {
+        return values.get(key) as T | undefined;
+      },
+      async update(key: string, value: unknown) {
+        values.set(key, value);
+      },
+    },
+  } as unknown as ExtensionContext;
+  const actions = {
+    repositoryRoot: f.repo,
+    assertCurrent() {},
+    async invalidate() {},
+    async refresh() {},
+  };
+  const ports = {
+    dataDirectory: path.join(f.root, "data"),
+    keys: server.keys,
+    credentials: server.credentials,
+  };
+  ui.file = path.join(f.root, "connection.json");
+  fs.writeFileSync(ui.file, JSON.stringify(server.config));
+  ui.secret = server.secret;
+  f.git(
+    "remote",
+    "add",
+    "origin",
+    "https://user:PRIVATE_REMOTE@github.example/fork/reviewer.git",
+  );
+  ui.choices = ["connect"];
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.equal(server.credentialValues.size, 0);
+  assert.equal(ui.errors.length, 1);
+  assert(ui.errors[0]!.includes("Git remotes"));
+  assert(!ui.errors[0]!.includes("PRIVATE_REMOTE"));
+  ui.errors = [];
+  f.git("remote", "set-url", "origin", "git@github.example:team/reviewer.git");
+  ui.choices = ["connect"];
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.deepEqual(ui.errors, []);
+  ui.choices = ["status"];
+  await manageCentralConnection(context, scope, actions, ports);
+  assert(
+    ui.html.at(-1)?.includes("Verified against central repository identity"),
+  );
+  f.git("remote", "set-url", "origin", "git@another.example:team/reviewer.git");
+  ui.choices = ["knowledge"];
+  const panels = ui.panels.length;
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.equal(ui.panels.length, panels);
+  assert(String(ui.errors.at(-1)).includes("Git remotes"));
+  ui.choices = ["disconnect"];
+  await manageCentralConnection(context, scope, actions, ports);
+  assert.equal(server.credentialValues.size, 0);
+});
+
 test("read-only status escapes server metadata and omits unexpected secret fields", () => {
   const html = centralStatusHtml({
     serverUrl: '<script>alert("x")</script>',

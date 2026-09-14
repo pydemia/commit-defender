@@ -61,3 +61,9 @@ Open **Manage Central Review Connection → View downloaded review knowledge** t
 The view is read-only. It refreshes knowledge when online freshness requires it and never invokes a model or uploads local content. Markdown and source references are displayed as text. Local Memory and Skills remain editable in their own view.
 
 Connection changes in the manager close the view. The view also checks local access on focus, at signed lease expiry, and every 30 seconds while open. A changed selection or manifest, confirmed local revocation, or invalid cache closes it. An offline client cannot detect a server revocation before synchronization; the existing signed offline lease applies.
+
+## Git remote binding
+
+New connections with Git remotes download the authorized repository identity using GET and compare it locally against effective fetch URLs. SSH and HTTPS forms can identify the same GitHub repository; forks, hosts, nonstandard ports and installation prefixes remain distinct. Credentials and URL query strings are removed before comparison and are never sent to GCR.
+
+The connection status indicates whether remote mapping was recorded. Changing a remote stops use of that connection's knowledge, including offline reviews and open downloaded-content views. Inspect the remote and disconnect/reconnect to establish a new binding. Existing manual connections and repositories without remotes remain unverified until reconnected with a matching remote.

@@ -232,6 +232,7 @@ export async function prepareStandaloneReview(
               connections ??= await CentralConnections.open({
                 scope: repositoryScope,
                 ...ports,
+                repositoryRoot: request.repoRoot,
               });
               const status = await connections.status(settings.connectionId!);
               if (status.clientId !== "commit-defender")

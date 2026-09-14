@@ -9,7 +9,11 @@ import {
 } from "./centralConnection.js";
 import { StandaloneReviewError } from "./standaloneReviewProtocol.js";
 
-type Target = { scope: LocalScope; selection?: CentralSelection };
+type Target = {
+  scope: LocalScope;
+  selection?: CentralSelection;
+  repositoryRoot?: string;
+};
 /** Selections come from extension globalState for trusted workspace roots only.
  * Repository configuration and remote URLs never provide credential targets. */
 export class CentralSynchronization {
@@ -27,8 +31,11 @@ export class CentralSynchronization {
     } = {},
   ) {}
   reconcile(targets: Target[]) {
-    const wanted = new Map<string, { scope: LocalScope; id: string }>();
-    for (const { scope, selection } of targets) {
+    const wanted = new Map<
+      string,
+      { scope: LocalScope; id: string; repositoryRoot?: string }
+    >();
+    for (const { scope, selection, repositoryRoot } of targets) {
       if (!selection) continue;
       const selected = centralSelection(selection);
       if (selected.mode !== "centralized" || selected.freshness !== "online")
@@ -36,6 +43,7 @@ export class CentralSynchronization {
       wanted.set(`${selectionKey(scope)}:${selected.connectionId}`, {
         scope,
         id: selected.connectionId,
+        ...(repositoryRoot ? { repositoryRoot } : {}),
       });
     }
     for (const [key, loop] of this.loops) {
@@ -43,7 +51,7 @@ export class CentralSynchronization {
       this.retire(loop);
       this.loops.delete(key);
     }
-    for (const [key, { scope, id }] of wanted) {
+    for (const [key, { scope, id, repositoryRoot }] of wanted) {
       if (this.loops.has(key)) continue;
       const loop = new KnowledgeSyncLoop({
         synchronize: async (signal) => {
@@ -58,7 +66,10 @@ export class CentralSynchronization {
                 throw new StandaloneReviewError("authentication-required");
               if (!signal.aborted) return manager.synchronize(id, signal);
             },
-            this.options.ports,
+            {
+              ...this.options.ports,
+              ...(repositoryRoot ? { repositoryRoot } : {}),
+            },
           );
         },
         onState: (state) => this.options.onState?.(key, state),

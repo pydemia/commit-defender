@@ -70,6 +70,8 @@ export function standaloneErrorMessage(code: string): string {
     case "incompatible":
     case "cache-unavailable":
       return "Central knowledge could not be verified. Check the selected server, signing keys, compatibility and cache expiry.";
+    case "repository-mismatch":
+      return "Git remotes no longer match the selected central repository. Check this worktree's remotes and reconnect before using central knowledge.";
     case "unsupported-provider":
       return "This provider does not yet support fixed-source standalone review. Your account settings have been preserved.";
     case "account-not-configured":
@@ -109,6 +111,7 @@ const safeCodes = new Set([
   "busy",
   "superseded",
   "invalid-binding",
+  "repository-mismatch",
   "invalid-manifest",
   "invalid-bundle",
   "incompatible",

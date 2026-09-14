@@ -59,6 +59,14 @@ export function centralStatusHtml(value: unknown): string {
     ["Repository", audience.repositoryId],
     ["User", audience.userId],
     ["Connection", v.status],
+    [
+      "Git remote mapping",
+      cache.reason === "repository-mismatch"
+        ? "Git remotes changed; reconnect"
+        : v.repositoryBinding
+          ? "Verified against central repository identity"
+          : "Manual connection; remote mapping not recorded",
+    ],
     ["API key expires", v.expiresAt],
     ["Verified cache", cache.status],
     ["Cache problem", cache.reason ?? "None"],
@@ -104,6 +112,7 @@ export async function manageCentralConnection(
   context: vscode.ExtensionContext,
   scope: Extract<LocalScope, { kind: "repository" }>,
   actions: {
+    repositoryRoot?: string;
     assertCurrent(): void;
     invalidate(): Promise<void>;
     refresh(): Promise<void>;
@@ -112,7 +121,12 @@ export async function manageCentralConnection(
 ): Promise<void> {
   const key = selectionKey(scope);
   const withManager = <T>(work: (manager: CentralConnections) => Promise<T>) =>
-    withCentralConnection(scope, work, ports);
+    withCentralConnection(scope, work, {
+      ...ports,
+      ...(actions.repositoryRoot
+        ? { repositoryRoot: actions.repositoryRoot }
+        : {}),
+    });
   if (activeViews.has(key)) return;
   activeViews.add(key);
   let selection: CentralSelection | undefined;

@@ -177,6 +177,7 @@ export async function reviewChatOperation(
               connections ??= await CentralConnections.open({
                 scope,
                 ...ports,
+                repositoryRoot: target.repoRoot,
               });
               if (
                 (await connections.status(settings.connectionId!)).clientId !==

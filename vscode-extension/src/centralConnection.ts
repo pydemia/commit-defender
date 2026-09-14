@@ -99,6 +99,7 @@ export function selectedReviewSettings(
 }
 export type CentralPorts = LocalStoragePorts & {
   credentials?: CentralCredentialStore;
+  repositoryRoot?: string;
 };
 export async function withCentralConnection<T>(
   scope: LocalScope,
@@ -147,7 +148,10 @@ export async function readCentralHistory(
         records.close();
       }
     },
-    ports,
+    {
+      ...ports,
+      ...(location.repoRoot ? { repositoryRoot: location.repoRoot } : {}),
+    },
   );
 }
 
