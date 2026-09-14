@@ -14730,7 +14730,7 @@ var centralCriterionDocument = object({
   reviewAfter: nullableTime
 });
 var sourceReference = object({
-  kind: choice(["memory", "github-pr-message", "manual"]),
+  kind: choice(["memory", "github-pr-message", "snapshot-change", "manual"]),
   id: nullableId,
   contentHash: sha256
 });
@@ -14787,7 +14787,8 @@ var skill = object({
   markdown: text5(2e4, 1),
   contentHash: sha256
 });
-var KNOWLEDGE_CLIENT_CONTRACT_VERSION = 2;
+var KNOWLEDGE_CLIENT_CONTRACT_VERSION = 3;
+var KNOWLEDGE_CLIENT_CONTRACT_MINIMUM = 2;
 var common = { schemaVersion: union(literal(1), literal(2)), tenantId: id, repositoryId: id };
 var centralKnowledgeBundle = refined(union(object({
   ...common,
@@ -15280,7 +15281,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.36",
+  version: "0.1.0-alpha.37",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -16879,8 +16880,8 @@ var import_node_crypto7 = require("node:crypto");
 function verifyKnowledgeManifest(value, options) {
   const manifest = signedKnowledgeManifest(value);
   const payload = manifest.payload;
-  const version = options.clientContractVersion ?? KNOWLEDGE_CLIENT_CONTRACT_VERSION;
-  if (!Number.isSafeInteger(version) || version < payload.compatibleClientContracts.minimum || version > payload.compatibleClientContracts.maximum)
+  const version = options.clientContractVersion ?? Math.min(KNOWLEDGE_CLIENT_CONTRACT_VERSION, payload.compatibleClientContracts.maximum);
+  if (!Number.isSafeInteger(version) || options.clientContractVersion === void 0 && version < KNOWLEDGE_CLIENT_CONTRACT_MINIMUM || version < payload.compatibleClientContracts.minimum || version > payload.compatibleClientContracts.maximum)
     throw Error("Incompatible knowledge client contract");
   if (canonicalKnowledgeJson(payload.audience) !== canonicalKnowledgeJson(knowledgeAudience(options.audience)))
     throw Error("Knowledge manifest audience mismatch");
@@ -17507,8 +17508,14 @@ var KnowledgeHttpTransport = class {
     return this.readManifest(request, 0);
   }
   async readManifest({ etag, signal }, retries) {
-    const route = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=2`;
+    const base = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=`;
+    let route = base + KNOWLEDGE_CLIENT_CONTRACT_VERSION;
     let response = await this.get(route, signal, etag);
+    if (response.statusCode === 426) {
+      response.destroy();
+      route = base + "2";
+      response = await this.get(route, signal, etag);
+    }
     for (let attempt = 0; response.statusCode === 503 && attempt < retries; attempt++) {
       await this.failure(response);
       const milliseconds = Math.round(Math.min(4e3, 1e3 * 2 ** attempt) * (0.75 + Math.random() * 0.5));
@@ -19490,7 +19497,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.36",
+  version: "0.1.0-alpha.37",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

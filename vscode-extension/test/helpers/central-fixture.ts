@@ -30,6 +30,7 @@ import {
 export async function centralFixture(
   root: string,
   instructions = "CD_CENTRAL_POLICY: inspect source, base and related callers.",
+  codeCriterion = false,
 ) {
   const audience = {
     serverId: "server",
@@ -53,7 +54,11 @@ export async function centralFixture(
       ...common,
       component: "policy",
       ownerUserId: null,
-      criteria: [],
+      criteria: codeCriterion ? [{
+        id: "code-criterion", revision: 1, contentHash: contentHash("code-criterion"), sourceContentHash: contentHash("curated-code-rule"),
+        document: { title: "Code-derived criterion", topicKey: "sum.correctness", requirement: "CD_CODE_CRITERION: verify the current arithmetic contract.", rationale: "A prior central change is evidence to inspect current behavior.", counterEvidence: ["Different endpoint or deliberately different contract"], reviewSteps: ["Read source and base"], appliesTo: {languages: [],filePaths: ["sum.ts"],symbols: [],contracts: [],branches: []}, severity: "P2", enforcement: "advisory", reviewAfter: null },
+        decision: {id: "central-code-decision",outcome: "design-decision",sources:[{kind:"snapshot-change",id:"central-file-id",contentHash:contentHash("central-code-source")}]}, exceptions: []
+      }] : [],
       skills: {
         schemaVersion: 1,
         hash: contentHash("skills"),
@@ -111,7 +116,7 @@ export async function centralFixture(
       collectiveMinimumSequence: 1,
       personalMinimumSequence: 1,
     },
-    compatibleClientContracts: { minimum: 2, maximum: 2 },
+    compatibleClientContracts: { minimum: codeCriterion ? 3 : 2, maximum: 3 },
     issuedAt: new Date(now - 1000).toISOString(),
     refreshAfter: new Date(now + 240_000).toISOString(),
     offlineValidUntil: new Date(now + 3600_000).toISOString(),
@@ -153,6 +158,7 @@ export async function centralFixture(
     ],
     { stdio: "ignore", timeout: 15000 },
   );
+  const requestMethods: string[] = [];
   let firstManifestFailure = false;
   let errorCode: string | undefined;
   let status = 200,
@@ -171,6 +177,7 @@ export async function centralFixture(
     { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) },
     (req, res) => {
       calls++;
+      requestMethods.push(req.method ?? "");
       res.setHeader("content-type", "application/json");
       if (
         req.headers.authorization !== `Bearer ${secret}` ||
@@ -205,7 +212,8 @@ export async function centralFixture(
         );
         return;
       }
-      if (req.url?.endsWith("/manifest?clientContractVersion=2")) {
+      if (/\/manifest\?clientContractVersion=[23]$/.test(req.url ?? "")) {
+        if (codeCriterion && req.url?.endsWith("=2")) {res.writeHead(426);res.end();return;}
         if (firstManifestFailure) {
           firstManifestFailure = false;
           res.writeHead(403);
@@ -387,6 +395,7 @@ export async function centralFixture(
       ).toString("base64url");
       return payload.snapshotId;
     },
+    get requestMethods() { return [...requestMethods]; },
     get submissionCalls() {
       return submissionCalls;
     },

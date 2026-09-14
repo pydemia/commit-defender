@@ -77,14 +77,14 @@ async function response(input: Parameters<LocalReviewExecutor["review"]>[0]) {
     }),
   };
 }
-async function setup(t: TestContext) {
+async function setup(t: TestContext, codeCriterion = false) {
   const f = fixture();
   f.write("sum.ts", "export const sum = (a: number, b: number) => a + b;\n");
   f.git("add", ".");
   f.git("commit", "-m", "base");
   f.write("sum.ts", "export const sum = (a: number, b: number) => a - b;\n");
   f.git("add", "sum.ts");
-  const central = await centralFixture(f.root);
+  const central = await centralFixture(f.root, undefined, codeCriterion);
   t.after(async () => {
     await central.close();
     f.cleanup();
@@ -172,8 +172,8 @@ test("explicit worktree selections cannot cross profiles or authorize credential
   );
 });
 
-test("connected CD review combines signed central and local knowledge and restores audience-bound history", async (t) => {
-  const f = await setup(t);
+test("connected CD review applies a v3 code-derived criterion with the local executor and restores audience-bound history", async (t) => {
+  const f = await setup(t, true);
   const candidate = await saveKnowledgeFromEditor(
     f.scope,
     "memory",
@@ -204,6 +204,7 @@ test("connected CD review combines signed central and local knowledge and restor
       async review(input) {
         calls++;
         assert(input.prompt.includes("CD_CENTRAL_POLICY"));
+        assert(input.prompt.includes("CD_CODE_CRITERION"));
         assert(input.prompt.includes("CD_LOCAL_MEMORY"));
         return response(input);
       },
@@ -215,6 +216,8 @@ test("connected CD review combines signed central and local knowledge and restor
   const report = result.report.gcr!.report;
   assert.equal(report.status, "completed");
   assert.equal(calls, 1);
+  assert(f.central.requestMethods.every(method => method === "GET"));
+  assert.equal(f.central.submissionCalls, 0);
   assert.deepEqual(
     report.identity.client.mode === "centralized" &&
       report.identity.client.audience,

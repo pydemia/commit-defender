@@ -67,3 +67,9 @@ Connection changes in the manager close the view. The view also checks local acc
 New connections with Git remotes download the authorized repository identity using GET and compare it locally against effective fetch URLs. SSH and HTTPS forms can identify the same GitHub repository; forks, hosts, nonstandard ports and installation prefixes remain distinct. Credentials and URL query strings are removed before comparison and are never sent to GCR.
 
 The connection status indicates whether remote mapping was recorded. Changing a remote stops use of that connection's knowledge, including offline reviews and open downloaded-content views. Inspect the remote and disconnect/reconnect to establish a new binding. Existing manual connections and repositories without remotes remain unverified until reconnected with a matching remote.
+
+## 코드 변경에서 발행한 기준
+
+2.9.4는 중앙 Git snapshot의 코드 변경을 출처로 하는 기준을 지원합니다. 중앙에서 평가·승인한 기준과 출처 ID·hash를 내려받고 로컬에 설정한 모델·계정으로 리뷰합니다. 중앙 코드 diff 원문을 받거나 로컬 코드·결과·피드백을 업로드하지 않습니다.
+
+지식 계약 v3과 기존 v2 발행물을 읽을 수 있습니다. 이전 서버가 v3 요청을 HTTP 426으로 거절하면 같은 서버에 v2를 한 번 요청합니다. 인증 실패나 일반 장애에서는 이 협상을 하지 않습니다. 새 코드 출처가 포함된 발행물을 받으려면 2.9.4 이상이 필요합니다.
