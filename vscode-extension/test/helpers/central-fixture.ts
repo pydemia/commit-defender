@@ -11,6 +11,9 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   reviewSubmission,
+  clientReviewReport,
+  type RemoteReviewStatus,
+  type RemoteReviewRequest,
   type ReviewSubmission,
   type ReviewSubmissionReceipt,
   type ReviewSubmissionStatus,
@@ -22,6 +25,8 @@ import {
 } from "@gcr/client-contract";
 import {
   contentHash,
+  prepareRemoteReviewHandle,
+  validateRemoteReviewRequest,
   type LocalKeyStore,
   type CentralCredentialStore,
 } from "@gcr/client-core";
@@ -167,6 +172,16 @@ export async function centralFixture(
   let reviewStatusCalls = 0,
     reviewStatusCode = 200;
   const decisions = new Map<string, ReviewSubmissionStatus["decision"]>();
+  const remote = {
+    enabled: false,
+    pending: false,
+    dropAck: false,
+    posts: 0,
+    cancels: 0,
+    input: null as RemoteReviewRequest | null,
+    receipt: null as RemoteReviewStatus | null,
+    report: null as ReturnType<typeof clientReviewReport> | null,
+  };
   const server = createServer(
     { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) },
     (req, res) => {
@@ -197,11 +212,175 @@ export async function centralFixture(
             userId: audience.userId,
             displayName: "Fixture",
             repositoryIds: [audience.repositoryId],
-            scopes: ["knowledge:read"],
+            scopes: [
+              "knowledge:read",
+              ...(remote.enabled ? ["ai:invoke"] : []),
+            ],
             clientId,
             keyId,
             expiresAt: new Date(now + 7200_000).toISOString(),
           }),
+        );
+        return;
+      }
+      if (remote.enabled && req.url?.includes("/remote-reviews")) {
+        if (req.url.endsWith("/models")) {
+          res.end(
+            JSON.stringify({
+              schemaVersion: 1,
+              audience,
+              clientId,
+              enabled: true,
+              outputTokenLimit: false,
+              limits: {
+                modelCalls: 10,
+                durationMs: 600000,
+                uploadBytes: 8388608,
+                userHourlyCalls: 60,
+                repositoryHourlyCalls: 300,
+              },
+              models: [
+                {
+                  accountId: "fixture-account",
+                  accountName: "Fixture account",
+                  name: "gpt-6-astra",
+                  displayName: "Astra",
+                  allowedEfforts: ["high", "xhigh"],
+                  defaultEffort: "xhigh",
+                },
+              ],
+            }),
+          );
+          return;
+        }
+        if (req.method === "POST" && req.url.endsWith("/remote-reviews")) {
+          let body = "";
+          req.setEncoding("utf8");
+          req.on("data", (chunk) => {
+            body += chunk;
+          });
+          req.on("end", () => {
+            try {
+              const input = validateRemoteReviewRequest(JSON.parse(body), {
+                audience,
+                clientId: "commit-defender",
+              });
+              remote.posts++;
+              remote.input = input;
+              if (!remote.receipt) {
+                const h = prepareRemoteReviewHandle(input),
+                  now = Date.now(),
+                  at = new Date(now).toISOString();
+                const pin = input.payload.context.resolved?.central?.manifest;
+                remote.report = clientReviewReport({
+                  contractVersion: 1,
+                  runId: "remote-result",
+                  identity: {
+                    client: h.client,
+                    source: h.source,
+                    context: {
+                      hash: h.contextHash,
+                      entries: [],
+                      required: [],
+                      ...(pin
+                        ? {
+                            centralSnapshot: {
+                              id: pin.payload.snapshotId,
+                              hash: pin.manifestHash,
+                              audience,
+                              authorizationRevision: String(
+                                pin.payload.authorizationRevision,
+                              ),
+                              offlineValidUntil: pin.payload.offlineValidUntil,
+                            },
+                          }
+                        : {}),
+                    },
+                    reviewProfile: {
+                      id: "fixture",
+                      revision: 1,
+                      hash: contentHash("profile"),
+                    },
+                    executor: {
+                      id: "central",
+                      version: "1",
+                      model: h.model,
+                      configHash: h.executorConfigHash,
+                    },
+                    toolsHash: contentHash("tools"),
+                  },
+                  status: "completed",
+                  trigger: "manual",
+                  requestedAt: at,
+                  startedAt: at,
+                  finishedAt: at,
+                  durationMs: 0,
+                  summary:
+                    "Synthetic central result; no model was invoked by this UI fixture.",
+                  sourceFiles: h.sourceFiles,
+                  files: h.selected.map((s) => ({
+                    source: h.sourceFiles.find(
+                      (f) => f.path === s.path && f.side === s.side,
+                    )!,
+                    status: "completed",
+                    summary: "Fixture",
+                  })),
+                  excluded: [],
+                  problems: [],
+                  findings: [],
+                  evidence: [],
+                  questions: [],
+                });
+                remote.receipt = {
+                  schemaVersion: 1,
+                  requestId: h.requestId,
+                  audience,
+                  clientId: "commit-defender",
+                  payloadHash: h.payloadHash,
+                  receivedAt: at,
+                  sourceExpiresAt: new Date(
+                    now + h.sourceSeconds * 1000,
+                  ).toISOString(),
+                  resultExpiresAt: new Date(
+                    now + h.resultSeconds * 1000,
+                  ).toISOString(),
+                  ...(remote.pending
+                    ? { state: "running" as const }
+                    : {
+                        state: "completed" as const,
+                        reportHash: contentHash(remote.report),
+                      }),
+                };
+              }
+              if (remote.dropAck) {
+                req.socket.destroy();
+                return;
+              }
+              res.writeHead(201).end(JSON.stringify(remote.receipt));
+            } catch {
+              res.writeHead(400).end("{}");
+            }
+          });
+          return;
+        }
+        if (!remote.receipt) {
+          res.writeHead(404).end("{}");
+          return;
+        }
+        if (req.url.endsWith("/cancel")) {
+          remote.cancels++;
+          remote.receipt = {
+            ...remote.receipt,
+            state: "cancelled",
+            reason: "cancelled",
+          };
+        }
+        res.end(
+          JSON.stringify(
+            req.url.endsWith("/result")
+              ? { status: remote.receipt, report: remote.report }
+              : remote.receipt,
+          ),
         );
         return;
       }
@@ -331,6 +510,7 @@ export async function centralFixture(
     },
   };
   return {
+    remote,
     audience,
     submissions,
     get reviewStatusCalls() {

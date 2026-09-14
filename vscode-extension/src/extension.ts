@@ -18,6 +18,7 @@ import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
+import { prepareRemoteWithUi, manageRemoteRequests } from './remoteModelView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
@@ -518,6 +519,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     sourceExclusions: SourceExclusion[] = [],
     automatic?: AutomaticTask<ReviewRequest>,
     feedback?: { connectionId: string; profileId: string; snapshotId: string; signal: AbortSignal; current: () => boolean },
+    centralModel = false,
   ): Promise<void | { retryAt?: number; completionConfirmed?: boolean }> {
     if (!automatic) lastManualStartedAt = Date.now();
     const cfg = getConfig();
@@ -535,6 +537,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         throw new StandaloneReviewError('central-connection-required');
       localSettings = { ...localSettings, freshness: 'online', offlineBehavior: 'pause', requiredCentralSnapshot: feedback.snapshotId };
     }
+    const remoteScope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: 'repository' });
+    const remoteSelection = JSON.stringify(readSelection(context.globalState, remoteScope));
     const backend = createReviewBackend(cfg, {
       workerFile: context.asAbsolutePath('out/standalone-review-worker.js'),
       settings: localSettings,
@@ -545,8 +549,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const ownerSignal = automatic?.signal ?? feedback?.signal;
     await execution.prepare(signal => withReviewSignals(signal, ownerSignal, async combined => {
       if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
-      const job = await backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions,
-        ...(automatic?.value.automatic ? { automatic: automatic.value.automatic } : {})}, combined);
+      const request: ReviewRequest = {repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions,
+        ...(automatic?.value.automatic ? { automatic: automatic.value.automatic } : {})};
+      const job = centralModel ? await prepareRemoteWithUi(request, localSettings, remoteScope, combined, () => {
+        if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
+        if (!vscode.workspace.isTrusted || localProfile() !== localSettings.profileId ||
+          JSON.stringify(readSelection(context.globalState, remoteScope)) !== remoteSelection)
+          throw new StandaloneReviewError('central-connection-required');
+      }) : await backend.prepareReview(request, combined);
       return { ...job, run: (runSignal: AbortSignal, progress?: Parameters<typeof job.run>[1]) =>
         withReviewSignals(runSignal, ownerSignal, merged => {
           if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
@@ -641,6 +651,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
+
+  context.subscriptions.push(vscode.commands.registerCommand('commitDefender.analyzeWithExecutor', async () => {
+    const intent = ++reviewIntent;
+    const selected = await vscode.window.showQuickPick([
+      { label: 'Local account executor', value: 'local', detail: 'Use the configured local review account.' },
+      { label: 'Central account executor', value: 'central', detail: 'Choose an authorized server model and approve the exact upload.' },
+    ], { title: 'Analyze staged files: executor' });
+    if (!selected || intent !== reviewIntent) return;
+    if (selected.value === 'local') { await vscode.commands.executeCommand('commitDefender.analyze'); return; }
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot || !vscode.workspace.isTrusted) { void vscode.window.showWarningMessage('Open and trust a Git worktree before central review.'); return; }
+    const config = getConfig();
+    const sourceExclusions: SourceExclusion[] = [];
+    const files = await getStagedFiles(repoRoot, config.excludePatterns, entry => sourceExclusions.push(entry));
+    if (!files.length) { void vscode.window.showInformationMessage('No staged files to review.'); return; }
+    if (intent !== reviewIntent) return;
+    await analyze(files, repoRoot, 'staged', undefined, sourceExclusions, undefined, undefined, true);
+  }));
+  context.subscriptions.push(vscode.commands.registerCommand('commitDefender.centralModelRequests', async () => {
+    const repoRoot = await resolveRepoRoot(), profileId = localProfile();
+    if (!repoRoot || !vscode.workspace.isTrusted) return;
+    const scope = knowledgeScope({ repoRoot, profileId, scope: 'repository' });
+    const assertCurrent = () => { if (!vscode.workspace.isTrusted || localProfile() !== profileId) throw new StandaloneReviewError('central-connection-required'); };
+    try {
+      const report = await manageRemoteRequests(scope, assertCurrent);
+      if (report) { assertCurrent(); showSummaryPanel(report, repoRoot, context); }
+    } catch {
+      void vscode.window.showErrorMessage('Central request outcome could not be confirmed. Check the original connection and refresh the request; no new review was submitted.');
+    }
+  }));
 
   // ── 1. Analyze Current File ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
@@ -896,6 +936,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       : (arg as { report?: AnalysisReport; repoRoot?: string });
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) { void vscode.window.showInformationMessage('Select a saved review in history or run a review first.'); return; }
+    if (selected.report.gcr?.report.identity.executor.id === 'central') {
+      void vscode.window.showInformationMessage('Follow-up chat for central model reviews is not available yet. Re-analyze the review to approve a new central request.');
+      return;
+    }
     try { await openReviewChat(selected.report, selected.repoRoot, context); }
     catch { void vscode.window.showErrorMessage('The review conversation could not be opened. Check the current workspace and review connection.'); }
   }));
@@ -912,7 +956,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const core = clientReviewReport(report.gcr.report);
       const files = [...new Set(core.files.map(file => file.source.path))];
       ++reviewIntent;
-      await analyze(files, repoRoot, core.identity.source.kind === 'index' ? 'staged' : files.length === 1 ? 'file' : 'directory', undefined, [], undefined, { ...pin, signal, current });
+      await analyze(files, repoRoot, core.identity.source.kind === 'index' ? 'staged' : files.length === 1 ? 'file' : 'directory', undefined, [], undefined, { ...pin, signal, current }, core.identity.executor.id === 'central');
     }); }
     catch { void vscode.window.showErrorMessage('The review feedback could not be opened. Check the current workspace and review connection.'); }
   }));
@@ -938,6 +982,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
+      const centralModel = histEntry.report.gcr?.report.identity.executor.id === 'central';
       const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) { return; }
 
@@ -959,7 +1004,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (staged): ${staged.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(staged, rawRoot, 'staged', undefined, sourceExclusions);
+            await analyze(staged, rawRoot, 'staged', undefined, sourceExclusions, undefined, undefined, centralModel);
             break;
           }
           case 'selection':
@@ -972,7 +1017,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (file): ${files[0]}`);
             if (intent !== reviewIntent) return;
-            await analyze(files, histEntry.repoRoot, histEntry.scope);
+            await analyze(files, histEntry.repoRoot, histEntry.scope, undefined, [], undefined, undefined, centralModel);
             break;
           }
           case 'directory': {
@@ -992,7 +1037,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (directory): ${path.relative(rawRoot, dirPath) || '.'}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(relPaths, rawRoot, 'directory', dirPath, sourceExclusions);
+            await analyze(relPaths, rawRoot, 'directory', dirPath, sourceExclusions, undefined, undefined, centralModel);
             break;
           }
           case 'repository': {
@@ -1006,7 +1051,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
             channel.appendLine(`\n[Commit Defender] Re-analyze (repository): ${allFiles.length} file(s)`);
             if (intent !== reviewIntent) return;
-            await analyze(allFiles, rawRoot, 'repository', undefined, sourceExclusions);
+            await analyze(allFiles, rawRoot, 'repository', undefined, sourceExclusions, undefined, undefined, centralModel);
             break;
           }
         }

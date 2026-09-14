@@ -1,6 +1,6 @@
 # Commit Defender
 
-This development branch supports [standalone review and local Memory/Skills](docs/standalone-review.md) and [explicit central review connections](docs/central-review.md), [conversations about saved reviews](docs/review-conversations.md), and [explicit feedback submission](docs/review-submissions.md). Manual reviews now use the shared GCR core and are advisory. The provider-based pre-commit hook described below remains a separate legacy path. This integration has not been published to Marketplace.
+This development branch supports [standalone review and local Memory/Skills](docs/standalone-review.md) and [explicit central review connections](docs/central-review.md), [conversations about saved reviews](docs/review-conversations.md), and [explicit feedback submission](docs/review-submissions.md). Manual reviews now use the shared GCR core and are advisory. Version 2.9.0 adds an explicit staged-review central executor with account/model selection, exact upload approval and request recovery; see the central connection guide for server requirements. The provider-based pre-commit hook described below remains a separate legacy path. This integration has not been published to Marketplace.
 
 **AI-powered pre-commit code review with priority-graded findings, inline in VS Code.**
 

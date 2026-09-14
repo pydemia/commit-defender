@@ -176,7 +176,7 @@ function buildSummaryHtml(
     <div class="header">
       <div class="header-row">
         <h1>🛡 Commit Defender &nbsp;${headerBadge} ${gradeBadge} &nbsp;${worstBadge}</h1>
-        ${report.gcr ? '<button class="json-btn" id="btnDiscuss">Discuss review</button><button class="json-btn" id="btnSubmit">Submit feedback</button>' : ''}
+        ${report.gcr ? `${report.gcr.report.identity.executor.id === 'central' ? '' : '<button class="json-btn" id="btnDiscuss">Discuss review</button>'}<button class="json-btn" id="btnSubmit">Submit feedback</button>` : ''}
         <button class="json-btn" id="btnShowJson" title="Open raw JSON report in editor">{ } Raw JSON</button>
       </div>
       <div class="meta">${metaParts.map(esc).join(" &nbsp;·&nbsp; ")}</div>
@@ -184,6 +184,7 @@ function buildSummaryHtml(
 
   if (report.gcr) {
     const core = report.gcr.report;
+    if (core.identity.executor.id === 'central') body += `<section><h2>Central model execution</h2><p>Model: ${esc(core.identity.executor.model)}. Source-read evidence was produced by the central worker. Open Central Model Requests to inspect the server job. Follow-up model chat for this execution is not available yet.</p></section>`;
     if (core.problems.length) {
       body += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
         `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;

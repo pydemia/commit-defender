@@ -890,7 +890,7 @@ var centralCredentialIdentity = object({
   displayName: text(1e3),
   tenantId: id,
   repositoryIds: list(id, 100),
-  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
+  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit", "ai:invoke"]), 4, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
   expiresAt: timestamp
@@ -1188,11 +1188,267 @@ var reviewSubmissionStatus = refined(object({
 });
 var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
+// node_modules/@gcr/client-contract/dist/remote-review.js
+var REMOTE_REVIEW_MAX_BYTES = 8 * 1024 * 1024;
+var remoteEffort = choice(["none", "minimal", "low", "medium", "high", "xhigh"]);
+var remoteReviewModels = object({
+  schemaVersion: literal(1),
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  enabled: boolean,
+  outputTokenLimit: literal(false),
+  limits: object({
+    modelCalls: integer(1, 10),
+    durationMs: integer(1e3, 6e5),
+    uploadBytes: integer(1, REMOTE_REVIEW_MAX_BYTES),
+    userHourlyCalls: integer(1),
+    repositoryHourlyCalls: integer(1)
+  }),
+  models: list(refined(object({
+    accountId: id,
+    accountName: text(256, 1),
+    name: text(256, 1),
+    displayName: text(256, 1),
+    allowedEfforts: list(remoteEffort, 6, 1),
+    defaultEffort: remoteEffort
+  }), (value, at) => {
+    if (!value.allowedEfforts.includes(value.defaultEffort))
+      fail(at, "default effort unavailable");
+  }), 1024)
+});
+var remoteReviewDocument = object({
+  id,
+  kind: choice(["instructions", "memory", "skill"]),
+  text: text(262144, 1),
+  hash: sha256
+});
+var remoteReviewResolvedContext = object({
+  version: literal(1),
+  client: clientIdentity,
+  sourceHash: sha256,
+  originalContextHash: sha256,
+  builtin: object({ id, revision: integer(1), hash: sha256 }),
+  knowledge: list(localKnowledge, 128),
+  requiredSources: list(object({ path: sourcePath, side: choice(["source", "base"]) }), 512),
+  validUntil: union(timestamp, literal(null)),
+  central: optional(object({
+    manifest: signedKnowledgeManifest,
+    selection: object({
+      now: timestamp,
+      byteLimit: integer(0, 1048576),
+      branch: union(sourcePath, literal(null))
+    }),
+    selectionHash: sha256
+  }))
+});
+var remoteReviewChange = refined(object({
+  path: sourcePath,
+  side: choice(["base", "source"]),
+  status: choice(["A", "M", "D", "R", "T"]),
+  oldPath: optional(sourcePath),
+  base: choice(["uploaded", "absent", "unavailable"])
+}), (value, at) => {
+  if (value.status === "D" !== (value.side === "base"))
+    fail(at, "change side mismatch");
+  if (value.status === "R" !== (value.oldPath !== void 0) || value.oldPath === value.path)
+    fail(at, "rename path mismatch");
+  if (value.status === "A" && value.base !== "absent" || value.status === "D" && value.base !== "uploaded" || value.status === "R" && value.base === "absent")
+    fail(at, "change base mismatch");
+});
+var remoteReviewPayload = refined(object({
+  schemaVersion: literal(1),
+  requestId: id,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  client: clientIdentity,
+  executor: literal("central"),
+  model: object({
+    accountId: id,
+    name: text(256, 1),
+    reasoningEffort: choice(["none", "minimal", "low", "medium", "high", "xhigh"])
+  }),
+  source: object({
+    provenance: literal("client-captured"),
+    snapshot: snapshotIdentity,
+    files: list(object({ metadata: sourceFile, text: text(2 * 1024 * 1024) }), 512, 1),
+    selected: list(object({ path: sourcePath, side: choice(["base", "source"]) }), 512, 1),
+    // Legacy receipts remain decodable; execution requires this approved description.
+    review: optional(object({ changes: list(remoteReviewChange, 200, 1), incomplete: boolean }))
+  }),
+  context: object({
+    provenance: literal("client-supplied"),
+    documents: list(remoteReviewDocument, 128),
+    resolved: optional(remoteReviewResolvedContext)
+  }),
+  budget: object({
+    modelCalls: integer(1, 10),
+    durationMs: integer(1e3, 6e5),
+    sourceBytes: integer(1, 33554432),
+    toolCalls: integer(1, 1e3),
+    outputTokensPerCall: optional(integer(1, 32768))
+  }),
+  retention: object({
+    sourceSeconds: integer(60, 86400),
+    resultSeconds: integer(60, 2592e3)
+  })
+}), (value, at) => {
+  const key3 = (file) => `${file.side}:${file.path}`;
+  unique(value.source.files.map((file) => key3(file.metadata)), `${at}.source.files`);
+  unique(value.source.selected.map(key3), `${at}.source.selected`);
+  unique(value.context.documents.map((document) => document.id), `${at}.context.documents`);
+  const files = new Set(value.source.files.map((file) => key3(file.metadata)));
+  if (value.source.selected.some((file) => !files.has(key3(file))))
+    fail(at, "selected source is not uploaded");
+  const review = value.source.review;
+  if (review) {
+    unique(review.changes.map((change) => change.path), `${at}.source.review.changes`);
+    const selected = new Set(value.source.selected.map(key3));
+    if (review.changes.length !== selected.size || review.changes.some((change) => !selected.has(key3(change))))
+      fail(at, "change selection mismatch");
+    for (const change of review.changes) {
+      if (files.has(`base:${change.oldPath ?? change.path}`) !== (change.base === "uploaded"))
+        fail(at, "base upload mismatch");
+      if (change.status === "D" && files.has(`source:${change.path}`))
+        fail(at, "deleted source is uploaded");
+    }
+  }
+  const client = value.client;
+  if (client.mode === "centralized" && ["serverId", "tenantId", "userId", "repositoryId"].some((key4) => value.audience[key4] !== client.audience[key4]))
+    fail(at, "central knowledge and model audiences differ");
+  if (value.retention.sourceSeconds * 1e3 < value.budget.durationMs)
+    fail(at, "source retention is shorter than the execution budget");
+  if (value.retention.resultSeconds < value.retention.sourceSeconds)
+    fail(at, "result retention is shorter than source retention");
+});
+var remoteReviewRequest = object({
+  payload: remoteReviewPayload,
+  approval: object({ payloadHash: sha256, approvedAt: timestamp })
+});
+var remoteReviewHandle = object({
+  schemaVersion: literal(1),
+  requestId: id,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  payloadHash: sha256,
+  client: clientIdentity,
+  source: snapshotIdentity,
+  sourceFiles: list(sourceFile, 512, 1),
+  selected: list(object({ path: sourcePath, side: choice(["base", "source"]) }), 512, 1),
+  contextHash: sha256,
+  model: text(256, 1),
+  executorConfigHash: sha256,
+  sourceSeconds: integer(60, 86400),
+  resultSeconds: integer(60, 2592e3)
+});
+var receipt = {
+  schemaVersion: literal(1),
+  requestId: id,
+  audience: centralAudience,
+  clientId: choice(["commit-defender", "gcr-cli"]),
+  payloadHash: sha256,
+  receivedAt: timestamp,
+  sourceExpiresAt: timestamp,
+  resultExpiresAt: timestamp
+};
+var remoteReviewStatus = refined(union(object({ ...receipt, state: choice(["queued", "running", "cancel-requested"]) }), object({ ...receipt, state: literal("completed"), reportHash: sha256 }), object({
+  ...receipt,
+  state: literal("failed"),
+  reason: choice([
+    "authorization-revoked",
+    "account-unavailable",
+    "budget-exhausted",
+    "model-failed",
+    "invalid-output",
+    "context-unavailable"
+  ])
+}), object({ ...receipt, state: literal("cancelled"), reason: literal("cancelled") }), object({ ...receipt, state: literal("uncertain"), reason: literal("execution-lost") }), object({
+  ...receipt,
+  state: literal("expired"),
+  reason: choice(["source-expired", "result-expired"])
+})), (value, at) => {
+  if (value.sourceExpiresAt <= value.receivedAt || value.resultExpiresAt <= value.receivedAt)
+    fail(at, "retention deadline precedes receipt");
+});
+var remoteReviewCancel = object({
+  schemaVersion: literal(1),
+  requestId: id,
+  payloadHash: sha256
+});
+var remoteReviewResult = refined(object({
+  status: remoteReviewStatus,
+  report: clientReviewReport
+}), (value, at) => {
+  if (value.status.state !== "completed")
+    fail(at, "non-completed job has a report");
+});
+
+// node_modules/@gcr/client-contract/dist/source-tools.js
+var fixedSourceTools = [
+  {
+    name: "list_files",
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    },
+    description: "List up to 100 authorized files from the immutable source/base snapshot. Follow nextOffset for more files. This is not the live repository.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        offset: { type: "integer", minimum: 0, maximum: 1e4 },
+        limit: { type: "integer", minimum: 1, maximum: 100 }
+      },
+      additionalProperties: false
+    }
+  },
+  {
+    name: "read_file",
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    },
+    description: "Read numbered lines from an authorized fixed source or base file, with its SHA-256. Maximum 200 lines per read. Check truncation; a location is not defect evidence.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        side: { type: "string", enum: ["source", "base"] },
+        startLine: { type: "integer", minimum: 1 },
+        endLine: { type: "integer", minimum: 1 }
+      },
+      required: ["path"],
+      additionalProperties: false
+    }
+  },
+  {
+    name: "search_code",
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    },
+    description: "Search literal text only within authorized fixed files. Returns at most 100 matches, not a semantic call graph or proof of absence outside this scope.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 300 },
+        side: { type: "string", enum: ["source", "base"] }
+      },
+      required: ["query"],
+      additionalProperties: false
+    }
+  }
+];
+
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.31",
+  version: "0.1.0-alpha.33",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1907,8 +2163,8 @@ function withHash(value) {
 }
 function verify(value) {
   const item = localKnowledge(value);
-  const { hash: hash4, ...body2 } = item;
-  if (hash4 !== contentHash(body2))
+  const { hash: hash5, ...body2 } = item;
+  if (hash5 !== contentHash(body2))
     throw new LocalStoreError("corrupt-storage", "Local knowledge content does not match its hash.");
   return item;
 }
@@ -2466,9 +2722,35 @@ function sourcePathPolicy(patterns = []) {
 }
 
 // node_modules/@gcr/client-core/dist/source-snapshot.js
+var import_node_crypto6 = require("node:crypto");
+
+// node_modules/@gcr/client-core/dist/review-source.js
 var import_node_crypto5 = require("node:crypto");
-var hash = (bytes) => (0, import_node_crypto5.createHash)("sha256").update(bytes).digest("hex");
-var blobId = (bytes, format) => (0, import_node_crypto5.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+function fixedSourceLines(result, startLine, endLine) {
+  if (!Number.isSafeInteger(startLine) || !Number.isSafeInteger(endLine) || startLine < 1 || endLine < startLine)
+    throw new SourceCaptureError("invalid-source-request");
+  if (result.status !== "available")
+    return result;
+  const lines = result.text.split("\n");
+  if (startLine > lines.length)
+    throw new SourceCaptureError("invalid-source-request");
+  const end = Math.min(endLine, startLine + 199, lines.length);
+  const full = lines.slice(startLine - 1, end).join("\n");
+  const text3 = full.slice(0, 24e3);
+  return {
+    status: "available",
+    source: result.source,
+    startLine,
+    endLine: startLine + text3.split("\n").length - 1,
+    text: text3,
+    excerptHash: (0, import_node_crypto5.createHash)("sha256").update(text3).digest("hex"),
+    truncated: text3.length !== full.length || end < Math.min(endLine, lines.length)
+  };
+}
+
+// node_modules/@gcr/client-core/dist/source-snapshot.js
+var hash = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
+var blobId = (bytes, format) => (0, import_node_crypto6.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 var key = (side, file) => `${side}:${file}`;
 function paths(values = []) {
   if (!Array.isArray(values) || values.length > 1e4)
@@ -2539,6 +2821,10 @@ var LocalSourceSnapshot = class {
     this.open();
     return structuredClone(this.#limitations);
   }
+  get incomplete() {
+    this.open();
+    return this.#limitations.some((item) => ["unreadable", "unsupported-source"].includes(item.reason));
+  }
   get diff() {
     this.open();
     return this.#diff;
@@ -2576,26 +2862,7 @@ var LocalSourceSnapshot = class {
     return reason ? { status: "unavailable", reason, detail: reason } : { status: "absent" };
   }
   readLines(file, side = "source", startLine = 1, endLine = startLine + 159) {
-    const result = this.readFile(file, side);
-    if (!Number.isSafeInteger(startLine) || !Number.isSafeInteger(endLine) || startLine < 1 || endLine < startLine)
-      throw new SourceCaptureError("invalid-source-request");
-    if (result.status !== "available")
-      return result;
-    const lines = result.text.split("\n");
-    if (startLine > lines.length)
-      throw new SourceCaptureError("invalid-source-request");
-    const end = Math.min(endLine, startLine + 199, lines.length);
-    const full = lines.slice(startLine - 1, end).join("\n");
-    const text3 = full.slice(0, 24e3);
-    return {
-      status: "available",
-      source: result.source,
-      startLine,
-      endLine: startLine + text3.split("\n").length - 1,
-      text: text3,
-      excerptHash: hash(text3),
-      truncated: text3.length !== full.length || end < Math.min(endLine, lines.length)
-    };
+    return fixedSourceLines(this.readFile(file, side), startLine, endLine);
   }
   /** Literal text candidates, not a semantic call graph or proof that a defect exists. */
   search(query, side = "source", prefix = "") {
@@ -2775,11 +3042,11 @@ function sourceLanguage(file) {
 }
 
 // node_modules/@gcr/client-core/dist/central-cache.js
-var import_node_crypto8 = require("node:crypto");
+var import_node_crypto9 = require("node:crypto");
 var import_node_path6 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/central-binding.js
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 var KnowledgeSyncError = class extends Error {
   code;
   constructor(code, message) {
@@ -2833,12 +3100,12 @@ var TrustedCentralBinding = class {
       for (const [id3, value] of input.trustedKeys) {
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id3))
           throw invalid2();
-        const key3 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
+        const key3 = typeof value === "string" ? (0, import_node_crypto7.createPublicKey)(value) : value;
         if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
           throw invalid2();
-        this.#keys.set(id3, (0, import_node_crypto6.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
+        this.#keys.set(id3, (0, import_node_crypto7.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
       }
-      this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
+      this.id = (0, import_node_crypto7.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
       Object.freeze(this);
     } catch {
       throw invalid2();
@@ -2850,7 +3117,7 @@ var TrustedCentralBinding = class {
 };
 
 // node_modules/@gcr/client-core/dist/knowledge-signature.js
-var import_node_crypto7 = require("node:crypto");
+var import_node_crypto8 = require("node:crypto");
 function verifyKnowledgeManifest(value, options) {
   const manifest = signedKnowledgeManifest(value);
   const payload = manifest.payload;
@@ -2862,11 +3129,11 @@ function verifyKnowledgeManifest(value, options) {
   const trusted = options.trustedKeys.get(payload.signingKeyId);
   if (!trusted)
     throw Error("Untrusted knowledge signing key");
-  const key3 = typeof trusted === "string" ? (0, import_node_crypto7.createPublicKey)(trusted) : trusted;
+  const key3 = typeof trusted === "string" ? (0, import_node_crypto8.createPublicKey)(trusted) : trusted;
   if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
     throw Error("Invalid knowledge verification key");
   const bytes = canonicalKnowledgeJson(payload);
-  if ((0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto7.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key3, Buffer.from(manifest.signature, "base64url")))
+  if ((0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto8.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key3, Buffer.from(manifest.signature, "base64url")))
     throw Error("Invalid knowledge manifest signature");
   const issued = Date.parse(payload.issuedAt), until = Date.parse(options.mode === "online" ? payload.refreshAfter : payload.offlineValidUntil);
   if (!Number.isFinite(options.now) || issued > options.now + 3e4 || options.now >= until)
@@ -2883,7 +3150,7 @@ function verifyKnowledgeManifest(value, options) {
 
 // node_modules/@gcr/client-core/dist/central-cache.js
 var parts = ["policy", "collective", "personal"];
-var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto9.createHash)("sha256").update(bytes).digest("hex");
 var error = (code) => new KnowledgeSyncError(code, {
   "invalid-binding": "Invalid central binding.",
   busy: "Another process owns the current synchronization.",
@@ -3090,7 +3357,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     if (options.signal?.aborted)
       cancel();
     const timer = setTimeout(() => controller2.abort("timeout"), timeout);
-    const token2 = (0, import_node_crypto8.randomUUID)();
+    const token2 = (0, import_node_crypto9.randomUUID)();
     let generation;
     let authorizationUncertain = false;
     try {
@@ -3200,7 +3467,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         const bundle = this.bundle(parsed, part, manifest);
         this.check(controller2.signal);
         await this.owned(token2, generation);
-        const id3 = (0, import_node_crypto8.randomUUID)();
+        const id3 = (0, import_node_crypto9.randomUUID)();
         await this.records.write("knowledge", id3, bundle, 0);
         refs[part] = id3;
       }
@@ -3621,10 +3888,36 @@ var LocalReviewContext = class {
   async observeCentralSnapshot() {
     if (!this.authority)
       return "current";
-    await this.authority.assertConnection?.();
     if (this.#data.validUntil && this.#data.validUntil <= (/* @__PURE__ */ new Date()).toISOString())
       throw Error("central-context-expired");
+    if (typeof this.authority === "function")
+      return this.authority();
+    await this.authority.assertConnection?.();
     return this.authority.cache.observeSnapshot(this.authority.manifest, this.authority.mode);
+  }
+  get documents() {
+    return structuredClone(this.#data.documents ?? []);
+  }
+  /** Export only selected material; omitted local identifiers and store paths stay local. */
+  toRemoteContext() {
+    if (this.#data.transferable !== true || !this.#data.builtin || this.#data.identity.required.some((item) => !item.available) || this.#data.sources.some((item) => !item.available) || this.#data.validUntil && this.#data.validUntil <= (/* @__PURE__ */ new Date()).toISOString() || this.#data.client.mode === "centralized" && !this.#data.centralTransfer)
+      throw Error("context-not-transferable");
+    const builtin = this.#data.builtin;
+    return {
+      provenance: "client-supplied",
+      documents: this.documents,
+      resolved: remoteReviewResolvedContext({
+        version: 1,
+        client: this.client,
+        sourceHash: this.sourceHash,
+        originalContextHash: this.identity.hash,
+        builtin: { id: builtin.id, revision: builtin.revision, hash: builtin.hash },
+        knowledge: this.knowledge,
+        requiredSources: this.sources.map(({ path: path13, side }) => ({ path: path13, side })),
+        validUntil: this.validUntil,
+        ...this.#data.centralTransfer ? { central: this.#data.centralTransfer } : {}
+      })
+    };
   }
   get client() {
     return structuredClone(this.#data.client);
@@ -3724,7 +4017,7 @@ async function resolveLocalContext(input) {
       if (read.status === "available")
         primary.push(read);
       const basePath = file.oldPath ?? file.path;
-      if (file.side === "source" && input.snapshot.readFile(basePath, "base").status === "available")
+      if (file.side === "source" && input.snapshot.readFile(basePath, "base").status !== "absent")
         requestedSources.push({ path: basePath, side: "base" });
     }
     const sources = [];
@@ -3764,8 +4057,8 @@ async function resolveLocalContext(input) {
         if (!inScope(item, client) || seen.has(item.id))
           throw Error("knowledge-scope-mismatch");
         seen.add(item.id);
-        const { hash: hash4, ...body2 } = item;
-        if (hash4 !== contentHash(body2))
+        const { hash: hash5, ...body2 } = item;
+        if (hash5 !== contentHash(body2))
           throw Error("knowledge-hash-mismatch");
         const bytes2 = Buffer.byteLength(canonicalJson(item));
         scannedBytes += bytes2;
@@ -3887,7 +4180,8 @@ async function resolveLocalContext(input) {
         bytes,
         omissions,
         sources,
-        validUntil: expiry[0] ?? null
+        validUntil: expiry[0] ?? null,
+        transferable: problems.length === 0
       })
     };
   } catch {
@@ -3933,13 +4227,12 @@ async function resolveCentralContext(input) {
       const read = input.snapshot.readFile(file.path, file.side);
       return read.status === "available" ? [read] : [];
     });
-    const central = selectCentralKnowledge({
-      bundles: pinned.bundles,
-      selected,
+    const selection = {
       branch: input.snapshot.branchName,
       now: (input.now ?? /* @__PURE__ */ new Date()).toISOString(),
       byteLimit: Math.max(0, limit - builtinBytes - requiredLocalBytes)
-    });
+    };
+    const central = selectCentralKnowledge({ bundles: pinned.bundles, selected, ...selection });
     let bytes = builtinBytes + central.bytes;
     const knowledge = [];
     const omissions = ctx.omissions;
@@ -4019,7 +4312,13 @@ async function resolveCentralContext(input) {
         omissions,
         sources: ctx.sources,
         validUntil,
-        central
+        transferable: problems.length === 0,
+        central,
+        centralTransfer: {
+          manifest: pinned.manifest,
+          selection,
+          selectionHash: contentHash(central)
+        }
       }, {
         cache: input.cache,
         manifest: pinned.manifest,
@@ -4191,7 +4490,7 @@ function resolveLocalExecutionPolicy(input) {
     const now = (input.now ?? /* @__PURE__ */ new Date()).toISOString();
     if (context.validUntil && context.validUntil <= now)
       return unavailable2("missing-context", "Selected review context expired before execution. Resolve context again.");
-    if ((context.knowledge.length || context.central?.items.length) && approval.allowKnowledge !== true)
+    if ((context.knowledge.length || context.documents.length || context.central?.items.length) && approval.allowKnowledge !== true)
       return unavailable2("policy-unavailable", "Sending the selected local knowledge to this executor is not approved.");
     const matches2 = compilePathPatterns(approval.paths);
     const selectedPaths = new Set(input.snapshot.selected.flatMap((file) => [
@@ -4251,7 +4550,7 @@ function resolveLocalExecutionPolicy(input) {
 }
 
 // node_modules/@gcr/client-core/dist/review-source-port.js
-var import_node_crypto9 = require("node:crypto");
+var import_node_crypto10 = require("node:crypto");
 var LocalReviewSourcePort = class {
   snapshot;
   policy;
@@ -4313,7 +4612,7 @@ var LocalReviewSourcePort = class {
         if (result.status !== "available" || !this.policy.allowSource(result.source))
           throw new ReviewPolicyError("policy-unavailable");
         read = {
-          id: (0, import_node_crypto9.randomUUID)(),
+          id: (0, import_node_crypto10.randomUUID)(),
           location: {
             path: file,
             side,
@@ -4382,6 +4681,145 @@ var LocalReviewSourcePort = class {
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
 var import_promises3 = require("node:timers/promises");
+
+// node_modules/@gcr/client-core/dist/remote-review.js
+var import_node_crypto11 = require("node:crypto");
+var hash3 = (text3) => (0, import_node_crypto11.createHash)("sha256").update(text3).digest("hex");
+var RemoteReviewValidationError = class extends Error {
+  code;
+  constructor(code) {
+    super(code);
+    this.code = code;
+    this.name = "RemoteReviewValidationError";
+  }
+};
+function validateRemoteReviewPayload(input) {
+  try {
+    canonicalJson(input, REMOTE_REVIEW_MAX_BYTES);
+    const payload = remoteReviewPayload(input);
+    const excluded = sourcePathPolicy();
+    for (const file of payload.source.files) {
+      const { metadata, text: text3 } = file;
+      const bytes = Buffer.from(text3, "utf8");
+      if (excluded(metadata.path) || bytes.length > 2 * 1024 * 1024 || text3.includes("\0") || bytes.toString("utf8") !== text3 || bytes.length !== metadata.byteLength || text3.split("\n").length !== metadata.lineCount || hash3(text3) !== metadata.hash)
+        throw Error("invalid-upload");
+      if (metadata.gitBlob) {
+        const oid = (0, import_node_crypto11.createHash)(payload.source.snapshot.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+        if (oid !== metadata.gitBlob)
+          throw Error("invalid-upload");
+      }
+    }
+    for (const document of payload.context.documents) {
+      if (hash3(document.text) !== document.hash || Buffer.from(document.text, "utf8").toString("utf8") !== document.text)
+        throw Error("invalid-upload");
+    }
+    for (const change of payload.source.review?.changes ?? []) {
+      if (excluded(change.path) || change.oldPath && excluded(change.oldPath))
+        throw Error("invalid-upload");
+    }
+    const resolved = payload.context.resolved;
+    if (resolved) {
+      if (contentHash(resolved.client) !== contentHash(payload.client) || resolved.sourceHash !== payload.source.snapshot.hash || payload.client.mode === "centralized" !== (resolved.central !== void 0) || new Set(resolved.knowledge.map((item) => item.id)).size !== resolved.knowledge.length)
+        throw Error("invalid-upload");
+      for (const item of resolved.knowledge) {
+        const { hash: hash5, ...body2 } = item;
+        if (hash5 !== contentHash(body2) || item.scope.profileId !== payload.client.profileId || item.scope.kind === "repository" && (item.scope.repositoryKey !== payload.client.repositoryKey || item.scope.worktreeKey !== payload.client.worktreeKey))
+          throw Error("invalid-upload");
+      }
+      if (resolved.central && contentHash(resolved.central.manifest.payload.audience) !== contentHash(payload.audience))
+        throw Error("invalid-upload");
+    }
+    return payload;
+  } catch {
+    throw new RemoteReviewValidationError("invalid-upload");
+  }
+}
+function validateRemoteReviewRequest(input, expected) {
+  let request;
+  try {
+    canonicalJson(input, REMOTE_REVIEW_MAX_BYTES + 1024);
+    request = remoteReviewRequest(input);
+  } catch {
+    throw new RemoteReviewValidationError("invalid-upload");
+  }
+  request.payload = validateRemoteReviewPayload(request.payload);
+  if (request.approval.payloadHash !== contentHash(request.payload))
+    throw new RemoteReviewValidationError("approval-mismatch");
+  if (request.payload.clientId !== expected.clientId || ["serverId", "tenantId", "userId", "repositoryId"].some((key3) => request.payload.audience[key3] !== expected.audience[key3]))
+    throw new RemoteReviewValidationError("audience-mismatch");
+  return request;
+}
+function remoteReviewContextHash(payload) {
+  return contentHash({
+    version: 3,
+    client: payload.client,
+    sourceHash: payload.source.snapshot.hash,
+    context: payload.context
+  });
+}
+function centralReviewExecutorConfigHash(model, modelCalls) {
+  return contentHash({
+    accountId: model.accountId,
+    model: model.name,
+    reasoningEffort: model.reasoningEffort,
+    modelCalls
+  });
+}
+function prepareRemoteReviewHandle(input) {
+  const { payload: p, approval } = validateRemoteReviewRequest(input, input.payload);
+  return remoteReviewHandle({
+    schemaVersion: 1,
+    requestId: p.requestId,
+    audience: p.audience,
+    clientId: p.clientId,
+    payloadHash: approval.payloadHash,
+    client: p.client,
+    source: p.source.snapshot,
+    sourceFiles: p.source.files.map((f) => f.metadata),
+    selected: p.source.selected,
+    contextHash: remoteReviewContextHash(p),
+    model: p.model.name,
+    executorConfigHash: centralReviewExecutorConfigHash(p.model, p.budget.modelCalls),
+    sourceSeconds: p.retention.sourceSeconds,
+    resultSeconds: p.retention.resultSeconds
+  });
+}
+var RemoteReviewDeliveryError = class extends Error {
+  code;
+  statusCode;
+  authorityFailure;
+  constructor(code, statusCode, authorityFailure) {
+    super(code);
+    this.code = code;
+    this.statusCode = statusCode;
+    this.authorityFailure = authorityFailure;
+    this.name = "RemoteReviewDeliveryError";
+  }
+};
+function verifyRemoteReviewStatus(handle, input, previous) {
+  try {
+    const h = remoteReviewHandle(handle), s = remoteReviewStatus(input);
+    if (s.requestId !== h.requestId || s.payloadHash !== h.payloadHash || s.clientId !== h.clientId || contentHash(s.audience) !== contentHash(h.audience) || Date.parse(s.sourceExpiresAt) - Date.parse(s.receivedAt) !== h.sourceSeconds * 1e3 || Date.parse(s.resultExpiresAt) - Date.parse(s.receivedAt) !== h.resultSeconds * 1e3 || previous && (s.receivedAt !== previous.receivedAt || s.sourceExpiresAt !== previous.sourceExpiresAt || s.resultExpiresAt !== previous.resultExpiresAt || previous.state === "completed" && s.state === "completed" && s.reportHash !== previous.reportHash))
+      throw Error("mismatch");
+    return s;
+  } catch {
+    throw new RemoteReviewDeliveryError("response-mismatch");
+  }
+}
+function verifyRemoteReviewResult(handle, input, previous) {
+  try {
+    const h = remoteReviewHandle(handle), result = remoteReviewResult(input);
+    const s = verifyRemoteReviewStatus(h, result.status, previous), r = result.report;
+    const hashes = (values) => contentHash(values.map((v) => contentHash(v)).sort());
+    if (s.state !== "completed" || s.reportHash !== contentHash(r) || !["completed", "partial", "needs-context"].includes(r.status) || !r.finishedAt || contentHash(r.identity.client) !== contentHash(h.client) || contentHash(r.identity.source) !== contentHash(h.source) || r.identity.context.hash !== h.contextHash || r.identity.executor.id !== "central" || r.identity.executor.model !== h.model || r.identity.executor.configHash !== h.executorConfigHash || hashes(r.sourceFiles) !== hashes(h.sourceFiles) || hashes(r.files.map((f) => ({ path: f.source.path, side: f.source.side }))) !== hashes(h.selected))
+      throw Error("mismatch");
+    return result;
+  } catch {
+    throw new RemoteReviewDeliveryError("response-mismatch");
+  }
+}
+
+// node_modules/@gcr/client-core/dist/knowledge-http.js
 var unavailable3 = () => new KnowledgeSyncError("unavailable", "Central HTTP request failed.");
 var KnowledgeHttpTransport = class {
   binding;
@@ -4516,18 +4954,18 @@ var KnowledgeHttpTransport = class {
       throw new Error("submission-binding-mismatch");
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(input.audience.repositoryId)}/review-submissions/${input.kind === "result" ? "results" : "feedback"}`, signal, void 0, JSON.stringify(input));
     const body2 = await this.submissionJson(response, [200, 201]);
-    const receipt = reviewSubmissionReceipt(body2);
-    if (receipt.requestId !== input.id || receipt.payloadHash !== contentHash(input) || contentHash(receipt.audience) !== contentHash(input.audience) || receipt.clientId !== input.clientId || receipt.kind !== input.kind)
+    const receipt2 = reviewSubmissionReceipt(body2);
+    if (receipt2.requestId !== input.id || receipt2.payloadHash !== contentHash(input) || contentHash(receipt2.audience) !== contentHash(input.audience) || receipt2.clientId !== input.clientId || receipt2.kind !== input.kind)
       throw new ReviewSubmissionDeliveryError(503);
-    return receipt;
+    return receipt2;
   }
   async submissionStatus(value, signal) {
-    const receipt = reviewSubmissionReceipt(value);
-    if (contentHash(receipt.audience) !== contentHash(this.binding.audience))
+    const receipt2 = reviewSubmissionReceipt(value);
+    if (contentHash(receipt2.audience) !== contentHash(this.binding.audience))
       throw new Error("submission-binding-mismatch");
-    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt.id)}/status`, signal);
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt2.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt2.id)}/status`, signal);
     const result = reviewSubmissionStatus(await this.submissionJson(response, [200]));
-    if (contentHash(result.receipt) !== contentHash(receipt))
+    if (contentHash(result.receipt) !== contentHash(receipt2))
       throw new ReviewSubmissionDeliveryError(503);
     return result;
   }
@@ -4581,6 +5019,79 @@ var KnowledgeHttpTransport = class {
       response.destroy();
     }
   }
+  remoteRoute(handle) {
+    const h = remoteReviewHandle(handle);
+    if (contentHash(h.audience) !== contentHash(this.binding.audience))
+      throw new RemoteReviewDeliveryError("response-mismatch");
+    return `api/v1/repositories/${encodeURIComponent(h.audience.repositoryId)}/remote-reviews`;
+  }
+  async remoteJson(route, signal, body2) {
+    let response;
+    try {
+      response = await this.get(route, signal, void 0, body2);
+      const status = response.statusCode ?? 503;
+      const success = status === 200 || body2 !== void 0 && status === 201;
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of response) {
+        const bytes = Buffer.from(chunk);
+        size += bytes.length;
+        if (size > (success && route.endsWith("/result") ? 16 * 1024 * 1024 + 65536 : success && route.endsWith("/models") ? 2 * 1024 * 1024 : 32768))
+          throw new RemoteReviewDeliveryError("delivery-unconfirmed");
+        chunks.push(bytes);
+      }
+      let value;
+      try {
+        value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+      } catch {
+        throw new RemoteReviewDeliveryError(success ? "response-mismatch" : "http-error", status);
+      }
+      if (!success) {
+        const code = value?.error?.code;
+        const authority = status === 401 && code === "CLIENT_AUTHENTICATION_REQUIRED" ? "authentication-required" : status === 403 && code === "CLIENT_ACCESS_REVOKED" ? "revoked" : status === 503 && code === "IDENTITY_UNAVAILABLE" ? "identity-unavailable" : void 0;
+        throw new RemoteReviewDeliveryError("http-error", status, authority);
+      }
+      return value;
+    } catch (error2) {
+      if (error2 instanceof RemoteReviewDeliveryError)
+        throw error2;
+      throw new RemoteReviewDeliveryError("delivery-unconfirmed");
+    } finally {
+      response?.destroy();
+    }
+  }
+  async remoteReviewModels(clientId, signal) {
+    const raw = await this.remoteJson(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/remote-reviews/models`, signal);
+    try {
+      const result = remoteReviewModels(raw);
+      if (result.clientId !== clientId || contentHash(result.audience) !== contentHash(this.binding.audience))
+        throw new Error("mismatch");
+      return result;
+    } catch {
+      throw new RemoteReviewDeliveryError("response-mismatch");
+    }
+  }
+  async submitRemoteReview(value, signal) {
+    const input = validateRemoteReviewRequest(value, {
+      audience: this.binding.audience,
+      clientId: value.payload.clientId
+    });
+    const handle = prepareRemoteReviewHandle(input);
+    return verifyRemoteReviewStatus(handle, await this.remoteJson(this.remoteRoute(handle), signal, JSON.stringify(input)));
+  }
+  async remoteReviewStatus(handle, signal) {
+    return verifyRemoteReviewStatus(handle, await this.remoteJson(`${this.remoteRoute(handle)}/${encodeURIComponent(handle.requestId)}/status`, signal));
+  }
+  async remoteReviewResult(handle, signal) {
+    return verifyRemoteReviewResult(handle, await this.remoteJson(`${this.remoteRoute(handle)}/${encodeURIComponent(handle.requestId)}/result`, signal));
+  }
+  async cancelRemoteReview(handle, signal) {
+    return verifyRemoteReviewStatus(handle, await this.remoteJson(`${this.remoteRoute(handle)}/${encodeURIComponent(handle.requestId)}/cancel`, signal, JSON.stringify({
+      schemaVersion: 1,
+      requestId: handle.requestId,
+      payloadHash: handle.payloadHash
+    })));
+  }
   async bundle({ snapshotId, bundleId, signal }) {
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/bundles/${encodeURIComponent(bundleId)}?snapshotId=${encodeURIComponent(snapshotId)}`, signal);
     if (response.statusCode !== 200)
@@ -4613,7 +5124,7 @@ var ReviewSubmissionDeliveryError = class extends Error {
 
 // node_modules/@gcr/client-core/dist/central-connection.js
 var import_node_path7 = __toESM(require("node:path"), 1);
-var import_node_crypto10 = require("node:crypto");
+var import_node_crypto12 = require("node:crypto");
 var denied = () => new KnowledgeSyncError("authentication-required", "The selected central connection requires authentication.");
 var CentralConnectionSetupError = class extends KnowledgeSyncError {
   connectionId;
@@ -4754,7 +5265,7 @@ var CentralConnections = class _CentralConnections {
       })),
       ca: config.ca,
       offlineBehavior: behavior,
-      credentialReference: "gcr-" + (0, import_node_crypto10.randomUUID)(),
+      credentialReference: "gcr-" + (0, import_node_crypto12.randomUUID)(),
       keyId: identity.keyId,
       clientId,
       expiresAt: identity.expiresAt
@@ -4819,12 +5330,37 @@ var CentralConnections = class _CentralConnections {
     return this.submissionOperation(state, (transport, s) => transport.submitReview(input, s), signal);
   }
   async submissionStatus(id3, value, signal) {
-    const receipt = reviewSubmissionReceipt(value);
+    const receipt2 = reviewSubmissionReceipt(value);
     const state = await this.state(id3);
     await this.assert(state);
-    if (receipt.clientId !== state.value.clientId)
+    if (receipt2.clientId !== state.value.clientId)
       throw denied();
-    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt, s), signal);
+    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt2, s), signal);
+  }
+  async remoteReviewModels(id3, signal) {
+    const state = await this.state(id3);
+    await this.assert(state);
+    return this.submissionOperation(state, (transport, s) => transport.remoteReviewModels(state.value.clientId, s), signal);
+  }
+  async submitRemoteReview(id3, value, signal) {
+    value = validateRemoteReviewRequest(value, value.payload);
+    return this.remoteOperation(id3, prepareRemoteReviewHandle(value), (t, s) => t.submitRemoteReview(value, s), signal);
+  }
+  async remoteReviewStatus(id3, handle, signal) {
+    return this.remoteOperation(id3, handle, (t, s) => t.remoteReviewStatus(handle, s), signal);
+  }
+  async remoteReviewResult(id3, handle, signal) {
+    return this.remoteOperation(id3, handle, (t, s) => t.remoteReviewResult(handle, s), signal);
+  }
+  async cancelRemoteReview(id3, handle, signal) {
+    return this.remoteOperation(id3, handle, (t, s) => t.cancelRemoteReview(handle, s), signal);
+  }
+  async remoteOperation(id3, value, work, signal) {
+    const handle = remoteReviewHandle(value), state = await this.state(id3);
+    await this.assert(state);
+    if (handle.clientId !== state.value.clientId || handle.client.profileId !== this.options.scope.profileId || this.options.scope.kind !== "repository" || handle.client.repositoryKey !== this.options.scope.repositoryKey || handle.client.worktreeKey !== this.options.scope.worktreeKey)
+      throw denied();
+    return this.submissionOperation(state, work, signal);
   }
   async submissionOperation(state, work, signal) {
     const cache = await this.cache(state.value);
@@ -4834,7 +5370,7 @@ var CentralConnections = class _CentralConnections {
       await this.assert(state);
       return result;
     } catch (error2) {
-      if (error2 instanceof ReviewSubmissionDeliveryError && error2.authorityFailure) {
+      if ((error2 instanceof ReviewSubmissionDeliveryError || error2 instanceof RemoteReviewDeliveryError) && error2.authorityFailure) {
         await this.assert(state);
         try {
           await cache.rejectAuthority(generation, error2.authorityFailure);
@@ -5062,7 +5598,7 @@ async function resolveReviewExecution(input) {
 var maximumFrame = 9 * 1024 * 1024;
 
 // node_modules/@gcr/client-core/dist/review-conversations.js
-var import_node_crypto11 = require("node:crypto");
+var import_node_crypto13 = require("node:crypto");
 var ReviewConversationError = class extends Error {
   code;
   constructor(code) {
@@ -5191,7 +5727,7 @@ var ReviewConversationStore = class {
       throw new ReviewConversationError("quota-exceeded");
     const previousUsage = { ...turn.usage };
     turn.status = "running";
-    turn.worker = (0, import_node_crypto11.randomUUID)();
+    turn.worker = (0, import_node_crypto13.randomUUID)();
     turn.usage = { ...chat.limits, modelCalls: previousUsage.modelCalls + 1 };
     turn.updatedAt = chat.updatedAt = this.time(chat.updatedAt);
     return { stored: await this.write(stored), previousUsage };
@@ -5207,7 +5743,7 @@ var ReviewConversationStore = class {
     const question = reviewChatQuestionInput(input.question);
     const at = this.time(stored.conversation.updatedAt);
     turn.questions.push({
-      id: (0, import_node_crypto11.randomUUID)(),
+      id: (0, import_node_crypto13.randomUUID)(),
       callId: input.callId,
       ...question,
       answer: null,
@@ -5550,12 +6086,12 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.31",
+  version: "0.1.0-alpha.33",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var import_node_crypto14 = require("node:crypto");
+var import_node_crypto16 = require("node:crypto");
 var import_node_fs3 = require("node:fs");
 var import_promises6 = require("node:fs/promises");
 var import_node_os3 = __toESM(require("node:os"), 1);
@@ -5842,7 +6378,7 @@ function codexAccountEnvironment() {
 var import_node_http3 = require("node:http");
 var import_promises5 = require("node:fs/promises");
 var import_node_path10 = __toESM(require("node:path"), 1);
-var import_node_crypto13 = require("node:crypto");
+var import_node_crypto15 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
 var import_promises4 = require("node:fs/promises");
@@ -5877,68 +6413,8 @@ async function runIsolatedCodex(input) {
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
-var import_node_crypto12 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 var import_node_http2 = require("node:http");
-var fixedSourceTools = [
-  {
-    name: "list_files",
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    },
-    description: "List up to 100 authorized files from the immutable source/base snapshot. Follow nextOffset for more files. This is not the live repository.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        offset: { type: "integer", minimum: 0, maximum: 1e4 },
-        limit: { type: "integer", minimum: 1, maximum: 100 }
-      },
-      additionalProperties: false
-    }
-  },
-  {
-    name: "read_file",
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    },
-    description: "Read numbered lines from an authorized fixed source or base file, with its SHA-256. Maximum 200 lines per read. Check truncation; a location is not defect evidence.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string" },
-        side: { type: "string", enum: ["source", "base"] },
-        startLine: { type: "integer", minimum: 1 },
-        endLine: { type: "integer", minimum: 1 }
-      },
-      required: ["path"],
-      additionalProperties: false
-    }
-  },
-  {
-    name: "search_code",
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    },
-    description: "Search literal text only within authorized fixed files. Returns at most 100 matches, not a semantic call graph or proof of absence outside this scope.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: { type: "string", minLength: 1, maxLength: 300 },
-        side: { type: "string", enum: ["source", "base"] }
-      },
-      required: ["query"],
-      additionalProperties: false
-    }
-  }
-];
 var reviewQuestionTool = {
   name: "ask_user",
   description: "Persist one question requiring user intent and pause this conversation. Stop after calling. The host resumes with the saved answer in a new isolated step; no execution permission can be granted by an answer.",
@@ -5963,7 +6439,7 @@ var reviewQuestionTool = {
   }
 };
 async function startSourceBridge(port2, questions) {
-  const token2 = (0, import_node_crypto12.randomBytes)(32).toString("hex");
+  const token2 = (0, import_node_crypto14.randomBytes)(32).toString("hex");
   const authorization = Buffer.from(`Bearer ${token2}`);
   const tools = questions ? [...fixedSourceTools, reviewQuestionTool] : fixedSourceTools;
   const sockets = /* @__PURE__ */ new Set();
@@ -5971,7 +6447,7 @@ async function startSourceBridge(port2, questions) {
   let requestCount = 0;
   const server = (0, import_node_http2.createServer)(async (req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
-    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto12.timingSafeEqual)(supplied, authorization)) {
+    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto14.timingSafeEqual)(supplied, authorization)) {
       res.writeHead(403).end();
       return;
     }
@@ -6036,7 +6512,7 @@ async function startSourceBridge(port2, questions) {
             break;
           }
           try {
-            const text3 = name === "ask_user" && questions ? await questions.askUser((0, import_node_crypto12.createHash)("sha256").update(JSON.stringify([token2, id3])).digest("hex"), reviewChatQuestionInput(params?.arguments)) : await port2.execute(name, params?.arguments ?? {});
+            const text3 = name === "ask_user" && questions ? await questions.askUser((0, import_node_crypto14.createHash)("sha256").update(JSON.stringify([token2, id3])).digest("hex"), reviewChatQuestionInput(params?.arguments)) : await port2.execute(name, params?.arguments ?? {});
             if (typeof text3 !== "string" || Buffer.byteLength(text3) > 1048576)
               throw Error("output");
             result = { content: [{ type: "text", text: text3 }], isError: false };
@@ -6111,7 +6587,7 @@ function catalogNames(request) {
   return tools.flatMap((tool) => tool.type === "namespace" && Array.isArray(tool.tools) ? tool.tools.map((child) => `${String(tool.name)}.${String(child.name)}`) : [`${String(tool.type)}.${String(tool.name)}`]).sort();
 }
 async function probeCodexCatalog(command, root, observe, conversation = false) {
-  const canary = `DO_NOT_LOAD_${(0, import_node_crypto13.randomBytes)(16).toString("hex")}`;
+  const canary = `DO_NOT_LOAD_${(0, import_node_crypto15.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
     await (0, import_promises5.mkdir)(import_node_path10.default.join(root, name), { mode: 448 });
   await (0, import_promises5.writeFile)(import_node_path10.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
@@ -6225,12 +6701,12 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 }
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var hash3 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
+var hash4 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
   const info = await (0, import_promises6.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
-  const digest2 = (0, import_node_crypto14.createHash)("sha256");
+  const digest2 = (0, import_node_crypto16.createHash)("sha256");
   for await (const bytes of (0, import_node_fs3.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
@@ -6395,14 +6871,14 @@ async function prepareCodexAccountExecutor(options) {
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
     const environment = codexAccountEnvironment();
-    const configHash = hash3(JSON.stringify({
+    const configHash = hash4(JSON.stringify({
       version: 1,
       command,
       fingerprint,
       cliVersion,
       model: options.model,
       effort: options.reasoningEffort,
-      catalogHash: hash3(catalog),
+      catalogHash: hash4(catalog),
       tools,
       toolDefinitions: fixedSourceTools,
       conversationTools,
@@ -6424,7 +6900,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.31",
+  version: "0.1.0-alpha.33",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
