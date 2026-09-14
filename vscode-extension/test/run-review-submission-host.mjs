@@ -190,9 +190,41 @@ try {
     () => ui.locator("#status").textContent(),
     (t) => t.startsWith("Received by the server"),
   );
+  await ui.getByText("Check central review status", { exact: true }).click();
+  await until(
+    () => ui.locator("#followupState").textContent(),
+    (t) => t.includes("awaiting central review"),
+  );
+  assert(await ui.locator("#rereview").isDisabled());
+  await writeFile(control, JSON.stringify({ adopt: true }));
+  await until(proof, (p) => p.stage === "adopted");
+  await ui.locator("#synchronize").click();
+  await until(
+    () => ui.locator("#syncState").textContent(),
+    (t) => t.includes("not in the signed policy yet"),
+  );
+  assert(await ui.locator("#rereview").isDisabled());
+  assert.equal(await ui.locator("img").count(), 0);
+  await writeFile(control, JSON.stringify({ publish: true }));
+  await until(proof, (p) => p.stage === "published");
+  await ui.locator("#synchronize").click();
+  await until(() => ui.locator("#rereview").isEnabled(), Boolean);
+  assert(
+    (await ui.locator("#syncState").textContent()).includes(
+      "current criterion revision is present",
+    ),
+  );
   await ui
     .locator("body")
     .screenshot({ path: evidence.replace(/\.json$/, ".png") });
+  await writeFile(control, JSON.stringify({ retire: true }));
+  await until(proof, (p) => p.stage === "retired");
+  await ui.locator("#rereview").click();
+  await until(
+    () => ui.locator("#status").textContent(),
+    (t) => t.includes("policy or snapshot changed"),
+  );
+  assert(await ui.locator("#followupSection").isHidden());
   await writeFile(control, JSON.stringify({ reopen: true, finish: true }));
   await host;
   assert.equal((await proof()).status, "passed");
@@ -242,6 +274,10 @@ try {
             outboxReopen: uiPassed,
             localCandidate: uiPassed,
             explicitSubmission: uiPassed,
+            pendingStatus: uiPassed,
+            publicationRequired: uiPassed,
+            explicitSynchronization: uiPassed,
+            retiredCriterionPreventsRereview: uiPassed,
           },
         },
         null,

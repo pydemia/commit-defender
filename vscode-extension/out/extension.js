@@ -12614,12 +12614,12 @@ async function callClaudeCodeCli(req) {
   if (req.model.trim()) {
     args.push("--model", req.model.trim());
   }
-  const env3 = { ...process.env };
-  delete env3.ANTHROPIC_API_KEY;
-  delete env3.ANTHROPIC_AUTH_TOKEN;
-  env3.CLAUDE_AGENT_SDK_CLIENT_APP = env3.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  const env4 = { ...process.env };
+  delete env4.ANTHROPIC_API_KEY;
+  delete env4.ANTHROPIC_AUTH_TOKEN;
+  env4.CLAUDE_AGENT_SDK_CLIENT_APP = env4.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env3);
+    const result = await runCli(command, args, req.userMessage, req, env4);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
     }
@@ -12659,13 +12659,13 @@ async function callGeminiCli(req) {
   if (req.model.trim()) {
     args.unshift("--model", req.model.trim());
   }
-  const env3 = { ...process.env };
-  delete env3.GEMINI_API_KEY;
-  delete env3.GOOGLE_API_KEY;
-  delete env3.GOOGLE_GENAI_USE_VERTEXAI;
-  env3.GOOGLE_GENAI_USE_GCA = "true";
+  const env4 = { ...process.env };
+  delete env4.GEMINI_API_KEY;
+  delete env4.GOOGLE_API_KEY;
+  delete env4.GOOGLE_GENAI_USE_VERTEXAI;
+  env4.GOOGLE_GENAI_USE_GCA = "true";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env3);
+    const result = await runCli(command, args, req.userMessage, req, env4);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
     }
@@ -12786,7 +12786,7 @@ async function withSchemaFile(schema, fn) {
     await (0, import_promises.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
-function runCli(command, args, stdin, req, env3) {
+function runCli(command, args, stdin, req, env4) {
   return new Promise((resolve3, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
@@ -12794,7 +12794,7 @@ function runCli(command, args, stdin, req, env3) {
     }
     const child = (0, import_child_process3.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
-      env: env3,
+      env: env4,
       shell: false,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"]
@@ -13609,6 +13609,8 @@ function standaloneErrorMessage(code3) {
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "central-snapshot-changed":
+      return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
       return "The local execution policy could not authorize this review.";
     case "no-source":
@@ -13647,6 +13649,7 @@ var safeCodes = /* @__PURE__ */ new Set([
   "executor-unavailable",
   "credential-unavailable",
   "needs-context",
+  "central-snapshot-changed",
   "policy-unavailable",
   "no-source",
   "disposed",
@@ -15208,13 +15211,60 @@ var reviewSubmissionReceipt = object({
   receivedAt: timestamp,
   expiresAt: timestamp
 });
+var intakeRule = object({
+  id,
+  title: text5(500, 1),
+  state: choice(["draft", "evaluated", "shadow", "active", "retired"]),
+  revision: integer(1),
+  contentHash: sha256
+});
+var intakeFeedback = object({
+  id,
+  kind: choice(["correction", "exception"]),
+  revision: integer(1),
+  resolution: union(object({
+    action: choice(["acknowledge", "approve-exception", "reject"]),
+    note: text5(2e3, 1),
+    at: timestamp
+  }), literal(null)),
+  exception: union(object({
+    id,
+    revision: integer(1),
+    startsAt: timestamp,
+    expiresAt: timestamp,
+    revoked: boolean
+  }), literal(null))
+});
+var reviewSubmissionStatus = refined(object({
+  schemaVersion: literal(1),
+  receipt: reviewSubmissionReceipt,
+  checkedAt: timestamp,
+  decision: union(object({
+    action: choice(["dismiss", "create-candidate", "link-feedback"]),
+    note: text5(2e3, 1),
+    at: timestamp,
+    rule: union(intakeRule, literal(null)),
+    feedback: union(intakeFeedback, literal(null))
+  }), literal(null))
+}), (value, at) => {
+  const d = value.decision;
+  if (!d)
+    return;
+  if (d.action === "dismiss" && (d.rule || d.feedback) || d.action === "create-candidate" && (!d.rule || d.feedback) || d.action === "link-feedback" && (!d.rule || !d.feedback) || value.receipt.kind === "result" && d.action !== "dismiss")
+    fail(at, "inconsistent intake links");
+  const f = d.feedback;
+  if (f?.exception && (f.kind !== "exception" || f.resolution?.action !== "approve-exception" || f.exception.revision !== f.revision || f.exception.expiresAt <= f.exception.startsAt))
+    fail(at, "inconsistent intake exception");
+  if (f?.resolution && (f.resolution.action === "acknowledge" && f.kind !== "correction" || f.resolution.action === "approve-exception" && !f.exception))
+    fail(at, "inconsistent intake resolution");
+});
 var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -17482,6 +17532,23 @@ var KnowledgeHttpTransport = class {
     if (contentHash(input.audience) !== contentHash(this.binding.audience))
       throw new Error("submission-binding-mismatch");
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(input.audience.repositoryId)}/review-submissions/${input.kind === "result" ? "results" : "feedback"}`, signal, void 0, JSON.stringify(input));
+    const body2 = await this.submissionJson(response, [200, 201]);
+    const receipt = reviewSubmissionReceipt(body2);
+    if (receipt.requestId !== input.id || receipt.payloadHash !== contentHash(input) || contentHash(receipt.audience) !== contentHash(input.audience) || receipt.clientId !== input.clientId || receipt.kind !== input.kind)
+      throw new ReviewSubmissionDeliveryError(503);
+    return receipt;
+  }
+  async submissionStatus(value, signal) {
+    const receipt = reviewSubmissionReceipt(value);
+    if (contentHash(receipt.audience) !== contentHash(this.binding.audience))
+      throw new Error("submission-binding-mismatch");
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt.id)}/status`, signal);
+    const result = reviewSubmissionStatus(await this.submissionJson(response, [200]));
+    if (contentHash(result.receipt) !== contentHash(receipt))
+      throw new ReviewSubmissionDeliveryError(503);
+    return result;
+  }
+  async submissionJson(response, successCodes) {
     try {
       const chunks = [];
       let size = 0;
@@ -17496,17 +17563,14 @@ var KnowledgeHttpTransport = class {
       try {
         body2 = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
       } catch {
-        throw new ReviewSubmissionDeliveryError(response.statusCode === 200 || response.statusCode === 201 ? 503 : response.statusCode ?? 503);
+        throw new ReviewSubmissionDeliveryError(successCodes.includes(response.statusCode ?? 0) ? 503 : response.statusCode ?? 503);
       }
-      if (response.statusCode !== 200 && response.statusCode !== 201) {
+      if (!successCodes.includes(response.statusCode ?? 0)) {
         const code3 = body2?.error?.code;
         const authorityFailure = response.statusCode === 403 && code3 === "CLIENT_ACCESS_REVOKED" ? "revoked" : response.statusCode === 401 && code3 === "CLIENT_AUTHENTICATION_REQUIRED" ? "authentication-required" : response.statusCode === 503 && code3 === "IDENTITY_UNAVAILABLE" ? "identity-unavailable" : void 0;
         throw new ReviewSubmissionDeliveryError(response.statusCode ?? 503, authorityFailure);
       }
-      const receipt = reviewSubmissionReceipt(body2);
-      if (receipt.requestId !== input.id || receipt.payloadHash !== contentHash(input) || contentHash(receipt.audience) !== contentHash(input.audience) || receipt.clientId !== input.clientId || receipt.kind !== input.kind)
-        throw new ReviewSubmissionDeliveryError(503);
-      return receipt;
+      return body2;
     } finally {
       response.destroy();
     }
@@ -17769,10 +17833,21 @@ var CentralConnections = class _CentralConnections {
     await this.assert(state);
     if (input.clientId !== state.value.clientId)
       throw denied();
+    return this.submissionOperation(state, (transport, s) => transport.submitReview(input, s), signal);
+  }
+  async submissionStatus(id3, value, signal) {
+    const receipt = reviewSubmissionReceipt(value);
+    const state = await this.state(id3);
+    await this.assert(state);
+    if (receipt.clientId !== state.value.clientId)
+      throw denied();
+    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt, s), signal);
+  }
+  async submissionOperation(state, work, signal) {
     const cache = await this.cache(state.value);
     const { generation } = await cache.connectionState();
     try {
-      const result = await this.timed(signal, (s) => this.transport(state).submitReview(input, s));
+      const result = await this.timed(signal, (s) => work(this.transport(state), s));
       await this.assert(state);
       return result;
     } catch (error2) {
@@ -17784,7 +17859,7 @@ var CentralConnections = class _CentralConnections {
           if (error2.authorityFailure !== "identity-unavailable") {
             this.invalid.add(state.value.credentialReference);
             try {
-              await this.records.write("settings", id3, { ...state.value, status: "disconnected" }, state.revision);
+              await this.records.write("settings", state.value.id, { ...state.value, status: "disconnected" }, state.revision);
             } catch {
             }
             try {
@@ -18643,6 +18718,35 @@ var ReviewSubmissionQueueError = class extends Error {
 var fail2 = (code3) => {
   throw new ReviewSubmissionQueueError(code3);
 };
+function reviewSubmissionPolicyState(status, snapshot, now = Date.now()) {
+  if (contentHash(status.receipt.audience) !== contentHash(snapshot.manifest.payload.audience))
+    return fail2("selection-changed");
+  const d = status.decision;
+  if (!d || d.action === "dismiss")
+    return "no-adoption";
+  const rule = d.rule;
+  if (rule.state !== "active")
+    return "not-active";
+  const feedback = d.feedback;
+  if (feedback && !feedback.resolution)
+    return "pending-feedback";
+  if (feedback?.resolution?.action === "reject")
+    return "feedback-rejected";
+  if (feedback?.kind === "correction" && rule.revision <= feedback.revision)
+    return "acknowledged-only";
+  const exception = feedback?.exception;
+  if (exception) {
+    if (exception.revision !== rule.revision)
+      return "outdated-exception";
+    if (exception.revoked || Date.parse(exception.startsAt) > now || Date.parse(exception.expiresAt) <= now)
+      return "exception-inactive";
+  }
+  const policy = snapshot.bundles.policy;
+  const item = policy.component === "policy" ? policy.criteria.find((x) => x.id === rule.id && x.revision === rule.revision && x.sourceContentHash === rule.contentHash) : void 0;
+  if (!item || exception && !item.exceptions.some((x) => x.id === exception.id))
+    return "awaiting-publication";
+  return exception ? "exception-current" : "criterion-current";
+}
 var ReviewSubmissionQueue = class _ReviewSubmissionQueue {
   records;
   connectionId;
@@ -18875,7 +18979,7 @@ function prepareReviewSubmission(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -19817,12 +19921,12 @@ var import_node_child_process4 = require("node:child_process");
 var digest2 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
 var quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
 function git2(root2, args, missing = false) {
-  const env3 = { ...process.env };
-  for (const key3 of Object.keys(env3))
-    if (key3.startsWith("GIT_")) delete env3[key3];
+  const env4 = { ...process.env };
+  for (const key3 of Object.keys(env4))
+    if (key3.startsWith("GIT_")) delete env4[key3];
   try {
     return (0, import_node_child_process4.execFileSync)("git", ["-C", root2, ...args], {
-      env: env3,
+      env: env4,
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15e3
@@ -20262,8 +20366,8 @@ var BackgroundHooks = class {
           "Background reviews require trusted user-selected Codex gpt-6-astra/xhigh settings and an online central connection when selected."
         );
       }
-      const env3 = { ...process.env };
-      for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
+      const env4 = { ...process.env };
+      for (const k of Object.keys(env4)) if (k.startsWith("GIT_")) delete env4[k];
       const node2 = JSON.parse(
         (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
           nodePath,
@@ -20271,7 +20375,7 @@ var BackgroundHooks = class {
             "-p",
             'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})'
           ],
-          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4 }
+          { cwd: import_node_os3.default.homedir(), env: env4, timeout: 1e4 }
         )).stdout
       );
       if (node2.major < 22 || !import_node_path15.default.isAbsolute(node2.path))
@@ -20300,7 +20404,7 @@ var BackgroundHooks = class {
           "--data-dir",
           dataDirectory
         ],
-        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3 }
+        { cwd: import_node_os3.default.homedir(), env: env4, timeout: 65e3 }
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -20312,7 +20416,7 @@ var BackgroundHooks = class {
       const executorPath = import_node_path15.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process5.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
-        { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
+        { env: env4, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
       )).stdout.trim();
       const options = {
         mode: settings.mode,
@@ -23094,6 +23198,7 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
   closed = false;
   busy = false;
   localCandidates = /* @__PURE__ */ new Map();
+  followups = /* @__PURE__ */ new Map();
   static async open(options) {
     if (!options.current()) fail3("selection-changed");
     const report = clientReviewReport(options.report);
@@ -23241,6 +23346,71 @@ var ReviewSubmissionSession = class _ReviewSubmissionSession {
       return (await this.queue.cancel(id3)).value;
     });
   }
+  async inspect(id3, signal, withCache) {
+    const entry = this.belongs((await this.queue.get(id3)).value);
+    if (!entry.receipt) return fail3("receipt-required");
+    const status = await this.connections.submissionStatus(
+      this.options.connectionId,
+      entry.receipt,
+      signal
+    );
+    let sync = null;
+    if (withCache) {
+      const selected = await this.connections.review(
+        this.options.connectionId,
+        "offline",
+        signal
+      );
+      const snapshot = await selected.cache.read("offline");
+      sync = {
+        snapshotId: snapshot.manifest.payload.snapshotId,
+        policyState: reviewSubmissionPolicyState(status, snapshot)
+      };
+    }
+    const result = { id: id3, status, sync };
+    this.followups.set(id3, result);
+    return structuredClone(result);
+  }
+  reviewStatus(id3, signal) {
+    return this.operation(() => this.inspect(id3, signal, false));
+  }
+  synchronizeStatus(id3, signal) {
+    return this.operation(async () => {
+      const entry = this.belongs((await this.queue.get(id3)).value);
+      if (!entry.receipt) return fail3("receipt-required");
+      await this.connections.synchronize(this.options.connectionId, signal);
+      return this.inspect(id3, signal, true);
+    });
+  }
+  prepareRereview(id3, signal) {
+    return this.operation(async () => {
+      const prior = this.followups.get(id3)?.sync;
+      if (!prior || !["criterion-current", "exception-current"].includes(prior.policyState))
+        return fail3("synchronization-required");
+      const current = await this.inspect(id3, signal, true);
+      if (!current.sync || current.sync.snapshotId !== prior.snapshotId || !["criterion-current", "exception-current"].includes(
+        current.sync.policyState
+      ))
+        return fail3("synchronization-required");
+      return {
+        connectionId: this.options.connectionId,
+        profileId: this.options.profileId,
+        snapshotId: current.sync.snapshotId
+      };
+    });
+  }
+  centralReviewUrl(id3) {
+    return this.operation(async () => {
+      const entry = this.belongs((await this.queue.get(id3)).value);
+      if (!entry.receipt) return fail3("receipt-required");
+      const url = new URL("review-criteria", this.destination.serverUrl);
+      url.searchParams.set(
+        "repositoryId",
+        this.destination.audience.repositoryId
+      );
+      return url.toString();
+    });
+  }
   saveLocalCandidate(hash4) {
     return this.operation(async () => {
       const { submission } = this.confirmed(hash4);
@@ -23282,8 +23452,19 @@ var ReviewSubmissionView = class {
     if (v.viewId !== this.id) return;
     if ((v.command === "ready" || v.command === "refresh") && exact([]))
       return { command: v.command };
-    if ((v.command === "select" || v.command === "cancel") && exact(["id"]) && typeof v.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id))
-      return { command: v.command, id: v.id };
+    if ([
+      "select",
+      "cancel",
+      "review-status",
+      "synchronize",
+      "open-central"
+    ].includes(String(v.command)) && exact(["id"]) && typeof v.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id))
+      return {
+        command: v.command,
+        id: v.id
+      };
+    if (v.command === "rereview" && exact(["id", "confirmed"]) && v.confirmed === true && typeof v.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id))
+      return { command: "rereview", id: v.id };
     if (["save", "send", "memory"].includes(String(v.command)) && exact(["hash", "confirmed"]) && v.confirmed === true && typeof v.hash === "string" && /^[a-f0-9]{64}$/.test(v.hash))
       return { command: v.command, hash: v.hash };
     if (v.command !== "prepare" || !exact(["selection"]) || !v.selection || typeof v.selection !== "object" || Array.isArray(v.selection))
@@ -23339,11 +23520,13 @@ h1{font-size:1.5em}h2{font-size:1.15em;margin-top:24px}label{display:block;margi
 <p id="status" role="status" aria-live="polite"></p>
 <h2>Outbox for this review</h2><button id="refresh" class="secondary" disabled>Refresh outbox</button>
 <p class="hint">If delivery is unconfirmed, retrying the same entry uses the same request ID. Cancelling stops local retries and cannot retract a submission already received by the server.</p><div id="outbox"></div>
+<section id="followupSection" hidden><h2>Central review status</h2><p id="followupTitle"></p><p id="followupState"></p><p id="followupNote"></p><p id="followupChecked" class="hint"></p><p id="syncState"></p>
+<button id="synchronize" class="secondary">Synchronize central policy</button><button id="rereview" disabled>Review these files again</button><p id="reviewScope" class="hint"></p></section>
 <script nonce="${this.id}">
 const vscode=acquireVsCodeApi(),viewId='${this.id}',el=id=>document.getElementById(id);
-let busy=true,preview=null,ready=false;
+let busy=true,preview=null,ready=false,followup=null;
 const post=(command,extra={})=>vscode.postMessage({command,viewId,...extra});
-function controls(){el('editor').disabled=busy||!ready;el('refresh').disabled=busy||!ready;for(const id of ['send','save','memory'])el(id).disabled=busy||!preview||!el('confirmed').checked||(id==='memory'&&preview.submission.kind!=='feedback');for(const b of el('outbox').querySelectorAll('button'))b.disabled=busy;el('confirmed').disabled=busy;}
+function controls(){el('editor').disabled=busy||!ready;el('refresh').disabled=busy||!ready;for(const id of ['send','save','memory'])el(id).disabled=busy||!preview||!el('confirmed').checked||(id==='memory'&&preview.submission.kind!=='feedback');for(const b of el('outbox').querySelectorAll('button'))b.disabled=busy;el('confirmed').disabled=busy;el('synchronize').disabled=busy||!followup;el('rereview').disabled=busy||!followup?.rereviewAllowed;}
 function invalidate(){preview=null;el('confirmed').checked=false;el('previewSection').hidden=true;controls();}
 function request(command,extra={}){if(busy)return;busy=true;el('status').className='';el('status').textContent=command==='send'?'Submitting\u2026':'Checking\u2026';controls();post(command,extra);}
 el('editor').addEventListener('input',invalidate);
@@ -23352,15 +23535,19 @@ el('confirmed').addEventListener('change',controls);
 el('prepare').onclick=()=>{const selection=el('kind').value==='result'?{kind:'result'}:{kind:'feedback',feedbackKind:el('feedbackKind').value,message:el('message').value,includeSourceReference:el('source').checked,...(el('finding').value?{findingId:el('finding').value}:{})};if(selection.kind==='feedback'&&!selection.message.trim()){el('status').textContent='Enter a feedback message.';return;}request('prepare',{selection});};
 for(const command of ['send','save','memory'])el(command).onclick=()=>{if(preview&&el('confirmed').checked){request(command,{hash:preview.payloadHash,confirmed:true});el('confirmed').checked=false;controls();}};
 el('refresh').onclick=()=>request('refresh');
+el('synchronize').onclick=()=>{if(followup)request('synchronize',{id:followup.id});};
+el('rereview').onclick=()=>{if(followup?.rereviewAllowed)request('rereview',{id:followup.id,confirmed:true});};
 window.addEventListener('message',event=>{const m=event.data;if(!m||m.viewId!==viewId)return;
 if(m.type==='state'){
 ready=true;
 if(m.destination){const a=m.destination.audience;el('destination').textContent='Server: '+m.destination.serverUrl+' | Repository: '+a.repositoryId+' | Tenant: '+a.tenantId+' | User: '+a.userId+' | Server ID: '+a.serverId;}
+if(m.reviewScope)el('reviewScope').textContent=m.reviewScope;
+if(m.followup){followup=m.followup;el('followupSection').hidden=false;el('followupTitle').textContent=followup.title;el('followupState').textContent=followup.state;el('followupNote').textContent=followup.note;el('followupChecked').textContent='Checked at '+new Date(followup.checkedAt).toLocaleString();el('syncState').textContent=followup.sync;}
 if(m.findings){el('finding').replaceChildren(new Option('Review as a whole',''));for(const f of m.findings)el('finding').append(new Option(f.title,f.id));}
 if(m.preview){preview=m.preview;el('payload').textContent=JSON.stringify(preview.submission,null,2);el('confirmed').checked=false;el('previewSection').hidden=false;}
-if(m.entries){el('outbox').replaceChildren();if(!m.entries.length)el('outbox').textContent='No saved submissions for this review.';for(const entry of m.entries){const row=document.createElement('div');row.className='entry';const p=document.createElement('p');p.textContent=entry.payload.kind+' \xB7 '+entry.status+' \xB7 '+entry.payload.id+(entry.receipt?' \xB7 Received '+entry.receipt.receivedAt+' \xB7 Expires '+entry.receipt.expiresAt:'')+(entry.lastError?' \xB7 '+entry.lastError:'');row.append(p);const b=document.createElement('button');b.textContent='View exact content';b.className='secondary';b.onclick=()=>request('select',{id:entry.payload.id});row.append(b);if(['pending','rejected'].includes(entry.status)){const c=document.createElement('button');c.textContent='Cancel local retries';c.className='secondary';c.onclick=()=>request('cancel',{id:entry.payload.id});row.append(c);}el('outbox').append(row);}}
+if(m.entries){el('outbox').replaceChildren();if(!m.entries.length)el('outbox').textContent='No saved submissions for this review.';for(const entry of m.entries){const row=document.createElement('div');row.className='entry';const p=document.createElement('p');p.textContent=entry.payload.kind+' \xB7 '+entry.status+' \xB7 '+entry.payload.id+(entry.receipt?' \xB7 Received '+entry.receipt.receivedAt+' \xB7 Expires '+entry.receipt.expiresAt:'')+(entry.lastError?' \xB7 '+entry.lastError:'');row.append(p);const b=document.createElement('button');b.textContent='View exact content';b.className='secondary';b.onclick=()=>request('select',{id:entry.payload.id});row.append(b);if(entry.receipt){for(const [command,label] of [['review-status','Check central review status'],['open-central','Open central criteria']]){const c=document.createElement('button');c.textContent=label;c.className='secondary';c.onclick=()=>request(command,{id:entry.payload.id});row.append(c);}}if(['pending','rejected'].includes(entry.status)){const c=document.createElement('button');c.textContent='Cancel local retries';c.className='secondary';c.onclick=()=>request('cancel',{id:entry.payload.id});row.append(c);}el('outbox').append(row);}}
 el('status').className='';el('status').textContent=m.message||'';
-}else if(m.type==='error'){el('status').className='error';el('status').textContent=m.message;}
+}else if(m.type==='error'){followup=null;el('followupSection').hidden=true;el('status').className='error';el('status').textContent=m.message;}
 else return;
 busy=false;controls();
 });
@@ -23369,6 +23556,51 @@ post('ready');
   }
 };
 
+// src/reviewSubmissionStatus.ts
+function submissionFollowupSummary(value) {
+  const d = value.status.decision, rule = d?.rule, feedback = d?.feedback;
+  const states = {
+    draft: "Draft",
+    evaluated: "Evaluated",
+    shadow: "Shadow",
+    active: "Active",
+    retired: "Retired"
+  };
+  let state = !d ? "Received; awaiting central review." : d.action === "dismiss" ? "Closed without a criterion change." : `${states[rule.state]} criterion \xB7 revision ${rule.revision}.`;
+  if (feedback) {
+    state += !feedback.resolution ? " Feedback awaits a central decision." : feedback.resolution.action === "reject" ? " Feedback was rejected." : feedback.resolution.action === "acknowledge" ? " Correction acknowledged; acknowledgement does not change the criterion." : " Exception approved for its recorded scope and revision.";
+    if (feedback.exception) {
+      const e = feedback.exception;
+      state += e.revoked ? " The exception has been revoked." : Date.parse(e.expiresAt) <= Date.now() ? " The exception has expired." : ` Exception period: ${e.startsAt} to ${e.expiresAt}.`;
+      if (e.revision !== rule.revision)
+        state += " It belongs to an older criterion revision.";
+    }
+  }
+  const syncLabels = {
+    "no-adoption": "No adopted criterion to synchronize.",
+    "not-active": "The criterion is not active; it is not an active review policy.",
+    "pending-feedback": "The feedback still needs a central decision.",
+    "feedback-rejected": "The feedback was rejected; no approved change is implied.",
+    "acknowledged-only": "Acknowledgement has not produced a newer criterion revision.",
+    "outdated-exception": "The approved exception belongs to an older criterion revision.",
+    "exception-inactive": "The exception is revoked, expired, or has not started.",
+    "awaiting-publication": "Synchronization finished, but the reviewed revision or exception is not in the signed policy yet. Try synchronizing after publication completes.",
+    "criterion-current": "The current criterion revision is present in the synchronized signed policy. Its source scope still determines where it applies.",
+    "exception-current": "The approved exception and current criterion revision are present in the synchronized signed policy. The exception applies only within its scope and period."
+  };
+  return {
+    id: value.id,
+    title: rule?.title ?? "Submission review",
+    state,
+    note: [d?.note, feedback?.resolution?.note].filter(Boolean).join("\n"),
+    checkedAt: value.status.checkedAt,
+    sync: value.sync ? syncLabels[value.sync.policyState] : "Synchronize to check whether the reviewed change is available locally.",
+    rereviewAllowed: !!value.sync && ["criterion-current", "exception-current"].includes(
+      value.sync.policyState
+    )
+  };
+}
+
 // src/reviewSubmissionPanel.ts
 var panels2 = /* @__PURE__ */ new Map();
 var jobs = /* @__PURE__ */ new Set();
@@ -23376,7 +23608,7 @@ async function settleReviewSubmissions() {
   for (const panel of panels2.values()) panel.dispose();
   await Promise.allSettled([...jobs]);
 }
-async function openReviewSubmission(report, repoRoot, context) {
+async function openReviewSubmission(report, repoRoot, context, rereview) {
   if (!report.gcr) {
     void vscode17.window.showInformationMessage(
       "Open a saved fixed-source review to submit feedback."
@@ -23444,8 +23676,32 @@ async function openReviewSubmission(report, repoRoot, context) {
           current
         });
       if (!current()) return;
-      let preview, entry, notice = "";
+      let preview, followup, entry, notice = "";
       switch (message.command) {
+        case "review-status":
+          followup = submissionFollowupSummary(
+            await session.reviewStatus(message.id, controller.signal)
+          );
+          break;
+        case "synchronize":
+          followup = submissionFollowupSummary(
+            await session.synchronizeStatus(message.id, controller.signal)
+          );
+          break;
+        case "open-central": {
+          const url = await session.centralReviewUrl(message.id);
+          if (current()) await vscode17.env.openExternal(vscode17.Uri.parse(url));
+          break;
+        }
+        case "rereview": {
+          const pin = await session.prepareRereview(
+            message.id,
+            controller.signal
+          );
+          if (!rereview || !current()) return;
+          await rereview(pin, controller.signal, current);
+          break;
+        }
         case "prepare":
           preview = await session.prepare(message.selection);
           break;
@@ -23478,9 +23734,16 @@ async function openReviewSubmission(report, repoRoot, context) {
           findings: core.findings.map((f) => ({
             id: f.id,
             title: f.title
-          }))
+          })),
+          reviewScope: `${core.identity.source.kind === "index" ? "Current staged versions" : "Current working-tree versions"} of: ${core.files.map((f) => f.source.path).join(", ")}. Uses the selected model and the synchronized central policy.`
         } : {},
         ...preview ? { preview } : {},
+        ...followup ? {
+          followup: {
+            ...followup,
+            rereviewAllowed: followup.rereviewAllowed && !!rereview
+          }
+        } : {},
         entries,
         message: notice
       });
@@ -23533,6 +23796,11 @@ function deliveryNotice(entry) {
   return "Delivery is unconfirmed. Review the saved entry and choose Submit now to retry with the same request ID.";
 }
 function submissionError(error2) {
+  if (error2 instanceof ReviewSubmissionDeliveryError) {
+    if (error2.statusCode === 404 || error2.statusCode === 410)
+      return "This submission is no longer available for status checks. Its retention period may have ended; any adopted criterion has a separate history in Central Review Criteria.";
+    return "Central review status could not be verified. Check the connection and request the status again before synchronizing or reviewing.";
+  }
   if (error2 instanceof SubmissionSessionError) {
     if (error2.code === "report-mismatch")
       return "This review does not match the saved history in the current workspace, profile, and connection.";
@@ -23540,6 +23808,10 @@ function submissionError(error2) {
       return "Preview the content again and confirm it before continuing.";
     if (error2.code === "selection-changed")
       return "The workspace or central connection changed. Reopen this review under the intended connection.";
+    if (error2.code === "synchronization-required")
+      return "The reviewed policy or snapshot changed. Check central review status and synchronize again before reviewing.";
+    if (error2.code === "receipt-required")
+      return "A confirmed server receipt is required to check central review status.";
   }
   return "The action could not be confirmed. Check the central connection and saved outbox before retrying; a prior server delivery may still have succeeded.";
 }
@@ -23720,22 +23992,22 @@ function activate(context) {
       return false;
     }
     const shellArgs = isCodex ? ["login"] : isClaude ? ["auth", "login", "--claudeai"] : [];
-    const env3 = {};
+    const env4 = {};
     if (isClaude) {
-      env3.ANTHROPIC_API_KEY = null;
-      env3.ANTHROPIC_AUTH_TOKEN = null;
+      env4.ANTHROPIC_API_KEY = null;
+      env4.ANTHROPIC_AUTH_TOKEN = null;
     } else if (provider === "geminicli") {
-      env3.GEMINI_API_KEY = null;
-      env3.GOOGLE_API_KEY = null;
-      env3.GOOGLE_GENAI_USE_VERTEXAI = null;
-      env3.GOOGLE_GENAI_USE_GCA = "true";
+      env4.GEMINI_API_KEY = null;
+      env4.GOOGLE_API_KEY = null;
+      env4.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env4.GOOGLE_GENAI_USE_GCA = "true";
     }
     const terminal = vscode18.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
       cwd,
-      env: env3
+      env: env4
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
@@ -24021,9 +24293,9 @@ function activate(context) {
     vscode18.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
     vscode18.workspace.onDidOpenTextDocument(invalidateChangedSource)
   );
-  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic) {
+  async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback) {
     const cfg2 = getConfig();
-    let localSettings = getStandaloneReviewSettings(relPaths.length);
+    let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
     try {
       const scope2 = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: "repository" });
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope2));
@@ -24032,13 +24304,20 @@ function activate(context) {
       void vscode18.window.showErrorMessage(standaloneError(error2).message);
       return;
     }
+    if (feedback) {
+      if (!feedback.current() || localSettings.mode !== "centralized" || localSettings.connectionId !== feedback.connectionId || localSettings.profileId !== feedback.profileId)
+        throw new StandaloneReviewError("central-connection-required");
+      localSettings = { ...localSettings, freshness: "online", offlineBehavior: "pause", requiredCentralSnapshot: feedback.snapshotId };
+    }
     const backend = createReviewBackend(cfg2, {
       workerFile: context.asAbsolutePath("out/standalone-review-worker.js"),
       settings: localSettings
     });
     let automaticError;
     let automaticResultDisplayed = false;
-    await execution.prepare((signal) => withReviewSignals(signal, automatic?.signal, async (combined) => {
+    const ownerSignal = automatic?.signal ?? feedback?.signal;
+    await execution.prepare((signal) => withReviewSignals(signal, ownerSignal, async (combined) => {
+      if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
       const job = await backend.prepareReview({
         repoRoot,
         files: relPaths,
@@ -24047,7 +24326,10 @@ function activate(context) {
         sourceExclusions,
         ...automatic?.value.automatic ? { automatic: automatic.value.automatic } : {}
       }, combined);
-      return { ...job, run: (runSignal, progress) => withReviewSignals(runSignal, automatic?.signal, (merged) => job.run(merged, progress)) };
+      return { ...job, run: (runSignal, progress) => withReviewSignals(runSignal, ownerSignal, (merged) => {
+        if (feedback && !feedback.current()) throw new StandaloneReviewError("cancelled");
+        return job.run(merged, progress);
+      }) };
     }), {
       preparing: () => {
         statusBar.setPreparing();
@@ -24377,8 +24659,15 @@ function activate(context) {
       void vscode18.window.showInformationMessage("Select a saved review in history or run a review first.");
       return;
     }
+    const { report, repoRoot } = selected;
     try {
-      await openReviewSubmission(selected.report, selected.repoRoot, context);
+      await openReviewSubmission(report, repoRoot, context, async (pin, signal, current) => {
+        if (!current() || !report.gcr) return;
+        const core = clientReviewReport(report.gcr.report);
+        const files = [...new Set(core.files.map((file) => file.source.path))];
+        ++reviewIntent;
+        await analyze(files, repoRoot, core.identity.source.kind === "index" ? "staged" : files.length === 1 ? "file" : "directory", void 0, [], void 0, { ...pin, signal, current });
+      });
     } catch {
       void vscode18.window.showErrorMessage("The review feedback could not be opened. Check the current workspace and review connection.");
     }

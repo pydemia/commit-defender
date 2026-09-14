@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "status": "package-verified-installation-pending",
+  "scope": "P08-C05 follow-up status, explicit sync and snapshot-pinned re-review; full PRISM CD UI model cycle remains open",
+  "clientSource": "714b37d17777fe12a5e9ecbeba81ae76de8f04c7",
+  "clientVersion": "0.1.0-alpha.26",
+  "package": {
+    "version": "2.5.0",
+    "vsixSha256": "89b090537137be9b47360b93ea658eca06193eae7bfd17b18e1cb729d25130d4",
+    "files": {
+      "out/extension.js": "94c0d1c30bc363b5006e059602d854e007f5d1b39fa7166a7fee64e30f1225cd",
+      "out/hook-cli.js": "9429ddd93db7a17b5c4c5827797864be10d99c5eba1a794da1ec4cce34ead416",
+      "out/standalone-review-worker.js": "9502416671fdeed9a2c2218456f59ab6e0ff1a70c642352afcefc09c806f24f3",
+      "out/review-chat-worker.js": "3510f5b2436dbf541da1fe994237165ad5c17cf1e099c8d4dff8c0ffe990b65a",
+      "out/advisory-hook.cjs": "0dfa237d096ca87009377de9032a68ba1e21367d8a45c0b885e648b135292ced",
+      "out/gcr-service/main.mjs": "c855b77e9a66bd8059cd1c395bec8eeeca30ceb6a7275bc3eba9c481f98b66bf",
+      "out/gcr-service/manifest.json": "928770b3fbceb28a714559a52d3644c33531fedfa08aa8a72b78c3ace3d362e3"
+    }
+  },
+  "tests": {
+    "tests": 176,
+    "pass": 176,
+    "fail": 0
+  },
+  "typecheck": true,
+  "testTypecheck": true,
+  "build": true,
+  "nativeHost": {
+    "status": "passed",
+    "vscode": "1.135.0",
+    "syntheticReview": true,
+    "externalModelCalls": 0,
+    "connectionId": "d3b29c7ba3213bfe85c185b89d17cf3c48428364903dc3d332edb8c1c8ce6fad",
+    "stage": "selection-change-closed-panel",
+    "publishedSnapshot": "snapshot-2",
+    "localCandidateId": "ac9ba9da-0f1e-44bf-8cc2-518e8fdec987",
+    "extensionVersion": "2.5.0",
+    "requestId": "2c15d95e-7644-453b-ac3a-3bc8fac2bbad",
+    "receipt": {
+      "audience": {
+        "repositoryId": "repository",
+        "serverId": "server",
+        "tenantId": "tenant",
+        "userId": "alice"
+      },
+      "clientId": "commit-defender",
+      "evidence": "client-reported",
+      "expiresAt": "2026-10-14T07:16:26.811Z",
+      "id": "08c9d7ce-b28f-44a3-8eb4-b66185fe4fd0",
+      "kind": "feedback",
+      "payloadHash": "70d3639bcb922ee1edff1bb956de6f93e7de5d18a03c2b6799263c05e485e546",
+      "receivedAt": "2026-09-14T07:16:26.811Z",
+      "requestId": "2c15d95e-7644-453b-ac3a-3bc8fac2bbad",
+      "schemaVersion": 1,
+      "status": "submitted"
+    },
+    "submissionCalls": 1,
+    "reviewStatusCalls": 4,
+    "credentialRemoved": true,
+    "fixtureAndKeysRemoved": true,
+    "ui": {
+      "verified": true,
+      "preview": true,
+      "confirmation": true,
+      "noHtmlInjection": true,
+      "outboxReopen": true,
+      "localCandidate": true,
+      "explicitSubmission": true,
+      "pendingStatus": true,
+      "publicationRequired": true,
+      "explicitSynchronization": true,
+      "retiredCriterionPreventsRereview": true
+    }
+  },
+  "minimumHost": {
+    "status": "passed",
+    "vscode": "1.90.2",
+    "node": "20.9.0",
+    "electron": "29.4.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "extensionVersion": "2.5.0",
+    "delivery": "packaged-extension",
+    "commandCount": 25,
+    "activation": true,
+    "hookDefault": "disable",
+    "modelCalled": false,
+    "checks": [
+      "activation",
+      "command registration",
+      "clear findings",
+      "cancel without run",
+      "no hook installed",
+      "standalone defaults and user profile",
+      "empty history refresh creates no local store or OS key"
+    ]
+  },
+  "externalModelCalls": 0,
+  "limitations": [
+    "Native UI uses an owned TLS publisher and synthetic initial review.",
+    "The successful pinned re-review integration uses a synthetic executor.",
+    "Actual PRISM approval to sync to model re-review from this CD UI remains unverified.",
+    "Public Marketplace release and full P08 remain open."
+  ],
+  "initialFailures": [
+    "Full suite initially stopped on the old alpha.25 version assertion; updated to delivered alpha.26.",
+    "New message test initially expected confirmed to be retained after validated parsing; corrected the expectation.",
+    "New snapshot-change test initially changed only the publisher, while a fresh signed local cache remained valid; added actual shared-cache synchronization to exercise snapshot replacement."
+  ]
+}

@@ -1490,13 +1490,60 @@ var reviewSubmissionReceipt = object({
   receivedAt: timestamp,
   expiresAt: timestamp
 });
+var intakeRule = object({
+  id,
+  title: text(500, 1),
+  state: choice(["draft", "evaluated", "shadow", "active", "retired"]),
+  revision: integer(1),
+  contentHash: sha256
+});
+var intakeFeedback = object({
+  id,
+  kind: choice(["correction", "exception"]),
+  revision: integer(1),
+  resolution: union(object({
+    action: choice(["acknowledge", "approve-exception", "reject"]),
+    note: text(2e3, 1),
+    at: timestamp
+  }), literal(null)),
+  exception: union(object({
+    id,
+    revision: integer(1),
+    startsAt: timestamp,
+    expiresAt: timestamp,
+    revoked: boolean
+  }), literal(null))
+});
+var reviewSubmissionStatus = refined(object({
+  schemaVersion: literal(1),
+  receipt: reviewSubmissionReceipt,
+  checkedAt: timestamp,
+  decision: union(object({
+    action: choice(["dismiss", "create-candidate", "link-feedback"]),
+    note: text(2e3, 1),
+    at: timestamp,
+    rule: union(intakeRule, literal(null)),
+    feedback: union(intakeFeedback, literal(null))
+  }), literal(null))
+}), (value, at) => {
+  const d = value.decision;
+  if (!d)
+    return;
+  if (d.action === "dismiss" && (d.rule || d.feedback) || d.action === "create-candidate" && (!d.rule || d.feedback) || d.action === "link-feedback" && (!d.rule || !d.feedback) || value.receipt.kind === "result" && d.action !== "dismiss")
+    fail(at, "inconsistent intake links");
+  const f = d.feedback;
+  if (f?.exception && (f.kind !== "exception" || f.resolution?.action !== "approve-exception" || f.exception.revision !== f.revision || f.exception.expiresAt <= f.exception.startsAt))
+    fail(at, "inconsistent intake exception");
+  if (f?.resolution && (f.resolution.action === "acknowledge" && f.kind !== "correction" || f.resolution.action === "approve-exception" && !f.exception))
+    fail(at, "inconsistent intake resolution");
+});
 var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2142,7 +2189,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

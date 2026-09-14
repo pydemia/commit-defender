@@ -664,33 +664,150 @@ test("identity failure permits only confirmed local fallback and never switches 
   assert.equal(attempts, 1);
 });
 
-test('connected review conversations survive unchanged synchronization and reject confirmed revoked resumes', async t => {
+test("connected review conversations survive unchanged synchronization and reject confirmed revoked resumes", async (t) => {
   const f = await setup(t);
   let calls = 0;
-  const executor: import('@gcr/client-core').LocalReviewChatExecutor = {
-    descriptor, conversationCapability: 'checkpoint-tool-v1', review: response,
+  const executor: import("@gcr/client-core").LocalReviewChatExecutor = {
+    descriptor,
+    conversationCapability: "checkpoint-tool-v1",
+    review: response,
     async converse(input) {
       calls++;
-      await input.source.execute('read_file', { path: 'sum.ts', side: 'source' });
-      await input.questions.askUser('central-question', { question: 'Is subtraction intentional?', options: ['Yes', 'No'] });
-      throw Error('paused');
+      await input.source.execute("read_file", {
+        path: "sum.ts",
+        side: "source",
+      });
+      await input.questions.askUser("central-question", {
+        question: "Is subtraction intentional?",
+        options: ["Yes", "No"],
+      });
+      throw Error("paused");
     },
   };
   const ports = { ...f.ports, prepareExecutor: async () => executor };
-  const prepared = await prepareStandaloneReview(f.request, f.settings, signal(), ports);
+  const prepared = await prepareStandaloneReview(
+    f.request,
+    f.settings,
+    signal(),
+    ports,
+  );
   const report = (await prepared.run(signal())).report.gcr!.report;
-  const { reviewChatOperation } = await import('../src/reviewChatSession.js');
-  const target = { repoRoot: f.repo, reportId: report.runId, mode: 'centralized' as const };
-  await withCentralConnection(f.scope, c => c.synchronize(f.selection.connectionId), f.ports);
-  const read = await reviewChatOperation(target, { type: 'read' }, f.settings, signal(), undefined, ports);
-  assert.equal(read.type, 'state');
-  const pending = await reviewChatOperation(target, { type: 'send', turnId: 'central-turn', content: 'Explain the change.' }, f.settings, signal(), undefined, ports);
-  assert.equal(pending.type, 'state');
-  if (pending.type !== 'state') throw Error('fixture');
-  assert.equal(pending.state.conversation.turns[0].status, 'awaiting_input');
+  const { reviewChatOperation } = await import("../src/reviewChatSession.js");
+  const target = {
+    repoRoot: f.repo,
+    reportId: report.runId,
+    mode: "centralized" as const,
+  };
+  await withCentralConnection(
+    f.scope,
+    (c) => c.synchronize(f.selection.connectionId),
+    f.ports,
+  );
+  const read = await reviewChatOperation(
+    target,
+    { type: "read" },
+    f.settings,
+    signal(),
+    undefined,
+    ports,
+  );
+  assert.equal(read.type, "state");
+  const pending = await reviewChatOperation(
+    target,
+    { type: "send", turnId: "central-turn", content: "Explain the change." },
+    f.settings,
+    signal(),
+    undefined,
+    ports,
+  );
+  assert.equal(pending.type, "state");
+  if (pending.type !== "state") throw Error("fixture");
+  assert.equal(pending.state.conversation.turns[0].status, "awaiting_input");
   assert.equal(calls, 1);
   f.central.setStatus(403);
-  await assert.rejects(withCentralConnection(f.scope, c => c.synchronize(f.selection.connectionId), f.ports));
-  await assert.rejects(reviewChatOperation(target, { type: 'answer', turnId: 'central-turn', questionId: pending.state.conversation.turns[0].questions[0].id, content: 'No' }, f.settings, signal(), undefined, ports));
+  await assert.rejects(
+    withCentralConnection(
+      f.scope,
+      (c) => c.synchronize(f.selection.connectionId),
+      f.ports,
+    ),
+  );
+  await assert.rejects(
+    reviewChatOperation(
+      target,
+      {
+        type: "answer",
+        turnId: "central-turn",
+        questionId: pending.state.conversation.turns[0].questions[0].id,
+        content: "No",
+      },
+      f.settings,
+      signal(),
+      undefined,
+      ports,
+    ),
+  );
   assert.equal(calls, 1);
+});
+
+test("feedback re-review stops before preparing a model when its confirmed central snapshot changes", async (t) => {
+  const f = await setup(t);
+  let prepared = 0;
+  const ports = {
+    ...f.ports,
+    prepareExecutor: async () => {
+      prepared++;
+      return { descriptor, review: response };
+    },
+  };
+  const pinned = {
+    ...f.settings,
+    offlineBehavior: "pause" as const,
+    requiredCentralSnapshot: "snapshot",
+  };
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...pinned, requiredCentralSnapshot: "other" },
+      signal(),
+      ports,
+    ),
+    { code: "central-snapshot-changed" },
+  );
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...pinned, mode: "standalone" },
+      signal(),
+      ports,
+    ),
+    { code: "central-snapshot-changed" },
+  );
+  await assert.rejects(
+    prepareStandaloneReview(
+      f.request,
+      { ...pinned, offlineBehavior: "standalone" },
+      signal(),
+      ports,
+    ),
+    { code: "central-snapshot-changed" },
+  );
+  assert.equal(prepared, 0);
+  const job = await prepareStandaloneReview(f.request, pinned, signal(), ports);
+  assert.equal(
+    (await job.run(signal())).report.gcr!.report.status,
+    "completed",
+  );
+  assert.equal(prepared, 1);
+  f.central.publishCriteria([]);
+  await withCentralConnection(
+    f.scope,
+    (c) => c.synchronize(f.selection.connectionId),
+    f.ports,
+  );
+  await assert.rejects(
+    prepareStandaloneReview(f.request, pinned, signal(), ports),
+    { code: "central-snapshot-changed" },
+  );
+  assert.equal(prepared, 1);
 });

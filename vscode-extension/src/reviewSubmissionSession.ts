@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   clientReviewReport,
   type ClientReviewReport,
+  type ReviewSubmissionStatus,
 } from "@gcr/client-contract";
 import {
   CentralConnections,
@@ -12,6 +13,7 @@ import {
   prepareReviewSubmission,
   contentHash,
   defaultLocalDataDirectory,
+  reviewSubmissionPolicyState,
 } from "@gcr/client-core";
 import { knowledgeScope, withLocalKnowledge } from "./localKnowledge.js";
 import type { CentralPorts } from "./centralConnection.js";
@@ -23,6 +25,14 @@ export type SubmissionEntry = Awaited<
   ReturnType<ReviewSubmissionQueue["get"]>
 >["value"];
 export type SubmissionPreview = ReturnType<typeof prepareReviewSubmission>;
+export type SubmissionFollowup = {
+  id: string;
+  status: ReviewSubmissionStatus;
+  sync: null | {
+    snapshotId: string;
+    policyState: ReturnType<typeof reviewSubmissionPolicyState>;
+  };
+};
 export class SubmissionSessionError extends Error {
   constructor(readonly code: string) {
     super(code);
@@ -47,6 +57,7 @@ export class ReviewSubmissionSession {
   private closed = false;
   private busy = false;
   private readonly localCandidates = new Map<string, string>();
+  private readonly followups = new Map<string, SubmissionFollowup>();
   private constructor(
     private readonly options: Options,
     readonly report: ClientReviewReport,
@@ -236,6 +247,78 @@ export class ReviewSubmissionSession {
     return this.operation(async () => {
       this.belongs((await this.queue.get(id)).value);
       return (await this.queue.cancel(id)).value;
+    });
+  }
+  private async inspect(id: string, signal: AbortSignal, withCache: boolean) {
+    const entry = this.belongs((await this.queue.get(id)).value);
+    if (!entry.receipt) return fail("receipt-required");
+    const status = await this.connections.submissionStatus(
+      this.options.connectionId,
+      entry.receipt,
+      signal,
+    );
+    let sync: SubmissionFollowup["sync"] = null;
+    if (withCache) {
+      const selected = await this.connections.review(
+        this.options.connectionId,
+        "offline",
+        signal,
+      );
+      const snapshot = await selected.cache.read("offline");
+      sync = {
+        snapshotId: snapshot.manifest.payload.snapshotId,
+        policyState: reviewSubmissionPolicyState(status, snapshot),
+      };
+    }
+    const result = { id, status, sync };
+    this.followups.set(id, result);
+    return structuredClone(result);
+  }
+  reviewStatus(id: string, signal: AbortSignal) {
+    return this.operation(() => this.inspect(id, signal, false));
+  }
+  synchronizeStatus(id: string, signal: AbortSignal) {
+    return this.operation(async () => {
+      const entry = this.belongs((await this.queue.get(id)).value);
+      if (!entry.receipt) return fail("receipt-required");
+      await this.connections.synchronize(this.options.connectionId, signal);
+      return this.inspect(id, signal, true);
+    });
+  }
+  prepareRereview(id: string, signal: AbortSignal) {
+    return this.operation(async () => {
+      const prior = this.followups.get(id)?.sync;
+      if (
+        !prior ||
+        !["criterion-current", "exception-current"].includes(prior.policyState)
+      )
+        return fail("synchronization-required");
+      const current = await this.inspect(id, signal, true);
+      if (
+        !current.sync ||
+        current.sync.snapshotId !== prior.snapshotId ||
+        !["criterion-current", "exception-current"].includes(
+          current.sync.policyState,
+        )
+      )
+        return fail("synchronization-required");
+      return {
+        connectionId: this.options.connectionId,
+        profileId: this.options.profileId,
+        snapshotId: current.sync.snapshotId,
+      };
+    });
+  }
+  centralReviewUrl(id: string) {
+    return this.operation(async () => {
+      const entry = this.belongs((await this.queue.get(id)).value);
+      if (!entry.receipt) return fail("receipt-required");
+      const url = new URL("review-criteria", this.destination.serverUrl);
+      url.searchParams.set(
+        "repositoryId",
+        this.destination.audience.repositoryId,
+      );
+      return url.toString();
     });
   }
   saveLocalCandidate(hash: string) {

@@ -13,6 +13,7 @@ import {
   reviewSubmission,
   type ReviewSubmission,
   type ReviewSubmissionReceipt,
+  type ReviewSubmissionStatus,
   canonicalKnowledgeJson,
   encodeKnowledgeBundle,
   KNOWLEDGE_SIGNATURE_CONTEXT,
@@ -163,6 +164,9 @@ export async function centralFixture(
     { payload: ReviewSubmission; receipt: ReviewSubmissionReceipt }
   >();
   let submissionCalls = 0;
+  let reviewStatusCalls = 0,
+    reviewStatusCode = 200;
+  const decisions = new Map<string, ReviewSubmissionStatus["decision"]>();
   const server = createServer(
     { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) },
     (req, res) => {
@@ -209,6 +213,29 @@ export async function centralFixture(
           return;
         }
         res.end(JSON.stringify(manifest));
+        return;
+      }
+      const statusId = /\/review-submissions\/([^/]+)\/status$/.exec(
+        req.url ?? "",
+      )?.[1];
+      if (req.method === "GET" && statusId) {
+        reviewStatusCalls++;
+        const row = [...submissions.values()].find(
+          (x) => x.receipt.id === statusId,
+        );
+        if (!row || reviewStatusCode !== 200) {
+          res.writeHead(row ? reviewStatusCode : 404);
+          res.end("{}");
+          return;
+        }
+        res.end(
+          JSON.stringify({
+            schemaVersion: 1,
+            receipt: row.receipt,
+            checkedAt: new Date().toISOString(),
+            decision: decisions.get(row.payload.id) ?? null,
+          }),
+        );
         return;
       }
       if (
@@ -260,10 +287,13 @@ export async function centralFixture(
         });
         return;
       }
-      const component =
-        /\/bundles\/(policy|collective|personal)\?snapshotId=snapshot$/.exec(
-          req.url ?? "",
-        )?.[1];
+      const target = new URL(req.url ?? "/", "https://fixture.invalid");
+      const component = (["policy", "collective", "personal"] as const).find(
+        (key) =>
+          target.pathname.endsWith(
+            "/bundles/" + payload.components[key].bundleId,
+          ) && target.searchParams.get("snapshotId") === payload.snapshotId,
+      );
       if (component) {
         res.end(bytes[component]);
         return;
@@ -303,6 +333,43 @@ export async function centralFixture(
   return {
     audience,
     submissions,
+    get reviewStatusCalls() {
+      return reviewStatusCalls;
+    },
+    setReviewStatus(code: number) {
+      reviewStatusCode = code;
+    },
+    setReviewDecision(id: string, value: ReviewSubmissionStatus["decision"]) {
+      decisions.set(id, structuredClone(value));
+    },
+    publishCriteria(
+      criteria: Extract<
+        CentralKnowledgeBundle,
+        { component: "policy" }
+      >["criteria"],
+    ) {
+      if (bundles.policy.component !== "policy") throw Error("Policy fixture");
+      bundles.policy.criteria = structuredClone(criteria);
+      bytes.policy = Buffer.from(encodeKnowledgeBundle(bundles.policy));
+      const sequence = payload.components.policy.releaseSequence + 1;
+      payload.snapshotId = "snapshot-" + sequence;
+      payload.components.policy = {
+        bundleId: "policy-" + sequence,
+        releaseSequence: sequence,
+        contentHash: createHash("sha256").update(bytes.policy).digest("hex"),
+        sizeBytes: bytes.policy.length,
+      };
+      const serialized = canonicalKnowledgeJson(payload);
+      manifest.manifestHash = createHash("sha256")
+        .update(serialized)
+        .digest("hex");
+      manifest.signature = sign(
+        null,
+        Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + serialized),
+        signing.privateKey,
+      ).toString("base64url");
+      return payload.snapshotId;
+    },
     get submissionCalls() {
       return submissionCalls;
     },

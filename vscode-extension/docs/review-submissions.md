@@ -12,9 +12,19 @@ Choose correction / false positive, exception request, or new judgment. Write th
 
 Open an outbox entry to inspect and confirm its original payload before retrying. Retries preserve the request ID; a stored receipt is reused. A connection error may leave delivery unconfirmed even if the server accepted the request. **Cancel local retries** cannot retract a server receipt. The outbox and server intake retain submissions for 30 days. No source bodies, review prose, conversation history, or local Memory/Skill bodies are added automatically; text you put in the message is shared as written.
 
-Submissions are visible to authorized repository reviewers and labeled `client-reported`. A receipt means the server received the payload. It does not approve a criterion or exception. The central intake review, conversion to a candidate, approval status, and subsequent bundle synchronization are still being implemented under P08-C05. Until those are connected, the extension displays delivery status only.
+Submissions are visible to authorized repository reviewers and labeled `client-reported`. A receipt means the server received the payload. It does not approve a criterion or exception. Central reviewers can adopt feedback as a candidate or link it to a correction/exception request. Commit Defender 2.5.0 adds the follow-up actions below; the server must support the status endpoint (GCR alpha.47 or later).
 
 A changed workspace trust, review configuration, profile, or selected connection closes the panel. Each action checks the saved report and connection again. Review history from another workspace, profile, or central audience cannot be submitted from this panel.
+
+## Check approval and review again
+
+For a submitted outbox entry, **Check central review status** retrieves its current criterion state and revision, intake note, and correction/exception decision using `knowledge:read`. **Open central criteria** opens the configured server’s criteria page. Both require the original submitting user and client identity. Merely opening the panel does not fetch status.
+
+Choose **Synchronize central policy** to download and verify the current signed policy. An approval by itself does not enable re-review: the exact criterion revision/hash and, when relevant, approved exception must be present in that policy. A correction acknowledgement needs a subsequent criterion revision. Pending/rejected feedback, inactive criteria, and expired/revoked/future or superseded exceptions remain unavailable for this action.
+
+**Review these files again** starts a separate review only after this explicit synchronization. It reads the current staged versions for an original index review, or current working-tree versions of the original report’s file paths otherwise. It uses the selected model and pins the policy snapshot confirmed in this panel. Source applicability still follows the criterion and exception scopes. The host rechecks status and the snapshot before launching; a changed policy requires a new status check and synchronization. This path pauses on unavailable central policy and does not fall back to local-only review. Closing the feedback panel or changing its selection cancels an in-flight follow-up review.
+
+After receipt retention expires, status may return unavailable even though an adopted criterion remains in central history. Status retrieval, synchronization and re-review do not send another feedback payload.
 
 ## Verification
 

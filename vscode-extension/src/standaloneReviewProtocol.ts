@@ -7,6 +7,8 @@ export interface StandaloneReviewSettings {
   connectionId?: string;
   freshness?: "online" | "offline";
   offlineBehavior?: OfflineBehavior;
+  /** Host-pinned snapshot after explicit feedback synchronization. */
+  requiredCentralSnapshot?: string;
   profileId: string;
   provider: string;
   model: string;
@@ -18,7 +20,10 @@ export interface StandaloneReviewSettings {
 }
 
 export class StandaloneReviewError extends Error {
-  constructor(readonly code: string, readonly retryAt?: number) {
+  constructor(
+    readonly code: string,
+    readonly retryAt?: number,
+  ) {
     super(standaloneErrorMessage(code));
     this.name = "StandaloneReviewError";
   }
@@ -75,6 +80,8 @@ export function standaloneErrorMessage(code: string): string {
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "central-snapshot-changed":
+      return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
       return "The local execution policy could not authorize this review.";
     case "no-source":
@@ -114,6 +121,7 @@ const safeCodes = new Set([
   "executor-unavailable",
   "credential-unavailable",
   "needs-context",
+  "central-snapshot-changed",
   "policy-unavailable",
   "no-source",
   "disposed",
@@ -128,7 +136,13 @@ export function standaloneError(error: unknown): StandaloneReviewError {
     typeof code === "string" && safeCodes.has(code)
       ? code
       : "preparation-failed",
-    code === "request-deferred" && error && typeof error === "object" && "retryAt" in error
-      && typeof error.retryAt === "number" && Number.isSafeInteger(error.retryAt) ? error.retryAt : undefined,
+    code === "request-deferred" &&
+      error &&
+      typeof error === "object" &&
+      "retryAt" in error &&
+      typeof error.retryAt === "number" &&
+      Number.isSafeInteger(error.retryAt)
+      ? error.retryAt
+      : undefined,
   );
 }

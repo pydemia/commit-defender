@@ -1269,13 +1269,60 @@ var reviewSubmissionReceipt = object({
   receivedAt: timestamp,
   expiresAt: timestamp
 });
+var intakeRule = object({
+  id,
+  title: text(500, 1),
+  state: choice(["draft", "evaluated", "shadow", "active", "retired"]),
+  revision: integer(1),
+  contentHash: sha256
+});
+var intakeFeedback = object({
+  id,
+  kind: choice(["correction", "exception"]),
+  revision: integer(1),
+  resolution: union(object({
+    action: choice(["acknowledge", "approve-exception", "reject"]),
+    note: text(2e3, 1),
+    at: timestamp
+  }), literal(null)),
+  exception: union(object({
+    id,
+    revision: integer(1),
+    startsAt: timestamp,
+    expiresAt: timestamp,
+    revoked: boolean
+  }), literal(null))
+});
+var reviewSubmissionStatus = refined(object({
+  schemaVersion: literal(1),
+  receipt: reviewSubmissionReceipt,
+  checkedAt: timestamp,
+  decision: union(object({
+    action: choice(["dismiss", "create-candidate", "link-feedback"]),
+    note: text(2e3, 1),
+    at: timestamp,
+    rule: union(intakeRule, literal(null)),
+    feedback: union(intakeFeedback, literal(null))
+  }), literal(null))
+}), (value, at) => {
+  const d = value.decision;
+  if (!d)
+    return;
+  if (d.action === "dismiss" && (d.rule || d.feedback) || d.action === "create-candidate" && (!d.rule || d.feedback) || d.action === "link-feedback" && (!d.rule || !d.feedback) || value.receipt.kind === "result" && d.action !== "dismiss")
+    fail(at, "inconsistent intake links");
+  const f = d.feedback;
+  if (f?.exception && (f.kind !== "exception" || f.resolution?.action !== "approve-exception" || f.exception.revision !== f.revision || f.exception.expiresAt <= f.exception.startsAt))
+    fail(at, "inconsistent intake exception");
+  if (f?.resolution && (f.resolution.action === "acknowledge" && f.kind !== "correction" || f.resolution.action === "approve-exception" && !f.exception))
+    fail(at, "inconsistent intake resolution");
+});
 var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -5614,6 +5661,23 @@ var KnowledgeHttpTransport = class {
     if (contentHash(input2.audience) !== contentHash(this.binding.audience))
       throw new Error("submission-binding-mismatch");
     const response = await this.get(`api/v1/repositories/${encodeURIComponent(input2.audience.repositoryId)}/review-submissions/${input2.kind === "result" ? "results" : "feedback"}`, signal, void 0, JSON.stringify(input2));
+    const body2 = await this.submissionJson(response, [200, 201]);
+    const receipt = reviewSubmissionReceipt(body2);
+    if (receipt.requestId !== input2.id || receipt.payloadHash !== contentHash(input2) || contentHash(receipt.audience) !== contentHash(input2.audience) || receipt.clientId !== input2.clientId || receipt.kind !== input2.kind)
+      throw new ReviewSubmissionDeliveryError(503);
+    return receipt;
+  }
+  async submissionStatus(value, signal) {
+    const receipt = reviewSubmissionReceipt(value);
+    if (contentHash(receipt.audience) !== contentHash(this.binding.audience))
+      throw new Error("submission-binding-mismatch");
+    const response = await this.get(`api/v1/repositories/${encodeURIComponent(receipt.audience.repositoryId)}/review-submissions/${encodeURIComponent(receipt.id)}/status`, signal);
+    const result = reviewSubmissionStatus(await this.submissionJson(response, [200]));
+    if (contentHash(result.receipt) !== contentHash(receipt))
+      throw new ReviewSubmissionDeliveryError(503);
+    return result;
+  }
+  async submissionJson(response, successCodes) {
     try {
       const chunks = [];
       let size = 0;
@@ -5628,17 +5692,14 @@ var KnowledgeHttpTransport = class {
       try {
         body2 = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
       } catch {
-        throw new ReviewSubmissionDeliveryError(response.statusCode === 200 || response.statusCode === 201 ? 503 : response.statusCode ?? 503);
+        throw new ReviewSubmissionDeliveryError(successCodes.includes(response.statusCode ?? 0) ? 503 : response.statusCode ?? 503);
       }
-      if (response.statusCode !== 200 && response.statusCode !== 201) {
+      if (!successCodes.includes(response.statusCode ?? 0)) {
         const code = body2?.error?.code;
         const authorityFailure = response.statusCode === 403 && code === "CLIENT_ACCESS_REVOKED" ? "revoked" : response.statusCode === 401 && code === "CLIENT_AUTHENTICATION_REQUIRED" ? "authentication-required" : response.statusCode === 503 && code === "IDENTITY_UNAVAILABLE" ? "identity-unavailable" : void 0;
         throw new ReviewSubmissionDeliveryError(response.statusCode ?? 503, authorityFailure);
       }
-      const receipt = reviewSubmissionReceipt(body2);
-      if (receipt.requestId !== input2.id || receipt.payloadHash !== contentHash(input2) || contentHash(receipt.audience) !== contentHash(input2.audience) || receipt.clientId !== input2.clientId || receipt.kind !== input2.kind)
-        throw new ReviewSubmissionDeliveryError(503);
-      return receipt;
+      return body2;
     } finally {
       response.destroy();
     }
@@ -5901,10 +5962,21 @@ var CentralConnections = class _CentralConnections {
     await this.assert(state);
     if (input2.clientId !== state.value.clientId)
       throw denied();
+    return this.submissionOperation(state, (transport, s) => transport.submitReview(input2, s), signal);
+  }
+  async submissionStatus(id3, value, signal) {
+    const receipt = reviewSubmissionReceipt(value);
+    const state = await this.state(id3);
+    await this.assert(state);
+    if (receipt.clientId !== state.value.clientId)
+      throw denied();
+    return this.submissionOperation(state, (transport, s) => transport.submissionStatus(receipt, s), signal);
+  }
+  async submissionOperation(state, work, signal) {
     const cache = await this.cache(state.value);
     const { generation } = await cache.connectionState();
     try {
-      const result = await this.timed(signal, (s) => this.transport(state).submitReview(input2, s));
+      const result = await this.timed(signal, (s) => work(this.transport(state), s));
       await this.assert(state);
       return result;
     } catch (error2) {
@@ -5916,7 +5988,7 @@ var CentralConnections = class _CentralConnections {
           if (error2.authorityFailure !== "identity-unavailable") {
             this.invalid.add(state.value.credentialReference);
             try {
-              await this.records.write("settings", id3, { ...state.value, status: "disconnected" }, state.revision);
+              await this.records.write("settings", state.value.id, { ...state.value, status: "disconnected" }, state.revision);
             } catch {
             }
             try {
@@ -6906,7 +6978,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7780,7 +7852,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.25",
+  version: "0.1.0-alpha.26",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7843,6 +7915,8 @@ function standaloneErrorMessage(code) {
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "central-snapshot-changed":
+      return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
       return "The local execution policy could not authorize this review.";
     case "no-source":
@@ -7881,6 +7955,7 @@ var safeCodes = /* @__PURE__ */ new Set([
   "executor-unavailable",
   "credential-unavailable",
   "needs-context",
+  "central-snapshot-changed",
   "policy-unavailable",
   "no-source",
   "disposed",
@@ -7920,6 +7995,10 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     checkAbort(signal);
     if (!["standalone", "centralized"].includes(settings.mode))
       throw new StandaloneReviewError("unsupported-mode");
+    if (settings.requiredCentralSnapshot !== void 0 && (typeof settings.requiredCentralSnapshot !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(
+      settings.requiredCentralSnapshot
+    ) || settings.mode !== "centralized" || settings.offlineBehavior !== "pause"))
+      throw new StandaloneReviewError("central-snapshot-changed");
     if (settings.mode === "centralized") {
       if (!settings.connectionId)
         throw new StandaloneReviewError("central-connection-required");
@@ -7952,13 +8031,21 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       throw new StandaloneReviewError("policy-unavailable");
     const assertAutomaticSource = async () => {
       if (!automatic) return;
-      const current = await observeAutomaticRepository(request.repoRoot, settings.excludePatterns);
+      const current = await observeAutomaticRepository(
+        request.repoRoot,
+        settings.excludePatterns
+      );
       if (current.head !== automatic.head || automatic.reason === "stage" && current.fingerprint !== automatic.indexFingerprint)
         throw new StandaloneReviewError("source-changed");
       if (automatic.reason === "save") {
         for (const file of request.files) {
-          const observed = await observeAutomaticFile(current.root, file, settings.excludePatterns);
-          if (!observed || observed.hash !== automatic.files[file]) throw new StandaloneReviewError("source-changed");
+          const observed = await observeAutomaticFile(
+            current.root,
+            file,
+            settings.excludePatterns
+          );
+          if (!observed || observed.hash !== automatic.files[file])
+            throw new StandaloneReviewError("source-changed");
         }
       }
       return current;
@@ -7978,15 +8065,20 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
         const read = snapshot.readFile(selected.path, "source");
         if (automatic.reason === "save") {
           const hash4 = read.status === "available" ? read.source.hash : null;
-          if (hash4 !== automatic.files[selected.path]) throw new StandaloneReviewError("source-changed");
+          if (hash4 !== automatic.files[selected.path])
+            throw new StandaloneReviewError("source-changed");
         } else {
-          const expected = automaticSource.changes.find((c) => c.path === selected.path);
+          const expected = automaticSource.changes.find(
+            (c) => c.path === selected.path
+          );
           if (!expected) throw new StandaloneReviewError("source-changed");
           if (read.status === "available") {
             const bytes = Buffer.from(read.text, "utf8");
             const oid = (0, import_node_crypto18.createHash)(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
-            if (oid !== expected.oid) throw new StandaloneReviewError("source-changed");
-          } else if (expected.status !== "D") throw new StandaloneReviewError("source-changed");
+            if (oid !== expected.oid)
+              throw new StandaloneReviewError("source-changed");
+          } else if (expected.status !== "D")
+            throw new StandaloneReviewError("source-changed");
         }
       }
     }
@@ -8039,6 +8131,8 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     checkAbort(signal);
     if (context.status !== "ready")
       throw new StandaloneReviewError("needs-context");
+    if (settings.requiredCentralSnapshot && context.context.identity.centralSnapshot?.id !== settings.requiredCentralSnapshot)
+      throw new StandaloneReviewError("central-snapshot-changed");
     let executor;
     try {
       executor = await (ports.prepareExecutor ?? prepareCodexAccountExecutor)({
@@ -8090,7 +8184,11 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       });
       opened.push(records);
       history = new LocalHistoryStore(records, void 0, identity.audience);
-      conversations = new ReviewConversationStore(records, void 0, identity.audience);
+      conversations = new ReviewConversationStore(
+        records,
+        void 0,
+        identity.audience
+      );
     }
     return {
       backendId: client.mode,
@@ -8129,7 +8227,13 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               },
               identity: policy.identity,
               signal: runSignal,
-              ...automatic ? { reason: automatic.reason, limits: { minimumIntervalMs: automatic.minimumIntervalMs, maximumReviewsPerHour: automatic.maximumReviewsPerHour } } : {},
+              ...automatic ? {
+                reason: automatic.reason,
+                limits: {
+                  minimumIntervalMs: automatic.minimumIntervalMs,
+                  maximumReviewsPerHour: automatic.maximumReviewsPerHour
+                }
+              } : {},
               assertValid: async () => {
                 await assertAutomaticSource();
                 if (await context.context.observeCentralSnapshot() !== "current")
@@ -8160,8 +8264,14 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               try {
                 await conversations.get(report.runId);
               } catch (error2) {
-                if (!(error2 instanceof ReviewConversationError) || error2.code !== "missing") throw error2;
-                await conversations.create({ id: report.runId, review: report, snapshot: fixedSnapshot, policy });
+                if (!(error2 instanceof ReviewConversationError) || error2.code !== "missing")
+                  throw error2;
+                await conversations.create({
+                  id: report.runId,
+                  review: report,
+                  snapshot: fixedSnapshot,
+                  policy
+                });
               }
               await conversations.prune();
             } catch {

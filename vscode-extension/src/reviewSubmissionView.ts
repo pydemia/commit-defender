@@ -3,7 +3,12 @@ import type { SubmissionSelection } from "./reviewSubmissionSession.js";
 export type SubmissionMessage =
   | { command: "ready" | "refresh" }
   | { command: "prepare"; selection: SubmissionSelection }
-  | { command: "select" | "cancel"; id: string }
+  | {
+      command:
+        "select" | "cancel" | "review-status" | "synchronize" | "open-central";
+      id: string;
+    }
+  | { command: "rereview"; id: string }
   | { command: "save" | "send" | "memory"; hash: string };
 export class ReviewSubmissionView {
   readonly id = randomBytes(16).toString("hex");
@@ -17,12 +22,34 @@ export class ReviewSubmissionView {
     if ((v.command === "ready" || v.command === "refresh") && exact([]))
       return { command: v.command };
     if (
-      (v.command === "select" || v.command === "cancel") &&
+      [
+        "select",
+        "cancel",
+        "review-status",
+        "synchronize",
+        "open-central",
+      ].includes(String(v.command)) &&
       exact(["id"]) &&
       typeof v.id === "string" &&
       /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id)
     )
-      return { command: v.command, id: v.id };
+      return {
+        command: v.command as
+          | "select"
+          | "cancel"
+          | "review-status"
+          | "synchronize"
+          | "open-central",
+        id: v.id,
+      };
+    if (
+      v.command === "rereview" &&
+      exact(["id", "confirmed"]) &&
+      v.confirmed === true &&
+      typeof v.id === "string" &&
+      /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(v.id)
+    )
+      return { command: "rereview", id: v.id };
     if (
       ["save", "send", "memory"].includes(String(v.command)) &&
       exact(["hash", "confirmed"]) &&
@@ -102,11 +129,13 @@ h1{font-size:1.5em}h2{font-size:1.15em;margin-top:24px}label{display:block;margi
 <p id="status" role="status" aria-live="polite"></p>
 <h2>Outbox for this review</h2><button id="refresh" class="secondary" disabled>Refresh outbox</button>
 <p class="hint">If delivery is unconfirmed, retrying the same entry uses the same request ID. Cancelling stops local retries and cannot retract a submission already received by the server.</p><div id="outbox"></div>
+<section id="followupSection" hidden><h2>Central review status</h2><p id="followupTitle"></p><p id="followupState"></p><p id="followupNote"></p><p id="followupChecked" class="hint"></p><p id="syncState"></p>
+<button id="synchronize" class="secondary">Synchronize central policy</button><button id="rereview" disabled>Review these files again</button><p id="reviewScope" class="hint"></p></section>
 <script nonce="${this.id}">
 const vscode=acquireVsCodeApi(),viewId='${this.id}',el=id=>document.getElementById(id);
-let busy=true,preview=null,ready=false;
+let busy=true,preview=null,ready=false,followup=null;
 const post=(command,extra={})=>vscode.postMessage({command,viewId,...extra});
-function controls(){el('editor').disabled=busy||!ready;el('refresh').disabled=busy||!ready;for(const id of ['send','save','memory'])el(id).disabled=busy||!preview||!el('confirmed').checked||(id==='memory'&&preview.submission.kind!=='feedback');for(const b of el('outbox').querySelectorAll('button'))b.disabled=busy;el('confirmed').disabled=busy;}
+function controls(){el('editor').disabled=busy||!ready;el('refresh').disabled=busy||!ready;for(const id of ['send','save','memory'])el(id).disabled=busy||!preview||!el('confirmed').checked||(id==='memory'&&preview.submission.kind!=='feedback');for(const b of el('outbox').querySelectorAll('button'))b.disabled=busy;el('confirmed').disabled=busy;el('synchronize').disabled=busy||!followup;el('rereview').disabled=busy||!followup?.rereviewAllowed;}
 function invalidate(){preview=null;el('confirmed').checked=false;el('previewSection').hidden=true;controls();}
 function request(command,extra={}){if(busy)return;busy=true;el('status').className='';el('status').textContent=command==='send'?'Submitting…':'Checking…';controls();post(command,extra);}
 el('editor').addEventListener('input',invalidate);
@@ -115,15 +144,19 @@ el('confirmed').addEventListener('change',controls);
 el('prepare').onclick=()=>{const selection=el('kind').value==='result'?{kind:'result'}:{kind:'feedback',feedbackKind:el('feedbackKind').value,message:el('message').value,includeSourceReference:el('source').checked,...(el('finding').value?{findingId:el('finding').value}:{})};if(selection.kind==='feedback'&&!selection.message.trim()){el('status').textContent='Enter a feedback message.';return;}request('prepare',{selection});};
 for(const command of ['send','save','memory'])el(command).onclick=()=>{if(preview&&el('confirmed').checked){request(command,{hash:preview.payloadHash,confirmed:true});el('confirmed').checked=false;controls();}};
 el('refresh').onclick=()=>request('refresh');
+el('synchronize').onclick=()=>{if(followup)request('synchronize',{id:followup.id});};
+el('rereview').onclick=()=>{if(followup?.rereviewAllowed)request('rereview',{id:followup.id,confirmed:true});};
 window.addEventListener('message',event=>{const m=event.data;if(!m||m.viewId!==viewId)return;
 if(m.type==='state'){
 ready=true;
 if(m.destination){const a=m.destination.audience;el('destination').textContent='Server: '+m.destination.serverUrl+' | Repository: '+a.repositoryId+' | Tenant: '+a.tenantId+' | User: '+a.userId+' | Server ID: '+a.serverId;}
+if(m.reviewScope)el('reviewScope').textContent=m.reviewScope;
+if(m.followup){followup=m.followup;el('followupSection').hidden=false;el('followupTitle').textContent=followup.title;el('followupState').textContent=followup.state;el('followupNote').textContent=followup.note;el('followupChecked').textContent='Checked at '+new Date(followup.checkedAt).toLocaleString();el('syncState').textContent=followup.sync;}
 if(m.findings){el('finding').replaceChildren(new Option('Review as a whole',''));for(const f of m.findings)el('finding').append(new Option(f.title,f.id));}
 if(m.preview){preview=m.preview;el('payload').textContent=JSON.stringify(preview.submission,null,2);el('confirmed').checked=false;el('previewSection').hidden=false;}
-if(m.entries){el('outbox').replaceChildren();if(!m.entries.length)el('outbox').textContent='No saved submissions for this review.';for(const entry of m.entries){const row=document.createElement('div');row.className='entry';const p=document.createElement('p');p.textContent=entry.payload.kind+' · '+entry.status+' · '+entry.payload.id+(entry.receipt?' · Received '+entry.receipt.receivedAt+' · Expires '+entry.receipt.expiresAt:'')+(entry.lastError?' · '+entry.lastError:'');row.append(p);const b=document.createElement('button');b.textContent='View exact content';b.className='secondary';b.onclick=()=>request('select',{id:entry.payload.id});row.append(b);if(['pending','rejected'].includes(entry.status)){const c=document.createElement('button');c.textContent='Cancel local retries';c.className='secondary';c.onclick=()=>request('cancel',{id:entry.payload.id});row.append(c);}el('outbox').append(row);}}
+if(m.entries){el('outbox').replaceChildren();if(!m.entries.length)el('outbox').textContent='No saved submissions for this review.';for(const entry of m.entries){const row=document.createElement('div');row.className='entry';const p=document.createElement('p');p.textContent=entry.payload.kind+' · '+entry.status+' · '+entry.payload.id+(entry.receipt?' · Received '+entry.receipt.receivedAt+' · Expires '+entry.receipt.expiresAt:'')+(entry.lastError?' · '+entry.lastError:'');row.append(p);const b=document.createElement('button');b.textContent='View exact content';b.className='secondary';b.onclick=()=>request('select',{id:entry.payload.id});row.append(b);if(entry.receipt){for(const [command,label] of [['review-status','Check central review status'],['open-central','Open central criteria']]){const c=document.createElement('button');c.textContent=label;c.className='secondary';c.onclick=()=>request(command,{id:entry.payload.id});row.append(c);}}if(['pending','rejected'].includes(entry.status)){const c=document.createElement('button');c.textContent='Cancel local retries';c.className='secondary';c.onclick=()=>request('cancel',{id:entry.payload.id});row.append(c);}el('outbox').append(row);}}
 el('status').className='';el('status').textContent=m.message||'';
-}else if(m.type==='error'){el('status').className='error';el('status').textContent=m.message;}
+}else if(m.type==='error'){followup=null;el('followupSection').hidden=true;el('status').className='error';el('status').textContent=m.message;}
 else return;
 busy=false;controls();
 });

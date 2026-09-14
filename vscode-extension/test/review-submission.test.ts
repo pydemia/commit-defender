@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import path from "node:path";
 import { contentHash, type LocalReviewExecutor } from "@gcr/client-core";
+import type {
+  CentralKnowledgeBundle,
+  ReviewSubmissionStatus,
+} from "@gcr/client-contract";
+import { submissionFollowupSummary } from "../src/reviewSubmissionStatus.js";
 import { ReviewSubmissionSession } from "../src/reviewSubmissionSession.js";
 import { ReviewSubmissionView } from "../src/reviewSubmissionView.js";
 import { prepareStandaloneReview } from "../src/standaloneReview.js";
@@ -138,6 +143,7 @@ async function setup(
     report,
     options,
     open,
+    executor,
     modelCalls: () => modelCalls,
     changeSelection: () => {
       current = false;
@@ -343,4 +349,244 @@ test("central reports retain their audience and snapshot and cannot be relabeled
     }),
   );
   assert.equal(f.central.submissionCalls, 1);
+});
+
+type Criterion = Extract<
+  CentralKnowledgeBundle,
+  { component: "policy" }
+>["criteria"][number];
+const appliesTo = {
+  languages: [],
+  filePaths: ["sum.ts"],
+  symbols: [],
+  contracts: [],
+  branches: [],
+};
+function criterion(revision = 1): Criterion {
+  return {
+    id: "criterion",
+    revision,
+    contentHash: contentHash(`published-${revision}`),
+    sourceContentHash: contentHash(`source-${revision}`),
+    document: {
+      title: "Preserve addition",
+      topicKey: "arithmetic",
+      requirement: "Add both arguments.",
+      rationale: "The caller expects a sum.",
+      severity: "P2",
+      enforcement: "advisory",
+      reviewAfter: null,
+      appliesTo,
+      counterEvidence: ["The contract explicitly requires subtraction."],
+      reviewSteps: ["Read the source and its caller."],
+    },
+    decision: {
+      id: "decision",
+      outcome: "defect",
+      sources: [
+        { kind: "manual", id: "fixture", contentHash: contentHash("manual") },
+      ],
+    },
+    exceptions: [],
+  };
+}
+function adoption(
+  c = criterion(),
+): NonNullable<ReviewSubmissionStatus["decision"]> {
+  return {
+    action: "create-candidate",
+    note: "Adopted for review.",
+    at: new Date().toISOString(),
+    rule: {
+      id: c.id,
+      title: c.document.title,
+      state: "active",
+      revision: c.revision,
+      contentHash: c.sourceContentHash,
+    },
+    feedback: null,
+  };
+}
+
+test("explicit status, signed publication and a pinned re-review form separate steps", async (t) => {
+  const f = await setup(t, "centralized"),
+    s = await f.open();
+  f.central.setSubmissionStatus(200);
+  const preview = await s.prepare({ ...feedback, feedbackKind: "judgment" });
+  const entry = await s.send(preview.payloadHash, signal()),
+    id = entry.payload.id;
+  assert.equal(f.central.reviewStatusCalls, 0);
+  assert.equal((await s.reviewStatus(id, signal())).status.decision, null);
+  await assert.rejects(
+    s.prepareRereview(id, signal()),
+    /synchronization-required/,
+  );
+  const decision = adoption();
+  decision.rule!.state = "draft";
+  f.central.setReviewDecision(id, decision);
+  assert.equal(
+    (await s.synchronizeStatus(id, signal())).sync?.policyState,
+    "not-active",
+  );
+  decision.rule!.state = "active";
+  f.central.setReviewDecision(id, decision);
+  assert.equal(
+    (await s.synchronizeStatus(id, signal())).sync?.policyState,
+    "awaiting-publication",
+  );
+  const snapshotId = f.central.publishCriteria([criterion()]);
+  const synced = await s.synchronizeStatus(id, signal());
+  assert.equal(synced.sync?.policyState, "criterion-current");
+  assert.equal(submissionFollowupSummary(synced).rereviewAllowed, true);
+  const pin = await s.prepareRereview(id, signal());
+  assert.equal(pin.snapshotId, snapshotId);
+  assert.equal(f.modelCalls(), 1);
+  assert.equal(f.central.submissionCalls, 1);
+  const job = await prepareStandaloneReview(
+    { repoRoot: f.f.repo, files: ["sum.ts"], scope: "staged" },
+    {
+      mode: "centralized",
+      connectionId: pin.connectionId,
+      profileId: pin.profileId,
+      freshness: "online",
+      offlineBehavior: "pause",
+      requiredCentralSnapshot: pin.snapshotId,
+      provider: "codex",
+      model: "gpt-6-astra",
+      reasoningEffort: "xhigh",
+      executablePath: "/unused",
+      workspaceTrusted: true,
+      durationMs: 30000,
+      excludePatterns: [],
+    },
+    signal(),
+    { ...f.ports, prepareExecutor: async () => f.executor },
+  );
+  const report = (await job.run(signal())).report.gcr!.report;
+  assert.equal(report.status, "completed");
+  assert.equal(report.identity.context.centralSnapshot?.id, snapshotId);
+  assert.notEqual(
+    report.identity.context.centralSnapshot?.id,
+    f.report.identity.context.centralSnapshot?.id,
+  );
+  assert(
+    report.identity.context.entries.some(
+      (e) => e.id === "criterion" && e.revision === 1,
+    ),
+  );
+  assert.equal(f.modelCalls(), 2);
+  f.central.setReviewDecision(id, adoption(criterion(2)));
+  await assert.rejects(
+    s.prepareRereview(id, signal()),
+    /synchronization-required/,
+  );
+  assert.equal(f.modelCalls(), 2);
+  f.central.setReviewStatus(404);
+  await assert.rejects(s.reviewStatus(id, signal()), { statusCode: 404 });
+  assert.equal(f.central.credentialValues.size, 1);
+  f.central.setStatus(403, "CLIENT_ACCESS_REVOKED");
+  await assert.rejects(s.reviewStatus(id, signal()));
+  assert.equal(f.central.credentialValues.size, 0);
+});
+
+test("correction acknowledgement and exception approval require the corresponding signed policy", async (t) => {
+  const f = await setup(t, "centralized"),
+    s = await f.open();
+  f.central.setSubmissionStatus(200);
+  const preview = await s.prepare(feedback),
+    entry = await s.send(preview.payloadHash, signal()),
+    id = entry.payload.id;
+  const c = criterion();
+  f.central.publishCriteria([c]);
+  const d = adoption(c);
+  d.action = "link-feedback";
+  d.feedback = {
+    id: "feedback",
+    kind: "correction",
+    revision: 1,
+    resolution: null,
+    exception: null,
+  };
+  const check = async (expected: string) => {
+    f.central.setReviewDecision(id, d);
+    const value = await s.synchronizeStatus(id, signal());
+    assert.equal(value.sync?.policyState, expected);
+    assert.equal(
+      submissionFollowupSummary(value).rereviewAllowed,
+      ["criterion-current", "exception-current"].includes(expected),
+    );
+  };
+  await check("pending-feedback");
+  const resolution = {
+    action: "reject" as const,
+    note: "Reviewed independently.",
+    at: new Date().toISOString(),
+  };
+  d.feedback.resolution = resolution;
+  await check("feedback-rejected");
+  d.feedback.resolution = { ...resolution, action: "acknowledge" };
+  await check("acknowledged-only");
+  const c2 = criterion(2);
+  d.rule = adoption(c2).rule;
+  await check("awaiting-publication");
+  f.central.publishCriteria([c2]);
+  await check("criterion-current");
+  d.feedback.kind = "exception";
+  d.feedback.revision = 2;
+  d.feedback.resolution = { ...resolution, action: "approve-exception" };
+  const e = {
+    id: "exception",
+    revision: 2,
+    startsAt: new Date(Date.now() - 60000).toISOString(),
+    expiresAt: new Date(Date.now() + 3600000).toISOString(),
+    revoked: false,
+  };
+  d.feedback.exception = e;
+  await check("awaiting-publication");
+  c2.exceptions = [
+    {
+      id: e.id,
+      startsAt: e.startsAt,
+      expiresAt: e.expiresAt,
+      reason: "Recorded exception.",
+      appliesTo,
+    },
+  ];
+  f.central.publishCriteria([c2]);
+  await check("exception-current");
+  e.revoked = true;
+  await check("exception-inactive");
+  e.revoked = false;
+  e.expiresAt = new Date(Date.now() - 1000).toISOString();
+  await check("exception-inactive");
+  e.expiresAt = new Date(Date.now() + 3600000).toISOString();
+  e.startsAt = new Date(Date.now() + 60000).toISOString();
+  await check("exception-inactive");
+  d.rule = adoption(criterion(3)).rule;
+  await check("outdated-exception");
+  assert.equal(f.modelCalls(), 1);
+});
+
+test("follow-up webview messages cannot supply an arbitrary destination or bypass the re-review click", () => {
+  const view = new ReviewSubmissionView(),
+    base = { viewId: view.id, id: "submission" };
+  for (const command of ["review-status", "synchronize", "open-central"]) {
+    assert.deepEqual(view.message({ ...base, command }), {
+      command,
+      id: base.id,
+    });
+    assert.equal(
+      view.message({ ...base, command, url: "https://other.invalid" }),
+      undefined,
+    );
+  }
+  assert.equal(view.message({ ...base, command: "rereview" }), undefined);
+  assert.equal(
+    view.message({ ...base, command: "rereview", confirmed: false }),
+    undefined,
+  );
+  assert.deepEqual(
+    view.message({ ...base, command: "rereview", confirmed: true }),
+    { command: "rereview", id: base.id },
+  );
 });

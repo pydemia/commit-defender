@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { clientReviewReport } from "@gcr/client-contract";
-import { contentHash } from "@gcr/client-core";
+import { contentHash, ReviewSubmissionDeliveryError } from "@gcr/client-core";
 import { getStandaloneReviewSettings } from "./config.js";
 import { knowledgeScope } from "./localKnowledge.js";
 import { readSelection, selectedReviewSettings } from "./centralConnection.js";
@@ -14,6 +14,7 @@ import {
   type SubmissionMessage,
 } from "./reviewSubmissionView.js";
 import type { AnalysisReport } from "./types.js";
+import { submissionFollowupSummary } from "./reviewSubmissionStatus.js";
 
 const panels = new Map<string, vscode.WebviewPanel>();
 const jobs = new Set<Promise<void>>();
@@ -25,6 +26,11 @@ export async function openReviewSubmission(
   report: AnalysisReport,
   repoRoot: string,
   context: vscode.ExtensionContext,
+  rereview?: (
+    pin: { connectionId: string; profileId: string; snapshotId: string },
+    signal: AbortSignal,
+    current: () => boolean,
+  ) => Promise<void>,
 ) {
   if (!report.gcr) {
     void vscode.window.showInformationMessage(
@@ -108,9 +114,34 @@ export async function openReviewSubmission(
         });
       if (!current()) return;
       let preview,
+        followup,
         entry: SubmissionEntry | undefined,
         notice = "";
       switch (message.command) {
+        case "review-status":
+          followup = submissionFollowupSummary(
+            await session.reviewStatus(message.id, controller.signal),
+          );
+          break;
+        case "synchronize":
+          followup = submissionFollowupSummary(
+            await session.synchronizeStatus(message.id, controller.signal),
+          );
+          break;
+        case "open-central": {
+          const url = await session.centralReviewUrl(message.id);
+          if (current()) await vscode.env.openExternal(vscode.Uri.parse(url));
+          break;
+        }
+        case "rereview": {
+          const pin = await session.prepareRereview(
+            message.id,
+            controller.signal,
+          );
+          if (!rereview || !current()) return;
+          await rereview(pin, controller.signal, current);
+          break;
+        }
         case "prepare":
           preview = await session.prepare(message.selection);
           break;
@@ -149,9 +180,18 @@ export async function openReviewSubmission(
                 id: f.id,
                 title: f.title,
               })),
+              reviewScope: `${core.identity.source.kind === "index" ? "Current staged versions" : "Current working-tree versions"} of: ${core.files.map((f) => f.source.path).join(", ")}. Uses the selected model and the synchronized central policy.`,
             }
           : {}),
         ...(preview ? { preview } : {}),
+        ...(followup
+          ? {
+              followup: {
+                ...followup,
+                rereviewAllowed: followup.rereviewAllowed && !!rereview,
+              },
+            }
+          : {}),
         entries,
         message: notice,
       });
@@ -204,6 +244,11 @@ function deliveryNotice(entry: SubmissionEntry) {
   return "Delivery is unconfirmed. Review the saved entry and choose Submit now to retry with the same request ID.";
 }
 function submissionError(error: unknown) {
+  if (error instanceof ReviewSubmissionDeliveryError) {
+    if (error.statusCode === 404 || error.statusCode === 410)
+      return "This submission is no longer available for status checks. Its retention period may have ended; any adopted criterion has a separate history in Central Review Criteria.";
+    return "Central review status could not be verified. Check the connection and request the status again before synchronizing or reviewing.";
+  }
   if (error instanceof SubmissionSessionError) {
     if (error.code === "report-mismatch")
       return "This review does not match the saved history in the current workspace, profile, and connection.";
@@ -211,6 +256,10 @@ function submissionError(error: unknown) {
       return "Preview the content again and confirm it before continuing.";
     if (error.code === "selection-changed")
       return "The workspace or central connection changed. Reopen this review under the intended connection.";
+    if (error.code === "synchronization-required")
+      return "The reviewed policy or snapshot changed. Check central review status and synchronize again before reviewing.";
+    if (error.code === "receipt-required")
+      return "A confirmed server receipt is required to check central review status.";
   }
   // Raw transport and storage diagnostics may contain credential or local-path data.
   return "The action could not be confirmed. Check the central connection and saved outbox before retrying; a prior server delivery may still have succeeded.";

@@ -12,6 +12,7 @@ import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKe
 import { AutomaticReviews } from './automaticReviews.js';
 import { BackgroundHooks } from './backgroundHooks.js';
 import type { AutomaticTask } from '@gcr/client-core';
+import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
@@ -512,9 +513,10 @@ export function activate(context: vscode.ExtensionContext): void {
     scopeTarget?: string,
     sourceExclusions: SourceExclusion[] = [],
     automatic?: AutomaticTask<ReviewRequest>,
+    feedback?: { connectionId: string; profileId: string; snapshotId: string; signal: AbortSignal; current: () => boolean },
   ): Promise<void | { retryAt?: number }> {
     const cfg = getConfig();
-    let localSettings = getStandaloneReviewSettings(relPaths.length);
+    let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
     try {
       const scope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: 'repository' });
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope));
@@ -522,17 +524,28 @@ export function activate(context: vscode.ExtensionContext): void {
       if (automatic) throw error;
       void vscode.window.showErrorMessage(standaloneError(error).message); return;
     }
+    if (feedback) {
+      if (!feedback.current() || localSettings.mode !== 'centralized' ||
+        localSettings.connectionId !== feedback.connectionId || localSettings.profileId !== feedback.profileId)
+        throw new StandaloneReviewError('central-connection-required');
+      localSettings = { ...localSettings, freshness: 'online', offlineBehavior: 'pause', requiredCentralSnapshot: feedback.snapshotId };
+    }
     const backend = createReviewBackend(cfg, {
       workerFile: context.asAbsolutePath('out/standalone-review-worker.js'),
       settings: localSettings,
     });
     let automaticError: unknown;
     let automaticResultDisplayed = false;
-    await execution.prepare(signal => withReviewSignals(signal, automatic?.signal, async combined => {
+    const ownerSignal = automatic?.signal ?? feedback?.signal;
+    await execution.prepare(signal => withReviewSignals(signal, ownerSignal, async combined => {
+      if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
       const job = await backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions,
         ...(automatic?.value.automatic ? { automatic: automatic.value.automatic } : {})}, combined);
       return { ...job, run: (runSignal: AbortSignal, progress?: Parameters<typeof job.run>[1]) =>
-        withReviewSignals(runSignal, automatic?.signal, merged => job.run(merged, progress)) };
+        withReviewSignals(runSignal, ownerSignal, merged => {
+          if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
+          return job.run(merged, progress);
+        }) };
     }), {
       preparing: () => {
         statusBar.setPreparing();
@@ -885,7 +898,14 @@ export function activate(context: vscode.ExtensionContext): void {
       : (arg as { report?: AnalysisReport; repoRoot?: string });
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) { void vscode.window.showInformationMessage('Select a saved review in history or run a review first.'); return; }
-    try { await openReviewSubmission(selected.report, selected.repoRoot, context); }
+    const { report, repoRoot } = selected;
+    try { await openReviewSubmission(report, repoRoot, context, async (pin, signal, current) => {
+      if (!current() || !report.gcr) return;
+      const core = clientReviewReport(report.gcr.report);
+      const files = [...new Set(core.files.map(file => file.source.path))];
+      ++reviewIntent;
+      await analyze(files, repoRoot, core.identity.source.kind === 'index' ? 'staged' : files.length === 1 ? 'file' : 'directory', undefined, [], undefined, { ...pin, signal, current });
+    }); }
     catch { void vscode.window.showErrorMessage('The review feedback could not be opened. Check the current workspace and review connection.'); }
   }));
   context.subscriptions.push(vscode.commands.registerCommand(

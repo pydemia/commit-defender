@@ -84,6 +84,16 @@ export async function prepareStandaloneReview(
     checkAbort(signal);
     if (!["standalone", "centralized"].includes(settings.mode))
       throw new StandaloneReviewError("unsupported-mode");
+    if (
+      settings.requiredCentralSnapshot !== undefined &&
+      (typeof settings.requiredCentralSnapshot !== "string" ||
+        !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(
+          settings.requiredCentralSnapshot,
+        ) ||
+        settings.mode !== "centralized" ||
+        settings.offlineBehavior !== "pause")
+    )
+      throw new StandaloneReviewError("central-snapshot-changed");
     if (settings.mode === "centralized") {
       if (!settings.connectionId)
         throw new StandaloneReviewError("central-connection-required");
@@ -115,26 +125,49 @@ export async function prepareStandaloneReview(
       worktreeKey: client.worktreeKey,
     };
     const automatic = request.automatic;
-    if (automatic && (!['save','stage'].includes(automatic.reason)
-      || !Number.isInteger(automatic.minimumIntervalMs) || automatic.minimumIntervalMs < 0 || automatic.minimumIntervalMs > 3600000
-      || !Number.isInteger(automatic.maximumReviewsPerHour) || automatic.maximumReviewsPerHour < 1 || automatic.maximumReviewsPerHour > 100
-      || (automatic.reason === 'stage' && (!automatic.indexFingerprint || request.scope !== 'staged'))
-      || (automatic.reason === 'save' && (!automatic.files || request.files.some(file => !(file in automatic.files!))))))
-      throw new StandaloneReviewError('policy-unavailable');
+    if (
+      automatic &&
+      (!["save", "stage"].includes(automatic.reason) ||
+        !Number.isInteger(automatic.minimumIntervalMs) ||
+        automatic.minimumIntervalMs < 0 ||
+        automatic.minimumIntervalMs > 3600000 ||
+        !Number.isInteger(automatic.maximumReviewsPerHour) ||
+        automatic.maximumReviewsPerHour < 1 ||
+        automatic.maximumReviewsPerHour > 100 ||
+        (automatic.reason === "stage" &&
+          (!automatic.indexFingerprint || request.scope !== "staged")) ||
+        (automatic.reason === "save" &&
+          (!automatic.files ||
+            request.files.some((file) => !(file in automatic.files!)))))
+    )
+      throw new StandaloneReviewError("policy-unavailable");
     const assertAutomaticSource = async () => {
       if (!automatic) return;
-      const current = await observeAutomaticRepository(request.repoRoot,settings.excludePatterns);
-      if (current.head !== automatic.head || (automatic.reason === 'stage' && current.fingerprint !== automatic.indexFingerprint))
-        throw new StandaloneReviewError('source-changed');
-      if (automatic.reason === 'save') {
+      const current = await observeAutomaticRepository(
+        request.repoRoot,
+        settings.excludePatterns,
+      );
+      if (
+        current.head !== automatic.head ||
+        (automatic.reason === "stage" &&
+          current.fingerprint !== automatic.indexFingerprint)
+      )
+        throw new StandaloneReviewError("source-changed");
+      if (automatic.reason === "save") {
         for (const file of request.files) {
-          const observed = await observeAutomaticFile(current.root,file,settings.excludePatterns);
-          if (!observed || observed.hash !== automatic.files![file]) throw new StandaloneReviewError('source-changed');
+          const observed = await observeAutomaticFile(
+            current.root,
+            file,
+            settings.excludePatterns,
+          );
+          if (!observed || observed.hash !== automatic.files![file])
+            throw new StandaloneReviewError("source-changed");
         }
       }
       return current;
     };
-    const automaticSource = await assertAutomaticSource(); checkAbort(signal);
+    const automaticSource = await assertAutomaticSource();
+    checkAbort(signal);
     snapshot = captureLocalSource({
       cwd: request.repoRoot,
       kind: request.scope === "staged" ? "index" : "working-tree",
@@ -145,18 +178,26 @@ export async function prepareStandaloneReview(
     await assertAutomaticSource();
     if (automatic && automaticSource) {
       for (const selected of snapshot.selected) {
-        const read = snapshot.readFile(selected.path,'source');
-        if (automatic.reason === 'save') {
-          const hash = read.status === 'available' ? read.source.hash : null;
-          if (hash !== automatic.files![selected.path]) throw new StandaloneReviewError('source-changed');
+        const read = snapshot.readFile(selected.path, "source");
+        if (automatic.reason === "save") {
+          const hash = read.status === "available" ? read.source.hash : null;
+          if (hash !== automatic.files![selected.path])
+            throw new StandaloneReviewError("source-changed");
         } else {
-          const expected = automaticSource.changes.find(c => c.path === selected.path);
-          if (!expected) throw new StandaloneReviewError('source-changed');
-          if (read.status === 'available') {
-            const bytes = Buffer.from(read.text,'utf8');
-            const oid = createHash(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
-            if (oid !== expected.oid) throw new StandaloneReviewError('source-changed');
-          } else if (expected.status !== 'D') throw new StandaloneReviewError('source-changed');
+          const expected = automaticSource.changes.find(
+            (c) => c.path === selected.path,
+          );
+          if (!expected) throw new StandaloneReviewError("source-changed");
+          if (read.status === "available") {
+            const bytes = Buffer.from(read.text, "utf8");
+            const oid = createHash(snapshot.identity.objectFormat)
+              .update(`blob ${bytes.length}\0`)
+              .update(bytes)
+              .digest("hex");
+            if (oid !== expected.oid)
+              throw new StandaloneReviewError("source-changed");
+          } else if (expected.status !== "D")
+            throw new StandaloneReviewError("source-changed");
         }
       }
     }
@@ -213,6 +254,12 @@ export async function prepareStandaloneReview(
     checkAbort(signal);
     if (context.status !== "ready")
       throw new StandaloneReviewError("needs-context");
+    if (
+      settings.requiredCentralSnapshot &&
+      context.context.identity.centralSnapshot?.id !==
+        settings.requiredCentralSnapshot
+    )
+      throw new StandaloneReviewError("central-snapshot-changed");
     let executor: LocalReviewExecutor;
     try {
       executor = await (ports.prepareExecutor ?? prepareCodexAccountExecutor)({
@@ -264,7 +311,11 @@ export async function prepareStandaloneReview(
       });
       opened.push(records);
       history = new LocalHistoryStore(records, undefined, identity.audience);
-      conversations = new ReviewConversationStore(records, undefined, identity.audience);
+      conversations = new ReviewConversationStore(
+        records,
+        undefined,
+        identity.audience,
+      );
     }
     return {
       backendId: client.mode,
@@ -311,7 +362,15 @@ export async function prepareStandaloneReview(
               },
               identity: policy.identity,
               signal: runSignal,
-              ...(automatic ? { reason: automatic.reason, limits: { minimumIntervalMs: automatic.minimumIntervalMs, maximumReviewsPerHour: automatic.maximumReviewsPerHour } } : {}),
+              ...(automatic
+                ? {
+                    reason: automatic.reason,
+                    limits: {
+                      minimumIntervalMs: automatic.minimumIntervalMs,
+                      maximumReviewsPerHour: automatic.maximumReviewsPerHour,
+                    },
+                  }
+                : {}),
               assertValid: async () => {
                 await assertAutomaticSource();
                 if (
@@ -346,16 +405,29 @@ export async function prepareStandaloneReview(
                 "The cancelled attempt could not be confirmed in encrypted history.";
             }
           }
-          if (["completed", "partial", "needs-context"].includes(report.status)) {
+          if (
+            ["completed", "partial", "needs-context"].includes(report.status)
+          ) {
             try {
-              try { await conversations.get(report.runId); }
-              catch (error) {
-                if (!(error instanceof ReviewConversationError) || error.code !== "missing") throw error;
-                await conversations.create({ id: report.runId, review: report, snapshot: fixedSnapshot, policy });
+              try {
+                await conversations.get(report.runId);
+              } catch (error) {
+                if (
+                  !(error instanceof ReviewConversationError) ||
+                  error.code !== "missing"
+                )
+                  throw error;
+                await conversations.create({
+                  id: report.runId,
+                  review: report,
+                  snapshot: fixedSnapshot,
+                  policy,
+                });
               }
               await conversations.prune();
             } catch {
-              diagnostic += " The review is available, but its conversation snapshot could not be saved.";
+              diagnostic +=
+                " The review is available, but its conversation snapshot could not be saved.";
             }
           }
           return {

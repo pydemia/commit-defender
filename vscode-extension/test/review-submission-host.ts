@@ -9,7 +9,11 @@ import {
   LocalRecordStore,
   LocalKnowledgeStore,
 } from "@gcr/client-core";
-import { projectCommitDefender } from "@gcr/client-contract";
+import {
+  projectCommitDefender,
+  type CentralKnowledgeBundle,
+  type ReviewSubmissionStatus,
+} from "@gcr/client-contract";
 import { centralFixture } from "./helpers/central-fixture.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { prepareStandaloneReview } from "../src/standaloneReview.js";
@@ -162,6 +166,73 @@ export async function run() {
       central.setSubmissionStatus(200);
       proof.stage = "reopened";
       save();
+      await until(async () => controls().adopt === true);
+      const submitted = (await queue.list())[0].value;
+      assert.equal(central.reviewStatusCalls, 1);
+      const criterion: Extract<
+        CentralKnowledgeBundle,
+        { component: "policy" }
+      >["criteria"][number] = {
+        id: "native-criterion",
+        revision: 1,
+        contentHash: contentHash("published"),
+        sourceContentHash: contentHash("source"),
+        document: {
+          title: "Preserve addition",
+          topicKey: "arithmetic",
+          requirement: "Add both arguments.",
+          rationale: "Caller contract.",
+          severity: "P2",
+          enforcement: "advisory",
+          reviewAfter: null,
+          appliesTo: {
+            languages: [],
+            filePaths: ["sum.ts"],
+            symbols: [],
+            contracts: [],
+            branches: [],
+          },
+          counterEvidence: ["Contract explicitly requires subtraction."],
+          reviewSteps: ["Read source and caller."],
+        },
+        decision: {
+          id: "decision",
+          outcome: "defect",
+          sources: [
+            {
+              kind: "manual",
+              id: "native",
+              contentHash: contentHash("manual"),
+            },
+          ],
+        },
+        exceptions: [],
+      };
+      const decision: NonNullable<ReviewSubmissionStatus["decision"]> = {
+        action: "create-candidate",
+        note: "NATIVE_ADOPTION <img src=x onerror=alert(1)>",
+        at: new Date().toISOString(),
+        rule: {
+          id: criterion.id,
+          title: criterion.document.title,
+          state: "active",
+          revision: 1,
+          contentHash: criterion.sourceContentHash,
+        },
+        feedback: null,
+      };
+      central.setReviewDecision(submitted.payload.id, decision);
+      proof.stage = "adopted";
+      save();
+      await until(async () => controls().publish === true);
+      proof.publishedSnapshot = central.publishCriteria([criterion]);
+      proof.stage = "published";
+      save();
+      await until(async () => controls().retire === true);
+      decision.rule!.state = "retired";
+      central.setReviewDecision(submitted.payload.id, decision);
+      proof.stage = "retired";
+      save();
       await until(async () => controls().finish === true);
       const result = (await queue.list())[0].value;
       assert.equal(result.status, "submitted");
@@ -201,6 +272,7 @@ export async function run() {
       proof.requestId = result.payload.id;
       proof.receipt = result.receipt;
       proof.submissionCalls = central.submissionCalls;
+      proof.reviewStatusCalls = central.reviewStatusCalls;
       save();
     } finally {
       queue.close();
