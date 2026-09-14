@@ -193,12 +193,19 @@ var gitBase = {
   baseCommit: union(gitOid, literal(null)),
   baseTree: gitOid
 };
-var snapshotIdentity = refined(union(object({ kind: literal("index"), hash: sha256, ...gitBase, sourceTree: gitOid }), object({ kind: literal("working-tree"), hash: sha256, ...gitBase })), (value, at) => {
+var snapshotIdentity = refined(union(object({ kind: literal("index"), hash: sha256, ...gitBase, sourceTree: gitOid }), object({ kind: literal("working-tree"), hash: sha256, ...gitBase }), object({
+  kind: literal("commit-tree"),
+  hash: sha256,
+  ...gitBase,
+  sourceCommit: gitOid,
+  sourceTree: gitOid
+})), (value, at) => {
   const size = value.objectFormat === "sha1" ? 40 : 64;
   const oids = [
     value.baseCommit,
     value.baseTree,
-    ..."sourceTree" in value ? [value.sourceTree] : []
+    ..."sourceTree" in value ? [value.sourceTree] : [],
+    ..."sourceCommit" in value ? [value.sourceCommit] : []
   ];
   if (oids.some((oid) => oid !== null && oid.length !== size))
     fail(at, "Git object format mismatch");
@@ -659,6 +666,12 @@ function projectCommitDefender(value) {
       base_commit: source.baseCommit,
       base_tree: source.baseTree,
       source_tree: source.sourceTree
+    } : source.kind === "commit-tree" ? {
+      kind: "commit-tree",
+      base_commit: source.baseCommit,
+      base_tree: source.baseTree,
+      source_commit: source.sourceCommit,
+      source_tree: source.sourceTree
     } : {
       kind: "working-tree",
       content_sha256: Object.fromEntries(report.files.map((file) => [file.source.path, file.source.hash]))
@@ -1089,7 +1102,7 @@ var reviewStartLedger = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.19",
+  version: "0.1.0-alpha.20",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2431,6 +2444,10 @@ var SourceGit = class {
       this.environment.GIT_OBJECT_DIRECTORY = objectDirectory;
       this.environment.GIT_ALTERNATE_OBJECT_DIRECTORIES = JSON.stringify(objects);
       this.environment.GIT_INDEX_FILE = this.index;
+      if (indexFile === null) {
+        this.text(["read-tree", "--empty"]);
+        return;
+      }
       try {
         const fd = (0, import_node_fs3.openSync)(originalIndex, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW | import_node_fs3.constants.O_NONBLOCK);
         try {
@@ -2473,7 +2490,7 @@ var SourceGit = class {
         "--no-replace-objects",
         ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
         "-C",
-        this.root,
+        args[0] === "check-ignore" && this.environment.GIT_WORK_TREE ? this.environment.GIT_WORK_TREE : this.root,
         "-c",
         "core.fsmonitor=false",
         "-c",
@@ -2565,6 +2582,36 @@ var SourceGit = class {
     if (entries.size)
       this.text(["update-index", "-z", "--index-info"], [...entries].map(([file, entry]) => `${entry.mode} ${entry.oid}	${file}\0`).join(""));
     return this.oid(this.text(["write-tree"]).trim());
+  }
+  /** Evaluate only .gitignore files from an immutable tree, without checking out source. */
+  ignoredInTree(tree, files) {
+    if (!files.length)
+      return [];
+    const directory = (0, import_node_fs3.mkdtempSync)(import_node_path5.default.join(this.directory, "ignore-"));
+    let bytes = 0;
+    for (const [file, entry] of tree) {
+      if (import_node_path5.default.posix.basename(file) !== ".gitignore" || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))
+        continue;
+      const prefix = import_node_path5.default.posix.dirname(file);
+      if (prefix !== "." && !files.some((candidate) => candidate.startsWith(prefix + "/")))
+        continue;
+      if (entry.size === null || entry.size > 1048576 || (bytes += entry.size) > 4194304)
+        throw new SourceCaptureError("capture-limit");
+      const target = import_node_path5.default.resolve(directory, file);
+      if (!target.startsWith(directory + import_node_path5.default.sep))
+        throw new SourceCaptureError("source-unavailable");
+      (0, import_node_fs3.mkdirSync)(import_node_path5.default.dirname(target), { recursive: true, mode: 448 });
+      (0, import_node_fs3.writeFileSync)(target, this.run(["cat-file", "blob", this.oid(entry.oid)], void 0, 1048577), { mode: 384 });
+    }
+    this.environment.GIT_DIR = this.text(["rev-parse", "--absolute-git-dir"]).trim();
+    this.environment.GIT_WORK_TREE = directory;
+    try {
+      return this.text(["check-ignore", "--no-index", "-z", "--stdin"], files.map((file) => `./${file}\0`).join(""), void 0, [0, 1]).split("\0").filter(Boolean).map((file) => file.replace(/^\.\//, ""));
+    } finally {
+      delete this.environment.GIT_WORK_TREE;
+      delete this.environment.GIT_DIR;
+      (0, import_node_fs3.rmSync)(directory, { recursive: true, force: true });
+    }
   }
   close() {
     (0, import_node_fs3.rmSync)(this.directory, { recursive: true, force: true });
@@ -2731,11 +2778,15 @@ var LocalSourceSnapshot = class {
 };
 function captureLocalSource(input2) {
   const options = structuredClone(input2);
-  if (options.kind !== "index" && options.kind !== "working-tree")
+  if (!["index", "working-tree", "commit-tree"].includes(options.kind))
+    throw new SourceCaptureError("invalid-source-request");
+  const committed = options.kind === "commit-tree";
+  const validOid = (value) => typeof value === "string" && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
+  if (committed ? !validOid(options.sourceCommit) || !(options.baseCommit === null || validOid(options.baseCommit)) || options.baseRef !== void 0 || options.indexFile !== void 0 : options.sourceCommit !== void 0 || options.baseCommit !== void 0 || options.targetBranch !== void 0)
     throw new SourceCaptureError("invalid-source-request");
   const selectedPaths = options.paths === void 0 ? void 0 : paths(options.paths);
   const untracked = paths(options.includeUntracked);
-  if (options.kind === "index" && untracked.length)
+  if (options.kind !== "working-tree" && untracked.length)
     throw new SourceCaptureError("invalid-source-request");
   const policy = sourcePathPolicy(options.excludePatterns);
   const fileLimit = limit(options.limits?.fileBytes, 1048576, 4194304);
@@ -2745,10 +2796,21 @@ function captureLocalSource(input2) {
   const deadline = Date.now() + limit(options.limits?.durationMs, 3e4, 12e4);
   if (options.baseRef !== void 0 && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/.test(options.baseRef))
     throw new SourceCaptureError("invalid-source-request");
-  const git2 = new SourceGit(options.cwd, deadline, options.indexFile);
+  const git2 = new SourceGit(options.cwd, deadline, committed ? null : options.indexFile);
   try {
-    const headCommit = git2.initialHead;
-    let baseCommit = headCommit;
+    const exactCommit = (oid) => {
+      const exact = git2.oid(oid);
+      if (git2.text(["cat-file", "-t", exact]).trim() !== "commit")
+        throw new SourceCaptureError("source-unavailable");
+      return exact;
+    };
+    const headCommit = committed ? exactCommit(options.sourceCommit) : git2.initialHead;
+    let baseCommit = committed ? options.baseCommit === null ? null : exactCommit(options.baseCommit) : headCommit;
+    if (options.targetBranch !== void 0) {
+      if (!options.targetBranch || options.targetBranch.length > 1024)
+        throw new SourceCaptureError("invalid-source-request");
+      git2.text(["check-ref-format", `refs/heads/${options.targetBranch}`]);
+    }
     if (options.baseRef) {
       if (!headCommit)
         throw new SourceCaptureError("source-unavailable");
@@ -2756,7 +2818,7 @@ function captureLocalSource(input2) {
       baseCommit = git2.oid(git2.text(["merge-base", headCommit, ref]).trim());
     }
     const baseTree = git2.oid(git2.text(baseCommit ? ["rev-parse", "--verify", `${baseCommit}^{tree}`] : ["hash-object", "-w", "-t", "tree", "--stdin"], "").trim());
-    const sourceTree = git2.oid(git2.text(["write-tree"]).trim());
+    const sourceTree = git2.oid(git2.text(committed ? ["rev-parse", "--verify", `${headCommit}^{tree}`] : ["write-tree"]).trim());
     const base = git2.tree(baseTree, entryLimit);
     const source = git2.tree(sourceTree, entryLimit);
     const skipWorktree = new Set(git2.text(["ls-files", "-t", "-z"]).split("\0").filter((entry) => entry.startsWith("S ")).map((entry) => entry.slice(2)));
@@ -2812,6 +2874,14 @@ function captureLocalSource(input2) {
       const ignored = checkIgnore();
       frozenIgnore = ignored;
       for (const file of ignored.split("\0").filter(Boolean).map((file2) => file2.replace(/^\.\//, "")))
+        for (const side of ["base", "source"])
+          exclude(file, side, "git-ignored");
+    }
+    if (committed) {
+      for (const file of /* @__PURE__ */ new Set([
+        ...git2.ignoredInTree(base, eligible),
+        ...git2.ignoredInTree(source, eligible)
+      ]))
         for (const side of ["base", "source"])
           exclude(file, side, "git-ignored");
     }
@@ -2878,7 +2948,7 @@ function captureLocalSource(input2) {
           continue;
         const tree = side === "base" ? base : source;
         const entry = tree.get(file);
-        if (entry && (side === "base" || options.kind === "index" || entry.mode === "160000") && (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))) {
+        if (entry && (side === "base" || options.kind !== "working-tree" || entry.mode === "160000") && (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))) {
           exclude(file, side, entry.mode === "120000" ? "symlink" : "unsupported-source", entry.mode === "160000" ? "submodule" : "unsupported-mode");
           continue;
         }
@@ -2985,7 +3055,7 @@ function captureLocalSource(input2) {
         throw new SourceCaptureError("snapshot-changed");
       }
     }
-    if (git2.head() !== headCommit || git2.branch() !== git2.initialBranch || checkIgnore() !== frozenIgnore)
+    if (!committed && (git2.head() !== headCommit || git2.branch() !== git2.initialBranch) || checkIgnore() !== frozenIgnore)
       throw new SourceCaptureError("snapshot-changed");
     if (workingWrites.length) {
       const names = workingWrites.map(({ body: body2 }, index) => {
@@ -3063,7 +3133,8 @@ function captureLocalSource(input2) {
       objectFormat: git2.objectFormat,
       baseCommit,
       baseTree,
-      ...options.kind === "index" ? { sourceTree } : {},
+      ...options.kind !== "working-tree" ? { sourceTree } : {},
+      ...committed ? { sourceCommit: headCommit } : {},
       hash: contentHash({
         version: 1,
         kind: options.kind,
@@ -3071,6 +3142,7 @@ function captureLocalSource(input2) {
         baseCommit,
         baseTree,
         sourceTree,
+        ...committed ? { targetBranch: options.targetBranch ?? null } : {},
         sourceFiles: [...files.values()].map((file) => ({ ...file.source, mode: file.mode })),
         selected,
         limitations,
@@ -3078,7 +3150,7 @@ function captureLocalSource(input2) {
         diffHash: hash(diff)
       })
     });
-    return new LocalSourceSnapshot(identity, git2.repository, headCommit, git2.initialBranch, files, selected, limitations, diff);
+    return new LocalSourceSnapshot(identity, git2.repository, headCommit, committed ? options.targetBranch ?? null : git2.initialBranch, files, selected, limitations, diff);
   } finally {
     git2.close();
   }
@@ -6166,7 +6238,7 @@ async function observeAutomaticFile(root, file, excludes = []) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.19",
+  version: "0.1.0-alpha.20",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6989,7 +7061,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.19",
+  version: "0.1.0-alpha.20",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

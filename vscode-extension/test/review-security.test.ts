@@ -500,3 +500,36 @@ test("repository Skill instructions remain user material and cannot change CLI a
     f.cleanup();
   }
 });
+
+test("committed review links recover immutable source after checkout and cache eviction", () => {
+  const f = fixture();
+  try {
+    f.write("source.ts", text);
+    f.git("add", ".");
+    f.git("commit", "-m", "base");
+    const base = f.git("rev-parse", "HEAD").trim(),
+      baseTree = f.git("rev-parse", "HEAD^{tree}").trim();
+    const committed = "export const committed = 3;\n";
+    f.write("source.ts", committed);
+    f.git("add", ".");
+    f.git("commit", "-m", "review source");
+    const sourceCommit = f.git("rev-parse", "HEAD").trim(),
+      sourceTree = f.git("rev-parse", "HEAD^{tree}").trim();
+    const r = report();
+    attachReviewSources(r, new Map([["source.ts", committed]]));
+    r.source_snapshot = {
+      kind: "commit-tree",
+      base_commit: base,
+      base_tree: baseTree,
+      source_commit: sourceCommit,
+      source_tree: sourceTree,
+    };
+    f.git("checkout", "--detach", base);
+    f.write("source.ts", "export const unrelated = 4;\n");
+    sourceViews.put("x".repeat(8 * 1024 * 1024));
+    assert.equal(readRecordedSource(f.repo, r, "source.ts"), committed);
+    assert.equal(liveSource(f.repo, r, "source.ts"), undefined);
+  } finally {
+    f.cleanup();
+  }
+});

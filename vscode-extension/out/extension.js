@@ -984,7 +984,7 @@ function readRecordedSource(repoRoot, report, file) {
   if (cached !== void 0) return cached;
   try {
     const snapshot = report.source_snapshot;
-    const text7 = snapshot?.kind === "index" ? readGitTreeFile(
+    const text7 = snapshot?.kind === "index" || snapshot?.kind === "commit-tree" ? readGitTreeFile(
       repoRoot,
       anchor.side === "base" ? snapshot.base_tree : snapshot.source_tree,
       file
@@ -14157,12 +14157,19 @@ var gitBase = {
   baseCommit: union(gitOid, literal(null)),
   baseTree: gitOid
 };
-var snapshotIdentity = refined(union(object({ kind: literal("index"), hash: sha256, ...gitBase, sourceTree: gitOid }), object({ kind: literal("working-tree"), hash: sha256, ...gitBase })), (value, at) => {
+var snapshotIdentity = refined(union(object({ kind: literal("index"), hash: sha256, ...gitBase, sourceTree: gitOid }), object({ kind: literal("working-tree"), hash: sha256, ...gitBase }), object({
+  kind: literal("commit-tree"),
+  hash: sha256,
+  ...gitBase,
+  sourceCommit: gitOid,
+  sourceTree: gitOid
+})), (value, at) => {
   const size = value.objectFormat === "sha1" ? 40 : 64;
   const oids = [
     value.baseCommit,
     value.baseTree,
-    ..."sourceTree" in value ? [value.sourceTree] : []
+    ..."sourceTree" in value ? [value.sourceTree] : [],
+    ..."sourceCommit" in value ? [value.sourceCommit] : []
   ];
   if (oids.some((oid) => oid !== null && oid.length !== size))
     fail(at, "Git object format mismatch");
@@ -14623,6 +14630,12 @@ function projectCommitDefender(value) {
       base_commit: source.baseCommit,
       base_tree: source.baseTree,
       source_tree: source.sourceTree
+    } : source.kind === "commit-tree" ? {
+      kind: "commit-tree",
+      base_commit: source.baseCommit,
+      base_tree: source.baseTree,
+      source_commit: source.sourceCommit,
+      source_tree: source.sourceTree
     } : {
       kind: "working-tree",
       content_sha256: Object.fromEntries(report.files.map((file) => [file.source.path, file.source.hash]))
@@ -15004,7 +15017,7 @@ var reviewStartLedger = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.19",
+  version: "0.1.0-alpha.20",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -17702,7 +17715,7 @@ async function observeAutomaticFile(root2, file, excludes = []) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.19",
+  version: "0.1.0-alpha.20",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

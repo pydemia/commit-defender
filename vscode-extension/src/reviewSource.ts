@@ -155,7 +155,7 @@ export function readRecordedSource(
   try {
     const snapshot = report.source_snapshot;
     const text =
-      snapshot?.kind === "index"
+      snapshot?.kind === "index" || snapshot?.kind === "commit-tree"
         ? readGitTreeFile(
             repoRoot,
             anchor.side === "base" ? snapshot.base_tree : snapshot.source_tree,

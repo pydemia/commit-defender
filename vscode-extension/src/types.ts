@@ -107,6 +107,7 @@ export interface AnalysisReport {
   /** Source identity captured before review; legacy CLI tool reads are not yet isolated. */
   source_snapshot?:
     | { kind: 'index'; base_commit: string | null; base_tree: string; source_tree: string }
+    | { kind: 'commit-tree'; base_commit: string | null; base_tree: string; source_commit: string; source_tree: string }
     | { kind: 'working-tree'; content_sha256: Record<string, string> };
 }
 
