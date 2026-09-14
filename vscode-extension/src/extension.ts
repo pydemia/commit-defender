@@ -9,6 +9,9 @@ import { createReviewBackend, createLegacyReviewBackend } from './reviewBackend.
 import { ReviewExecutionOwner } from './reviewExecution.js';
 import { checkLocalContextFreshness, knowledgeScope } from './localKnowledge.js';
 import { readSelectedHistory, readSelection, selectedReviewSettings, selectionKey } from './centralConnection.js';
+import { AutomaticReviews } from './automaticReviews.js';
+import type { AutomaticTask } from '@gcr/client-core';
+import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
@@ -505,20 +508,29 @@ export function activate(context: vscode.ExtensionContext): void {
     scope: AnalysisScope = 'staged',
     scopeTarget?: string,
     sourceExclusions: SourceExclusion[] = [],
-  ): Promise<void> {
+    automatic?: AutomaticTask<ReviewRequest>,
+  ): Promise<void | { retryAt?: number }> {
     const cfg = getConfig();
     let localSettings = getStandaloneReviewSettings(relPaths.length);
     try {
       const scope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: 'repository' });
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope));
     } catch (error) {
+      if (automatic) throw error;
       void vscode.window.showErrorMessage(standaloneError(error).message); return;
     }
     const backend = createReviewBackend(cfg, {
       workerFile: context.asAbsolutePath('out/standalone-review-worker.js'),
       settings: localSettings,
     });
-    await execution.prepare(signal => backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions}, signal), {
+    let automaticError: unknown;
+    let automaticResultDisplayed = false;
+    await execution.prepare(signal => withReviewSignals(signal, automatic?.signal, async combined => {
+      const job = await backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions,
+        ...(automatic?.value.automatic ? { automatic: automatic.value.automatic } : {})}, combined);
+      return { ...job, run: (runSignal: AbortSignal, progress?: Parameters<typeof job.run>[1]) =>
+        withReviewSignals(runSignal, automatic?.signal, merged => job.run(merged, progress)) };
+    }), {
       preparing: () => {
         statusBar.setPreparing();
         historyProvider.setRunning(true);
@@ -531,6 +543,7 @@ export function activate(context: vscode.ExtensionContext): void {
       },
       progress: (current, total, file) => statusBar.setProgress(current, total, file),
       error: error => {
+        if (automatic) { automaticError = error; if (automatic.isCurrent()) getOutputChannel().appendLine(`[Commit Defender] Automatic review: ${standaloneError(error).message}`); return; }
         const message = error instanceof Error ? error.message : 'Local review preparation failed.';
         statusBar.setError(message);
         getOutputChannel().appendLine(`[Commit Defender] ${message}`);
@@ -547,8 +560,13 @@ export function activate(context: vscode.ExtensionContext): void {
         if (execution.isRunning) return;
         historyProvider.setRunning(false);
         panelProvider.setRunning(false);
+        if (automatic && !automaticResultDisplayed) {
+          statusBar.setIdle('Automatic review stopped. Click for manual staged review.');
+        }
       },
       result: async (result, isCurrent) => {
+        if (automatic && !automatic.isCurrent()) return;
+        automaticResultDisplayed = !!automatic;
         retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
@@ -571,7 +589,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const status = reviewStatus(result.report.review);
         if (execution.isPreparing) statusBar.setPreparing();
         else statusBar.setReport(result.report);
-        if (status === 'failed') {
+        if (status === 'failed' && !automatic) {
           const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
           const provider = accountProvider(cfg.aiProvider);
           const signIn = provider ? signInLabel(provider) : undefined;
@@ -583,6 +601,7 @@ export function activate(context: vscode.ExtensionContext): void {
           });
         }
 
+        if (automatic) return;
         showSummaryPanel(result.report, repoRoot, context);
         await vscode.commands.executeCommand('commitDefender.panelView.focus');
         if (!isCurrent()) return;
@@ -592,6 +611,11 @@ export function activate(context: vscode.ExtensionContext): void {
         if (command) await reviewNavigation.open(command.arguments?.[0], isCurrent);
       },
     }, localSettings.durationMs);
+    if (automaticError && automatic?.isCurrent()) {
+      const error = standaloneError(automaticError);
+      if (error.code === 'request-deferred' && error.retryAt) return { retryAt: error.retryAt };
+      throw error;
+    }
   }
 
   // ── 1. Analyze Current File ────────────────────────────────────────────
@@ -1023,8 +1047,20 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   ));
 
-  // ── Auto-trigger on git stage ──────────────────────────────────────────
-  setupIndexWatcher(context);
+  const automaticReviews = new AutomaticReviews(context, {
+    busy: () => execution.isRunning,
+    run: (request, task) => analyze(request.files, request.repoRoot, request.scope, request.scopeTarget, request.sourceExclusions ?? [], task),
+    state: state => {
+      if (state.phase === 'waiting' && !execution.isRunning) statusBar.setIdle(`Automatic review waiting: ${state.reason ?? 'scheduled'}${state.retryAt ? ` until ${new Date(state.retryAt).toLocaleTimeString()}` : ''}. Click for manual staged review.`);
+      if (state.phase === 'failed') {
+        getOutputChannel().appendLine('[Commit Defender] Automatic review did not complete. Inspect Output or run a manual review.');
+        if (!execution.isRunning) statusBar.setError('Automatic review did not complete. Inspect Output or run a manual review.');
+      }
+    },
+  });
+  context.subscriptions.push(automaticReviews);
+  const settlePrevious = settleExecutions;
+  settleExecutions = async () => { automaticReviews.dispose(); await settlePrevious?.(); await automaticReviews.settled(); };
 }
 
 export async function deactivate(): Promise<void> {
@@ -1188,23 +1224,12 @@ function logSourceExclusions(excluded: SourceExclusion[], show = false): void {
   if (show) channel.show(true);
 }
 
-function setupIndexWatcher(context: vscode.ExtensionContext): void {
-  const cfg = getConfig();
-  if (!cfg.runOnStage) { return; }
-  const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
-  if (!ws) { return; }
-
-  const indexPattern = new vscode.RelativePattern(
-    vscode.Uri.file(path.join(ws.fsPath, '.git')),
-    'index'
-  );
-  const watcher = vscode.workspace.createFileSystemWatcher(indexPattern, false, false, true);
-  let debounce: ReturnType<typeof setTimeout> | undefined;
-  const trigger = (): void => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => vscode.commands.executeCommand('commitDefender.analyze'), 2000);
-  };
-  watcher.onDidChange(trigger);
-  watcher.onDidCreate(trigger);
-  context.subscriptions.push(watcher);
+async function withReviewSignals<T>(signal: AbortSignal, automatic: AbortSignal | undefined, work: (combined: AbortSignal) => Promise<T>): Promise<T> {
+  if (!automatic) return work(signal);
+  const combined = new AbortController();
+  const first = () => combined.abort(signal.reason), second = () => combined.abort(automatic.reason);
+  signal.addEventListener('abort',first,{once:true}); automatic.addEventListener('abort',second,{once:true});
+  if (signal.aborted) first(); if (automatic.aborted) second();
+  try { return await work(combined.signal); }
+  finally { signal.removeEventListener('abort',first); automatic.removeEventListener('abort',second); }
 }

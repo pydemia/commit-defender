@@ -51,6 +51,7 @@ port.on(
           port.postMessage({
             type: "failure",
             code: standaloneError(error).code,
+            retryAt: standaloneError(error).retryAt,
           });
         },
       )

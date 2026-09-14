@@ -19,6 +19,14 @@ export interface ReviewRequest {
   scope: ReviewScope;
   scopeTarget?: string;
   sourceExclusions?: SourceExclusion[];
+  automatic?: {
+    reason: "save" | "stage";
+    head: string | null;
+    indexFingerprint?: string;
+    files?: Record<string, string | null>;
+    minimumIntervalMs: number;
+    maximumReviewsPerHour: number;
+  };
 }
 export interface PreparedExecution<T> {
   readonly backendId: string;

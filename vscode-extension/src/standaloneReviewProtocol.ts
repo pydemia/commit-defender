@@ -18,7 +18,7 @@ export interface StandaloneReviewSettings {
 }
 
 export class StandaloneReviewError extends Error {
-  constructor(readonly code: string) {
+  constructor(readonly code: string, readonly retryAt?: number) {
     super(standaloneErrorMessage(code));
     this.name = "StandaloneReviewError";
   }
@@ -27,6 +27,8 @@ export class StandaloneReviewError extends Error {
 /** Only these generic diagnostics may cross the worker boundary; never raw provider output. */
 export function standaloneErrorMessage(code: string): string {
   switch (code) {
+    case "source-changed":
+      return "The saved or staged source changed before automatic review could start.";
     case "request-interrupted":
       return "A previous process may have started this review. Check its outcome before another execution.";
     case "request-busy":
@@ -85,6 +87,7 @@ export function standaloneErrorMessage(code: string): string {
 }
 
 const safeCodes = new Set([
+  "source-changed",
   "request-interrupted",
   "request-busy",
   "request-deferred",
@@ -125,5 +128,7 @@ export function standaloneError(error: unknown): StandaloneReviewError {
     typeof code === "string" && safeCodes.has(code)
       ? code
       : "preparation-failed",
+    code === "request-deferred" && error && typeof error === "object" && "retryAt" in error
+      && typeof error.retryAt === "number" && Number.isSafeInteger(error.retryAt) ? error.retryAt : undefined,
   );
 }

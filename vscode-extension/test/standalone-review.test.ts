@@ -9,6 +9,8 @@ import {
   LocalKnowledgeStore,
   LocalRecordStore,
   ReviewRequests,
+  observeAutomaticRepository,
+  observeAutomaticFile,
   type LocalKeyStore,
   type LocalReviewExecutor,
 } from "@gcr/client-core";
@@ -715,4 +717,29 @@ test("a cancelled follower saves its own attempt without completing the owner's 
     await first;
     queue.close();
   }
+});
+
+test("automatic Stage records its reason, shares a manual result, and defers new input at the durable budget", async (t) => {
+  const f=setup(t);let calls=0;
+  const ports={dataDirectory:f.dataDirectory,keys:f.keyStore,prepareExecutor:async()=>({descriptor,review:async(input:Parameters<LocalReviewExecutor['review']>[0])=>{calls++;return{raw:JSON.stringify((await answer(input)).response),model:descriptor.model};}})};
+  const observed=await observeAutomaticRepository(f.repo);
+  const automatic={reason:'stage' as const,head:observed.head,indexFingerprint:observed.fingerprint,minimumIntervalMs:0,maximumReviewsPerHour:1};
+  const job=await prepareStandaloneReview({...f.request,automatic},settings,abort(),ports);
+  const result=await job.run(abort());assert.equal(result.report.gcr?.report.trigger,'stage');assert.equal(calls,1);
+  const manual=await prepareStandaloneReview(f.request,settings,abort(),ports);assert.deepEqual((await manual.run(abort())).report,result.report);assert.equal(calls,1);
+  f.write('sum.ts','export const sum = (values: number[]) => 0;\n');f.git('add','.');
+  const next=await observeAutomaticRepository(f.repo);
+  const deferred=await prepareStandaloneReview({...f.request,automatic:{...automatic,indexFingerprint:next.fingerprint}},settings,abort(),ports);
+  await assert.rejects(deferred.run(abort()),(e:unknown)=>!!e && typeof e==='object' && 'code' in e && e.code==='request-deferred' && 'retryAt' in e && typeof e.retryAt==='number' && e.retryAt>Date.now());assert.equal(calls,1);
+});
+test("automatic Save verifies observed bytes again before the model starts",async(t)=>{
+ const f=setup(t);let calls=0;
+ const observed=await observeAutomaticRepository(f.repo),file=await observeAutomaticFile(f.repo,'sum.ts');assert(file);
+ const ports={dataDirectory:f.dataDirectory,keys:f.keyStore,prepareExecutor:async()=>({descriptor,review:async(input:Parameters<LocalReviewExecutor['review']>[0])=>{calls++;return{raw:JSON.stringify((await answer(input)).response),model:descriptor.model};}})};
+ const job=await prepareStandaloneReview({...f.request,scope:'selection',automatic:{reason:'save',head:observed.head,files:{'sum.ts':file.hash},minimumIntervalMs:600000,maximumReviewsPerHour:6}},settings,abort(),ports);
+ f.write('sum.ts','export const changedAfterSave = true;\n');
+ await assert.rejects(job.run(abort()),(e:unknown)=>!!e&&typeof e==='object'&&'code'in e&&e.code==='source-changed');assert.equal(calls,0);
+ const latest=await observeAutomaticFile(f.repo,'sum.ts');assert(latest);
+ const next=await prepareStandaloneReview({...f.request,scope:'selection',automatic:{reason:'save',head:observed.head,files:{'sum.ts':latest.hash},minimumIntervalMs:600000,maximumReviewsPerHour:6}},settings,abort(),ports);
+ const report=await next.run(abort());assert.equal(report.report.gcr?.report.trigger,'save');assert.equal(calls,1);
 });

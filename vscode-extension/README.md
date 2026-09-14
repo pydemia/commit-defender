@@ -38,9 +38,9 @@ Findings appear as inline comment threads in the editor (one thread per line, on
 | **Gemini CLI account** | Current models available to your Google account | Local `gemini` CLI |
 | **Antigravity account** | Current models available to your Antigravity account | Local `agy` CLI |
 
-### Automatic analysis on `git add`
+### Automatic reviews on Save and Stage
 
-Stage a file and Commit Defender silently runs in the background. Findings appear as diagnostics in the Problems panel and inline editor comments — no manual trigger needed.
+Enable Save or Stage independently in **Commit Defender: Automatic Reviews**, or set `commitDefender.runOnSave` / `commitDefender.runOnStage` in User Settings. Both default to off. Findings appear in Problems and inline comments without opening a summary or moving editor focus. See [automatic reviews](docs/automatic-reviews.md) for timing, scope and current limitations.
 
 ### Standalone pre-commit hook
 
@@ -248,7 +248,8 @@ P3 findings unconditionally block the commit. P0 is only emitted when the file h
 | `commitDefender.locale` | `en` | Review language: `en` or `ko` (한국어) |
 | `commitDefender.excludePatterns` | `[]` | Gitignore-style patterns to skip in addition to the repo's `.gitignore` |
 | `commitDefender.colorPalette` | `theme-adaptive` | Color palette for priority badges (14 options including colorblind-safe sets) |
-| `commitDefender.runOnStage` | `true` | Auto-analyze when files are staged |
+| `commitDefender.runOnSave` | `false` | Review saved changes; User Settings or worktree selection |
+| `commitDefender.runOnStage` | `false` | Review new staged changes; User Settings or worktree selection |
 | `commitDefender.preCommitHook` | `disable` | `enable` → install the standalone git pre-commit hook on activation |
 | `commitDefender.fileTimeoutSeconds` | `120` | Timeout for single-file analysis. `0` = no limit |
 | `commitDefender.directoryTimeoutSeconds` | `360` | Timeout for directory / repository analysis. `0` = no limit |
@@ -438,7 +439,7 @@ is also separate because `agy` and `gemini` can coexist.
 Install Node 18+ and ensure `command -v node` resolves in the shell that runs `git commit`.
 
 **Analysis never triggers automatically**
-Check that `commitDefender.runOnStage` is `true` and that the workspace has a `.git` folder (the extension activates only in git repositories).
+Enable Stage in **Commit Defender: Automatic Reviews** or set `commitDefender.runOnStage` to `true` in User Settings. Check that automatic reviews are not paused. Workspace settings cannot enable automatic model execution.
 
 **Hook isn't using my latest setting**
 The hook config is updated only on `onDidChangeConfiguration` events from a running VS Code window with the extension active. Make a one-character edit to settings.json (or run `Commit Defender: Install Pre-commit Hook` again) to force a re-write.

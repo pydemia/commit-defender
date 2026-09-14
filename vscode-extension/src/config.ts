@@ -153,3 +153,8 @@ function resolveExternalCliPath(configured: string, name: string): string {
   }
   return candidates.find(candidate => fs.existsSync(candidate)) ?? configured;
 }
+
+export function getAutomaticUserSettings(): (key: string) => unknown {
+  const cfg = vscode.workspace.getConfiguration('commitDefender');
+  return (key) => cfg.inspect(key)?.globalValue;
+}

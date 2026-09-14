@@ -26,7 +26,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var import_node_worker_threads = require("node:worker_threads");
 
 // src/standaloneReview.ts
-var import_node_path15 = __toESM(require("node:path"));
+var import_node_path16 = __toESM(require("node:path"));
+var import_node_crypto17 = require("node:crypto");
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -1088,7 +1089,7 @@ var reviewStartLedger = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.18",
+  version: "0.1.0-alpha.19",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1166,7 +1167,7 @@ function defaultLocalDataDirectory(platform = process.platform) {
   throw new LocalStoreError("unsupported-platform", "Local storage requires a supported OS credential store.");
 }
 function discoverLocalIdentity(cwd, profileId) {
-  const git = (args) => (0, import_node_child_process.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
+  const git2 = (args) => (0, import_node_child_process.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 1e4,
@@ -1174,9 +1175,9 @@ function discoverLocalIdentity(cwd, profileId) {
     env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }
   }).trim();
   try {
-    const root = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--show-toplevel"]));
-    const common2 = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--git-common-dir"]));
-    const directory = (0, import_node_fs.realpathSync)(git(["--path-format=absolute", "--git-dir"]));
+    const root = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--show-toplevel"]));
+    const common2 = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-common-dir"]));
+    const directory = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-dir"]));
     return clientIdentity({
       mode: "standalone",
       profileId,
@@ -2744,21 +2745,21 @@ function captureLocalSource(input2) {
   const deadline = Date.now() + limit(options.limits?.durationMs, 3e4, 12e4);
   if (options.baseRef !== void 0 && !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/.test(options.baseRef))
     throw new SourceCaptureError("invalid-source-request");
-  const git = new SourceGit(options.cwd, deadline, options.indexFile);
+  const git2 = new SourceGit(options.cwd, deadline, options.indexFile);
   try {
-    const headCommit = git.initialHead;
+    const headCommit = git2.initialHead;
     let baseCommit = headCommit;
     if (options.baseRef) {
       if (!headCommit)
         throw new SourceCaptureError("source-unavailable");
-      const ref = git.oid(git.text(["rev-parse", "--verify", "--end-of-options", `${options.baseRef}^{commit}`]).trim());
-      baseCommit = git.oid(git.text(["merge-base", headCommit, ref]).trim());
+      const ref = git2.oid(git2.text(["rev-parse", "--verify", "--end-of-options", `${options.baseRef}^{commit}`]).trim());
+      baseCommit = git2.oid(git2.text(["merge-base", headCommit, ref]).trim());
     }
-    const baseTree = git.oid(git.text(baseCommit ? ["rev-parse", "--verify", `${baseCommit}^{tree}`] : ["hash-object", "-w", "-t", "tree", "--stdin"], "").trim());
-    const sourceTree = git.oid(git.text(["write-tree"]).trim());
-    const base = git.tree(baseTree, entryLimit);
-    const source = git.tree(sourceTree, entryLimit);
-    const skipWorktree = new Set(git.text(["ls-files", "-t", "-z"]).split("\0").filter((entry) => entry.startsWith("S ")).map((entry) => entry.slice(2)));
+    const baseTree = git2.oid(git2.text(baseCommit ? ["rev-parse", "--verify", `${baseCommit}^{tree}`] : ["hash-object", "-w", "-t", "tree", "--stdin"], "").trim());
+    const sourceTree = git2.oid(git2.text(["write-tree"]).trim());
+    const base = git2.tree(baseTree, entryLimit);
+    const source = git2.tree(sourceTree, entryLimit);
+    const skipWorktree = new Set(git2.text(["ls-files", "-t", "-z"]).split("\0").filter((entry) => entry.startsWith("S ")).map((entry) => entry.slice(2)));
     const allPaths = [
       .../* @__PURE__ */ new Set([...base.keys(), ...source.keys(), ...untracked, ...selectedPaths ?? []])
     ].sort();
@@ -2786,7 +2787,7 @@ function captureLocalSource(input2) {
       const parts2 = file.split("/");
       for (let index = 1; index < parts2.length; index++) {
         try {
-          const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts2.slice(0, index)));
+          const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git2.root, ...parts2.slice(0, index)));
           if (stat2.isSymbolicLink()) {
             for (const side of ["base", "source"])
               exclude(file, side, "symlink", "ignore-path-symlink");
@@ -2806,7 +2807,7 @@ function captureLocalSource(input2) {
       return true;
     });
     let frozenIgnore = "";
-    const checkIgnore = () => ignoreInputs.length ? git.text(["check-ignore", "--no-index", "-z", "--stdin"], ignoreInputs.map((file) => `./${file}\0`).join(""), void 0, [0, 1]) : "";
+    const checkIgnore = () => ignoreInputs.length ? git2.text(["check-ignore", "--no-index", "-z", "--stdin"], ignoreInputs.map((file) => `./${file}\0`).join(""), void 0, [0, 1]) : "";
     if (ignoreInputs.length) {
       const ignored = checkIgnore();
       frozenIgnore = ignored;
@@ -2849,7 +2850,7 @@ function captureLocalSource(input2) {
         exclude(file, side, "unsupported-source", "lfs-pointer");
         return;
       }
-      if (blobId(body2, git.objectFormat) !== entry.oid)
+      if (blobId(body2, git2.objectFormat) !== entry.oid)
         throw new SourceCaptureError("source-unavailable");
       files.set(key(side, file), {
         source: sourceFile({
@@ -2886,7 +2887,7 @@ function captureLocalSource(input2) {
           try {
             const parts2 = file.split("/");
             for (let index = 1; index <= parts2.length; index++) {
-              const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git.root, ...parts2.slice(0, index)));
+              const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git2.root, ...parts2.slice(0, index)));
               if (stat2.isSymbolicLink()) {
                 exclude(file, side, "symlink");
                 break;
@@ -2898,7 +2899,7 @@ function captureLocalSource(input2) {
             }
             if (denied2.has(key(side, file)))
               continue;
-            const absolute = import_node_path6.default.join(git.root, file);
+            const absolute = import_node_path6.default.join(git2.root, file);
             fd = (0, import_node_fs4.openSync)(absolute, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
             const opened = (0, import_node_fs4.fstatSync)(fd);
             if (!opened.isFile() || (0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== signature(opened))
@@ -2921,7 +2922,7 @@ function captureLocalSource(input2) {
               mode: opened.mode & 73 ? "100755" : "100644",
               type: "blob",
               size: body2.length,
-              oid: blobId(body2, git.objectFormat)
+              oid: blobId(body2, git2.objectFormat)
             };
             add(file, side, body2, captured);
             if (files.has(key(side, file)))
@@ -2951,7 +2952,7 @@ function captureLocalSource(input2) {
       }
     }
     if (candidates.length) {
-      const output = git.run(["cat-file", "--batch"], candidates.map(({ entry }) => `${entry.oid}
+      const output = git2.run(["cat-file", "--batch"], candidates.map(({ entry }) => `${entry.oid}
 `).join(""), byteLimit + candidates.length * 160);
       let offset = 0;
       for (const { file, side, entry } of candidates) {
@@ -2977,22 +2978,22 @@ function captureLocalSource(input2) {
     }
     for (const observation of observations) {
       try {
-        const absolute = import_node_path6.default.join(git.root, observation.file);
+        const absolute = import_node_path6.default.join(git2.root, observation.file);
         if ((0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== observation.signature)
           throw new SourceCaptureError("snapshot-changed");
       } catch {
         throw new SourceCaptureError("snapshot-changed");
       }
     }
-    if (git.head() !== headCommit || git.branch() !== git.initialBranch || checkIgnore() !== frozenIgnore)
+    if (git2.head() !== headCommit || git2.branch() !== git2.initialBranch || checkIgnore() !== frozenIgnore)
       throw new SourceCaptureError("snapshot-changed");
     if (workingWrites.length) {
       const names = workingWrites.map(({ body: body2 }, index) => {
-        const name = import_node_path6.default.join(git.directory, `blob-${index}`);
+        const name = import_node_path6.default.join(git2.directory, `blob-${index}`);
         (0, import_node_fs4.writeFileSync)(name, body2, { mode: 384 });
         return JSON.stringify(name);
       });
-      const oids = git.text(["hash-object", "-w", "--no-filters", "--stdin-paths"], `${names.join("\n")}
+      const oids = git2.text(["hash-object", "-w", "--no-filters", "--stdin-paths"], `${names.join("\n")}
 `).trim().split("\n");
       if (oids.length !== workingWrites.length || oids.some((oid, index) => oid !== workingWrites[index].entry.oid))
         throw new SourceCaptureError("source-unavailable");
@@ -3007,9 +3008,9 @@ function captureLocalSource(input2) {
         size: file.source.byteLength
       }
     ]));
-    const left = git.selectedTree(filtered("base"));
-    const right = git.selectedTree(filtered("source"));
-    const records = git.text([
+    const left = git2.selectedTree(filtered("base"));
+    const right = git2.selectedTree(filtered("source"));
+    const records = git2.text([
       "diff",
       "--no-ext-diff",
       "--no-textconv",
@@ -3047,8 +3048,8 @@ function captureLocalSource(input2) {
       if (!selected.some((entry) => entry.path === file) && !limitations.some((item) => item.path === file))
         exclude(file, "source", "unreadable", "requested-file-not-captured");
     const patchPaths = new Set(selected.flatMap((change) => [change.path, ...change.oldPath ? [change.oldPath] : []]));
-    const patchTree = (side) => git.selectedTree(new Map([...filtered(side)].filter(([file]) => patchPaths.has(file))));
-    const diff = selected.length ? git.text([
+    const patchTree = (side) => git2.selectedTree(new Map([...filtered(side)].filter(([file]) => patchPaths.has(file))));
+    const diff = selected.length ? git2.text([
       "diff",
       "--no-ext-diff",
       "--no-textconv",
@@ -3059,7 +3060,7 @@ function captureLocalSource(input2) {
     ], void 0, byteLimit * 2 + 1048576) : "";
     const identity = snapshotIdentity({
       kind: options.kind,
-      objectFormat: git.objectFormat,
+      objectFormat: git2.objectFormat,
       baseCommit,
       baseTree,
       ...options.kind === "index" ? { sourceTree } : {},
@@ -3077,9 +3078,9 @@ function captureLocalSource(input2) {
         diffHash: hash(diff)
       })
     });
-    return new LocalSourceSnapshot(identity, git.repository, headCommit, git.initialBranch, files, selected, limitations, diff);
+    return new LocalSourceSnapshot(identity, git2.repository, headCommit, git2.initialBranch, files, selected, limitations, diff);
   } finally {
-    git.close();
+    git2.close();
   }
 }
 
@@ -4849,9 +4850,9 @@ async function runLocalReview(input2) {
       return read;
     });
   };
-  const requirements = (path16) => {
-    const change = selected.find((change2) => change2.path === path16);
-    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path16) : source2.path === path16);
+  const requirements = (path17) => {
+    const change = selected.find((change2) => change2.path === path17);
+    return snapshot.sourceFiles.filter((source2) => source2.side === "base" ? source2.path === (change.oldPath ?? path17) : source2.path === path17);
   };
   let portFailure;
   const source = {
@@ -6016,25 +6017,171 @@ async function executeReviewRequest(input2) {
   }
 }
 
+// node_modules/@gcr/client-core/dist/automatic-source.js
+var import_node_child_process4 = require("node:child_process");
+var import_node_fs5 = require("node:fs");
+var import_promises5 = require("node:fs/promises");
+var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_crypto13 = require("node:crypto");
+async function git(cwd, args, input2, allow = [0]) {
+  return new Promise((resolve, reject) => {
+    const child = (0, import_node_child_process4.execFile)("git", [
+      ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
+      "-c",
+      "core.fsmonitor=false",
+      "-c",
+      "core.hooksPath=/dev/null",
+      "-C",
+      cwd,
+      ...args
+    ], {
+      encoding: "utf8",
+      timeout: 1e4,
+      maxBuffer: 16 * 1024 * 1024,
+      env: {
+        PATH: process.env.PATH,
+        HOME: process.env.HOME,
+        LC_ALL: "C",
+        GIT_CONFIG_NOSYSTEM: "1",
+        GIT_CONFIG_GLOBAL: "/dev/null",
+        GIT_OPTIONAL_LOCKS: "0",
+        GIT_NO_LAZY_FETCH: "1",
+        GIT_TERMINAL_PROMPT: "0",
+        GIT_ALLOW_PROTOCOL: ""
+      }
+    }, (error2, stdout) => {
+      if (error2 && !allow.includes(Number(error2.code)))
+        reject(new SourceCaptureError("source-unavailable"));
+      else
+        resolve(stdout);
+    });
+    child.stdin?.on("error", () => {
+    });
+    child.stdin?.end(input2);
+  });
+}
+async function observeAutomaticRepository(cwd, excludes = []) {
+  const root = await (0, import_promises5.realpath)((await git(cwd, ["rev-parse", "--show-toplevel"])).trim());
+  const indexPath = (await git(root, ["rev-parse", "--path-format=absolute", "--git-path", "index"])).trim();
+  const head = (await git(root, ["rev-parse", "--verify", "HEAD"], void 0, [0, 128])).trim() || null;
+  const index = await git(root, ["ls-files", "--stage", "-z"]);
+  const raw = (await git(root, [
+    "diff",
+    "--cached",
+    "--raw",
+    "--no-abbrev",
+    "--no-renames",
+    "--no-ext-diff",
+    "--no-textconv",
+    "-z",
+    "--"
+  ])).split("\0");
+  const policy = sourcePathPolicy(excludes), changes = [];
+  for (let i = 0; i < raw.length - 1; i += 2) {
+    const header2 = raw[i].match(/^:(\d{6}) (\d{6}) ([a-f0-9]{40,64}) ([a-f0-9]{40,64}) ([AMDTU])$/);
+    if (!header2)
+      throw new SourceCaptureError("source-unavailable");
+    const file = sourcePath(raw[i + 1]);
+    if (policy(file) || !["000000", "100644", "100755"].includes(header2[2]) || header2[5] === "U")
+      continue;
+    changes.push({
+      path: file,
+      oldMode: header2[1],
+      mode: header2[2],
+      oldOid: header2[3],
+      oid: header2[4],
+      status: header2[5]
+    });
+  }
+  if (changes.length) {
+    const ignored = new Set((await git(root, ["check-ignore", "--no-index", "-z", "--stdin"], changes.map((c) => `./${c.path}\0`).join(""), [0, 1])).split("\0").map((p) => p.replace(/^\.\//, "")));
+    for (let i = changes.length - 1; i >= 0; i--)
+      if (ignored.has(changes[i].path))
+        changes.splice(i, 1);
+  }
+  const endHead = (await git(root, ["rev-parse", "--verify", "HEAD"], void 0, [0, 128])).trim() || null;
+  const endIndex = await git(root, ["ls-files", "--stage", "-z"]);
+  if (head !== endHead || index !== endIndex)
+    throw new SourceCaptureError("source-unavailable");
+  return { root, indexPath, head, fingerprint: contentHash({ head, index }), changes };
+}
+async function workingTreeChanged(root, file) {
+  const head = (await git(root, ["rev-parse", "--verify", "HEAD"], void 0, [0, 128])).trim();
+  if (!head)
+    return !!await git(root, ["status", "--porcelain=v1", "-z", "--", file]);
+  return !!await git(root, [
+    "diff",
+    head,
+    "--name-only",
+    "-z",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--",
+    file
+  ]) || !!await git(root, ["ls-files", "--others", "--exclude-standard", "-z", "--", file]);
+}
+async function observeAutomaticFile(root, file, excludes = []) {
+  file = sourcePath(file);
+  root = await (0, import_promises5.realpath)(root);
+  if (sourcePathPolicy(excludes)(file))
+    return void 0;
+  const absolute = import_node_path11.default.join(root, file), parent = await (0, import_promises5.realpath)(import_node_path11.default.dirname(absolute)).catch(() => void 0);
+  if (!parent || parent !== import_node_path11.default.dirname(absolute) || parent !== root && !parent.startsWith(root + import_node_path11.default.sep))
+    return void 0;
+  const ignored = await git(root, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
+  if (ignored)
+    return void 0;
+  let handle;
+  try {
+    handle = await (0, import_promises5.open)(absolute, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW | import_node_fs5.constants.O_NONBLOCK);
+    const before = await handle.stat();
+    if (!before.isFile() || before.size > 2 * 1024 * 1024)
+      return void 0;
+    const buffer = Buffer.alloc(Number(before.size) + 1);
+    let length = 0;
+    while (length < buffer.length) {
+      const read = await handle.read(buffer, length, buffer.length - length, null);
+      if (!read.bytesRead)
+        break;
+      length += read.bytesRead;
+    }
+    const after = await handle.stat();
+    if (length !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+      return void 0;
+    if (buffer.subarray(0, length).includes(0))
+      return void 0;
+    const changed = await workingTreeChanged(root, file);
+    return { hash: (0, import_node_crypto13.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
+  } catch (error2) {
+    if (error2.code === "ENOENT") {
+      const changed = await workingTreeChanged(root, file);
+      return { hash: null, changed };
+    }
+    return void 0;
+  } finally {
+    await handle?.close();
+  }
+}
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.18",
+  version: "0.1.0-alpha.19",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var import_node_crypto15 = require("node:crypto");
-var import_node_fs5 = require("node:fs");
-var import_promises7 = require("node:fs/promises");
+var import_node_crypto16 = require("node:crypto");
+var import_node_fs6 = require("node:fs");
+var import_promises8 = require("node:fs/promises");
 var import_node_os4 = __toESM(require("node:os"), 1);
-var import_node_path14 = __toESM(require("node:path"), 1);
+var import_node_path15 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/codex-config.js
-var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_path12 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/process.js
-var import_node_child_process4 = require("node:child_process");
+var import_node_child_process5 = require("node:child_process");
 var ExecutorError = class extends Error {
   code;
   constructor(code) {
@@ -6052,7 +6199,7 @@ async function runManagedProcess(input2) {
   if (!Number.isSafeInteger(input2.timeoutMs) || input2.timeoutMs < 1 || input2.timeoutMs > 6e5 || !Number.isSafeInteger(maximum) || maximum < 1 || maximum > 16 * 1024 * 1024 || Buffer.byteLength(input2.stdin) > 2 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
   return new Promise((resolve, reject) => {
-    const child = (0, import_node_child_process4.spawn)(input2.command, [...input2.args], {
+    const child = (0, import_node_child_process5.spawn)(input2.command, [...input2.args], {
       cwd: input2.cwd,
       env: { ...input2.env },
       detached: true,
@@ -6202,7 +6349,7 @@ function codexReviewArgs(root, sourceUrl) {
     instructions: CODEX_REVIEW_INSTRUCTIONS,
     developer_instructions: "",
     model_reasoning_effort: CODEX_REVIEW_EFFORT,
-    model_catalog_json: import_node_path11.default.join(root, "models.json"),
+    model_catalog_json: import_node_path12.default.join(root, "models.json"),
     project_doc_max_bytes: 0,
     web_search: "disabled",
     "agents.enabled": false,
@@ -6215,8 +6362,8 @@ function codexReviewArgs(root, sourceUrl) {
     "history.persistence": "none",
     "analytics.enabled": false,
     "feedback.enabled": false,
-    sqlite_home: import_node_path11.default.join(root, "state"),
-    log_dir: import_node_path11.default.join(root, "logs"),
+    sqlite_home: import_node_path12.default.join(root, "state"),
+    log_dir: import_node_path12.default.join(root, "logs"),
     "otel.exporter": "none",
     "otel.trace_exporter": "none",
     "otel.metrics_exporter": "none",
@@ -6303,23 +6450,23 @@ function codexAccountEnvironment() {
 
 // node_modules/@gcr/client-executors/dist/catalog-probe.js
 var import_node_http3 = require("node:http");
-var import_promises6 = require("node:fs/promises");
-var import_node_path13 = __toESM(require("node:path"), 1);
-var import_node_crypto14 = require("node:crypto");
+var import_promises7 = require("node:fs/promises");
+var import_node_path14 = __toESM(require("node:path"), 1);
+var import_node_crypto15 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
-var import_promises5 = require("node:fs/promises");
+var import_promises6 = require("node:fs/promises");
 var import_node_os3 = __toESM(require("node:os"), 1);
-var import_node_path12 = __toESM(require("node:path"), 1);
+var import_node_path13 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input2) {
   if (process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
-  const authHome = await (0, import_promises5.realpath)(input2.env.CODEX_HOME ?? import_node_path12.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  const authHome = await (0, import_promises6.realpath)(input2.env.CODEX_HOME ?? import_node_path13.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
   const denied2 = [];
   for (const name of ["AGENTS.md", "AGENTS.override.md"]) {
-    const file = import_node_path12.default.join(authHome, name);
+    const file = import_node_path13.default.join(authHome, name);
     try {
-      const info = await (0, import_promises5.lstat)(file);
+      const info = await (0, import_promises6.lstat)(file);
       if (!info.isFile() || info.isSymbolicLink())
         throw new ExecutorError("executor-unavailable");
     } catch (error2) {
@@ -6340,7 +6487,7 @@ async function runIsolatedCodex(input2) {
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
-var import_node_crypto13 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 var import_node_http2 = require("node:http");
 var fixedSourceTools = [
   {
@@ -6403,14 +6550,14 @@ var fixedSourceTools = [
   }
 ];
 async function startSourceBridge(port2) {
-  const token2 = (0, import_node_crypto13.randomBytes)(32).toString("hex");
+  const token2 = (0, import_node_crypto14.randomBytes)(32).toString("hex");
   const authorization = Buffer.from(`Bearer ${token2}`);
   const sockets = /* @__PURE__ */ new Set();
   let host = "";
   let requestCount = 0;
   const server = (0, import_node_http2.createServer)(async (req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
-    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto13.timingSafeEqual)(supplied, authorization)) {
+    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto14.timingSafeEqual)(supplied, authorization)) {
       res.writeHead(403).end();
       return;
     }
@@ -6550,11 +6697,11 @@ function catalogNames(request) {
   return tools.flatMap((tool) => tool.type === "namespace" && Array.isArray(tool.tools) ? tool.tools.map((child) => `${String(tool.name)}.${String(child.name)}`) : [`${String(tool.type)}.${String(tool.name)}`]).sort();
 }
 async function probeCodexCatalog(command, root, observe) {
-  const canary = `DO_NOT_LOAD_${(0, import_node_crypto14.randomBytes)(16).toString("hex")}`;
+  const canary = `DO_NOT_LOAD_${(0, import_node_crypto15.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
-    await (0, import_promises6.mkdir)(import_node_path13.default.join(root, name), { mode: 448 });
-  await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
-  await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+    await (0, import_promises7.mkdir)(import_node_path14.default.join(root, name), { mode: 448 });
+  await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
+  await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
   const bridge = await startSourceBridge({
     async execute() {
       throw Error("Probe never provides source.");
@@ -6600,7 +6747,7 @@ async function probeCodexCatalog(command, root, observe) {
     const address = server.address();
     if (!address || typeof address === "string")
       throw new ExecutorError("executor-unavailable");
-    await (0, import_promises6.writeFile)(import_node_path13.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
+    await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
 [mcp_servers.unexpected]
 url = "http://127.0.0.1:${address.port}/unexpected"
 `, { mode: 384 });
@@ -6618,11 +6765,11 @@ url = "http://127.0.0.1:${address.port}/unexpected"
     const processResult = await runIsolatedCodex({
       command,
       args,
-      cwd: import_node_path13.default.join(root, "cwd"),
+      cwd: import_node_path14.default.join(root, "cwd"),
       env: {
         PATH: "/usr/bin:/bin",
-        HOME: import_node_path13.default.join(root, "auth"),
-        CODEX_HOME: import_node_path13.default.join(root, "auth"),
+        HOME: import_node_path14.default.join(root, "auth"),
+        CODEX_HOME: import_node_path14.default.join(root, "auth"),
         LANG: "en_US.UTF-8",
         GCR_FIXED_SOURCE_TOKEN: bridge.token
       },
@@ -6656,22 +6803,22 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 }
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var hash3 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
-  const info = await (0, import_promises7.stat)(command);
+  const info = await (0, import_promises8.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
-  const digest2 = (0, import_node_crypto15.createHash)("sha256");
-  for await (const bytes of (0, import_node_fs5.createReadStream)(command))
+  const digest2 = (0, import_node_crypto16.createHash)("sha256");
+  for await (const bytes of (0, import_node_fs6.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
 }
 async function executablePath(value) {
-  const candidates = value.includes(import_node_path14.default.sep) ? [import_node_path14.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path14.default.delimiter).filter(Boolean).map((directory) => import_node_path14.default.join(directory, value));
+  const candidates = value.includes(import_node_path15.default.sep) ? [import_node_path15.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path15.default.delimiter).filter(Boolean).map((directory) => import_node_path15.default.join(directory, value));
   for (const candidate of candidates) {
     try {
-      await (0, import_promises7.access)(candidate, import_node_fs5.constants.X_OK);
-      return await (0, import_promises7.realpath)(candidate);
+      await (0, import_promises8.access)(candidate, import_node_fs6.constants.X_OK);
+      return await (0, import_promises8.realpath)(candidate);
     } catch {
     }
   }
@@ -6713,21 +6860,21 @@ var CodexAccountExecutor = class {
       throw new ExecutorError("cancelled");
     if (await binaryHash(this.command) !== this.fingerprint)
       throw new ExecutorError("executor-unavailable");
-    const root = await (0, import_promises7.mkdtemp)(import_node_path14.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
+    const root = await (0, import_promises8.mkdtemp)(import_node_path15.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
     const started = performance.now();
     let bridge;
     try {
-      const cwd = import_node_path14.default.join(root, "cwd");
-      await (0, import_promises7.mkdir)(cwd, { mode: 448 });
-      await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "models.json"), this.catalog, { mode: 384 });
+      const cwd = import_node_path15.default.join(root, "cwd");
+      await (0, import_promises8.mkdir)(cwd, { mode: 448 });
+      await (0, import_promises8.writeFile)(import_node_path15.default.join(root, "models.json"), this.catalog, { mode: 384 });
       bridge = await startSourceBridge(input2.source);
       const args = codexReviewArgs(root, bridge.url);
       if (input2.responseSchema) {
         const schema = JSON.stringify(input2.responseSchema);
         if (Buffer.byteLength(schema) > 65536)
           throw new ExecutorError("executor-unavailable");
-        const file = import_node_path14.default.join(root, "response-schema.json");
-        await (0, import_promises7.writeFile)(file, schema, { mode: 384 });
+        const file = import_node_path15.default.join(root, "response-schema.json");
+        await (0, import_promises8.writeFile)(file, schema, { mode: 384 });
         args.push("--output-schema", file);
       }
       args.push("-");
@@ -6773,7 +6920,7 @@ var CodexAccountExecutor = class {
       try {
         await bridge?.close();
       } finally {
-        await (0, import_promises7.rm)(root, { recursive: true, force: true });
+        await (0, import_promises8.rm)(root, { recursive: true, force: true });
       }
     }
   }
@@ -6782,7 +6929,7 @@ async function prepareCodexAccountExecutor(options) {
   if (options.model !== CODEX_REVIEW_MODEL || options.reasoningEffort !== CODEX_REVIEW_EFFORT || process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
-  const root = await (0, import_promises7.mkdtemp)(import_node_path14.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
+  const root = await (0, import_promises8.mkdtemp)(import_node_path15.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
   try {
     const fingerprint = await binaryHash(command);
     const env = { PATH: "/usr/bin:/bin", HOME: root, CODEX_HOME: root };
@@ -6810,7 +6957,7 @@ async function prepareCodexAccountExecutor(options) {
     if (bundled.code !== 0)
       throw new ExecutorError("executor-unavailable");
     const catalog = reviewModelCatalog(bundled.stdout);
-    await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises8.writeFile)(import_node_path15.default.join(root, "models.json"), catalog, { mode: 384 });
     const tools = await probeCodexCatalog(command, root);
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
@@ -6827,7 +6974,7 @@ async function prepareCodexAccountExecutor(options) {
       toolDefinitions: fixedSourceTools,
       settings: codexReviewArgs("/gcr/run", "http://127.0.0.1/source"),
       isolation: "macos-global-instruction-deny-v1",
-      authHome: environment.CODEX_HOME ?? import_node_path14.default.join(import_node_os4.default.homedir(), ".codex")
+      authHome: environment.CODEX_HOME ?? import_node_path15.default.join(import_node_os4.default.homedir(), ".codex")
     }));
     return new CodexAccountExecutor(command, fingerprint, catalog, configHash, environment, cliVersion);
   } catch (error2) {
@@ -6835,27 +6982,30 @@ async function prepareCodexAccountExecutor(options) {
       throw error2;
     throw new ExecutorError("executor-unavailable");
   } finally {
-    await (0, import_promises7.rm)(root, { recursive: true, force: true });
+    await (0, import_promises8.rm)(root, { recursive: true, force: true });
   }
 }
 
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.18",
+  version: "0.1.0-alpha.19",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // src/standaloneReviewProtocol.ts
 var StandaloneReviewError = class extends Error {
-  constructor(code) {
+  constructor(code, retryAt) {
     super(standaloneErrorMessage(code));
     this.code = code;
+    this.retryAt = retryAt;
     this.name = "StandaloneReviewError";
   }
 };
 function standaloneErrorMessage(code) {
   switch (code) {
+    case "source-changed":
+      return "The saved or staged source changed before automatic review could start.";
     case "request-interrupted":
       return "A previous process may have started this review. Check its outcome before another execution.";
     case "request-busy":
@@ -6913,6 +7063,7 @@ function standaloneErrorMessage(code) {
   }
 }
 var safeCodes = /* @__PURE__ */ new Set([
+  "source-changed",
   "request-interrupted",
   "request-busy",
   "request-deferred",
@@ -6947,7 +7098,8 @@ var safeCodes = /* @__PURE__ */ new Set([
 function standaloneError(error2) {
   const code = error2 && typeof error2 === "object" && "code" in error2 ? error2.code : void 0;
   return new StandaloneReviewError(
-    typeof code === "string" && safeCodes.has(code) ? code : "preparation-failed"
+    typeof code === "string" && safeCodes.has(code) ? code : "preparation-failed",
+    code === "request-deferred" && error2 && typeof error2 === "object" && "retryAt" in error2 && typeof error2.retryAt === "number" && Number.isSafeInteger(error2.retryAt) ? error2.retryAt : void 0
   );
 }
 
@@ -7004,6 +7156,24 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       repositoryKey: client.repositoryKey,
       worktreeKey: client.worktreeKey
     };
+    const automatic = request.automatic;
+    if (automatic && (!["save", "stage"].includes(automatic.reason) || !Number.isInteger(automatic.minimumIntervalMs) || automatic.minimumIntervalMs < 0 || automatic.minimumIntervalMs > 36e5 || !Number.isInteger(automatic.maximumReviewsPerHour) || automatic.maximumReviewsPerHour < 1 || automatic.maximumReviewsPerHour > 100 || automatic.reason === "stage" && (!automatic.indexFingerprint || request.scope !== "staged") || automatic.reason === "save" && (!automatic.files || request.files.some((file) => !(file in automatic.files)))))
+      throw new StandaloneReviewError("policy-unavailable");
+    const assertAutomaticSource = async () => {
+      if (!automatic) return;
+      const current = await observeAutomaticRepository(request.repoRoot, settings.excludePatterns);
+      if (current.head !== automatic.head || automatic.reason === "stage" && current.fingerprint !== automatic.indexFingerprint)
+        throw new StandaloneReviewError("source-changed");
+      if (automatic.reason === "save") {
+        for (const file of request.files) {
+          const observed = await observeAutomaticFile(current.root, file, settings.excludePatterns);
+          if (!observed || observed.hash !== automatic.files[file]) throw new StandaloneReviewError("source-changed");
+        }
+      }
+      return current;
+    };
+    const automaticSource = await assertAutomaticSource();
+    checkAbort(signal);
     snapshot = captureLocalSource({
       cwd: request.repoRoot,
       kind: request.scope === "staged" ? "index" : "working-tree",
@@ -7011,6 +7181,24 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       includeUntracked: request.scope === "staged" ? [] : request.files,
       excludePatterns: settings.excludePatterns
     });
+    await assertAutomaticSource();
+    if (automatic && automaticSource) {
+      for (const selected of snapshot.selected) {
+        const read = snapshot.readFile(selected.path, "source");
+        if (automatic.reason === "save") {
+          const hash4 = read.status === "available" ? read.source.hash : null;
+          if (hash4 !== automatic.files[selected.path]) throw new StandaloneReviewError("source-changed");
+        } else {
+          const expected = automaticSource.changes.find((c) => c.path === selected.path);
+          if (!expected) throw new StandaloneReviewError("source-changed");
+          if (read.status === "available") {
+            const bytes = Buffer.from(read.text, "utf8");
+            const oid = (0, import_node_crypto17.createHash)(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+            if (oid !== expected.oid) throw new StandaloneReviewError("source-changed");
+          } else if (expected.status !== "D") throw new StandaloneReviewError("source-changed");
+        }
+      }
+    }
     checkAbort(signal);
     if (!snapshot.selected.length) throw new StandaloneReviewError("no-source");
     for (const scope of [
@@ -7102,7 +7290,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       const records = await LocalRecordStore.open({
         scope: repositoryScope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path15.default.join(
+        dataDirectory: import_node_path16.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id
@@ -7130,7 +7318,8 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
             context: context.context,
             policy,
             executor,
-            signal: signal2
+            signal: signal2,
+            ...automatic ? { trigger: automatic.reason } : {}
           });
           const saveReport = async (report2) => {
             const saved = await history.saveReview(report2);
@@ -7147,7 +7336,9 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               },
               identity: policy.identity,
               signal: runSignal,
+              ...automatic ? { reason: automatic.reason, limits: { minimumIntervalMs: automatic.minimumIntervalMs, maximumReviewsPerHour: automatic.maximumReviewsPerHour } } : {},
               assertValid: async () => {
+                await assertAutomaticSource();
                 if (await context.context.observeCentralSnapshot() !== "current")
                   throw new ReviewRequestError("request-invalid");
               },
@@ -7235,7 +7426,8 @@ port.on(
       (error2) => {
         port.postMessage({
           type: "failure",
-          code: standaloneError(error2).code
+          code: standaloneError(error2).code,
+          retryAt: standaloneError(error2).retryAt
         });
       }
     ).finally(async () => {

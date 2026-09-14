@@ -109,7 +109,7 @@ export function prepareStandaloneWorker(
           result = message.result as RunResult;
           break;
         case "failure":
-          failure = new StandaloneReviewError(message.code);
+          failure = new StandaloneReviewError(message.code, message.retryAt);
           break;
       }
     });

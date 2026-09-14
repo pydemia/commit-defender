@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
 import {
   projectCommitDefender,
   centralConnectionReference,
@@ -15,6 +16,8 @@ import {
   reviewRequestKey,
   executeReviewRequest,
   ReviewRequestError,
+  observeAutomaticRepository,
+  observeAutomaticFile,
   discoverLocalIdentity,
   LocalHistoryStore,
   LocalKnowledgeStore,
@@ -109,6 +112,27 @@ export async function prepareStandaloneReview(
       repositoryKey: client.repositoryKey,
       worktreeKey: client.worktreeKey,
     };
+    const automatic = request.automatic;
+    if (automatic && (!['save','stage'].includes(automatic.reason)
+      || !Number.isInteger(automatic.minimumIntervalMs) || automatic.minimumIntervalMs < 0 || automatic.minimumIntervalMs > 3600000
+      || !Number.isInteger(automatic.maximumReviewsPerHour) || automatic.maximumReviewsPerHour < 1 || automatic.maximumReviewsPerHour > 100
+      || (automatic.reason === 'stage' && (!automatic.indexFingerprint || request.scope !== 'staged'))
+      || (automatic.reason === 'save' && (!automatic.files || request.files.some(file => !(file in automatic.files!))))))
+      throw new StandaloneReviewError('policy-unavailable');
+    const assertAutomaticSource = async () => {
+      if (!automatic) return;
+      const current = await observeAutomaticRepository(request.repoRoot,settings.excludePatterns);
+      if (current.head !== automatic.head || (automatic.reason === 'stage' && current.fingerprint !== automatic.indexFingerprint))
+        throw new StandaloneReviewError('source-changed');
+      if (automatic.reason === 'save') {
+        for (const file of request.files) {
+          const observed = await observeAutomaticFile(current.root,file,settings.excludePatterns);
+          if (!observed || observed.hash !== automatic.files![file]) throw new StandaloneReviewError('source-changed');
+        }
+      }
+      return current;
+    };
+    const automaticSource = await assertAutomaticSource(); checkAbort(signal);
     snapshot = captureLocalSource({
       cwd: request.repoRoot,
       kind: request.scope === "staged" ? "index" : "working-tree",
@@ -116,6 +140,24 @@ export async function prepareStandaloneReview(
       includeUntracked: request.scope === "staged" ? [] : request.files,
       excludePatterns: settings.excludePatterns,
     });
+    await assertAutomaticSource();
+    if (automatic && automaticSource) {
+      for (const selected of snapshot.selected) {
+        const read = snapshot.readFile(selected.path,'source');
+        if (automatic.reason === 'save') {
+          const hash = read.status === 'available' ? read.source.hash : null;
+          if (hash !== automatic.files![selected.path]) throw new StandaloneReviewError('source-changed');
+        } else {
+          const expected = automaticSource.changes.find(c => c.path === selected.path);
+          if (!expected) throw new StandaloneReviewError('source-changed');
+          if (read.status === 'available') {
+            const bytes = Buffer.from(read.text,'utf8');
+            const oid = createHash(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest('hex');
+            if (oid !== expected.oid) throw new StandaloneReviewError('source-changed');
+          } else if (expected.status !== 'D') throw new StandaloneReviewError('source-changed');
+        }
+      }
+    }
     checkAbort(signal);
     if (!snapshot.selected.length) throw new StandaloneReviewError("no-source");
     for (const scope of [
@@ -245,6 +287,7 @@ export async function prepareStandaloneReview(
               policy,
               executor,
               signal,
+              ...(automatic ? { trigger: automatic.reason } : {}),
             });
           const saveReport = async (report: ClientReviewReport) => {
             const saved = await history.saveReview(report);
@@ -264,7 +307,9 @@ export async function prepareStandaloneReview(
               },
               identity: policy.identity,
               signal: runSignal,
+              ...(automatic ? { reason: automatic.reason, limits: { minimumIntervalMs: automatic.minimumIntervalMs, maximumReviewsPerHour: automatic.maximumReviewsPerHour } } : {}),
               assertValid: async () => {
+                await assertAutomaticSource();
                 if (
                   (await context.context.observeCentralSnapshot()) !== "current"
                 )
