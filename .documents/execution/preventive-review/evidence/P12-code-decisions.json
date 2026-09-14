@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "phase": "P12",
+  "phaseComplete": false,
+  "goalComplete": false,
+  "sourceCommit": "6cd8f53423c2d913c63f9c5b8d1264d1a62103c2",
+  "commitDefenderSourceCommit": "1219342ebacb9e62ca64152b305ecfd6529a24f7",
+  "clients": {
+    "libraries": {
+      "schemaVersion": 1,
+      "version": "0.1.0-alpha.37",
+      "packages": [
+        {
+          "name": "@gcr/client-contract",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-contract-0.1.0-alpha.37.tgz",
+          "sha256": "cc63195a865f6f66b2cf29e2de036aaa0f2c5004365a638aa704203283816cd7"
+        },
+        {
+          "name": "@gcr/client-core",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-core-0.1.0-alpha.37.tgz",
+          "sha256": "b37785652568fc124aa86372734a810494db2c282f4ad8d8888f30641ccf1ce2"
+        },
+        {
+          "name": "@gcr/client-executors",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-executors-0.1.0-alpha.37.tgz",
+          "sha256": "2c31960bdacec76feeaaa9c44a8aeb216d4c6cc743d07031038db2688e0a7162"
+        }
+      ]
+    },
+    "cli": {
+      "schemaVersion": 1,
+      "cliVersion": "0.1.0-alpha.33",
+      "clientVersion": "0.1.0-alpha.37",
+      "packages": [
+        {
+          "name": "@gcr/client-contract",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-contract-0.1.0-alpha.37.tgz",
+          "sha256": "cc63195a865f6f66b2cf29e2de036aaa0f2c5004365a638aa704203283816cd7"
+        },
+        {
+          "name": "@gcr/client-core",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-core-0.1.0-alpha.37.tgz",
+          "sha256": "b37785652568fc124aa86372734a810494db2c282f4ad8d8888f30641ccf1ce2"
+        },
+        {
+          "name": "@gcr/client-executors",
+          "version": "0.1.0-alpha.37",
+          "file": "gcr-client-executors-0.1.0-alpha.37.tgz",
+          "sha256": "2c31960bdacec76feeaaa9c44a8aeb216d4c6cc743d07031038db2688e0a7162"
+        },
+        {
+          "name": "@gcr/cli",
+          "version": "0.1.0-alpha.33",
+          "file": "gcr-cli-0.1.0-alpha.33.tgz",
+          "sha256": "ca7c6cda6693b651e15a3ff26704f86dde00b63b2e90ce19e2d20ef24457519d"
+        }
+      ]
+    },
+    "cleanConsumerNode22": true,
+    "node18": {
+      "status": "passed",
+      "node": "v18.20.8",
+      "version": "0.1.0-alpha.37",
+      "cleanup": true
+    }
+  },
+  "extension": {
+    "version": "2.9.4",
+    "installation": {
+      "status": "passed",
+      "version": "2.9.4",
+      "path": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.9.4",
+      "verifiedFiles": 38,
+      "packageMetadataMatched": true,
+      "registryMatched": true,
+      "vsixSha256": "0ff5fe77f98537a404f80844d39e9bc8b073553a5c753c2f790a9345e9177ee7",
+      "forcedWindowReload": false,
+      "at": "2026-09-14T18:26:26.415576+00:00"
+    },
+    "minimumHost": {
+      "status": "passed",
+      "vscode": "1.90.2",
+      "node": "20.9.0",
+      "electron": "29.4.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "extensionVersion": "2.9.4",
+      "delivery": "packaged-extension",
+      "commandCount": 25,
+      "activation": true,
+      "hookDefault": "disable",
+      "modelCalled": false,
+      "checks": [
+        "activation",
+        "command registration",
+        "central executor and upstream submission commands absent",
+        "clear findings",
+        "cancel without run",
+        "no hook installed",
+        "standalone defaults and user profile",
+        "empty history refresh creates no local store or OS key"
+      ]
+    },
+    "installedHost": {
+      "status": "passed",
+      "vscode": "1.135.0",
+      "node": "24.18.1",
+      "electron": "42.8.1",
+      "platform": "darwin",
+      "arch": "arm64",
+      "extensionVersion": "2.9.4",
+      "delivery": "packaged-extension",
+      "commandCount": 25,
+      "activation": true,
+      "hookDefault": "disable",
+      "modelCalled": false,
+      "checks": [
+        "activation",
+        "command registration",
+        "central executor and upstream submission commands absent",
+        "clear findings",
+        "cancel without run",
+        "no hook installed",
+        "standalone defaults and user profile",
+        "empty history refresh creates no local store or OS key"
+      ]
+    }
+  },
+  "architecture": {
+    "direction": "central-to-local",
+    "localExecutor": "locally configured model/account",
+    "sourceOrResultUploadAdded": false,
+    "centralExecutorForLocalClientsAdded": false,
+    "existingLocalModelSettingsChanged": false
+  },
+  "limits": [
+    "Diff hunks do not provide complete before/after source context or establish defect correction, tests or agreement. Decision grounding beyond these sources remains P12-C03 work.",
+    "New exact text snapshots only, up to 12000 characters per diff and 100 recent code sources per list. Legacy/artifact backfill remains pending.",
+    "Source loss withdraws the criterion on its next requested publication; immediate invalidation scheduling and re-evaluation UI remain P12-C04 work.",
+    "Live proof used deployed modules and authenticated HTTPS with synthetic central code/discussion. It did not call external GitHub or an actual model account.",
+    "The first criteria fixture omitted a required github_updated_at field. A later publication test exposed the missing public source kind, which led to coordinated v3 negotiation and client delivery.",
+    "The build CA ConfigMap initially exceeded client-side apply annotation limits; it was created without the redundant annotation. The project-local vsce binary was absent; packaging used the installed vsce 3.9.1.",
+    "Registry image digest/source labels were verified; no registry SBOM/provenance attestations were requested.",
+    "VS Code windows were not forcibly reloaded, and the global CLI installation was not replaced.",
+    "P12 and the full P00-P13 goal remain incomplete. P10 and P08 upstream submissions remain withdrawn."
+  ],
+  "localArtifacts": "/Users/a09255/git/git-code-reviewer/artifacts/operations/P12-code-decisions",
+  "tests": {
+    "tests": 190,
+    "pass": 190,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0
+  },
+  "centralDelivery": {
+    "app": "0.8.0-alpha.53",
+    "chart": "0.10.49",
+    "revision": 63,
+    "status": "passed"
+  }
+}
