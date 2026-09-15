@@ -78,7 +78,7 @@ try {
   );
   await runTests({
     vscodeExecutablePath:
-      "/Applications/Visual Studio Code.app/Contents/MacOS/Electron",
+      "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
     extensionDevelopmentPath: extension,
     extensionTestsPath: path.resolve("out-test/g03-history-host.cjs"),
     extensionTestsEnv: {
