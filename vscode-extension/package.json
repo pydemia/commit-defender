@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.10.0",
+    "version": "2.11.0",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -207,13 +207,13 @@
                         "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
-                    "description": "Account selection in User Settings. This build supports fixed-source standalone review with Codex on macOS (CLI 0.153.4 or 0.154.0, gpt-6-astra, xhigh). Other provider adapters remain available for account login and commit-message generation. Standalone findings are advisory."
+                    "description": "User-selected model provider, independent of the central knowledge connection. Fixed-source reviews support Codex on macOS (verified CLI 0.153.4 or 0.154.0), Azure OpenAI, OpenAI, Anthropic and Gemini APIs. Other CLI adapters retain their existing login and commit-message support. Reviews are advisory."
                 },
                 "commitDefender.model": {
                     "type": "string",
                     "scope": "application",
                     "default": "",
-                    "description": "Model selected in User Settings. Standalone review requires gpt-6-astra. Other model names are preserved for existing account adapters; there is no automatic review-provider fallback."
+                    "description": "User-selected model or Azure deployment name. Codex verifies the selected model and reasoning against its bundled catalog. No automatic provider or model fallback."
                 },
                 "commitDefender.endpoint": {
                     "type": "string",
@@ -264,7 +264,7 @@
                     "default": 4096,
                     "minimum": 512,
                     "maximum": 32000,
-                    "description": "Legacy provider output-token setting. The fixed-source Codex executor does not support a hard output-token limit and does not apply this setting."
+                    "description": "API provider output-token limit. The Codex executor does not apply a hard output-token limit."
                 },
                 "commitDefender.severityLevel": {
                     "type": "string",
@@ -436,10 +436,16 @@
                     "type": "string",
                     "scope": "application",
                     "enum": [
+                        "",
+                        "none",
+                        "minimal",
+                        "low",
+                        "medium",
+                        "high",
                         "xhigh"
                     ],
                     "default": "xhigh",
-                    "description": "Reasoning effort supported by the fixed-source Codex review executor."
+                    "description": "Reasoning for review requests. Codex verifies model support. OpenAI and Azure receive reasoning_effort when nonempty. Leave empty for providers without a reasoning parameter. Existing saved choices are preserved."
                 },
                 "commitDefender.modelCredentialRef": {
                     "type": "object",
@@ -676,7 +682,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
@@ -712,7 +718,9 @@
         "test:counted-codex": "node --test test/counted-codex.test.mjs",
         "test:trigger-overlap": "esbuild test/trigger-overlap-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/trigger-overlap-host.cjs && node test/run-trigger-overlap-host.mjs",
         "test:editor-save": "esbuild test/editor-save-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/editor-save-host.cjs && node test/run-editor-save-host.mjs",
-        "test:local-activity": "esbuild test/local-review-activity.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/local-review-activity.test.cjs && node --test out-test/local-review-activity.test.cjs"
+        "test:local-activity": "esbuild test/local-review-activity.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/local-review-activity.test.cjs && node --test out-test/local-review-activity.test.cjs",
+        "test:local-provider-executor": "esbuild test/local-provider-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/local-provider-executor.test.cjs && node --test out-test/local-provider-executor.test.cjs",
+        "test:central-history": "esbuild test/central-history.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-history.test.cjs && node --test out-test/central-history.test.cjs"
     },
     "dependencies": {
         "ignore": "^5.3.1",
@@ -721,9 +729,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-contract-0.1.0-alpha.39.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-core-0.1.0-alpha.39.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.39/gcr-client-executors-0.1.0-alpha.39.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-contract-0.1.0-alpha.40.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-core-0.1.0-alpha.40.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-executors-0.1.0-alpha.40.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
