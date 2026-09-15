@@ -351,8 +351,8 @@ export class BackgroundHooks {
       if (
         !settings.workspaceTrusted ||
         settings.provider !== "codex" ||
-        settings.model !== "gpt-6-astra" ||
-        settings.reasoningEffort !== "xhigh" ||
+        !settings.model ||
+        !["none", "minimal", "low", "medium", "high", "xhigh"].includes(settings.reasoningEffort) ||
         !["standalone", "centralized"].includes(settings.mode) ||
         (settings.mode === "centralized" &&
           (!settings.connectionId || settings.freshness !== "online"))
@@ -360,7 +360,7 @@ export class BackgroundHooks {
         if (old && this.owned().some((row) => row.root === root))
           await this.disable(old);
         throw Error(
-          "Background reviews require trusted user-selected Codex gpt-6-astra/xhigh settings and an online central connection when selected.",
+          "Background reviews require trusted user-selected Codex model/reasoning settings and an online central connection when selected.",
         );
       }
       const env = { ...process.env };
@@ -436,8 +436,8 @@ export class BackgroundHooks {
           ).stdout.trim();
       const options = {
         mode: settings.mode,
-        model: "gpt-6-astra",
-        reasoningEffort: "xhigh",
+        model: settings.model,
+        reasoningEffort: settings.reasoningEffort,
         executorPath,
         ...(settings.connectionId
           ? {

@@ -26,6 +26,7 @@ import {
   StandaloneReviewError,
 } from "./standaloneReviewProtocol.js";
 import { showCentralKnowledge } from "./centralKnowledgeView.js";
+import { browseCentralHistory } from './centralHistoryView.js';
 
 const esc = (value: unknown) =>
   String(value).replace(
@@ -194,6 +195,7 @@ export async function manageCentralConnection(
           description:
             "Read central prompts, review criteria and memories; model execution stays local",
         },
+        { label: "Browse PR review history", action: "history", description: "Read original comments, replies, body versions and source-linked guidance" },
         {
           label: "Use signed offline knowledge",
           action: "offline",
@@ -352,6 +354,25 @@ export async function manageCentralConnection(
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const id = selection.connectionId;
+    if (choice.action === 'history') {
+      const selected = JSON.stringify(selection), freshness = selection.freshness;
+      const validate = async () => {
+        actions.assertCurrent();
+        if (JSON.stringify(readSelection(context.globalState, scope)) !== selected) throw new StandaloneReviewError('central-connection-required');
+        await withManager(async manager => {
+          const status = await manager.status(id);
+          if (status.clientId !== 'commit-defender') throw new StandaloneReviewError('central-connection-required');
+          const access = await manager.review(id, freshness);
+          await access.cache.read(freshness); await access.assertConnection();
+        });
+      };
+      await browseCentralHistory(context, async request => {
+        await validate();
+        const result = await withManager(manager => manager.readHistory(id, request, freshness));
+        await validate(); return result;
+      }, validate);
+      return;
+    }
     if (choice.action === "knowledge") {
       const selected = JSON.stringify(selection);
       const assertSelection = () => {

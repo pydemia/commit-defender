@@ -1,4 +1,5 @@
 import path from "node:path";
+import { prepareLocalProviderExecutor } from "./localProviderExecutor.js";
 import { createHash } from "node:crypto";
 import {
   projectCommitDefender,
@@ -27,6 +28,7 @@ import {
   resolveLocalContext,
   resolveLocalExecutionPolicy,
   runLocalReview,
+  loadSelectedSourceHistory,
   type LocalKeyStore,
   type LocalReviewExecutor,
   type LocalSourceSnapshot,
@@ -105,11 +107,11 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("untrusted-workspace");
     if (settings.provider === "unconfigured")
       throw new StandaloneReviewError("account-not-configured");
-    if (settings.provider !== "codex")
+    if (!["codex", "aoai", "openai", "anthropic", "gemini"].includes(settings.provider))
       throw new StandaloneReviewError("unsupported-provider");
     if (
-      settings.model !== "gpt-6-astra" ||
-      settings.reasoningEffort !== "xhigh"
+      !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(settings.model) ||
+      (settings.reasoningEffort !== "" && !["none", "minimal", "low", "medium", "high", "xhigh"].includes(settings.reasoningEffort))
     )
       throw new StandaloneReviewError("executor-unavailable");
     if (!request.files.length) throw new StandaloneReviewError("no-source");
@@ -250,7 +252,9 @@ export async function prepareStandaloneReview(
     const central = resolved.central;
     client = resolved.client;
     const context = central
-      ? await resolveCentralContext({ ...query, ...central })
+      ? await resolveCentralContext({ ...query, ...central,
+          loadSourceHistory: selection => loadSelectedSourceHistory(selection, request => connections!.readHistory(settings.connectionId!, request, central.freshness, signal)),
+        })
       : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
     if (context.status !== "ready")
@@ -263,13 +267,10 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("central-snapshot-changed");
     let executor: LocalReviewExecutor;
     try {
-      executor = await (ports.prepareExecutor ?? prepareCodexAccountExecutor)({
-        executablePath: settings.executablePath,
-        model: settings.model,
-        reasoningEffort: settings.reasoningEffort,
-      });
-    } catch {
+      executor = ports.prepareExecutor ? await ports.prepareExecutor({ executablePath: settings.executablePath, model: settings.model, reasoningEffort: settings.reasoningEffort }) : await prepareLocalProviderExecutor(settings, ports);
+    } catch (error) {
       checkAbort(signal);
+      if (error instanceof StandaloneReviewError) throw error;
       throw new StandaloneReviewError("executor-unavailable");
     }
     checkAbort(signal);

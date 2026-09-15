@@ -1,4 +1,5 @@
 import type { OfflineBehavior } from "@gcr/client-contract";
+import type { ModelCredentialReference } from './modelCredentials.js';
 
 /** Supplied by the extension's user settings and command handler, never a repository file. */
 export interface StandaloneReviewSettings {
@@ -17,6 +18,10 @@ export interface StandaloneReviewSettings {
   workspaceTrusted: boolean;
   durationMs: number;
   excludePatterns: string[];
+  endpoint?: string;
+  apiVersion?: string;
+  maxTokens?: number;
+  modelCredentialRef?: ModelCredentialReference;
 }
 
 export class StandaloneReviewError extends Error {
@@ -72,6 +77,10 @@ export function standaloneErrorMessage(code: string): string {
       return "Central knowledge could not be verified. Check the selected server, signing keys, compatibility and cache expiry.";
     case "repository-mismatch":
       return "Git remotes no longer match the selected central repository. Check this worktree's remotes and reconnect before using central knowledge.";
+    case "unsupported-reasoning":
+      return "This provider does not expose the selected reasoning effort. Choose a supported effort or its default.";
+    case "model-failed":
+      return "The selected local model did not complete this review. No fallback provider was used.";
     case "unsupported-provider":
       return "This provider does not yet support fixed-source standalone review. Your account settings have been preserved.";
     case "account-not-configured":
@@ -121,6 +130,8 @@ const safeCodes = new Set([
   "untrusted-workspace",
   "unsupported-mode",
   "unsupported-provider",
+  "unsupported-reasoning",
+  "model-failed",
   "executor-unavailable",
   "credential-unavailable",
   "needs-context",

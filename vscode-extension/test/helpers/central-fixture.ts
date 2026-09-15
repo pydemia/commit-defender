@@ -31,11 +31,12 @@ export async function centralFixture(
   root: string,
   instructions = "CD_CENTRAL_POLICY: inspect source, base and related callers.",
   codeCriterion = false,
+  history?: { repositoryId: string; respond(url: string): unknown },
 ) {
   const audience = {
     serverId: "server",
     tenantId: "tenant",
-    repositoryId: "repository",
+    repositoryId: history?.repositoryId ?? "repository",
     userId: "alice",
   };
   const signing = generateKeyPairSync("ed25519");
@@ -195,6 +196,9 @@ export async function centralFixture(
         );
         return;
       }
+      if (history && req.method === 'GET' && req.url?.startsWith(`/base/api/v1/repositories/${audience.repositoryId}/review-history`)) {
+        res.end(JSON.stringify(history.respond(req.url))); return;
+      }
       if (req.url === "/base/api/v1/client-auth/me") {
         res.end(
           JSON.stringify({
@@ -224,7 +228,7 @@ export async function centralFixture(
         return;
       }
       if (
-        req.url === "/base/api/v1/client-repositories/repository" &&
+        req.url === `/base/api/v1/client-repositories/${audience.repositoryId}` &&
         req.method === "GET"
       ) {
         res.end(

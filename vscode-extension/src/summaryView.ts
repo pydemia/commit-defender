@@ -218,7 +218,7 @@ function buildSummaryHtml(
         <p>Counter-evidence: ${esc(finding.evidenceAssessment.counterEvidence.status)}</p>
         <p>${view.markdown(finding.evidenceAssessment.counterEvidence.summary)}</p></details>`).join("")}
       <ul>${core.evidence.map(evidence => `<li>${esc(evidence.kind)} · ${esc(evidence.provenance.kind)}${evidence.kind === "source-read"
-        ? ` · ${esc(evidence.location.path)}:${evidence.location.startLine}–${evidence.location.endLine} (${esc(evidence.location.side)}) · <code>${esc(evidence.location.hash)}</code>` : ""}</li>`).join("")}</ul></section>`;
+        ? ` · ${esc(evidence.location.path)}:${evidence.location.startLine}–${evidence.location.endLine} (${esc(evidence.location.side)}) · <code>${esc(evidence.location.hash)}</code>` : evidence.kind === "reasoning" ? `<p>${esc(evidence.provenance.reference)}</p><pre>${esc(evidence.statement)}</pre>` : ""}</li>`).join("")}</ul></section>`;
   }
 
   if (report.review.rejected_finding_count) {

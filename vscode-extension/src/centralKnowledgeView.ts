@@ -63,17 +63,20 @@ export function showCentralKnowledge(
   snapshot: CentralKnowledgeSnapshot,
   validate: () => Promise<void>,
 ): vscode.WebviewPanel {
+  return showAuthorizedCentralText(context, 'Downloaded review knowledge', centralKnowledgeHtml(snapshot), Date.parse(snapshot.manifest.payload.offlineValidUntil), validate);
+}
+
+export function showAuthorizedCentralText(context: vscode.ExtensionContext, title: string, html: string, expires: number, validate: () => Promise<void>): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
     "commitDefender.centralKnowledge",
-    "Downloaded review knowledge",
+    title,
     vscode.ViewColumn.Active,
     { enableScripts: false, localResourceRoots: [] },
   );
-  panel.webview.html = centralKnowledgeHtml(snapshot);
+  panel.webview.html = html;
   let closed = false;
   let checking = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const expires = Date.parse(snapshot.manifest.payload.offlineValidUntil);
   const check = async () => {
     if (closed || checking) return;
     checking = true;

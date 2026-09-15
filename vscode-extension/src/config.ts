@@ -52,13 +52,20 @@ export type ExtensionConfig = ResolvedConfig;
 export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string): StandaloneReviewSettings {
   const cfg = vscode.workspace.getConfiguration('commitDefender', repoRoot ? vscode.Uri.file(repoRoot) : undefined);
   const user = <T>(name: string): T | undefined => cfg.inspect<T>(name)?.globalValue;
+  const provider = user<string>('aiProvider') ?? 'unconfigured';
   const seconds = user<number>(fileCount === 1 ? 'fileTimeoutSeconds' : 'directoryTimeoutSeconds');
   return {
     mode: user<string>('reviewMode') ?? 'standalone',
     profileId: user<string>('localProfile') ?? 'default',
-    provider: user<string>('aiProvider') ?? 'unconfigured',
+    provider,
     model: user<string>('model') ?? '',
-    reasoningEffort: user<string>('reviewReasoningEffort') ?? 'xhigh',
+    reasoningEffort: user<string>('reviewReasoningEffort') ?? (provider === 'codex' ? 'xhigh' : ''),
+    ...(['aoai', 'openai', 'anthropic', 'gemini'].includes(provider) ? {
+      endpoint: user<string>('endpoint') ?? '',
+      apiVersion: user<string>('apiVersion') ?? '2024-08-01-preview',
+      maxTokens: user<number>('maxTokens') ?? 4096,
+      modelCredentialRef: user<ModelCredentialReference>('modelCredentialRef'),
+    } : {}),
     executablePath: resolveCodexPath(user<string>('codexPath') ?? 'codex'),
     workspaceTrusted: vscode.workspace.isTrusted,
     durationMs: seconds && Number.isFinite(seconds) && seconds > 0

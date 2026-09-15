@@ -19,6 +19,9 @@ export interface ProviderRequest {
   apiVersion: string;     // aoai only
   model: string;
   maxTokens: number;
+  reasoningEffort?: string;
+  /** Fixed-source reviews reserve exactly one model request. */
+  noRetry?: boolean;
   systemPrompt: string;
   userMessage: string;
   /** Repository root used as the child process cwd for local CLI providers. */
@@ -485,6 +488,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
       { role: 'user',   content: req.userMessage },
     ],
     max_completion_tokens: req.maxTokens,
+    ...(req.reasoningEffort ? { reasoning_effort: req.reasoningEffort } : {}),
     ...(withJsonFormat ? { response_format: { type: 'json_object' } } : {}),
   });
 
@@ -505,7 +509,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
       // Some deployments reject response_format — retry without it.
-      if (/response_format|json_object|unsupported/i.test(body)) {
+      if (!req.noRetry && /response_format|json_object|unsupported/i.test(body)) {
         let retry: Response;
         try {
           retry = await fetch(url, {
@@ -541,6 +545,7 @@ async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
       { role: 'user',   content: req.userMessage },
     ],
     max_completion_tokens: req.maxTokens,
+    ...(req.reasoningEffort ? { reasoning_effort: req.reasoningEffort } : {}),
     ...(withJsonFormat ? { response_format: { type: 'json_object' } } : {}),
   });
 
@@ -560,7 +565,7 @@ async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
-      if (/response_format|json_object|unsupported/i.test(body)) {
+      if (!req.noRetry && /response_format|json_object|unsupported/i.test(body)) {
         let retry: Response;
         try {
           retry = await fetch(url, {

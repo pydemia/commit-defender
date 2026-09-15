@@ -67,7 +67,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const current = getConfig();
     const choices: ModelChoice[] = [];
     if (provider === 'codex') {
-      choices.push({ label: '$(sparkle) gpt-6-astra', description: 'xhigh · standalone review',
+      choices.push({ label: '$(sparkle) gpt-6-astra', description: 'Uses your selected reasoning effort',
         detail: 'Requires the supported local Codex executable. Uses captured source, base and related context.', model: 'gpt-6-astra' });
     } else if (includeDefault) {
       choices.push({
@@ -129,7 +129,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Clear an API-provider model before switching provider so no analysis can
     // observe the new CLI provider with the previous provider's model ID.
     await settings.update('model', model, target);
-    if (provider === 'codex') await settings.update('reviewReasoningEffort', 'xhigh', target);
     await settings.update('aiProvider', provider, target);
     setTimeout(() => {
       if (providerUpdateFromWizard === provider) { providerUpdateFromWizard = undefined; }
@@ -190,7 +189,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   async function selectAccountProviderAndModel(): Promise<void> {
     type ProviderChoice = vscode.QuickPickItem & { provider: AccountProvider };
     const choices: ProviderChoice[] = [
-      { label: 'Codex', description: 'Standalone review · gpt-6-astra / xhigh', provider: 'codex' },
+      { label: 'Codex', description: 'Local review with your selected model and reasoning effort', provider: 'codex' },
       { label: 'Claude Code', description: 'Account login and commit messages; standalone review unavailable', provider: 'claudecode' },
       { label: 'Gemini CLI', description: 'Account login and commit messages; standalone review unavailable', provider: 'geminicli' },
       { label: 'Antigravity', description: 'Account login and commit messages; standalone review unavailable', provider: 'antigravity' },

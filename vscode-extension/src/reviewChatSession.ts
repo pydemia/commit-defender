@@ -141,8 +141,8 @@ export async function reviewChatOperation(
     }
     if (
       settings.provider !== "codex" ||
-      settings.model !== "gpt-6-astra" ||
-      settings.reasoningEffort !== "xhigh" ||
+      !settings.model || settings.model !== stored.conversation.identity.executor.model ||
+      !["none", "minimal", "low", "medium", "high", "xhigh"].includes(settings.reasoningEffort) ||
       contentHash(settings.excludePatterns) !==
         contentHash(stored.source.excludePatterns) ||
       settings.durationMs < stored.conversation.limits.durationMs
