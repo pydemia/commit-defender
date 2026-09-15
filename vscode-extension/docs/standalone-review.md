@@ -1,12 +1,12 @@
-# Standalone review (development branch)
+# Standalone review
 
-This integration is under validation and has not been published to Marketplace. Manual reviews use the shared GCR core over captured local source. Standalone mode does not contact a GCR server or upload local knowledge to one. The selected model receives approved source and active local knowledge as review context.
+Manual reviews use the shared GCR core over captured local source. Standalone mode does not contact a GCR server or upload local knowledge to one. The selected model receives approved source and active local knowledge as review context.
 
 ## Select an account
 
-Run **Commit Defender: Select Account Provider and Model**, choose Codex, then `gpt-6-astra`. The selection is saved in User Settings with `xhigh` reasoning effort. Set `commitDefender.codexPath` in User Settings if the supported executable is not found on PATH. Use **Commit Defender: Sign in with Codex** to open the existing CLI login flow.
+Run **Commit Defender: Select Account Provider and Model** and choose the provider and model in User Settings. Set `commitDefender.reviewReasoningEffort` separately; changing the account does not overwrite it. Set `commitDefender.codexPath` in User Settings if the supported executable is not found on PATH. Use **Commit Defender: Sign in with Codex** to open the existing CLI login flow.
 
-The current fixed-source executor supports macOS and Codex CLI `0.153.4` or `0.154.0`. It checks the executable and capabilities before a model call. Other providers and models remain available to their existing login and commit-message adapters; they cannot run this standalone review yet. An unsupported selection produces an error without switching providers.
+The current fixed-source executor supports macOS and Codex CLI `0.153.4` or `0.154.0`. It checks the executable and capabilities before a model call. Codex uses the selected model and checks its reasoning capability against the CLI catalog. Azure OpenAI, OpenAI, Anthropic and Gemini API reviews use the existing destination-bound model credential. OpenAI and Azure accept a nonempty reasoning setting; leave it empty for Anthropic and Gemini. Claude Code, Gemini CLI and Antigravity retain their existing login and commit-message support; this release does not claim fixed-source review support for those CLI adapters. An unsupported selection produces an error without switching providers.
 
 Repository account settings do not authorize an executable, model or profile. Existing values are preserved. Select the account again in User Settings when migrating a workspace that previously kept these choices in `.vscode/settings.json`.
 
@@ -14,7 +14,7 @@ Repository account settings do not authorize an executable, model or profile. Ex
 
 Use the existing Analyze Current File, Analyze Staged Files, Analyze Directory or Analyze Repository commands. Staged reviews capture the index; other commands capture saved working-tree files. The core can read captured base and related repository source through its limited source tools. Unsaved editor changes are not part of the captured view.
 
-Preparation runs in a worker. The status bar can cancel preparation or execution. The model-run limit defaults to 120 seconds for one file and 360 seconds for multiple files, with a maximum of 600 seconds. Preparation has a separate limit of the same duration. Cancellation waits for owned resources to close. The legacy `maxTokens` setting does not impose an output-token cap on this executor.
+Preparation runs in a worker. The status bar can cancel preparation or execution. The model-run limit defaults to 120 seconds for one file and 360 seconds for multiple files, with a maximum of 600 seconds. Preparation has a separate limit of the same duration. Cancellation waits for owned resources to close. `maxTokens` limits API output. It does not impose an output-token cap on Codex.
 
 The summary preserves incomplete, failed and cancelled outcomes. Standalone findings are advisory. It shows the source/context hashes, criteria revisions, source-read observations, anchor checks and evidence assessment. A source-read observation records a returned range; it does not claim a test was executed. Changed editor content invalidates inline source positions.
 

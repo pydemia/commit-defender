@@ -2,9 +2,9 @@
 
 Central integration is one-way. The extension downloads central reviews, review knowledge and prompts and applies them with the configured local model. Local source, results, feedback, conversations and personal Memory stay on this computer. No central executor, result submission or feedback upload is offered. Historical encrypted outboxes are retained locally and cannot be sent by this client.
 
-Manual reviews can use a signed GCR knowledge snapshot together with active local Memory and Skills. Source, base and related files are captured by the shared review core. The model runs through the selected local Codex account; the central API key grants access to review knowledge.
+Manual reviews can use a signed GCR knowledge snapshot together with active local Memory and Skills. Source, base and related files are captured by the shared review core. The model runs through the selected local provider; the central API key grants access to review knowledge.
 
-The current executor supports macOS, Codex CLI `0.153.4` or `0.154.0`, `gpt-6-astra` and `xhigh`. Choose the account and model in User Settings. New installations remain standalone until you select a central connection.
+Supported review providers and capability limits are listed in [Standalone review](standalone-review.md). Connecting to GCR does not change the provider, model or reasoning. Choose the account and model in User Settings. New installations remain standalone until you select a central connection.
 
 ## Connect a worktree
 
@@ -48,7 +48,7 @@ Status and report provenance are read-only. This checkpoint does not add central
 
 ## Verification scope
 
-The macOS packaged worker has performed an actual Astra/xhigh central review using a synthetic HTTPS publisher and OS-backed credentials. Tests cover local/central composition, history isolation, offline operation and cancellation after disconnect. A real VS Code Extension Host verifies activation and command registration; the connection dialog flow is exercised with a VS Code API mock and real HTTPS transport. Visual inspection and PRISM-DEV server integration are separate checks. This development build has not been published to Marketplace.
+The macOS packaged worker has performed an actual Astra/xhigh central review using a synthetic HTTPS publisher and OS-backed credentials. Tests cover local/central composition, history isolation, offline operation and cancellation after disconnect. A real VS Code Extension Host verifies activation and command registration; the connection dialog flow is exercised with a VS Code API mock and real HTTPS transport. Visual inspection and PRISM-DEV server integration are separate checks. The G03 release adds PR history retrieval; its real model evidence is recorded separately from synthetic provider tests.
 
 Reports show configured and effective modes separately: `Centralized · online`, `Centralized · cached` or `Standalone · fallback: <reason>`. A fallback does not change the saved connection or switch the model provider. Local fallback history remains locally owned, contains no central snapshot or entries, and is labeled as advisory without establishing central policy compliance. The selected connection's fallback results remain readable after central access expires. Reconnection never reruns or relabels an existing local result.
 
@@ -73,3 +73,13 @@ The connection status indicates whether remote mapping was recorded. Changing a 
 2.9.4는 중앙 Git snapshot의 코드 변경을 출처로 하는 기준을 지원합니다. 중앙에서 평가·승인한 기준과 출처 ID·hash를 내려받고 로컬에 설정한 모델·계정으로 리뷰합니다. 중앙 코드 diff 원문을 받거나 로컬 코드·결과·피드백을 업로드하지 않습니다.
 
 지식 계약 v3과 기존 v2 발행물을 읽을 수 있습니다. 이전 서버가 v3 요청을 HTTP 426으로 거절하면 같은 서버에 v2를 한 번 요청합니다. 인증 실패나 일반 장애에서는 이 협상을 하지 않습니다. 새 코드 출처가 포함된 발행물을 받으려면 2.9.4 이상이 필요합니다.
+
+## Read PR history and reuse sources
+
+Choose **Browse PR review history** in Central Review Connection. Select a PR and comment, then read the original, replies, body versions, thread observations or source-linked guidance. Next-page actions send the server cursor. Raw history is readable with the existing reader role and does not require memory approval. Downloaded HTML is displayed as text; the view runs no scripts.
+
+Reviews select active guidance locally using file paths, language, symbols and branch scope. Natural-language contract conditions and counter-evidence are passed to the selected model for evaluation. Up to five selected source-linked guidelines can include their original comment and at most ten replies. The review records whether the reply page was complete. A changed guidance revision, changed source hash or mixed thread revision prevents that source from being added. Related source capture is optional; unavailable history does not remove the base review.
+
+The captured context stays fixed for the run. The report records the central snapshot, guideline revision, original URL and ID, body hash, observation hash, history API revision and reply hashes. These are past observations, including claimed fixes and resolved threads. They do not establish that the current code is correct.
+
+History pages use a separate encrypted cache under the same connection and signed access lease. At most 128 distinct pages are cached. Offline mode reads only pages cached for the current connection generation; synchronization can require fetching them again. Revoked, expired or invalidated material cannot be reused. Server outages, missing history, identity failures and failed model calls keep their separate outcomes. Only server-owned repository/PR/history IDs and cursors cross the history API boundary. Local source and review text go to the selected provider, never to GCR.
