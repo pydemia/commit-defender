@@ -23,8 +23,7 @@ export async function run() {
     ? JSON.parse(fs.readFileSync(process.env.G03_MODEL_CONFIGURATION, "utf8"))
     : undefined;
   const sourceId = "4f94ce45-2f0e-42e5-98b4-6ed2c2fde3e1";
-  const file =
-    "data-management/mainapp/domains/position_management/block/schema.py";
+  const file = process.env.G04_TARGET ?? "data-management/mainapp/domains/position_management/block/schema.py";
   const proof: Record<string, any> = {
     status: "running",
     vscode: vscode.version,
@@ -32,7 +31,7 @@ export async function run() {
     realModel: Boolean(real),
     modelCalls: 0,
     syntheticResponse: !real,
-    sourceFixture: "G03 BlockUpdateRequest",
+    sourceFixture: process.env.G04_CASE ? `G04 ${process.env.G04_CASE}` : "G03 BlockUpdateRequest",
     newCollection: 0,
   };
   const save = () =>

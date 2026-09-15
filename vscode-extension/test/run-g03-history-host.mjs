@@ -11,6 +11,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { g04Fixture } from "./helpers/g04-fixtures.mjs";
 import { runTests } from "@vscode/test-electron";
 import {
   defaultLocalDataDirectory,
@@ -22,8 +23,8 @@ assert(process.env.G03_CONFIGURATION && process.env.G03_EVIDENCE);
 const root = await mkdtemp(path.join(os.tmpdir(), "cd-g03-host-"));
 const workspace = path.join(root, "workspace"),
   profileId = "cd-g03-" + randomUUID();
-const filename =
-  "data-management/mainapp/domains/position_management/block/schema.py";
+const scenario = process.env.G04_CASE ? g04Fixture(process.env.G04_CASE) : undefined;
+const filename = scenario?.target ?? "data-management/mainapp/domains/position_management/block/schema.py";
 const git = (...args) =>
   execFileSync(
     "git",
@@ -53,6 +54,12 @@ try {
     "origin",
     "https://github.com/skccmygit/skax-successionX-backend.git",
   );
+  if (scenario) {
+    for (const [file, content] of Object.entries(scenario.base)) {
+      await mkdir(path.dirname(path.join(workspace, file)), { recursive: true });
+      await writeFile(path.join(workspace, file), content);
+    }
+  } else {
   await writeFile(
     path.join(workspace, filename),
     "from pydantic import BaseModel, Field\n\nclass BlockUpdateRequest(BaseModel):\n    name: str = Field(min_length=1)\n",
@@ -65,11 +72,12 @@ try {
     "import pytest\nfrom pydantic import ValidationError\nfrom mainapp.domains.position_management.block.consumer import update_block\n\ndef test_nonempty_name_is_returned():\n    assert update_block({\"name\": \"alpha\"}) == {\"name\": \"alpha\"}\n\ndef test_empty_name_is_rejected():\n    with pytest.raises(ValidationError):\n        update_block({\"name\": \"\"})\n");
   await writeFile(path.join(workspace, "pyproject.toml"),
     '[project]\nname = "g03-validation-fixture"\nversion = "0.0.0"\ndependencies = ["pydantic>=2,<3", "pytest>=8,<9"]\n\n[tool.pytest.ini_options]\npythonpath = ["data-management"]\n');
+  }
   git("add", ".");
   git("commit", "-m", "synthetic G03 validation baseline");
   await writeFile(
     path.join(workspace, filename),
-    "from pydantic import BaseModel\n\nclass BlockUpdateRequest(BaseModel):\n    name: str\n",
+    scenario?.source ?? "from pydantic import BaseModel\n\nclass BlockUpdateRequest(BaseModel):\n    name: str\n",
   );
   git("add", filename);
   await mkdir(path.join(root, "user-data/User"), { recursive: true });
@@ -94,6 +102,7 @@ try {
       G03_WORKSPACE: workspace,
       G03_PROFILE: profileId,
       G03_EVIDENCE: process.env.G03_EVIDENCE,
+      ...(scenario ? { G04_CASE: scenario.name, G04_TARGET: scenario.target } : {}),
       ...(process.env.G03_MODEL_CONFIGURATION
         ? { G03_MODEL_CONFIGURATION: process.env.G03_MODEL_CONFIGURATION }
         : {}),
