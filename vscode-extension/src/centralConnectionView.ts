@@ -87,7 +87,7 @@ export function centralStatusHtml(value: unknown): string {
       return `<tr><th>${esc(name)}</th><td>Release ${esc(bundle.releaseSequence)} · ${esc(bundle.bundleId)}<br><code>${esc(bundle.contentHash)}</code></td></tr>`;
     })
     .join("");
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>Online reviews refresh expired knowledge. Offline reviews require an unexpired signed lease and active connection. Model availability is checked separately when a review starts.</p><table>${rows.map(([label, item]) => `<tr><th>${esc(label)}</th><td>${esc(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. Local Memory and Skills remain editable in their own view.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>This connection reads PR history, Skills, prompts and published guidance from GCR. Your selected local provider, model and reasoning stay unchanged. Local code and results are not uploaded to GCR; approved source and context go to the model provider you select.</p><p>Online reviews require fresh signed knowledge; the current server uses a five-minute manifest lifetime. An already running review keeps its pinned version and can stop at expiry. Offline reviews require a valid signed lease and active authority. Model failures are checked separately from connection and cache failures.</p><table>${rows.map(([label, item]) => `<tr><th>${esc(label)}</th><td>${esc(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. To inspect originals, replies and versions, choose Browse PR review history. Use View downloaded review knowledge for Skills and guidance. Local Memory and Skills remain separately editable and are not uploaded.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function readConfig(file: string) {
   const handle = await open(
@@ -193,9 +193,9 @@ export async function manageCentralConnection(
           label: "View downloaded review knowledge",
           action: "knowledge",
           description:
-            "Read central prompts, review criteria and memories; model execution stays local",
+            "Read central prompts, Skills and guidance; keep your selected local provider",
         },
-        { label: "Browse PR review history", action: "history", description: "Read original comments, replies, body versions and source-linked guidance" },
+        { label: "Browse PR review history", action: "history", description: "Read originals, replies and versions without memory approval; no model call" },
         {
           label: "Use signed offline knowledge",
           action: "offline",

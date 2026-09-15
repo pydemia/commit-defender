@@ -211,6 +211,7 @@ function buildSummaryHtml(
         `<li>${esc(entry.origin)} ${esc(entry.kind)}: <code>${esc(entry.id)}</code> · revision ${entry.revision} · <code>${esc(entry.hash)}</code></li>`).join("")}</ul></details>
       ${freshness?.changes.length ? `<ul>${freshness.changes.map(change => `<li><code>${esc(change.id)}</code>: ${esc(change.reason)}</li>`).join("")}</ul>` : ""}
       </section><section><h2>Evidence</h2>
+      ${core.identity.context.entries.some(entry => entry.id.startsWith("history-")) ? "<p>History IDs and hashes record material supplied to this review. Read the Overall Summary and finding rationale for the model's application, already-satisfied or exclusion assessment. A past comment or claimed fix is not proof of the current code.</p>" : ""}
       <p>Source-read observations record returned source ranges. Anchor validation checks positions. Neither records execution of tests.</p>
       ${core.findings.map(finding => `<details><summary>${esc(finding.title)} · ${esc(finding.evidenceAssessment.level)}</summary>
         <p>Anchor: ${esc(finding.anchorValidation.status)} — ${esc(finding.anchorValidation.reason)}</p>

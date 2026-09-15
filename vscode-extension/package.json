@@ -199,7 +199,7 @@
                     "enumDescriptions": [
                         "aoai (Azure OpenAI): Azure-hosted OpenAI models. Requires endpoint, api-version, and a deployment name as the model.",
                         "anthropic: Anthropic Claude models (claude-sonnet-4-6, claude-opus-4-6, etc.).",
-                        "openai: OpenAI platform (api.openai.com). Works with any model name like gpt-4o, o3, etc.",
+                        "openai: OpenAI API. Select a model available to your account and compatible with the configured API adapter.",
                         "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.).",
                         "codex: Use the locally installed Codex CLI and its saved ChatGPT/Codex login. No API key required.",
                         "claudecode: Use the locally installed Claude Code CLI and its saved subscription login. No API key required.",
@@ -284,7 +284,7 @@
                         "lean: Minimal \u2014 only P3 Critical (security, syntax errors, data-loss) issues flagged."
                     ],
                     "default": "moderate",
-                    "description": "Controls how strictly the AI assigns priority levels. P1=Info (optional), P2=Warning (recommended), P3=Critical (blocks commit)."
+                    "description": "Controls how strictly the AI assigns priority levels. P1=Info, P2=Warning, P3=Critical. Manual and background shared-core reviews are advisory; commit blocking belongs to the separately enabled legacy hook."
                 },
                 "commitDefender.richnessLevel": {
                     "type": "string",
@@ -385,7 +385,7 @@
                         "disable: Do not install or manage the git pre-commit hook. Analysis is still available manually and on git stage."
                     ],
                     "default": "disable",
-                    "description": "Controls whether the git pre-commit hook is automatically installed in the workspace repository."
+                    "description": "Controls the separate legacy pre-commit hook, which can block Git on P3. Not required for manual review, GCR history pulling or the advisory Automatic Reviews service."
                 },
                 "commitDefender.fileTimeoutSeconds": {
                     "type": "number",

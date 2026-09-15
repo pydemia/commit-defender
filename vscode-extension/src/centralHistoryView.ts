@@ -42,9 +42,9 @@ export function centralHistoryHtml(
     "item" in data
       ? render(data.item)
       : "items" in data
-        ? data.items.map(render).join("") || "<p>No entries in this page.</p>"
+        ? data.items.map(render).join("") || "<p>No saved entries in this page. Check the selected PR and collection coverage; this view does not collect additional history.</p>"
         : render(data);
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);padding:24px;max-width:1000px}pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}article{padding:16px 0;border-bottom:1px solid var(--vscode-panel-border)}p{overflow-wrap:anywhere}</style></head><body><h1>${esc(title)}</h1><p>${result.cached ? "Cached history" : "Central history"} · fetched ${esc(result.fetchedAt)} · access lease ${esc(result.expiresAt)}</p><p>These are past review observations. A reply, resolved thread or merge is not proof of a current fix. Original history does not require memory approval.</p>${content}</body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);padding:24px;max-width:1000px}pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}article{padding:16px 0;border-bottom:1px solid var(--vscode-panel-border)}p{overflow-wrap:anywhere}</style></head><body><h1>${esc(title)}</h1><p>${result.cached ? "Cached history" : "Central history"} · fetched ${esc(result.fetchedAt)} · access lease ${esc(result.expiresAt)}</p><p>These are past review observations. A reply, resolved thread or merge is not proof of a current fix. Original history does not require memory approval. Source-linked guidance is activated centrally; its applicability and counter-evidence must be checked against the current code. Browse without a model call, then run an Analyze command with your selected provider to review local changes.</p>${content}</body></html>`;
 }
 /** Existing connection menu owns scope and credentials. All navigation sends
  * server IDs; this UI has no local text search or write endpoint. */
