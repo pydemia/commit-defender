@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.11.0",
+    "version": "2.11.1",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -729,9 +729,9 @@
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
         "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-contract-0.1.0-alpha.40.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-core-0.1.0-alpha.40.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.40/gcr-client-executors-0.1.0-alpha.40.tgz"
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.41/gcr-client-contract-0.1.0-alpha.41.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.41/gcr-client-core-0.1.0-alpha.41.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.41/gcr-client-executors-0.1.0-alpha.41.tgz"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
