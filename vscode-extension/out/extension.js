@@ -17655,6 +17655,7 @@ function buildSummaryHtml(report, view, palette) {
       <details><summary>Review criteria used</summary><ul>${core.identity.context.entries.map((entry) => `<li>${esc(entry.origin)} ${esc(entry.kind)}: <code>${esc(entry.id)}</code> \xB7 revision ${entry.revision} \xB7 <code>${esc(entry.hash)}</code></li>`).join("")}</ul></details>
       ${freshness?.changes.length ? `<ul>${freshness.changes.map((change) => `<li><code>${esc(change.id)}</code>: ${esc(change.reason)}</li>`).join("")}</ul>` : ""}
       </section><section><h2>Evidence</h2>
+      ${core.identity.context.entries.some((entry) => entry.id.startsWith("history-")) ? "<p>History IDs and hashes record material supplied to this review. Read the Overall Summary and finding rationale for the model's application, already-satisfied or exclusion assessment. A past comment or claimed fix is not proof of the current code.</p>" : ""}
       <p>Source-read observations record returned source ranges. Anchor validation checks positions. Neither records execution of tests.</p>
       ${core.findings.map((finding) => `<details><summary>${esc(finding.title)} \xB7 ${esc(finding.evidenceAssessment.level)}</summary>
         <p>Anchor: ${esc(finding.anchorValidation.status)} \u2014 ${esc(finding.anchorValidation.reason)}</p>
@@ -22263,8 +22264,8 @@ function centralHistoryHtml(title, result) {
     return `<pre>${esc3(JSON.stringify(item, null, 2))}</pre>`;
   };
   const data = result.data;
-  const content3 = "item" in data ? render(data.item) : "items" in data ? data.items.map(render).join("") || "<p>No entries in this page.</p>" : render(data);
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);padding:24px;max-width:1000px}pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}article{padding:16px 0;border-bottom:1px solid var(--vscode-panel-border)}p{overflow-wrap:anywhere}</style></head><body><h1>${esc3(title)}</h1><p>${result.cached ? "Cached history" : "Central history"} \xB7 fetched ${esc3(result.fetchedAt)} \xB7 access lease ${esc3(result.expiresAt)}</p><p>These are past review observations. A reply, resolved thread or merge is not proof of a current fix. Original history does not require memory approval.</p>${content3}</body></html>`;
+  const content3 = "item" in data ? render(data.item) : "items" in data ? data.items.map(render).join("") || "<p>No saved entries in this page. Check the selected PR and collection coverage; this view does not collect additional history.</p>" : render(data);
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);padding:24px;max-width:1000px}pre{font-family:inherit;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}article{padding:16px 0;border-bottom:1px solid var(--vscode-panel-border)}p{overflow-wrap:anywhere}</style></head><body><h1>${esc3(title)}</h1><p>${result.cached ? "Cached history" : "Central history"} \xB7 fetched ${esc3(result.fetchedAt)} \xB7 access lease ${esc3(result.expiresAt)}</p><p>These are past review observations. A reply, resolved thread or merge is not proof of a current fix. Original history does not require memory approval. Source-linked guidance is activated centrally; its applicability and counter-evidence must be checked against the current code. Browse without a model call, then run an Analyze command with your selected provider to review local changes.</p>${content3}</body></html>`;
 }
 async function browseCentralHistory(context, read, validate) {
   let cursor2;
@@ -22416,7 +22417,7 @@ function centralStatusHtml(value) {
     const bundle = item;
     return `<tr><th>${esc4(name)}</th><td>Release ${esc4(bundle.releaseSequence)} \xB7 ${esc4(bundle.bundleId)}<br><code>${esc4(bundle.contentHash)}</code></td></tr>`;
   }).join("");
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>Online reviews refresh expired knowledge. Offline reviews require an unexpired signed lease and active connection. Model availability is checked separately when a review starts.</p><table>${rows2.map(([label, item]) => `<tr><th>${esc4(label)}</th><td>${esc4(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. Local Memory and Skills remain editable in their own view.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>This connection reads PR history, Skills, prompts and published guidance from GCR. Your selected local provider, model and reasoning stay unchanged. Local code and results are not uploaded to GCR; approved source and context go to the model provider you select.</p><p>Online reviews require fresh signed knowledge; the current server uses a five-minute manifest lifetime. An already running review keeps its pinned version and can stop at expiry. Offline reviews require a valid signed lease and active authority. Model failures are checked separately from connection and cache failures.</p><table>${rows2.map(([label, item]) => `<tr><th>${esc4(label)}</th><td>${esc4(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. To inspect originals, replies and versions, choose Browse PR review history. Use View downloaded review knowledge for Skills and guidance. Local Memory and Skills remain separately editable and are not uploaded.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function readConfig(file) {
   const handle2 = await (0, import_promises12.open)(
@@ -22503,9 +22504,9 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         {
           label: "View downloaded review knowledge",
           action: "knowledge",
-          description: "Read central prompts, review criteria and memories; model execution stays local"
+          description: "Read central prompts, Skills and guidance; keep your selected local provider"
         },
-        { label: "Browse PR review history", action: "history", description: "Read original comments, replies, body versions and source-linked guidance" },
+        { label: "Browse PR review history", action: "history", description: "Read originals, replies and versions without memory approval; no model call" },
         {
           label: "Use signed offline knowledge",
           action: "offline",
