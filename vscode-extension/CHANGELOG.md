@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.11.3
+
+- Keep the overall history applicability assessment visible alongside per-file summaries. The model worker and common packages are unchanged from 2.11.2.
+
 ## 2.11.2
 
 - Ask source-linked reviews to explain whether historical guidance applies, is already satisfied, is excluded, or was not used, with the original source ID and URL in the summary. Zero-finding reviews can now explain why an old criticism does not apply.
