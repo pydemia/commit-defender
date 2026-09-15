@@ -337,3 +337,21 @@ test("fallback reports show configured and effective modes without claiming cent
   );
   assert(!view.html.includes("<h2>Central knowledge used</h2>"));
 });
+
+
+test("history applicability remains visible with per-file summaries and no findings", () => {
+  const core = reportFor("source-evidence");
+  core.findings = [];
+  core.summary = "History source-917 excluded: stored state is outside request validation. https://github.com/example/repo/pull/917 <script>unsafe()</script>";
+  const audience = { serverId: "server", tenantId: "tenant", repositoryId: "repository", userId: "reader" };
+  core.identity.client = { ...core.identity.client, mode: "centralized", audience };
+  core.identity.context.centralSnapshot = { id: "snapshot", hash: "b".repeat(64), audience, authorizationRevision: "1", offlineValidUntil: "2026-09-17T00:00:00.000Z" };
+  core.identity.context.entries.push({ origin: "central", kind: "memory", id: "history-source-917", revision: 1, hash: "a".repeat(64), component: "collective" });
+  const projected = projectCommitDefender(core);
+  assert(projected.review.per_file_summaries.length > 0);
+  const view = new SummaryView(projected, "/synthetic", new ReviewLinks());
+  assert(view.html.includes("History source-917 excluded: stored state is outside request validation."));
+  assert(!view.html.includes("<script>unsafe()</script>"));
+  assert.equal(normalizeReport(projected).length, 0);
+  assert.equal((view.html.match(/History source-917 excluded:/g) ?? []).length, 1);
+});
