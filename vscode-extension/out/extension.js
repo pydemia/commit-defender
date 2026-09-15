@@ -17683,6 +17683,7 @@ function buildSummaryHtml(report, view, palette) {
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
       body2 += `<section><h2>\u{1F4CB} Overall Summary</h2>
+        ${report.review.per_file_summaries?.length && report.gcr?.report.identity.context.entries.some((entry) => entry.id.startsWith("history-")) ? `<div class="per-file-summary">${view.markdown(report.review.summary)}</div>` : ""}
         ${_renderOverallSummary(report.review, blocks, view, pal)}</section>`;
     }
   }
