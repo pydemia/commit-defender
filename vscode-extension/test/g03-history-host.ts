@@ -153,7 +153,8 @@ export async function run() {
         wrapper: real.diagnosticWorkerPath,
         installedWorker: worker,
         eventFile: real.settings.g03CliEvents,
-        invocationArgumentsAndStreamsUnchanged: true,
+        invocationArgumentsAndStreamsUnchanged: real.settings.g03OmitOutputSchema !== true,
+        outputSchemaDiagnosticOmission: real.settings.g03OmitOutputSchema === true,
       };
     }
     const job = real

@@ -10,7 +10,12 @@ const fd = fs.openSync(evidence, 'wx', 0o600);
 const original = cp.spawn;
 let invocation = 0;
 cp.spawn = function(command, args, options) {
-  const child = original.call(this, command, args, options);
+  let selectedArgs = args;
+  if (command === '/usr/bin/sandbox-exec' && workerData.settings.g03OmitOutputSchema === true && args.includes('--output-schema')) {
+    const index = args.indexOf('--output-schema');
+    selectedArgs = [...args.slice(0, index), ...args.slice(index + 2)];
+  }
+  const child = original.call(this, command, selectedArgs, options);
   if (command === '/usr/bin/sandbox-exec' && args.includes('exec')) {
     const id = ++invocation;
     const kind = args.includes('model_provider="gcr_fixture"') ? 'loopback-probe' : 'account-review';
