@@ -147,9 +147,18 @@ export async function run() {
     };
     const signal = AbortSignal.timeout(Math.max(600000, settings.durationMs + 60000));
     if (real) assert.equal(real.maximumReviewInvocations, 1);
+    if (real?.diagnosticWorkerPath) {
+      assert.equal(real.settings.g03ObservedWorker, worker);
+      proof.passiveCliObserver = {
+        wrapper: real.diagnosticWorkerPath,
+        installedWorker: worker,
+        eventFile: real.settings.g03CliEvents,
+        invocationArgumentsAndStreamsUnchanged: true,
+      };
+    }
     const job = real
       ? await prepareStandaloneWorker(
-          worker,
+          real.diagnosticWorkerPath ?? worker,
           { repoRoot: workspace, files: [file], scope: "staged" },
           settings,
           signal,
