@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { CentralConnections, contentHash } from "@gcr/client-core";
-import { reviewHistoryDetail } from "@gcr/client-contract";
+import { reviewHistoryDetail, reviewHistoryMessagePage } from "@gcr/client-contract";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { centralHistoryHtml } from "../src/centralHistoryView.js";
 import { showAuthorizedCentralText } from "../src/centralKnowledgeView.js";
@@ -102,6 +102,20 @@ export async function run() {
       url: detail.item.htmlUrl,
       offlineExact: true,
     };
+    const reviewFreshness = real?.settings?.freshness === "offline" ? "offline" : "online";
+    if (reviewFreshness === "offline") {
+      await manager.readHistory(connectionId, {
+        kind: "guidance-detail", guidanceId: "9ee94837-fd43-46f6-ac03-30bdfb8d3575",
+      });
+      const replies = reviewHistoryMessagePage((await manager.readHistory(connectionId, {
+        kind: "messages", pullNumber: 917, parentId: sourceId,
+      })).data);
+      assert.equal(replies.nextCursor, null);
+      for (const reply of replies.items) await manager.readHistory(connectionId, {
+        kind: "message", pullNumber: 917, sourceId: reply.id,
+      });
+      proof.historyPrefetchedOnlineForSignedOfflineReview = true;
+    }
     const panel = showAuthorizedCentralText(
       { subscriptions } as vscode.ExtensionContext,
       "G03 original PR review comment",
@@ -109,7 +123,7 @@ export async function run() {
       Date.parse(original.expiresAt),
       async () => {
         await (
-          await manager.review(connectionId!, "online")
+          await manager.review(connectionId!, reviewFreshness)
         ).assertConnection();
       },
     );
@@ -131,7 +145,7 @@ export async function run() {
       excludePatterns: [],
       ...(real?.settings ?? {}),
     };
-    const signal = AbortSignal.timeout(600000);
+    const signal = AbortSignal.timeout(Math.max(600000, settings.durationMs + 60000));
     if (real) assert.equal(real.maximumReviewInvocations, 1);
     const job = real
       ? await prepareStandaloneWorker(
