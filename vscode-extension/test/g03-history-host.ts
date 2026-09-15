@@ -155,6 +155,7 @@ export async function run() {
         eventFile: real.settings.g03CliEvents,
         invocationArgumentsAndStreamsUnchanged: real.settings.g03OmitOutputSchema !== true,
         outputSchemaDiagnosticOmission: real.settings.g03OmitOutputSchema === true,
+        schemaSuppliedInPrompt: real.settings.g03SchemaInPrompt === true,
       };
     }
     const job = real
