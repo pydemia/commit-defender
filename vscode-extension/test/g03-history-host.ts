@@ -71,6 +71,20 @@ export async function run() {
     );
     connectionId = connection.id;
     proof.connectionId = connectionId;
+    if (real && process.env.G04_CASE) {
+      const budget = Number(real.settings?.durationMs ?? 240000);
+      proof.manifestAdmission = { minimumRemainingMs: budget + 30000, observations: [] };
+      for (;;) {
+        const central = await manager.review(connectionId, "online");
+        const snapshot = await central.cache.read("online");
+        const refreshAfter = snapshot.manifest.payload.refreshAfter;
+        const remainingMs = Date.parse(refreshAfter) - Date.now();
+        proof.manifestAdmission.observations.push({ checkedAt: new Date().toISOString(), refreshAfter, remainingMs });
+        save();
+        if (remainingMs >= budget + 30000) break;
+        await new Promise(resolve => setTimeout(resolve, Math.min(30000, Math.max(1000, remainingMs + 500))));
+      }
+    }
     proof.pulls = [];
     for (const pullNumber of [917, 915]) {
       const result = await manager.readHistory(connectionId, {
@@ -228,6 +242,14 @@ export async function run() {
         model: settings.model,
         reasoningEffort: settings.reasoningEffort,
       };
+      if (real && process.env.G04_CASE) {
+        const central = await manager.review(connectionId!, "online");
+        const current = await central.cache.read("online");
+        const remainingMs = Date.parse(current.manifest.payload.refreshAfter) - Date.now();
+        proof.manifestAdmission.beforeRun = { remainingMs, refreshAfter: current.manifest.payload.refreshAfter };
+        save();
+        assert(remainingMs > settings.durationMs + 5000, "Manifest life exhausted during preparation; model not called");
+      }
       proof.modelCalls = real ? 1 : 0;
       save();
       const result = await job.run(signal);
