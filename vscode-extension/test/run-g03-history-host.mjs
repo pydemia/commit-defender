@@ -57,6 +57,14 @@ try {
     path.join(workspace, filename),
     "from pydantic import BaseModel, Field\n\nclass BlockUpdateRequest(BaseModel):\n    name: str = Field(min_length=1)\n",
   );
+  // Unchanged callers and boundary tests are fixed supporting context, not extra review targets.
+  await writeFile(path.join(workspace, path.dirname(filename), "consumer.py"),
+    "from .schema import BlockUpdateRequest\n\ndef update_block(payload: dict) -> dict:\n    request = BlockUpdateRequest.model_validate(payload)\n    return {\"name\": request.name}\n");
+  await mkdir(path.join(workspace, "tests"));
+  await writeFile(path.join(workspace, "tests/test_block_update.py"),
+    "import pytest\nfrom pydantic import ValidationError\nfrom mainapp.domains.position_management.block.consumer import update_block\n\ndef test_nonempty_name_is_returned():\n    assert update_block({\"name\": \"alpha\"}) == {\"name\": \"alpha\"}\n\ndef test_empty_name_is_rejected():\n    with pytest.raises(ValidationError):\n        update_block({\"name\": \"\"})\n");
+  await writeFile(path.join(workspace, "pyproject.toml"),
+    '[project]\nname = "g03-validation-fixture"\nversion = "0.0.0"\ndependencies = ["pydantic>=2,<3", "pytest>=8,<9"]\n\n[tool.pytest.ini_options]\npythonpath = ["data-management"]\n');
   git("add", ".");
   git("commit", "-m", "synthetic G03 validation baseline");
   await writeFile(
