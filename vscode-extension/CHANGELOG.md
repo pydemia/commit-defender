@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.11.1
+
+- Pass the review response schema in Codex prompt instructions to avoid the CLI output-schema path that stalled account reviews during verification. Existing response and source-evidence validation still reject malformed or incomplete reviews.
+
 ## 2.11.0
 
 - Pull GCR PR review originals, replies, body versions, thread observations and source-linked guidance with the existing reader connection.
