@@ -1,8 +1,8 @@
-# Model API credentials (development branch)
+# Model API credentials
 
 Run **Commit Defender: Manage Model API Credential** after selecting an API provider, endpoint and model in User Settings. A new key is entered in a native password box. Settings and new hook configurations store a reference. Runtime code does not read `commitDefender.apiKey` as a fallback.
 
-This applies to Azure OpenAI, OpenAI, Anthropic and Gemini API adapters used by commit-message generation and the legacy hook. Standalone fixed-source review still uses the supported Codex account executor. Codex, Claude Code, Gemini CLI and Antigravity retain their own login stores; this command does not copy or migrate those accounts.
+This applies to the Azure OpenAI, OpenAI, Anthropic and Gemini API adapters used by fixed-source manual review, commit-message generation and the legacy hook. Codex fixed-source review uses its supported account executor. Codex, Claude Code, Gemini CLI and Antigravity retain their own login stores; this command does not copy or migrate those accounts.
 
 ## Migrate an existing value
 

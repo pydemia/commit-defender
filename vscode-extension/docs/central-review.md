@@ -48,7 +48,11 @@ Status and report provenance are read-only. This checkpoint does not add central
 
 ## Verification scope
 
-The macOS packaged worker has performed an actual Astra/xhigh central review using a synthetic HTTPS publisher and OS-backed credentials. Tests cover local/central composition, history isolation, offline operation and cancellation after disconnect. A real VS Code Extension Host verifies activation and command registration; the connection dialog flow is exercised with a VS Code API mock and real HTTPS transport. Visual inspection and PRISM-DEV server integration are separate checks. The G03 release adds PR history retrieval; its real model evidence is recorded separately from synthetic provider tests.
+G03/G04 exercised the installed extension in a real VS Code Extension Host against PRISM-DEV history and published source-linked guidance. G04 used the existing Codex account with Luna/high on three fixed scenarios: an uncalled validation helper, its validator repair, and an unrelated stored-state check. All final reviews completed, with source-linked applicability explanations and no repeated old finding in the repaired/unrelated cases. These results are narrower than general provider/model coverage. Other supported adapters have contract regression evidence.
+
+The recorded delivery was CD 2.11.3 with clients alpha.42 and private service alpha.37. This is a verification checkpoint, not a claim that an already open user Host or Marketplace has that version. See the repository's G04 execution record and the [installation checks](installation.md).
+
+The current online manifest expires five minutes after issuance. Starting a new Host can still receive an existing manifest with less time remaining. A running review does not replace its pinned material just to extend the deadline; inspect Connection Status, synchronize normally and retry when appropriate. Signed offline mode has its own authority/lease checks and does not bypass revocation.
 
 Reports show configured and effective modes separately: `Centralized · online`, `Centralized · cached` or `Standalone · fallback: <reason>`. A fallback does not change the saved connection or switch the model provider. Local fallback history remains locally owned, contains no central snapshot or entries, and is labeled as advisory without establishing central policy compliance. The selected connection's fallback results remain readable after central access expires. Reconnection never reruns or relabels an existing local result.
 
@@ -56,7 +60,7 @@ If identity verification succeeds but the first knowledge publication fails, a c
 
 ## View downloaded content
 
-Open **Manage Central Review Connection → View downloaded review knowledge** to read the selected repository's signed snapshot. The view includes prompt instructions and documents, review criteria with applicability, counter-evidence and exceptions, shared review knowledge, and your centrally published memories. It shows all downloaded entries; each review selects relevant entries and records its own context.
+Open **Central Review Connection → View downloaded review knowledge** to read the selected repository's signed snapshot. The view includes prompt instructions and documents, review criteria with applicability, counter-evidence and exceptions, shared review knowledge, and your centrally published memories. It shows all downloaded entries; each review selects relevant entries and records its own context.
 
 The view is read-only. It refreshes knowledge when online freshness requires it and never invokes a model or uploads local content. Markdown and source references are displayed as text. Local Memory and Skills remain editable in their own view.
 
@@ -83,3 +87,6 @@ Reviews select active guidance locally using file paths, language, symbols and b
 The captured context stays fixed for the run. The report records the central snapshot, guideline revision, original URL and ID, body hash, observation hash, history API revision and reply hashes. These are past observations, including claimed fixes and resolved threads. They do not establish that the current code is correct.
 
 History pages use a separate encrypted cache under the same connection and signed access lease. At most 128 distinct pages are cached. Offline mode reads only pages cached for the current connection generation; synchronization can require fetching them again. Revoked, expired or invalidated material cannot be reused. Server outages, missing history, identity failures and failed model calls keep their separate outcomes. Only server-owned repository/PR/history IDs and cursors cross the history API boundary. Local source and review text go to the selected provider, never to GCR.
+
+
+The Overall Summary records the model's application, already-satisfied, exclusion or non-use assessment with original source IDs/URLs, including zero-finding reviews. Review criteria and evidence show the captured versions separately. See [the three-case usage example](how-to.md#reuse-an-earlier-pr-comment).

@@ -1,123 +1,52 @@
-# commit-defender
+# Commit Defender
 
-**AI-powered git pre-commit code review for VS Code.** Catches bugs, security issues, and style violations before they land — inline in the editor and at `git commit` time.
+Commit Defender reviews local Git changes in VS Code using the model provider you select. It captures source before review, preserves failed and incomplete outcomes, and shows findings with their source and context versions. Manual reviews and the opt-in background review service are advisory.
 
-Commit Defender is a pure TypeScript VS Code extension. It supports API providers (Azure OpenAI · Anthropic · OpenAI · Google Gemini) and account-authenticated local agents (Codex · Claude Code · Gemini CLI · Antigravity), and ships its own git pre-commit hook that works even when VS Code is closed.
+You can use local Memory and Skills without a server, or pull PR review history, Skills, prompts and published guidance from Git Code Reviewer (GCR). Connecting to GCR does not select a central model or change your account, model or reasoning setting. Local code, diffs, questions, results, conversations and personal Memory are not uploaded to GCR. Approved source and review context are sent to your selected model provider.
 
----
+## Start here
 
-## How it works
+1. [Install the VSIX and configure a provider](vscode-extension/docs/installation.md). Use the artifact built from the release or branch you intend to run; Marketplace publication is a separate delivery step.
+2. Open a trusted Git workspace, select **Commit Defender: Select Account Provider and Model**, and configure credentials in User Settings.
+3. Save and stage a small change, then run **Commit Defender: Analyze Staged Files**. New installations do not start reviews automatically when you stage files.
+4. Inspect the status, current-source evidence and Summary. An empty findings list is meaningful only with a completed review and understood coverage.
+5. To reuse central material, follow [Connect to GCR](vscode-extension/docs/central-review.md). A repository connection JSON and a `commit-defender` reader key are separate from your model credential.
 
+## Guides and specifications
+
+| Document | Use it for |
+| --- | --- |
+| [Installation and configuration](vscode-extension/docs/installation.md) | VSIX/source installation, requirements, accounts, settings and upgrade checks |
+| [How-to and examples](vscode-extension/docs/how-to.md) | First review, historical guidance, cancellation, cache and common problems |
+| [Feature specification](vscode-extension/docs/features.md) | Commands, inputs, outputs, provider/OS boundaries and unsupported actions |
+| [Architecture](vscode-extension/docs/architecture.md) | Extension, workers, local service, shared packages, storage and trust boundaries |
+| [Central connection](vscode-extension/docs/central-review.md) | Reader setup, raw PR history, signed knowledge and revocation |
+| [Standalone review](vscode-extension/docs/standalone-review.md) | Fixed source, local Memory/Skills, deadlines and result evidence |
+| [Automatic reviews](vscode-extension/docs/automatic-reviews.md) | Explicit Save/Stage/Commit/Push opt-in and legacy hook coexistence |
+| [Model credentials](vscode-extension/docs/model-credentials.md) | OS-backed API keys and migration from legacy plaintext settings |
+| [Review conversations](vscode-extension/docs/review-conversations.md) | Local follow-up conversations on saved reviews |
+
+The [GCR installation and connection guide](https://github.com/pydemia/git-code-reviewer/blob/codex/review-memory-pull-g01/docs/product/getting-started.md) describes the server side in Korean. [Extension README](vscode-extension/README.md) is also included in the VSIX.
+
+## Scope and compatibility
+
+The current fixed-source review path supports Codex on macOS with the verified CLI versions listed in the setup guide, and the existing OpenAI, Azure OpenAI, Anthropic and Gemini API adapters. A CLI appearing in a sign-in or commit-message menu does not imply fixed-source review support. Unsupported selections fail without silently switching providers.
+
+The repository also contains the separate Python `commit-defender` package and the legacy Node pre-commit hook. They are not the shared-core local review service. In particular, the legacy hook may block a commit on P3; current manual/background findings do not. Do not install another hook to enable central history pulling. See the [legacy compatibility section](vscode-extension/docs/installation.md#legacy-python-package).
+
+Results retain the model's evidence and limitations. Reading source or validating a line anchor does not run tests. Downloaded Skills are instructions, not executable checks. The P11 runner, central execution proxy and local-to-central result submission are outside the delivered review workflow.
+
+## Development
+
+```bash
+cd vscode-extension
+npm ci
+npm run build
+npm run typecheck:test
 ```
-git add foo.ts
-    │
-    ▼
-VS Code extension  ──► AI provider  ──► priority-graded findings
-                                        (P0 / P1 / P2 / P3)
-                                            │
-                                            ├── inline comment threads
-                                            ├── Problems panel diagnostics
-                                            ├── CodeLens badges
-                                            └── summary webview
 
-git commit
-    │
-    ▼
-.git/hooks/pre-commit
-    │
-    ▼
-node out/hook-cli.js  ──► AI provider  ──► same review, terminal output
-                                            │
-                                            └── exit 1 on any P3 → commit blocked
-```
-
-Both paths run the **same review** with the **same settings**. The hook reads a materialised config file (`<repo>/.commit-defender/hook.json`) that the extension writes whenever your settings change, so the hook works without VS Code running.
-
----
-
-## Install
-
-1. Install **Commit Defender** from the VS Code Marketplace.
-2. Open **Settings → Extensions → Commit Defender** and set:
-   - `commitDefender.aiProvider` (one of `aoai` / `anthropic` / `openai` / `gemini` / `codex` / `claudecode` / `geminicli` / `antigravity`)
-   - `commitDefender.model` (e.g. `claude-sonnet-4-6`, `gpt-4o`)
-   - `commitDefender.apiKey` for an API provider (in **User Settings**, not Workspace), or run the corresponding **Commit Defender: Sign in with …** command for an account provider
-   - `commitDefender.endpoint` (required for Azure OpenAI only)
-3. (Optional) Set `commitDefender.preCommitHook: enable` to install the standalone git pre-commit hook.
-
-For account providers, the Sign in command launches the official CLI's browser
-flow; that CLI owns the localhost redirect and credential storage. The
-non-interactive pre-commit hook never launches a browser.
-
-After sign-in starts, choose whether to switch the workspace to that provider
-and use its CLI default or a selected model. The same picker is available as
-**Commit Defender: Select Account Provider and Model**.
-
-That's it. Stage a file and findings appear in the editor.
-
-For the full setup guide, settings reference, and pre-commit hook details, see [vscode-extension/README.md](vscode-extension/README.md).
-
----
-
-## Priority levels
-
-Every finding carries one of four acceptance levels:
-
-| Level | Name | Meaning |
-|---|---|---|
-| 🟩 **P0** | Praise | Clean code — positive feedback, nothing to fix |
-| 🟦 **P1** | Info | Optional improvement — code works as-is |
-| 🟧 **P2** | Warning | Highly recommended — potential runtime error or bad practice |
-| 🟥 **P3** | Critical | Must fix — syntax error, security vulnerability, or data-loss risk. **Blocks commit** |
-
-P3 findings unconditionally block the commit. P0–P2 are advisory.
-
----
-
-## Inline skip directives
-
-Add these comments to fully suppress findings on a given line:
-
-| Directive | When to use |
-|---|---|
-| `# CD:skip` | Explicitly suppress review for this line |
-| `# CD:skip:<reason>` | Same suppression — `<reason>` is a human-readable note |
-| `# type: ignore` | Honoured as an existing type-checker suppression marker |
-| `# TODO` | Known unfinished work — suppress until addressed |
-
----
-
-## Per-repo skills
-
-Drop SKILL.md files under `<repo>/.commit-defender/<topic>/SKILL.md` to inject project-specific guidance into every review for that repo. The directory name becomes the section heading and the file body is appended to the AI's system prompt.
-
----
-
-## Severity & richness
-
-Two prompt-shaping knobs control how strict and how verbose the AI is:
-
-- `commitDefender.severityLevel`: `lean` → `generous` → `moderate` → `rigorous` → `severe`
-- `commitDefender.richnessLevel`: `silent` → `simple` → `moderate` → `chatty` → `colorful`
-
-Higher severity pushes more findings toward P2/P3. Higher richness gives longer per-finding explanations.
-
----
-
-## Privacy
-
-Commit Defender sends your **staged diff** (or full file contents in on-demand mode) plus the system prompt to the AI provider you configure. API keys are sent only to the selected API provider. For Codex, Claude Code, Gemini CLI, and Antigravity account providers, credentials stay in the CLI credential store and are never read by Commit Defender. No analytics or telemetry.
-
-Review your provider's data-retention policy before enabling AI review on sensitive codebases.
-
----
+The `vendor` directory contains pinned GCR tarballs and provenance. The build bundles them into the extension and prepares its private background service; it does not replace a global CLI. Use the targeted `test:*` scripts listed in `package.json` for the code you change. Build/package/install instructions and artifact checks are in [Installation](vscode-extension/docs/installation.md).
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-### Local Review Activity
-
-Run **Commit Defender: Local Review Activity** from the command palette or sidebar and choose the last 7, 30 or 90 days. Run it again to refresh. The view reads encrypted history for the selected local profile, worktree and connection. It shows saved terminal states, triggers, reported duration, executor/model identity and the provenance of downloaded review knowledge.
-
-The view makes no model calls, central synchronization requests or uploads. Changing the profile, review mode, workspace or central connection closes the previous view. When the selected connection's local history is unavailable, the view marks the remaining local fallback history as incomplete. Deleted or unsaved runs, token usage, provider call counts and billed cost are unknown. Findings are counted per saved review, not as unique confirmed defects; downloaded criteria counts describe inputs, not quality or compliance.

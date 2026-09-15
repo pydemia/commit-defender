@@ -13,3 +13,13 @@ Reviews preserve incomplete, failed and cancelled outcomes. Manual findings are 
 Upgrading from older Marketplace builds preserves saved settings and credentials. Review account choices must be explicitly stored in User Settings, and legacy plaintext API keys require explicit migration before the new review path can use them. Unsupported CLI review selections fail without silently changing providers.
 
 Requirements: VS Code 1.90 or newer, a trusted Git workspace, a configured provider, and an available OS credential store. See [local storage](docs/standalone-review.md), [model credentials](docs/model-credentials.md), and [review conversations](docs/review-conversations.md).
+
+
+## Setup and reference
+
+- [Install, configure and upgrade](docs/installation.md): VSIX/source setup, provider credentials and first-review checks.
+- [How-to and examples](docs/how-to.md): staged review, historical guidance, offline operation and troubleshooting.
+- [Feature specification](docs/features.md): command contracts, provider/platform coverage and execution limits.
+- [Architecture](docs/architecture.md): workers, shared packages, local service, storage and communication boundaries.
+
+The Overall Summary explains the applicability of supplied history and remains visible with per-file summaries. Input provenance and a model's source-linked assessment are separate evidence. Online manifest freshness can stop a long review; a failed or cancelled result is never a clean review.
