@@ -24,7 +24,7 @@ export async function run() {
     assert(view.html.includes("https://github.com/skccmygit/skax-successionX-backend/pull/917#discussion_r3967869279"));
     assert(view.html.includes(core.identity.context.hash));
     assert(view.html.includes("revision 1"));
-    assert(view.html.includes(core.summary.replace(/[`*]/g, "").slice(0, 12)));
+    assert(view.html.replace(/<[^>]*>/g, "").includes(core.summary.replace(/[`*]/g, "").slice(0, 12)));
     await vscode.commands.executeCommand("commitDefender.showHistoryEntry", {
       id: core.runId, timestamp: new Date(core.finishedAt!), report,
       repoRoot: process.env.G03_WORKSPACE!, label: saved.sourceFixture, scope: "staged",
