@@ -96,12 +96,13 @@ try {
     vscodeExecutablePath:
       "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
     extensionDevelopmentPath: extension,
-    extensionTestsPath: path.resolve("out-test/g03-history-host.cjs"),
+    extensionTestsPath: path.resolve(process.env.G04_DISPLAY_REPORTS ? "out-test/g04-display-host.cjs" : "out-test/g03-history-host.cjs"),
     extensionTestsEnv: {
       G03_CONFIGURATION: process.env.G03_CONFIGURATION,
       G03_WORKSPACE: workspace,
       G03_PROFILE: profileId,
       G03_EVIDENCE: process.env.G03_EVIDENCE,
+      ...(process.env.G04_DISPLAY_REPORTS ? { G04_DISPLAY_REPORTS: process.env.G04_DISPLAY_REPORTS } : {}),
       ...(scenario ? { G04_CASE: scenario.name, G04_TARGET: scenario.target } : {}),
       ...(process.env.G03_MODEL_CONFIGURATION
         ? { G03_MODEL_CONFIGURATION: process.env.G03_MODEL_CONFIGURATION }
