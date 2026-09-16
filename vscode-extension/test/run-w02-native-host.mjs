@@ -9,7 +9,7 @@ import { defaultLocalDataDirectory, PlatformLocalKeyStore } from '@gcr/client-co
 import { windowsNative } from '@gcr/client-core/windows-native';
 
 assert.equal(process.platform, 'win32');
-for (const key of ['W02_EXTENSION', 'W02_VSCODE', 'W02_EVIDENCE'])
+for (const key of ['W02_EXTENSION', 'W02_CODEX', 'W02_VSCODE', 'W02_EVIDENCE'])
   assert(process.env[key] && path.isAbsolute(process.env[key]), key);
 const root = await mkdtemp(path.join(os.tmpdir(), 'cd-w02-host-'));
 const workspace = path.join(root, '한글 공백 workspace');
@@ -52,6 +52,7 @@ try {
   const configuration = path.join(root, 'configuration.json');
   await writeFile(configuration, JSON.stringify({ workspace, profileId,
     syntheticResponse: true, maximumReviewInvocations: 0,
+    executablePath: process.env.W02_CODEX,
   }));
   const userData = path.join(root, 'user-data');
   await mkdir(path.join(userData, 'User'), { recursive: true });

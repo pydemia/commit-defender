@@ -8,6 +8,7 @@ import { CentralConnections, contentHash } from "@gcr/client-core";
 import { centralFixture } from "./helpers/central-fixture.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { prepareStandaloneReview } from "../src/standaloneReview.js";
+import { prepareStandaloneWorker } from "../src/standaloneWorkerClient.js";
 import { readCentralHistory } from "../src/centralConnection.js";
 
 export async function run() {
@@ -16,6 +17,8 @@ export async function run() {
   assert.equal(input.maximumReviewInvocations, 0);
   const extension = vscode.extensions.getExtension("pydemia.commit-defender")!;
   assert(extension);
+  assert.deepEqual(fs.readFileSync(path.join(__dirname, "windows-native.exe")),
+    fs.readFileSync(path.join(extension.extensionPath, "out/windows-native.exe")));
   await extension.activate();
   assert(vscode.workspace.isTrusted);
   const fixture = await centralFixture(path.dirname(input.workspace));
@@ -94,10 +97,25 @@ export async function run() {
     proof.encryptedHistoryReopened = true;
     proof.savedResultCommandOpened = true;
     proof.syntheticReportStatus = report.status;
+    const installed = await prepareStandaloneWorker(path.join(
+      extension.extensionPath, "out/standalone-review-worker.js"), {
+      repoRoot: input.workspace, files: ["sum.ts"], scope: "staged",
+    }, {
+      mode: "centralized", connectionId, freshness: "online", offlineBehavior: "pause",
+      profileId: input.profileId, provider: "codex", model: "gpt-5.6-luna",
+      reasoningEffort: "high", executablePath: input.executablePath,
+      workspaceTrusted: true, durationMs: 240000, excludePatterns: [],
+    }, AbortSignal.timeout(90000));
+    await installed.dispose?.();
+    proof.installedWorkerPreparation = "passed; disposed without model invocation";
     fixture.setStatus(403);
     await assert.rejects(manager.synchronize(connectionId), { code: "revoked" });
     await assert.rejects(manager.review(connectionId, "offline"));
     proof.syntheticRevocationBlocksOffline = true;
+    assert(fixture.requestMethods.every((method) => method === "GET"));
+    proof.syntheticCentralRequests = {
+      count: fixture.requestMethods.length, methods: [...new Set(fixture.requestMethods)],
+    };
     proof.status = "passed";
   } catch (error) {
     proof.status = "failed";
