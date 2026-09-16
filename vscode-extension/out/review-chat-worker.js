@@ -6441,7 +6441,7 @@ var clientCorePackage = Object.freeze({
 
 // node_modules/@gcr/client-executors/dist/codex.js
 var import_node_crypto17 = require("node:crypto");
-var import_node_fs4 = require("node:fs");
+var import_node_fs5 = require("node:fs");
 var import_promises6 = require("node:fs/promises");
 var import_node_os4 = __toESM(require("node:os"), 1);
 var import_node_path12 = __toESM(require("node:path"), 1);
@@ -6782,10 +6782,13 @@ var import_node_crypto16 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
 var import_promises4 = require("node:fs/promises");
+var import_node_fs4 = require("node:fs");
 var import_node_crypto14 = require("node:crypto");
 var import_node_os3 = __toESM(require("node:os"), 1);
 var import_node_path10 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input) {
+  if (process.platform === "linux")
+    return runLinuxCodex(input);
   if (process.platform === "win32") {
     const original = input.env.CODEX_HOME ?? import_node_path10.default.join(input.env.USERPROFILE ?? import_node_os3.default.homedir(), ".codex");
     const root = import_node_path10.default.join(import_node_path10.default.dirname(input.cwd), `account-${(0, import_node_crypto14.randomUUID)()}`);
@@ -6832,6 +6835,64 @@ async function runIsolatedCodex(input) {
     command: "/usr/bin/sandbox-exec",
     args: ["-p", profile, input.command, ...input.args]
   });
+}
+async function runLinuxCodex(input) {
+  if (input.signal?.aborted)
+    throw new ExecutorError("cancelled");
+  const original = import_node_path10.default.resolve(input.env.CODEX_HOME ?? import_node_path10.default.join(input.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  let root;
+  let auth;
+  let directory2;
+  try {
+    directory2 = await (0, import_promises4.open)(original, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_DIRECTORY | import_node_fs4.constants.O_NOFOLLOW);
+    const home = await directory2.stat();
+    if (home.uid !== process.getuid() || (home.mode & 18) !== 0)
+      throw new ExecutorError("executor-unavailable");
+    const source2 = import_node_path10.default.join(original, "auth.json");
+    try {
+      auth = await (0, import_promises4.open)(source2, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
+    } catch (error2) {
+      if (error2.code !== "ENOENT" || !input.args.includes('model_provider="gcr_fixture"'))
+        throw error2;
+    }
+    const info = await auth?.stat();
+    if (info && (!info.isFile() || info.uid !== home.uid || (info.mode & 63) !== 0))
+      throw new ExecutorError("executor-unavailable");
+    root = await (0, import_promises4.mkdtemp)(import_node_path10.default.join(original, ".gcr-account-"));
+    const privateHome = await (0, import_promises4.lstat)(root);
+    const currentHome = await (0, import_promises4.lstat)(original);
+    if (!currentHome.isDirectory() || currentHome.dev !== home.dev || currentHome.ino !== home.ino || !privateHome.isDirectory() || privateHome.uid !== home.uid || (privateHome.mode & 63) !== 0)
+      throw new ExecutorError("executor-unavailable");
+    if (info) {
+      const destination = import_node_path10.default.join(root, "auth.json");
+      await (0, import_promises4.link)(source2, destination);
+      const linked = await (0, import_promises4.lstat)(destination);
+      if (!linked.isFile() || linked.dev !== info.dev || linked.ino !== info.ino || linked.uid !== info.uid || (linked.mode & 63) !== 0)
+        throw new ExecutorError("executor-unavailable");
+    }
+    return await runManagedProcess({
+      ...input,
+      env: { ...input.env, CODEX_HOME: root },
+      args: [...input.args, "-c", 'cli_auth_credentials_store="file"']
+    });
+  } catch (error2) {
+    if (error2 instanceof ExecutorError)
+      throw error2;
+    throw new ExecutorError("executor-unavailable");
+  } finally {
+    try {
+      if (root)
+        await (0, import_promises4.rm)(root, { recursive: true, force: true });
+    } catch {
+      throw new ExecutorError("cleanup-failed");
+    } finally {
+      try {
+        await auth?.close();
+      } finally {
+        await directory2?.close();
+      }
+    }
+  }
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
@@ -7201,7 +7262,7 @@ async function binaryHash(command) {
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
   const digest2 = (0, import_node_crypto17.createHash)("sha256");
-  for await (const bytes of (0, import_node_fs4.createReadStream)(command))
+  for await (const bytes of (0, import_node_fs5.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
 }
@@ -7211,7 +7272,7 @@ async function executablePath(value) {
     if (process.platform === "win32" && !candidate.toLowerCase().endsWith(".exe"))
       continue;
     try {
-      await (0, import_promises6.access)(candidate, import_node_fs4.constants.X_OK);
+      await (0, import_promises6.access)(candidate, import_node_fs5.constants.X_OK);
       return await (0, import_promises6.realpath)(candidate);
     } catch {
     }
@@ -7324,7 +7385,7 @@ var CodexAccountExecutor = class {
   }
 };
 async function prepareCodexAccountExecutor(options) {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(options.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(options.reasoningEffort) || !["darwin", "win32"].includes(process.platform))
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(options.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(options.reasoningEffort) || !["darwin", "linux", "win32"].includes(process.platform))
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
   const root = process.platform === "win32" ? windowsPrivateTemporary("gcr-codex-probe-") : await (0, import_promises6.mkdtemp)(import_node_path12.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
@@ -7382,7 +7443,7 @@ async function prepareCodexAccountExecutor(options) {
       conversationTools,
       questionToolDefinition: reviewQuestionTool,
       settings: codexReviewArgs("/gcr/run", "http://127.0.0.1/source", false, options.model, options.reasoningEffort),
-      isolation: "macos-global-instruction-deny-v1",
+      isolation: process.platform === "linux" ? "linux-private-account-link-v1" : "macos-global-instruction-deny-v1",
       responseFormat: "prompt-json-schema-v1",
       authHome: environment.CODEX_HOME ?? import_node_path12.default.join(import_node_os4.default.homedir(), ".codex")
     }));
@@ -7399,7 +7460,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.49",
+  version: "0.1.0-alpha.50",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

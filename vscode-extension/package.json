@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.12.5",
+    "version": "2.12.6",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -207,7 +207,7 @@
                         "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
-                    "description": "User-selected model provider, independent of the central knowledge connection. Fixed-source reviews support Codex on macOS (verified CLI 0.153.4 or 0.154.0), Azure OpenAI, OpenAI, Anthropic and Gemini APIs. Other CLI adapters retain their existing login and commit-message support. Reviews are advisory."
+                    "description": "User-selected model provider, independent of central knowledge. Fixed-source reviews support Codex account and Azure OpenAI, OpenAI, Anthropic and Gemini APIs. See platform coverage for Linux development support. Other CLI adapters retain login and commit-message support. Reviews are advisory."
                 },
                 "commitDefender.model": {
                     "type": "string",
@@ -238,7 +238,7 @@
                     "type": "string",
                     "scope": "application",
                     "default": "codex",
-                    "description": "User-selected Codex executable. Standalone review verifies the binary and capabilities before execution; this build supports Codex 0.153.4 or 0.154.0 on macOS. A blank/default command uses discovery without changing your saved login."
+                    "description": "User-selected Codex executable. Review verifies CLI 0.153.4 or 0.154.0 and its capabilities before execution. Linux requires a private file-backed existing account; see platform coverage. Default discovery preserves your saved login."
                 },
                 "commitDefender.claudeCodePath": {
                     "type": "string",
@@ -685,6 +685,7 @@
         "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
+        "package:platforms": "node scripts/package-platforms.mjs",
         "bundle:test-host": "esbuild test/extension-host.test.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/extension-host.cjs",
         "test:extension": "npm run build && npm run bundle:test-host && node test/run-extension-host.mjs",
         "test:executor-poc": "esbuild test/account-executor-poc.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-executor-poc.cjs && node out-test/account-executor-poc.cjs",
@@ -726,20 +727,21 @@
         "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native"
     },
     "dependencies": {
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.48/gcr-client-contract-0.1.0-alpha.48.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.49/gcr-client-core-0.1.0-alpha.49.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.50/gcr-client-executors-0.1.0-alpha.50.tgz",
         "ignore": "^5.3.1",
         "mdast-util-from-markdown": "2.0.3",
         "mdast-util-gfm-autolink-literal": "2.0.1",
         "mdast-util-to-markdown": "2.1.2",
         "micromark": "4.0.2",
-        "micromark-extension-gfm-autolink-literal": "2.1.0",
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.48/gcr-client-contract-0.1.0-alpha.48.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.49/gcr-client-core-0.1.0-alpha.49.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.49/gcr-client-executors-0.1.0-alpha.49.tgz"
+        "micromark-extension-gfm-autolink-literal": "2.1.0"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
         "@types/vscode": "1.90.0",
         "@vscode/test-electron": "3.1.0",
+        "@vscode/vsce": "4.0.0",
         "esbuild": "^0.21.0",
         "typescript": "^5.4.0"
     }

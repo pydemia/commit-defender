@@ -3,15 +3,15 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
-const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.38");
+const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.39");
 const manifest = JSON.parse(
   await readFile(path.join(directory, "manifest.json"), "utf8"),
 );
 const entry = manifest.packages.find((p) => p.name === "@gcr/cli");
-assert.equal(entry.version, "0.1.0-alpha.38");
+assert.equal(entry.version, "0.1.0-alpha.39");
 assert.equal(
   entry.sha256,
-  "01a7e41379e9f1f22d76a16cf89090345df986a1a2e542c147cb76d7d09631e5",
+  "560421894593080e854ff981c5342ec789c71ba95c57301c80308e31b9bb1c87",
 );
 const file = path.join(directory, entry.file);
 assert.equal(
