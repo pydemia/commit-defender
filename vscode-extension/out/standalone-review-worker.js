@@ -1517,7 +1517,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.46",
+  version: "0.1.0-alpha.47",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -3270,6 +3270,18 @@ var SourceGit = class {
     }
   }
   close() {
+    if (process.platform === "win32" && (0, import_node_fs4.existsSync)(this.directory)) {
+      const writable = (directory2) => {
+        for (const entry of (0, import_node_fs4.readdirSync)(directory2, { withFileTypes: true })) {
+          const file = import_node_path6.default.join(directory2, entry.name);
+          if (entry.isDirectory())
+            writable(file);
+          else if (entry.isFile())
+            (0, import_node_fs4.chmodSync)(file, 384);
+        }
+      };
+      writable(this.directory);
+    }
     (0, import_node_fs4.rmSync)(this.directory, { recursive: true, force: true });
   }
 };
@@ -7993,7 +8005,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.46",
+  version: "0.1.0-alpha.47",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -8957,7 +8969,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.46",
+  version: "0.1.0-alpha.47",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
