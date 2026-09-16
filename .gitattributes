@@ -1,0 +1,3 @@
+# Preserve byte-checked fixture and delivery manifests on Windows.
+vscode-extension/test/fixtures/client-contract/reports.json -text
+vscode-extension/vendor/gcr/*/manifest.json -text

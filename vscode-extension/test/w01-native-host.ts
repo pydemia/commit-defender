@@ -58,7 +58,10 @@ export async function run() {
     assert.equal(proof.report.status, "completed");
     assert.equal(proof.report.identity.executor.model, "gpt-5.6-luna");
     assert.equal(result.reviewCompletionConfirmed, true);
-    assert(proof.report.findings.length > 0);
+    assert(proof.report.findings.some((finding: { anchor: {
+      path: string; startLine: number; endLine: number } }) =>
+      finding.anchor.path === "sum.ts" && finding.anchor.startLine <= 2 &&
+      finding.anchor.endLine >= 2));
     assert(!JSON.stringify(proof.report).includes("W01_EXCLUDED_SECRET"));
     const client = discoverLocalIdentity(configuration.workspace, configuration.profileId);
     const records = await LocalRecordStore.open({ scope: {

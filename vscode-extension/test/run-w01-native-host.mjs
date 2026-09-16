@@ -45,6 +45,10 @@ try {
     defectConfirmed = true;
   }
   assert(defectConfirmed, 'The fixture must reproduce the defect before a model call');
+  await writeFile(process.env.W01_EVIDENCE, JSON.stringify({
+    status: 'host-starting', realModel: false, modelCalls: 0,
+    fixtureDefectReproduced: true,
+  }, null, 2) + '\n');
   const configuration = path.join(root, 'configuration.json');
   await writeFile(configuration, JSON.stringify({ workspace, profileId,
     model: 'gpt-5.6-luna', reasoningEffort: 'high', durationMs: 240000,
@@ -87,6 +91,8 @@ try {
         `--extensionTestsPath=${path.resolve('out-test/w01-native-host.cjs')}`],
       env: environment, stdin: '', maximum: 4 * 1024 * 1024, timeout: 420000,
     }, { timeoutMs: 425000 });
+    await writeFile(process.env.W01_EVIDENCE + '.host.log',
+      (result.stdout ?? '') + '\n' + (result.stderr ?? ''));
     if (result.error || result.code !== 0)
       throw Error(`Verification Host failed: ${result.error ?? result.code}`);
   } finally { hostExited = true; }
@@ -103,6 +109,7 @@ try {
     const proof = JSON.parse(await readFile(process.env.W01_EVIDENCE, 'utf8'));
     proof.testHostExited = true;
     proof.temporaryProfileAndKeyRemoved = true;
+    proof.fixtureDefectReproduced = true;
     await writeFile(process.env.W01_EVIDENCE, JSON.stringify(proof, null, 2) + '\n');
   }
 }
