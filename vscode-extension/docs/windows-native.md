@@ -6,8 +6,8 @@ Codex CLI 0.153.4의 기존 계정과 `gpt-5.6-luna / high`다.
 다른 Windows/CPU/VS Code/Node/Codex 조합은 별도 검증이 필요하다.
 AnyCPU helper가 포함됐다는 사실은 Windows x64 실행 검증이 아니다.
 
-W04의 macOS ARM64 native 회귀는 완료했다. W03 임시 폴더 수동 정리는 남아 있다.
-W04 전체 완료 상태는 아니다. 전체 근거는 저장소의
+W04의 macOS ARM64 native 회귀와 W03 임시 폴더 수동 정리를 완료했다.
+W04는 명시된 검증 범위에서 완료했다. 전체 근거는 저장소의
 [W04 실행 기록](../../.documents/execution/windows-support/W04.md)을 따른다.
 
 ## 설치와 적용 확인
