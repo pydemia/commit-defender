@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { Worker } from "node:worker_threads";
 import { discoverLocalIdentity, LocalHistoryStore, LocalRecordStore } from "@gcr/client-core";
 import { prepareStandaloneWorker } from "../src/standaloneWorkerClient.js";
 
@@ -35,6 +36,16 @@ export async function run() {
   try {
     await extension.activate();
     assert(vscode.workspace.isTrusted);
+    const diagnostic = new Worker(path.join(__dirname, 'w01-diagnostic-worker.cjs'), {
+      workerData: configuration,
+    });
+    try {
+      proof.preparationDiagnostic = await new Promise((resolve, reject) => {
+        diagnostic.once('message', resolve); diagnostic.once('error', reject);
+      });
+    } finally { await diagnostic.terminate(); }
+    save();
+    assert.equal(proof.preparationDiagnostic.status, 'passed');
     const preparation = AbortSignal.timeout(120000);
     job = await prepareStandaloneWorker(worker, {
       repoRoot: configuration.workspace, files: ["sum.ts"], scope: "staged",
