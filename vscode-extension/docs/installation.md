@@ -9,11 +9,17 @@ This guide describes the extension and shared-core review path in this checkout.
 | VS Code 1.90 or newer | Extension activation; use a trusted Git workspace |
 | Git | Staged and working-tree snapshots, captured base and repository identity |
 | Node.js 22 or newer | Building from source and the independent automatic-review service; ordinary extension workers use VS Code's runtime |
-| OS credential store | macOS Keychain or Linux Secret Service; no plaintext fallback. This build has no Windows adapter |
-| Selected provider and usable model | Codex account review is verified on macOS with CLI 0.153.4/0.154.0; API adapters are OpenAI, Azure OpenAI, Anthropic and Gemini |
+| OS credential store | Windows Credential Manager with local NTFS, macOS Keychain or Linux Secret Service; no plaintext fallback |
+| Selected provider and usable model | Windows ARM64 account review was verified with Codex 0.153.4; earlier macOS evidence used 0.153.4/0.154.0. API adapters are OpenAI, Azure OpenAI, Anthropic and Gemini |
 | GCR reader access | Only if you want central history/knowledge; standalone review requires no GCR server |
 
-Claude Code, Gemini CLI and Antigravity retain separate account/commit-message integration. They are not supported fixed-source review executors in this build. Actual end-to-end model verification recorded for G03/G04 used Codex on macOS; API provider support also has adapter regression coverage, not an assertion that every model has been live-tested.
+Claude Code, Gemini CLI and Antigravity retain separate account/commit-message
+integration. They are not supported fixed-source review executors in this
+build. G03/G04 used Codex on macOS; W01–W03 used a native Windows ARM64
+Extension Host. Final-artifact macOS regression remains unverified. API adapter
+regression does not mean every provider/model was live-tested. See the [Windows
+support and recovery guide](windows-native.md) for the verified combination,
+fixed VSIX and remaining limits.
 
 ## Install a supplied VSIX
 
