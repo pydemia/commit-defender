@@ -1868,7 +1868,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.44",
+  version: "0.1.0-alpha.46",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1898,7 +1898,7 @@ var import_node_path = __toESM(require("node:path"), 1);
 var import_node_url = require("node:url");
 var import_meta = {};
 var maximum = 36 * 1024 * 1024;
-var directory = typeof __dirname === "string" ? __dirname : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+var directory = typeof import_meta.url === "string" ? import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url)) : __dirname;
 var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
 function windowsNativeExecutable() {
   if (process.platform !== "win32")
@@ -6551,7 +6551,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.44",
+  version: "0.1.0-alpha.46",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

@@ -1388,7 +1388,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.44",
+  version: "0.1.0-alpha.46",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1419,8 +1419,12 @@ var import_node_os = __toESM(require("node:os"), 1);
 var import_node_url = require("node:url");
 var import_meta = {};
 var maximum = 36 * 1024 * 1024;
-var directory = typeof __dirname === "string" ? __dirname : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+var directory = typeof import_meta.url === "string" ? import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url)) : __dirname;
 var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
+function windowsEnvironmentValue(name) {
+  const key3 = Object.keys(process.env).find((key4) => key4.toLowerCase() === name.toLowerCase());
+  return key3 === void 0 ? void 0 : process.env[key3];
+}
 function windowsPrivateTemporary(prefix) {
   if (!/^[a-z0-9-]+$/.test(prefix))
     throw Error("Invalid temporary prefix.");
@@ -6270,7 +6274,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.44",
+  version: "0.1.0-alpha.46",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6308,7 +6312,7 @@ async function runManagedProcess(input) {
       command: input.command,
       args: input.args,
       cwd: input.cwd,
-      env: { SystemRoot: process.env.SystemRoot, ...input.env },
+      env: { SystemRoot: windowsEnvironmentValue("SystemRoot"), ...input.env },
       stdin: input.stdin,
       timeout: input.timeoutMs,
       maximum: maximum2
@@ -7041,7 +7045,7 @@ async function binaryHash(command) {
   return digest2.digest("hex");
 }
 async function executablePath(value) {
-  const candidates = import_node_path12.default.isAbsolute(value) || value.includes(import_node_path12.default.sep) ? [import_node_path12.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path12.default.delimiter).filter(Boolean).map((directory2) => import_node_path12.default.join(directory2, process.platform === "win32" && !import_node_path12.default.extname(value) ? `${value}.exe` : value));
+  const candidates = import_node_path12.default.isAbsolute(value) || value.includes(import_node_path12.default.sep) ? [import_node_path12.default.resolve(value)] : ((process.platform === "win32" ? windowsEnvironmentValue("PATH") : process.env.PATH) ?? "").split(import_node_path12.default.delimiter).filter(Boolean).map((directory2) => import_node_path12.default.join(directory2, process.platform === "win32" && !import_node_path12.default.extname(value) ? `${value}.exe` : value));
   for (const candidate of candidates) {
     if (process.platform === "win32" && !candidate.toLowerCase().endsWith(".exe"))
       continue;
@@ -7167,7 +7171,7 @@ async function prepareCodexAccountExecutor(options) {
     const fingerprint = await binaryHash(command);
     const env = {
       ...process.platform === "win32" ? codexAccountEnvironment() : {},
-      PATH: process.platform === "win32" ? process.env.PATH : "/usr/bin:/bin",
+      PATH: process.platform === "win32" ? windowsEnvironmentValue("PATH") : "/usr/bin:/bin",
       HOME: root,
       CODEX_HOME: root
     };
@@ -7234,7 +7238,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.44",
+  version: "0.1.0-alpha.46",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
