@@ -18,7 +18,11 @@ Automatic settings mirroring will not overwrite a legacy hook that still contain
 
 Model secrets use AES-256-GCM records under `model-credentials/v1` in the application-data directory. Their wrapping keys use the OS service `com.commitdefender.model-credentials.v1`. This directory and service are separate from personal Memory/Skills, central connections, GitHub and publisher credentials. On macOS the application-data root is `~/Library/Application Support/CommitDefender`.
 
-The shared OS adapter supports macOS Keychain and Linux Secret Service. A headless hook needs the same OS user, local profile, encrypted data and available credential store; copying `hook.json` to a CI runner does not copy its key. Windows has no supported adapter in this build. There is no plaintext fallback when a key is missing or the store is locked.
+The shared OS adapter supports Windows Credential Manager with local NTFS,
+macOS Keychain, and Linux Secret Service. A headless hook needs the same OS user,
+local profile, encrypted data, and available credential store; copying
+`hook.json` to a CI runner does not copy its key. There is no plaintext fallback
+when a key is missing or the store is locked.
 
 ## Interrupted migration
 

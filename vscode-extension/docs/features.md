@@ -37,12 +37,16 @@ Local source, diffs, questions, review results, conversation and private Memory 
 
 | Provider | Fixed-source manual review | Authentication / constraints |
 | --- | --- | --- |
-| Codex | Supported on macOS | Existing CLI account; verified 0.153.4/0.154.0, model/effort capability checks |
+| Codex | macOS and Windows native paths | Existing CLI account; verified 0.153.4/0.154.0, model/effort capability checks; see the release's OS/CPU coverage |
 | OpenAI / Azure OpenAI | Existing API adapters | Destination-bound encrypted API credential, explicit model/deployment |
 | Anthropic / Gemini API | Existing API adapters | Destination-bound credential; leave reasoning setting empty |
 | Claude Code / Gemini CLI / Antigravity | Not supported by this fixed-source path | Separate sign-in/commit-message integration does not imply review support |
 
-No provider is silently substituted. Central connection state does not select a server model. OS-backed storage supports macOS Keychain and Linux Secret Service; Windows storage is not supported in this build. Actual G03/G04 model evidence is narrower than the full adapter support surface and is recorded in the execution documentation.
+No provider is silently substituted. Central connection state does not select a
+server model. OS-backed storage supports Windows Credential Manager with local
+NTFS, macOS Keychain, and Linux Secret Service. Actual model evidence is narrower
+than the adapter support surface; see [Windows verification](windows-native.md)
+and the G03/G04 execution records for macOS.
 
 ## Automatic and legacy paths
 
