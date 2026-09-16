@@ -104,7 +104,7 @@ try {
     capabilities: { untrustedWorkspaces: { supported: true } },
   }));
   await writeFile(path.join(harness, 'extension.cjs'),
-    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve(scenario ? 'out-test/w02-model-host.cjs' : 'out-test/w02-native-host.cjs'))}).run();}catch(e){console.error(e);}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
+    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve(scenario ? 'out-test/w02-model-host.cjs' : 'out-test/w02-native-host.cjs'))}).run();}catch(e){const fs=require('node:fs'),p=process.env.W02_EVIDENCE;const proof=JSON.parse(fs.readFileSync(p,'utf8'));if(proof.status==='host-starting'){proof.status='failed';proof.phase='harness-preparation';proof.failure=e.message;fs.writeFileSync(p,JSON.stringify(proof,null,2));}}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
   try {
     const environment = { ...process.env, W02_CONFIGURATION: configuration,
       W02_EVIDENCE: process.env.W02_EVIDENCE };

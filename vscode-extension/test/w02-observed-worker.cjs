@@ -11,9 +11,9 @@ cp.spawn = function(command, args, options) {
   const child = original.call(this, command, args, options);
   if (!String(command).endsWith('windows-native.exe') || !child.stdin)
     return child;
-  const end = child.stdin.end;
+  const write = child.stdin.write;
   let kind;
-  child.stdin.end = function(input, ...rest) {
+  child.stdin.write = function(input, ...rest) {
     try {
       const request = JSON.parse(String(input));
       if (request.operation === 'process' && request.args?.includes('exec')) {
@@ -26,7 +26,7 @@ cp.spawn = function(command, args, options) {
         });
       }
     } catch { /* Storage session and other operations are deliberately ignored. */ }
-    return end.call(this, input, ...rest);
+    return write.call(this, input, ...rest);
   };
   child.on('close', (code, signal) => {
     if (kind) emit({ event: 'native-process-closed', kind, code, signal });

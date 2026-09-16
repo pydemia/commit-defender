@@ -100,6 +100,7 @@ export function w02HistoryFixture(records: string) {
   return { repositoryId, respond, source, reply, guidance, revision,
     historicalHash: state.source.contentHash,
     memories: [{ id: guidance.id, revision: guidance.revision,
+      aggregationKey: contentHash({ localGuidance: guidance.id }),
       contentHash: contentHash(content), sourceRevision: guidance.revision,
       sourceContentHash: source.contentHash, kind: "decision" as const,
       content, sources: [{ kind: "github-pr-message" as const, id: source.id,
