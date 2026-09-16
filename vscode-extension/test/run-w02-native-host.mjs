@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, readdir, writeFile, rm } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import os from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
@@ -12,12 +12,21 @@ import { g04Fixture } from './helpers/g04-fixtures.mjs';
 assert.equal(process.platform, 'win32');
 for (const key of ['W02_EXTENSION', 'W02_CODEX', 'W02_VSCODE', 'W02_EVIDENCE'])
   assert(process.env[key] && path.isAbsolute(process.env[key]), key);
+const realCase = process.env.W02_CASE;
+const liveConnection = process.env.W02_LIVE_CONNECTION;
+const rawScenario = realCase ? g04Fixture(realCase) : undefined;
+if (liveConnection) assert(path.isAbsolute(liveConnection));
+const live = liveConnection ? JSON.parse(await readFile(liveConnection, 'utf8')) : undefined;
+if (live) assert(rawScenario && live.source && live.reply && live.guidance);
+const scenario = rawScenario && live ? {
+  ...rawScenario,
+  base: Object.fromEntries(Object.entries(rawScenario.base).map(([name, content]) => [live.prefix + name, content])),
+  target: live.prefix + rawScenario.target,
+} : rawScenario;
+if (scenario) assert(path.isAbsolute(process.env.W02_RECORDS));
 const root = await mkdtemp(path.join(os.tmpdir(), 'cd-w02-host-'));
 const workspace = path.join(root, '한글 공백 workspace');
 const profileId = `w02-${randomUUID()}`;
-const realCase = process.env.W02_CASE;
-const scenario = realCase ? g04Fixture(realCase) : undefined;
-if (scenario) assert(path.isAbsolute(process.env.W02_RECORDS));
 const git = (...args) => execFileSync('git', ['-C', workspace,
   '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
   '-c', 'user.name=W02 Fixture', '-c', 'user.email=fixture@example.invalid',
@@ -60,9 +69,17 @@ try {
     fixtureDefectReproduced: defectConfirmed,
   }, null, 2) + '\n');
   const configuration = path.join(root, 'configuration.json');
+  const fixedContext = live ? Object.entries(files).map(([name, content]) => ({
+    path: name,
+    baseSha256: createHash('sha256').update(content).digest('hex'),
+    sourceSha256: createHash('sha256').update(
+      name === target ? scenario.source : content,
+    ).digest('hex'),
+  })) : undefined;
   await writeFile(configuration, JSON.stringify({ workspace, profileId,
     syntheticResponse: !scenario, maximumReviewInvocations: scenario ? 1 : 0,
-    case: realCase, target, records: process.env.W02_RECORDS,
+    liveConnection, fixedContext, case: realCase, target,
+    records: process.env.W02_RECORDS,
     fixtureBaseSha: git('rev-parse', 'HEAD').toString().trim(),
     fixtureTreeSha: git('write-tree').toString().trim(),
     cliEvents: process.env.W02_EVIDENCE + '.provider.jsonl',
@@ -104,7 +121,7 @@ try {
     capabilities: { untrustedWorkspaces: { supported: true } },
   }));
   await writeFile(path.join(harness, 'extension.cjs'),
-    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve(scenario ? 'out-test/w02-model-host.cjs' : 'out-test/w02-native-host.cjs'))}).run();}catch(e){const fs=require('node:fs'),p=process.env.W02_EVIDENCE;const proof=JSON.parse(fs.readFileSync(p,'utf8'));if(proof.status==='host-starting'){proof.status='failed';proof.phase='harness-preparation';proof.failure=e.message;fs.writeFileSync(p,JSON.stringify(proof,null,2));}}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
+    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve(liveConnection ? 'out-test/w02-live-pr-host.cjs' : scenario ? 'out-test/w02-model-host.cjs' : 'out-test/w02-native-host.cjs'))}).run();}catch(e){const fs=require('node:fs'),p=process.env.W02_EVIDENCE;const proof=JSON.parse(fs.readFileSync(p,'utf8'));if(proof.status==='host-starting'){proof.status='failed';proof.phase='harness-preparation';proof.failure=e.message;fs.writeFileSync(p,JSON.stringify(proof,null,2));}}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
   try {
     const environment = { ...process.env, W02_CONFIGURATION: configuration,
       W02_EVIDENCE: process.env.W02_EVIDENCE };
