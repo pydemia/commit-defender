@@ -145,6 +145,7 @@ try {
       }
       assert(stopped, 'Owned service termination unconfirmed.');
       proof.serviceStopped = true;
+      await writeFile(process.env.W03_EVIDENCE, JSON.stringify(proof, null, 2) + '\n');
     } catch (error) {
       if (error.code !== 'service-unavailable') throw error;
       if (proof.servicePid) {
@@ -171,7 +172,7 @@ try {
     }
     // Only the exact new service program used by this isolated Host is eligible.
     for (const program of [proof.serviceProgram, proof.advisoryProgram].filter(Boolean)) {
-      const owned = path.dirname(program);
+      const owned = path.dirname(path.resolve(program));
       assert.equal(path.dirname(owned), programs);
       if (!previousPrograms.has(path.basename(owned))) await rm(owned, { recursive:true, force:true });
     }

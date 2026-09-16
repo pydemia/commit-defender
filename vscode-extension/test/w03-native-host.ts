@@ -10,6 +10,7 @@ import {
   LocalHistoryStore, LocalRecordStore, type ServiceJob,
 } from "@gcr/client-core";
 import { prepareCodexAccountExecutor } from "@gcr/client-executors";
+import { reviewExitCode } from "@gcr/client-contract";
 
 const sha256 = (file: string) =>
   createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -151,9 +152,6 @@ export async function run() {
       proof.receipt = job; save(); return job;
     }, (job) => !["queued", "running"].includes(job.state), 300000);
     proof.finishedAt = new Date().toISOString();
-    assert.equal(final.state, "finished");
-    assert.equal(final.result?.status, "completed");
-    assert.equal(final.result?.exitCode, 0);
     assert(final.result?.runId);
     const identity = discoverLocalIdentity(root, config.profileId);
     const scope = { kind: "repository" as const, profileId: config.profileId,
@@ -167,8 +165,12 @@ export async function run() {
     proof.modelCalls = 1;
     proof.modelCallCountConfirmed = true;
     save();
+    assert.equal(final.state, "finished");
+    assert.equal(final.result?.status, "completed");
     assert.equal(report.status, "completed");
     assert.equal(report.problems.length, 0);
+    // The CLI returns 1 for a completed review containing findings.
+    assert.equal(final.result?.exitCode, reviewExitCode(report));
     assert.equal(report.identity.executor.model, config.model);
     assert.equal(report.identity.source.hash, proof.source.hash);
     assert(report.findings.some((finding) => finding.anchor.path === "sum.ts" &&
