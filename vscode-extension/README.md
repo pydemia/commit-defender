@@ -49,8 +49,14 @@ The published **2.12.5** package targets **Windows ARM64**. Native account revie
 was verified there with Codex `0.153.4` and `gpt-5.6-luna / high`; earlier macOS
 account reviews used `0.153.4`/`0.154.0`. macOS ARM64 package regression and Linux
 ARM64 container tests are separate evidence. Those results do not establish
-Windows x64, macOS x64, or Linux account-review support. Multi-platform packages
-and Linux Codex support are being prepared and are not in published 2.12.5.
+Windows x64, macOS x64, or Linux account-review support.
+
+The **2.12.6 development candidates** add x64 (amd64) and ARM64 packages for
+Windows, macOS, and Linux. Linux Codex isolation passed synthetic checks with
+actual CLI binaries on ARM64 and emulated x64; an authenticated Linux review
+and Extension Host remain unverified. See
+[platform packages and Linux setup](docs/platforms.md). These changes are not
+part of the published 2.12.5 release.
 
 See [Installation](docs/installation.md) for source builds and
 [Windows support and recovery](docs/windows-native.md) for the verified
@@ -61,7 +67,7 @@ Finish active work and reload when convenient.
 
 | Provider | Review setup | Constraints |
 | --- | --- | --- |
-| Codex account | Select `codex`, an available model and reasoning effort; use the existing CLI login | Fixed-source review currently accepts CLI `0.153.4` or `0.154.0` on macOS/Windows after binary and tool checks |
+| Codex account | Select `codex`, an available model and reasoning effort; use the existing CLI login | Accepts CLI `0.153.4` or `0.154.0` after binary/tool checks; Linux development support and account-storage requirements are described in the platform guide |
 | OpenAI | Select `openai` and a model, then store its API key | Optional reasoning must be supported by the model |
 | Azure OpenAI | Select `aoai`, resource endpoint, deployment name, and API version | The model field is the deployment name |
 | Anthropic | Select `anthropic` and a model, then store its API key | Set review reasoning effort to an empty string |

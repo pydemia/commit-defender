@@ -37,7 +37,7 @@ Local source, diffs, questions, review results, conversation and private Memory 
 
 | Provider | Fixed-source manual review | Authentication / constraints |
 | --- | --- | --- |
-| Codex | macOS and Windows native paths | Existing CLI account; verified 0.153.4/0.154.0, model/effort capability checks; see the release's OS/CPU coverage |
+| Codex | macOS/Windows paths and Linux development path | Existing CLI account; 0.153.4/0.154.0 capability checks; see [platform coverage](platforms.md) for actual evidence and Linux account requirements |
 | OpenAI / Azure OpenAI | Existing API adapters | Destination-bound encrypted API credential, explicit model/deployment |
 | Anthropic / Gemini API | Existing API adapters | Destination-bound credential; leave reasoning setting empty |
 | Claude Code / Gemini CLI / Antigravity | Not supported by this fixed-source path | Separate sign-in/commit-message integration does not imply review support |

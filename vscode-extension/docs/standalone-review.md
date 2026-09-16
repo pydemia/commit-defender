@@ -6,7 +6,7 @@ Manual reviews use the shared GCR core over captured local source. Standalone mo
 
 Run **Commit Defender: Select Account Provider and Model** and choose the provider and model in User Settings. Set `commitDefender.reviewReasoningEffort` separately; changing the account does not overwrite it. Set `commitDefender.codexPath` in User Settings if the supported executable is not found on PATH. Use **Commit Defender: Sign in with Codex** to open the existing CLI login flow.
 
-The fixed-source executor has macOS and Windows native paths and accepts Codex
+The fixed-source executor has macOS, Windows, and Linux paths and accepts Codex
 CLI `0.153.4` or `0.154.0` after executable and capability checks. Windows
 ARM64 was actually verified with `0.153.4`; W04 also verified the frozen packages
 on macOS ARM64 without another model call. See [Windows native support](windows-native.md) before
@@ -18,6 +18,14 @@ reasoning setting; leave it empty for Anthropic and Gemini. Claude Code, Gemini
 CLI and Antigravity retain their existing login and commit-message support;
 this release does not claim fixed-source review support for those CLI adapters.
 An unsupported selection produces an error without switching providers.
+
+Linux development packages require the existing account's owner-only regular
+`auth.json` and an owner-controlled Codex home with hard-link support. The
+executor exposes the same file in a temporary private home; it does not copy
+credentials or import global instructions. Keyring-only Codex accounts fail
+closed and are not exported to plaintext. Linux Secret Service remains required
+for the extension's own encrypted history/credentials. Actual Linux account
+review and Extension Host validation are pending; see [platforms](platforms.md).
 
 Repository account settings do not authorize an executable, model or profile. Existing values are preserved. Select the account again in User Settings when migrating a workspace that previously kept these choices in `.vscode/settings.json`.
 

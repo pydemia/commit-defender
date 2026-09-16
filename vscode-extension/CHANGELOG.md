@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.12.6 (development candidate)
+
+- Restore a complete Details-page guide with setup examples, review workflows,
+  commands, settings, automatic hooks, and troubleshooting.
+- Prepare Windows, macOS, and Linux VSIX targets for ARM64 and x64. Target
+  packaging and native execution evidence are documented separately.
+- Add Linux Codex account isolation without credential copies or inherited
+  global instructions. Linux authenticated review/Host validation remains pending.
+- Pin executor alpha.50 and private CLI/service alpha.39; reuse contract alpha.48,
+  core alpha.49, and native helper 1.0.3. Pin local vsce 4.0.0 for packaging.
+
 ## 2.12.5
 
 - Deliver native Windows ARM64 reviews with user-scoped credential storage,

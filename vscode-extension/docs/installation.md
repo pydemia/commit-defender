@@ -47,6 +47,11 @@ code --install-extension ./commit-defender-local.vsix
 
 `npm ci` uses the committed lockfile and local `vendor/gcr` artifacts. `npm run build` typechecks and bundles the extension, review workers, hook adapters and private service. `vsce` also runs the prepublish build. `--no-dependencies` is intentional: runtime dependencies are already bundled, and vendor tarballs/source tests are not shipped. Keep `third-party` notices in the package. Nothing in this procedure publishes to Marketplace or replaces the user's global GCR/Codex CLI.
 
+`@vscode/vsce` is pinned locally at 4.0.0; a global `vsce` command is unnecessary.
+Use `npm run package:platforms` to create all six architecture-specific
+development candidates. The command refuses to overwrite existing files and
+records their hashes/source commit. See [platform selection](platforms.md).
+
 ## Configure an account and model
 
 Run **Commit Defender: Select Account Provider and Model**. Store choices in **User Settings**. Workspace settings can narrow source exclusions but cannot authorize another account, model, executable or local profile.
