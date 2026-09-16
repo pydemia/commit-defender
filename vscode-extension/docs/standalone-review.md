@@ -8,8 +8,8 @@ Run **Commit Defender: Select Account Provider and Model** and choose the provid
 
 The fixed-source executor has macOS and Windows native paths and accepts Codex
 CLI `0.153.4` or `0.154.0` after executable and capability checks. Windows
-ARM64 was actually verified with `0.153.4`; final-artifact macOS regression
-remains pending. See [Windows native support](windows-native.md) before
+ARM64 was actually verified with `0.153.4`; W04 also verified the frozen packages
+on macOS ARM64 without another model call. See [Windows native support](windows-native.md) before
 treating a permitted CLI version as a tested OS/CPU combination. Codex uses the
 selected model and checks its reasoning capability against the CLI catalog.
 Azure OpenAI, OpenAI, Anthropic and Gemini API reviews use the existing

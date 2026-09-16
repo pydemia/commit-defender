@@ -16,8 +16,9 @@ This guide describes the extension and shared-core review path in this checkout.
 Claude Code, Gemini CLI and Antigravity retain separate account/commit-message
 integration. They are not supported fixed-source review executors in this
 build. G03/G04 used Codex on macOS; W01–W03 used a native Windows ARM64
-Extension Host. Final-artifact macOS regression remains unverified. API adapter
-regression does not mean every provider/model was live-tested. See the [Windows
+Extension Host. W04 verified the frozen packages on macOS ARM64 without another
+model call. API adapter regression does not mean every provider/model was
+live-tested. See the [Windows
 support and recovery guide](windows-native.md) for the verified combination,
 fixed VSIX and remaining limits.
 
