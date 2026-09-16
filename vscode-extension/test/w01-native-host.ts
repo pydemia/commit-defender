@@ -22,7 +22,7 @@ export async function run() {
     vscode: vscode.version, extensionVersion: extension.packageJSON.version,
     extensionPath: extension.extensionPath,
     workerSha256: createHash("sha256").update(fs.readFileSync(worker)).digest("hex"),
-    realModel: true, syntheticResponse: false, centralConnection: false,
+    realModel: false, syntheticResponse: false, centralConnection: false,
     maximumReviewInvocations: 1, timeoutMs: 240000, modelCalls: 0,
     accountSource: "existing default local Codex auth.json; NTFS auth-only link",
     fixture: "sum changes addition to subtraction with consumer and tests",
@@ -48,6 +48,7 @@ export async function run() {
     }, preparation);
     proof.status = "running";
     proof.modelCalls = 1;
+    proof.realModel = true;
     proof.startedAt = new Date().toISOString();
     save();
     const result = await job.run(AbortSignal.timeout(240000));

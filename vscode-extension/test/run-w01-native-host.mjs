@@ -35,7 +35,7 @@ try {
   git('add', 'sum.ts');
   let defectConfirmed = false;
   try {
-    execFileSync(process.execPath, ['--test', 'sum.test.ts'], {
+    execFileSync(process.execPath, ['--test', '--test-reporter=tap', 'sum.test.ts'], {
       cwd: workspace, encoding: 'utf8', windowsHide: true, stdio: 'pipe',
     });
   } catch (error) {
@@ -66,7 +66,8 @@ try {
   }));
   // Seed trust for this generated repository only, in the disposable profile.
   // test-electron adds sandbox/trust bypass flags, so launch the Host directly.
-  const storage = path.join(userData, 'User', 'globalStorage');
+  const sharedData = path.join(root, 'shared-data');
+  const storage = path.join(sharedData, 'sharedStorage');
   await mkdir(storage, { recursive: true });
   const database = new DatabaseSync(path.join(storage, 'state.vscdb'));
   try {
@@ -78,6 +79,18 @@ try {
       }] }),
     );
   } finally { database.close(); }
+  // --extensionTestsPath replaces VS Code's storage with an empty in-memory DB.
+  // Use a disposable startup extension so normal fixture-only trust is retained.
+  const harness = path.join(root, 'acceptance-extension');
+  await mkdir(harness);
+  await writeFile(path.join(harness, 'package.json'), JSON.stringify({
+    name: 'w01-native-acceptance', publisher: 'gcr-test', version: '1.0.0',
+    engines: { vscode: '^1.137.0' }, main: './extension.cjs',
+    activationEvents: ['onStartupFinished'],
+    capabilities: { untrustedWorkspaces: { supported: true } },
+  }));
+  await writeFile(path.join(harness, 'extension.cjs'),
+    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve('out-test/w01-native-host.cjs'))}).run();}catch(e){console.error(e);}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
   try {
     const environment = { ...process.env, W01_CONFIGURATION: configuration,
       W01_EVIDENCE: process.env.W01_EVIDENCE };
@@ -86,15 +99,17 @@ try {
       operation: 'process', command: process.env.W01_VSCODE, cwd: root,
       args: [workspace, '--user-data-dir', userData, '--extensions-dir',
         path.join(root, 'extensions'), '--disable-extensions', '--skip-welcome',
+        '--shared-data-dir', sharedData,
         '--skip-release-notes', '--disable-updates',
         `--extensionDevelopmentPath=${process.env.W01_EXTENSION}`,
-        `--extensionTestsPath=${path.resolve('out-test/w01-native-host.cjs')}`],
+        `--extensionDevelopmentPath=${harness}`],
       env: environment, stdin: '', maximum: 4 * 1024 * 1024, timeout: 420000,
     }, { timeoutMs: 425000 });
     await writeFile(process.env.W01_EVIDENCE + '.host.log',
       (result.stdout ?? '') + '\n' + (result.stderr ?? ''));
     if (result.error || result.code !== 0)
       throw Error(`Verification Host failed: ${result.error ?? result.code}`);
+    assert.equal(JSON.parse(await readFile(process.env.W01_EVIDENCE, 'utf8')).status, 'passed');
   } finally { hostExited = true; }
 } finally {
   // Remove only this generated profile, after the test Host exits.
@@ -111,5 +126,5 @@ try {
     proof.temporaryProfileAndKeyRemoved = true;
     proof.fixtureDefectReproduced = true;
     await writeFile(process.env.W01_EVIDENCE, JSON.stringify(proof, null, 2) + '\n');
-  }
+  } else { await rm(root, { recursive: true, force: true }); }
 }
