@@ -1,6 +1,6 @@
-# 플랫폼별 개발 package
+# 플랫폼별 설치와 검증 범위
 
-2.12.6 개발 후보는 다음 VSIX를 제공한다. `x64`는 `amd64`와 같은 아키텍처다.
+2.12.6은 다음 VSIX를 제공한다. `x64`는 `amd64`와 같은 아키텍처다.
 VS Code가 실행되는 OS/CPU에 맞는 파일을 **Install from VSIX…**로 선택한다.
 Remote SSH로 Linux에서 extension을 실행한다면 Linux 쪽 조건이 적용된다.
 
@@ -45,10 +45,12 @@ keyring에만 저장된 Codex 로그인은 이 경로에서 사용할 수 없다
 | Windows x64 | package target 제공. x64 장비 native 실행은 미검증 |
 | macOS ARM64 | W04에서 기존 공통 package를 native 검증. 이번 변경은 Linux 분기에 한정하며 새 VSIX Host는 미검증 |
 | macOS x64 | package target 제공. Intel Mac 실행은 미검증 |
-| Linux ARM64 | Node 22.23.2 Docker container에서 격리·process 25개 검사와 Codex 0.153.4 실제 바이너리의 합성 도구 검사 통과 |
+| Linux ARM64 | WSL2 Ubuntu 24.04.1, VS Code 1.137.0/Node 24.18.1 Host, Codex 0.153.4, Luna/high 실제 리뷰 1회 완료. 결함·근거·암호화 결과 재조회·정리 통과. 별도 Docker 격리·process 25개 검사 통과 |
 | Linux x64 | ARM64 PC의 Docker 에뮬레이션에서 Node 22.23.2/Codex 0.153.4 합성 도구 검사 통과. x64 native 장비 검증과 구분 |
 
-Linux 실제 계정 모델 호출과 VS Code Extension Host는 아직 검증하지 않았다.
+Linux 실제 리뷰는 Windows ARM64 PC의 WSL2에서 수행했다. WSL을 사용하지
+않는 Linux desktop과 x64 장비의 실제 계정 리뷰는 별도로 검증하지 않았다.
+Linux 자동 service를 경유한 실제 모델 호출도 이번 검증 범위에는 없다.
 합성 검사는 모델에게 결함을 판단시킨 증거가 아니다. target 이름이나 AnyCPU
 helper만으로 해당 OS/CPU 전체 지원이 검증된 것으로 해석하지 않는다.
 
