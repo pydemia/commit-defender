@@ -34,27 +34,68 @@ const proof = { status: 'starting', mode, realModelCallsAllowed: mode === 'revie
 const save = () => fs.writeFileSync(output + '.launcher.json', JSON.stringify(proof, null, 2) + '\n');
 let keyring;
 let host;
+let log = '';
 const wait = (child, timeoutMs) => new Promise((resolve, reject) => {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    resolve(child.exitCode); return;
+  }
   const timer = setTimeout(() => reject(Error('Owned process did not exit')), timeoutMs);
   child.once('close', code => { clearTimeout(timer); resolve(code); });
   child.once('error', error => { clearTimeout(timer); reject(error); });
 });
+async function stopHost() {
+  if (!host?.pid) return;
+  const live = () => execFileSync('/usr/bin/ps',
+    ['-eo', 'pid=,pgid=,stat='], { encoding: 'utf8' }).trim().split('\n')
+    .some(line => {
+      const [, group, state] = line.trim().split(/\s+/);
+      return Number(group) === host.pid && !state.startsWith('Z');
+    });
+  for (const signal of ['SIGTERM', 'SIGKILL']) {
+    if (!live()) return;
+    process.kill(-host.pid, signal);
+    for (let i = 0; i < 50 && live(); i++)
+      await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  assert(!live(), 'Owned Linux Host processes remain');
+}
 try {
+  const control = path.join(session, 'keyring');
+  fs.mkdirSync(control, { mode: 0o700 });
+  process.env.GNOME_KEYRING_CONTROL = control;
+  // Activation must inherit this test's private data directory as well.
+  execFileSync('/usr/bin/dbus-update-activation-environment',
+    ['XDG_DATA_HOME', 'GNOME_KEYRING_CONTROL'], { timeout: 3000 });
   keyring = spawn('/usr/bin/gnome-keyring-daemon',
-    ['--foreground', '--unlock', '--components=secrets', '--control-directory', path.join(session, 'keyring')],
+    ['--foreground', '--unlock', '--components=secrets', '--control-directory', control],
     { stdio: ['pipe', 'pipe', 'pipe'] });
+  keyring.stderr.on('data', bytes => { log += String(bytes); });
   keyring.stdin.end(password);
   // Poll for this new bus's Secret Service, never the user's original bus.
   const synthetic = randomBytes(32).toString('base64');
   let ready = false;
   for (let attempt = 0; attempt < 40; attempt++) {
     try {
-      execFileSync('/usr/bin/secret-tool', ['store', '--label=GCR Linux verification', 'gcr-test', 'preflight'],
-        { input: synthetic, timeout: 2000, stdio: ['pipe', 'pipe', 'pipe'] });
-      ready = true; break;
+      const owner = execFileSync('/usr/bin/gdbus', ['call', '--session',
+        '--dest', 'org.freedesktop.DBus', '--object-path',
+        '/org/freedesktop/DBus', '--method',
+        'org.freedesktop.DBus.NameHasOwner', 'org.freedesktop.secrets'],
+        { encoding: 'utf8', timeout: 2000 });
+      if (owner.includes('true')) { ready = true; break; }
     } catch { await new Promise(resolve => setTimeout(resolve, 100)); }
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
   assert(ready, 'Isolated Secret Service unavailable');
+  proof.keyringFiles = fs.existsSync(path.join(data, 'keyrings'))
+    ? fs.readdirSync(path.join(data, 'keyrings')) : [];
+  proof.keyringCollections = execFileSync('/usr/bin/gdbus', ['call',
+    '--session', '--dest', 'org.freedesktop.secrets', '--object-path',
+    '/org/freedesktop/secrets', '--method',
+    'org.freedesktop.DBus.Properties.Get', 'org.freedesktop.Secret.Service',
+    'Collections'], { encoding: 'utf8', timeout: 3000 }).trim();
+  execFileSync('/usr/bin/secret-tool', ['store',
+    '--label=GCR Linux verification', 'gcr-test', 'preflight'],
+    { input: synthetic, timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
   assert.equal(execFileSync('/usr/bin/secret-tool', ['lookup', 'gcr-test', 'preflight'],
     { encoding: 'utf8', timeout: 3000 }).trim(), synthetic);
   execFileSync('/usr/bin/secret-tool', ['clear', 'gcr-test', 'preflight'], { timeout: 3000 });
@@ -124,10 +165,13 @@ try {
     GCR_LINUX_EVIDENCE: output };
   delete env.ELECTRON_RUN_AS_NODE;
   host = spawn(code, [workspace, '--user-data-dir', userData, '--extensions-dir', path.join(session, 'extensions'),
+    '--shared-data-dir', path.join(session, 'shared-data'),
+    '--agents-user-data-dir', path.join(session, 'agents-data'),
+    '--agents-extensions-dir', path.join(session, 'agents-extensions'),
+    '--agent-plugins-dir', path.join(session, 'agent-plugins'),
     '--disable-extensions', '--skip-welcome', '--skip-release-notes', '--disable-updates',
     `--extensionDevelopmentPath=${extension}`, `--extensionDevelopmentPath=${harness}`],
     { env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
-  let log = '';
   for (const stream of [host.stdout, host.stderr]) stream.on('data', bytes => { if(log.length < 200000)log += bytes; });
   proof.hostPid = host.pid;
   proof.hostExitCode = await wait(host, mode === 'review' ? 480000 : 90000);
@@ -141,13 +185,23 @@ try {
   proof.error = error instanceof Error ? error.message : 'Linux verification failed';
   process.exitCode = 1;
 } finally {
-  if(host) { try { process.kill(-host.pid, 'SIGTERM'); } catch(error) { if(error.code !== 'ESRCH')throw error; } }
-  if(keyring) { const exited = wait(keyring, 5000); keyring.kill('SIGTERM'); await exited; }
+  fs.writeFileSync(output + '.host.log', log);
+  try {
+    await stopHost();
+    if (keyring) {
+      keyring.kill('SIGTERM');
+      await wait(keyring, 5000);
+    }
+    proof.ownedProcessesStopped = true;
   proof.existingAccountDocumentsUnchanged = JSON.stringify(before) === JSON.stringify(accountDocumentHashes());
   const account = fs.statSync(path.join(process.env.HOME, '.codex/auth.json'));
   proof.accountInodePreserved = account.ino === initialAccount.ino && account.nlink === initialAccount.nlink;
   assert(proof.existingAccountDocumentsUnchanged && proof.accountInodePreserved);
   fs.rmSync(session, { recursive: true, force: true });
   proof.sessionAndEncryptedKeyringRemoved = !fs.existsSync(session);
-  save();
+  } catch (error) {
+    proof.launcherCleanup = 'failed';
+    proof.cleanupError = error.message;
+    process.exitCode = 1;
+  } finally { save(); }
 }
