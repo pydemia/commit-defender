@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,6 +22,12 @@ import type {
   ReviewResult,
 } from '../src/types.js';
 import { fixture } from './helpers/review-fixture.js';
+import { PlatformLocalKeyStore } from '@gcr/client-core';
+import {
+  MODEL_CREDENTIAL_SERVICE, modelCredentialBinding,
+  modelCredentialDataDirectory, saveModelCredential,
+} from '../src/modelCredentials.js';
+import { configToHookJson } from '../src/hook/config.js';
 
 const comment: FileComment = {
   file: 'first.ts',
@@ -36,12 +44,75 @@ const clean = {
 };
 const defect = { ...clean, file_comments: [comment] };
 type Reply = { raw?: string; fail?: boolean; wait?: boolean };
-function setup(
+async function setup(
   replies: Reply[],
   files = ['first.ts', 'second.ts', 'third.ts'],
 ) {
   const f = fixture();
   for (const file of files) f.write(file, 'export const value = 1;\n');
+  const calls = () =>
+    fs.existsSync(f.capture)
+      ? fs.readFileSync(f.capture, 'utf8').trim().split('\n').length
+      : 0;
+  if (process.platform === 'win32') {
+    // These assertions cover shared outcome handling, not Codex CLI behavior.
+    // Use the supported HTTP adapter on Windows without emulating a shebang.
+    const serverFile = path.join(f.root, 'outcome-server.cjs');
+    fs.writeFileSync(serverFile, `
+const http = require('node:http');
+const fs = require('node:fs');
+const replies = ${JSON.stringify(replies)};
+let count = 0;
+const server = http.createServer((request, response) => {
+  if (request.method !== 'POST' || request.url !== '/chat/completions') {
+    response.writeHead(404); response.end(); return;
+  }
+  let body = '';
+  request.on('data', chunk => { body += chunk; });
+  request.on('end', () => {
+    fs.appendFileSync(${JSON.stringify(f.capture)}, JSON.stringify(body) + '\\n');
+    const reply = replies[Math.min(count++, replies.length - 1)];
+    if (reply.wait) return;
+    if (reply.fail) {
+      response.writeHead(500); response.end('SYNTHETIC_PROVIDER_FAILURE');
+      return;
+    }
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify({ choices: [{
+      message: { content: reply.raw }, finish_reason: 'stop'
+    }] }));
+  });
+});
+process.on('disconnect', () => {
+  server.closeAllConnections(); server.close(() => process.exit(0));
+});
+server.listen(0, '127.0.0.1', () => process.send(server.address().port));
+`);
+    const server = spawn(process.execPath, [serverFile], {
+      cwd: f.root, windowsHide: true, shell: false,
+      stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      env: { SystemRoot: process.env.SystemRoot },
+    });
+    const stopped = once(server, 'exit').then(([code]) => code);
+    const cleanup = async () => {
+      if (server.connected) server.disconnect();
+      const timer = setTimeout(() => server.kill(), 5000);
+      try { assert.equal(await stopped, 0, 'Fixture server did not stop cleanly'); }
+      finally { clearTimeout(timer); f.cleanup(); }
+    };
+    try {
+      const [port] = await once(server, 'message', {
+        signal: AbortSignal.timeout(5000),
+      });
+      assert(Number.isSafeInteger(port) && port > 0 && port <= 65535);
+      return {
+        ...f, calls, cleanup,
+        cfg: { ...f.cfg, aiProvider: 'openai' as const,
+          endpoint: `http://127.0.0.1:${port}`,
+          model: 'synthetic-outcome-fixture', apiKey: 'SYNTHETIC_TEST_KEY' },
+      };
+    } catch (error) { await cleanup(); throw error; }
+  }
   fs.writeFileSync(
     f.executable,
     `#!/usr/bin/env node
@@ -58,10 +129,6 @@ process.stdin.on('end', () => {
 });
 `,
   );
-  const calls = () =>
-    fs.existsSync(f.capture)
-      ? fs.readFileSync(f.capture, 'utf8').trim().split('\n').length
-      : 0;
   return { ...f, calls };
 }
 async function waitFor(predicate: () => boolean): Promise<void> {
@@ -100,7 +167,7 @@ function apiRequest(
 }
 
 test('all provider failures remain failed with no fabricated P3 finding or successful grade', async () => {
-  const f = setup([{ fail: true }]);
+  const f = await setup([{ fail: true }]);
   try {
     const { report: result } = await new Reviewer(f.cfg).reviewFilesSeparately(
       f.repo,
@@ -126,12 +193,12 @@ test('all provider failures remain failed with no fabricated P3 finding or succe
       '0/2 selected file(s) completed; 2 failed',
     );
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 test('partial failure preserves actual P3 findings and keeps advisory separate from legacy hook enforcement', async () => {
-  const f = setup([{ raw: JSON.stringify(defect) }, { fail: true }]);
+  const f = await setup([{ raw: JSON.stringify(defect) }, { fail: true }]);
   try {
     const { report: result } = await new Reviewer(f.cfg).reviewFilesSeparately(
       f.repo,
@@ -152,12 +219,12 @@ test('partial failure preserves actual P3 findings and keeps advisory separate f
       '1/2 selected file(s) completed; 1 failed',
     );
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 test('completed clean review does not manufacture findings from its summary', async () => {
-  const f = setup([
+  const f = await setup([
     {
       raw: JSON.stringify({
         ...clean,
@@ -176,12 +243,12 @@ test('completed clean review does not manufacture findings from its summary', as
     assert.equal(reviewCoverage(result), '2/2 selected file(s) completed');
     assert.equal(OUTCOME_META[reviewStatus(result.review)].label, 'Completed');
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 test('cancellation before execution calls no provider and remains cancelled rather than pass', async () => {
-  const f = setup([{ raw: JSON.stringify(clean) }]);
+  const f = await setup([{ raw: JSON.stringify(clean) }]);
   const controller = new AbortController();
   controller.abort('user');
   try {
@@ -204,13 +271,13 @@ test('cancellation before execution calls no provider and remains cancelled rath
     }
     assert.equal(f.calls(), 0);
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 for (const reason of ['user', 'timeout']) {
   test(`${reason} during the second file preserves the first finding and records unperformed work`, async () => {
-    const f = setup([{ raw: JSON.stringify(defect) }, { wait: true }]);
+    const f = await setup([{ raw: JSON.stringify(defect) }, { wait: true }]);
     const controller = new AbortController();
     try {
       const pending = new Reviewer(f.cfg).reviewFilesSeparately(
@@ -237,13 +304,13 @@ for (const reason of ['user', 'timeout']) {
       assert.equal(f.calls(), 2);
     } finally {
       controller.abort();
-      f.cleanup();
+      await f.cleanup();
     }
   });
 }
 
 test('timeout before any completed file is failed and never cancellation or a grade', async () => {
-  const f = setup([{ wait: true }]);
+  const f = await setup([{ wait: true }]);
   const controller = new AbortController();
   try {
     const pending = new Reviewer(f.cfg).reviewFilesSeparately(
@@ -265,12 +332,12 @@ test('timeout before any completed file is failed and never cancellation or a gr
     );
   } finally {
     controller.abort();
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 test('source truncation marks otherwise valid file and staged reviews partial', async () => {
-  const f = setup([{ raw: JSON.stringify(clean) }], ['first.ts']);
+  const f = await setup([{ raw: JSON.stringify(clean) }], ['first.ts']);
   try {
     f.write('first.ts', 'export const data = "' + 'x'.repeat(81000) + '";\n');
     f.git('add', 'first.ts');
@@ -286,12 +353,12 @@ test('source truncation marks otherwise valid file and staged reviews partial', 
       assert.equal(result.report.review.grade, '');
     }
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
 test('repaired model JSON is partial, while complete but unusable JSON is an error', async () => {
-  const f = setup([
+  const f = await setup([
     { raw: JSON.stringify(defect).slice(0, -1) },
     { raw: '{}' },
   ]);
@@ -314,7 +381,7 @@ test('repaired model JSON is partial, while complete but unusable JSON is an err
       parseReviewJson('{"summary":"x","blocking":"false","file_comments":[]}'),
     );
   } finally {
-    f.cleanup();
+    await f.cleanup();
   }
 });
 
@@ -428,7 +495,7 @@ for (const provider of ['openai', 'anthropic', 'gemini'] as const) {
         );
       } finally {
         context.mock.restoreAll();
-        f.cleanup();
+        await f.cleanup();
       }
     });
   }
@@ -459,19 +526,30 @@ test('legacy and advisory enforcement handle P3, model blocking and incomplete s
 });
 
 for (const partial of [false, true]) {
-  test(`actual hook displays ${partial ? 'partial blocking review' : 'failed allowed review'} without a PASS label`, () => {
-    const f = setup(
+  test(`actual hook displays ${partial ? 'partial blocking review' : 'failed allowed review'} without a PASS label`, async () => {
+    const f = await setup(
       [partial ? { raw: JSON.stringify(defect).slice(0, -1) } : { fail: true }],
       ['first.ts'],
     );
+    let credentialProfile: string | undefined;
     try {
       f.git('add', 'first.ts');
-      f.write('.commit-defender/hook.json', JSON.stringify(f.cfg));
+      let hookConfig: unknown = f.cfg;
+      if (process.platform === 'win32') {
+        credentialProfile = `w04-outcome-${randomUUID()}`;
+        const reference = await saveModelCredential(
+          credentialProfile, modelCredentialBinding(f.cfg), f.cfg.apiKey,
+        );
+        hookConfig = configToHookJson(f.cfg, reference);
+        assert(!JSON.stringify(hookConfig).includes(f.cfg.apiKey));
+      }
+      f.write('.commit-defender/hook.json', JSON.stringify(hookConfig));
       const result = spawnSync(
         process.execPath,
         [path.resolve('out/hook-cli.js'), f.repo],
-        { encoding: 'utf8' },
+        { encoding: 'utf8', windowsHide: true, timeout: 20000 },
       );
+      assert.equal(f.calls(), 1, 'Hook must reach the synthetic provider');
       assert.equal(result.status, partial ? 1 : 0);
       assert(
         result.stderr.includes(`Review: ${partial ? 'PARTIAL' : 'FAILED'}`),
@@ -483,7 +561,23 @@ for (const partial of [false, true]) {
       );
       assert(!result.stderr.includes('PASS'));
     } finally {
-      f.cleanup();
+      try {
+        if (credentialProfile) {
+          const directory = path.join(
+            modelCredentialDataDirectory(), 'profiles', credentialProfile,
+          );
+          const file = path.join(directory, 'local/key-ref.json');
+          if (fs.existsSync(file)) {
+            const key = JSON.parse(fs.readFileSync(file, 'utf8'));
+            assert.equal(key.profileId, credentialProfile);
+            const store = new PlatformLocalKeyStore(MODEL_CREDENTIAL_SERVICE);
+            await store.remove(`${credentialProfile}.${key.id}`);
+            assert.equal(await store.read(`${credentialProfile}.${key.id}`), undefined);
+          }
+          fs.rmSync(directory, { recursive: true, force: true });
+          assert(!fs.existsSync(directory));
+        }
+      } finally { await f.cleanup(); }
     }
   });
 }
