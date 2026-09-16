@@ -1517,7 +1517,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.47",
+  version: "0.1.0-alpha.48",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1570,7 +1570,7 @@ function windowsNativeExecutable() {
     const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
     const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
     const hash4 = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
-    if (manifest.version !== "1.0.1" || hash4 !== manifest.sha256)
+    if (manifest.version !== "1.0.2" || hash4 !== manifest.sha256)
       throw Error();
     return executable;
   } catch {
@@ -1626,6 +1626,156 @@ function windowsNativeSync(request) {
   }
   return checkWindowsStorage(decode(stdout));
 }
+var WindowsStorageSession = class {
+  onClose;
+  child;
+  queue = [];
+  active;
+  bytes = 0;
+  output = Buffer.alloc(0);
+  idle;
+  closed = false;
+  failure;
+  constructor(executable, onClose) {
+    this.onClose = onClose;
+    this.child = (0, import_node_child_process.spawn)(executable, ["--storage-session", String(process.pid)], {
+      windowsHide: true,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    this.child.on("error", () => this.stop("storage-unavailable"));
+    this.child.on("close", () => {
+      this.stop("storage-unavailable");
+      const error2 = this.failure ?? "storage-unavailable";
+      if (this.active) {
+        this.finish(this.active, {
+          error: this.active.publishing ? "commit-unknown" : error2
+        });
+        this.active = void 0;
+      }
+      for (const request of this.queue.splice(0))
+        this.finish(request, { error: error2 });
+    });
+    this.child.stdin.on("error", () => this.stop("storage-unavailable"));
+    this.child.stderr.on("data", () => this.stop("storage-unavailable"));
+    this.child.stdout.on("data", (chunk) => {
+      if (this.closed)
+        return;
+      if (!this.active || this.output.length + chunk.length > maximum) {
+        this.stop("storage-unavailable");
+        return;
+      }
+      this.output = Buffer.concat([this.output, chunk]);
+      const end = this.output.indexOf(10);
+      if (end < 0)
+        return;
+      if (end !== this.output.length - 1) {
+        this.stop("storage-unavailable");
+        return;
+      }
+      let result;
+      try {
+        result = decode(this.output.toString("utf8"));
+      } catch {
+        this.stop("storage-unavailable");
+        return;
+      }
+      this.output.fill(0);
+      this.output = Buffer.alloc(0);
+      const request = this.active;
+      this.active = void 0;
+      this.finish(request, result);
+      this.next();
+    });
+  }
+  request(input2, publishing, options) {
+    const bytes = Buffer.byteLength(input2);
+    if (this.closed || this.queue.length >= 64 || this.bytes + bytes > maximum)
+      return Promise.resolve({ error: "storage-unavailable" });
+    clearTimeout(this.idle);
+    return new Promise((resolve) => {
+      const abort = () => {
+        if (this.active === request)
+          this.stop("cancelled");
+        else {
+          const index = this.queue.indexOf(request);
+          if (index >= 0) {
+            this.queue.splice(index, 1);
+            this.finish(request, { error: "cancelled" });
+          }
+        }
+      };
+      const request = {
+        input: input2,
+        bytes,
+        publishing,
+        resolve,
+        signal: options.signal,
+        abort,
+        timer: setTimeout(() => {
+          if (this.active === request)
+            this.stop("timeout");
+          else {
+            const index = this.queue.indexOf(request);
+            if (index >= 0) {
+              this.queue.splice(index, 1);
+              this.finish(request, { error: "timeout" });
+            }
+          }
+        }, options.timeoutMs ?? 15e3)
+      };
+      this.bytes += bytes;
+      this.queue.push(request);
+      options.signal?.addEventListener("abort", abort, { once: true });
+      if (options.signal?.aborted)
+        abort();
+      this.next();
+    });
+  }
+  finish(request, result) {
+    clearTimeout(request.timer);
+    request.signal?.removeEventListener("abort", request.abort);
+    this.bytes -= request.bytes;
+    request.input = "";
+    request.resolve(result);
+  }
+  next() {
+    if (this.closed || this.active)
+      return;
+    this.active = this.queue.shift();
+    if (this.active)
+      this.child.stdin.write(this.active.input);
+    else
+      this.idle = setTimeout(() => {
+        this.closed = true;
+        this.onClose();
+        this.child.stdin.end();
+      }, 100);
+  }
+  stop(error2) {
+    if (this.closed)
+      return;
+    this.closed = true;
+    this.failure = error2;
+    clearTimeout(this.idle);
+    this.onClose();
+    this.child.kill();
+    this.output.fill(0);
+    this.output = Buffer.alloc(0);
+    if (this.active)
+      clearTimeout(this.active.timer);
+    for (const request of this.queue)
+      clearTimeout(request.timer);
+  }
+};
+var storageSession;
+var storageOperations = /* @__PURE__ */ new Set([
+  "credential",
+  "directory",
+  "validate-directory",
+  "read",
+  "publish"
+]);
 function windowsNative(request, options = {}) {
   const input2 = JSON.stringify(request) + "\n";
   if (Buffer.byteLength(input2) > maximum)
@@ -1633,6 +1783,12 @@ function windowsNative(request, options = {}) {
   if (options.signal?.aborted)
     return Promise.resolve({ error: "cancelled" });
   const executable = windowsNativeExecutable();
+  if (storageOperations.has(String(request.operation))) {
+    storageSession ??= new WindowsStorageSession(executable, () => {
+      storageSession = void 0;
+    });
+    return storageSession.request(input2, request.operation === "publish", options);
+  }
   return new Promise((resolve, reject) => {
     const child = (0, import_node_child_process.spawn)(executable, [], {
       windowsHide: true,
@@ -8005,7 +8161,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.47",
+  version: "0.1.0-alpha.48",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -8969,7 +9125,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.47",
+  version: "0.1.0-alpha.48",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

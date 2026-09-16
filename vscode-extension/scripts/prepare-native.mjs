@@ -19,7 +19,7 @@ async function put(file, bytes) {
     await rename(temporary, file);
   } finally { await rm(temporary, { force: true }); }
 }
-assert.equal(manifest.version, '1.0.1');
+assert.equal(manifest.version, '1.0.2');
 assert.equal(manifest.sha256, hash(executable));
 assert.equal(manifest.sourceSha256, hash(source));
 for (const output of ['out', 'out-test']) {
