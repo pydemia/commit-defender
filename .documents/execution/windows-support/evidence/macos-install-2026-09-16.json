@@ -1,0 +1,71 @@
+{
+  "recordedAt": "2026-09-16T13:30:44.921986+00:00",
+  "sourceHead": "4d1b237ec50456a0e6c12904dbc878088e0d405a",
+  "installed": {
+    "extensionPath": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.12.6-darwin-arm64",
+    "version": "2.12.6",
+    "runtime": [
+      {
+        "file": "out/advisory-hook.cjs",
+        "sha256": "e8270bb445528abab7493172a0b08c343451822d4efa310b928cee11e0919217"
+      },
+      {
+        "file": "out/extension.js",
+        "sha256": "8f504e515fa31932cd8083c525a8fd40cd5e0f82e694933389edf82c9b276e83"
+      },
+      {
+        "file": "out/gcr-service/main.mjs",
+        "sha256": "c245681b326264ec81af7ebba610c19762c711634921f1f084fd720dd86af656"
+      },
+      {
+        "file": "out/gcr-service/manifest.json",
+        "sha256": "8f8c37bc3e7aae3f20c95b602eadcacddf2ae7d880e716dd6937e6772c67e613"
+      },
+      {
+        "file": "out/gcr-service/windows-native.exe",
+        "sha256": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89"
+      },
+      {
+        "file": "out/gcr-service/windows-native.json",
+        "sha256": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575"
+      },
+      {
+        "file": "out/hook-cli.js",
+        "sha256": "42318d2952e197f456d5e2186b55d9ee72e804f3311e2ecc135f0d4c89e5ed2c"
+      },
+      {
+        "file": "out/review-chat-worker.js",
+        "sha256": "9f482716685c292c6f55b99302c27ca70d1633996c9e96dc25122bee202b4878"
+      },
+      {
+        "file": "out/standalone-review-worker.js",
+        "sha256": "58e83a2b8f457bcc29504630fef999aeb0aa89a91df692cdbc82ca9a83c6e74e"
+      },
+      {
+        "file": "out/windows-native.exe",
+        "sha256": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89"
+      },
+      {
+        "file": "out/windows-native.json",
+        "sha256": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575"
+      }
+    ]
+  },
+  "extensionHost": {
+    "version": "2.12.6",
+    "extensionPath": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.12.6-darwin-arm64",
+    "isActive": true,
+    "registeredCommands": 26,
+    "actualModelCalls": 0,
+    "reviewInvoked": false
+  },
+  "vscodeVersion": "1.137.0",
+  "architecture": "arm64",
+  "previousVersion": "2.11.3",
+  "userSettingsAndCodexAccountFilesUnchanged": true,
+  "publishedRuntimeHashMatches": 11,
+  "actualModelCalls": 0,
+  "existingUserHostReloaded": false,
+  "existingUserHostAppliedVersion": "not inspected",
+  "isolatedTestResourcesCleaned": true
+}
