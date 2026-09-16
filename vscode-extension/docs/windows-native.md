@@ -12,7 +12,12 @@ W04는 명시된 검증 범위에서 완료했다. 전체 근거는 저장소의
 
 ## 설치와 적용 확인
 
-전달물은 `commit-defender-2.12.4-win32-arm64.vsix`다.
+Marketplace 게시 후보는 `commit-defender-2.12.5-win32-arm64.vsix`다.
+2.12.4의 실행 파일을 유지하고 공개 안내와 링크를 보완한다. 게시 여부와
+최종 파일 hash는 저장소의
+[게시 기록](../../.documents/execution/windows-support/publish.md)에서 확인한다.
+
+W04에서 검증한 전달물은 `commit-defender-2.12.4-win32-arm64.vsix`다.
 SHA256은 다음과 같다.
 
 `88471efee2b80a1b79d28e4712d90566eeeac1fa3ea6fa340d515efba5a48f1b`

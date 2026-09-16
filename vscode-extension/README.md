@@ -2,7 +2,20 @@
 
 Commit Defender reviews captured local Git changes and displays advisory findings in VS Code. It can use local Memory and Skills, or pull review history and published guidance from a Git Code Reviewer (GCR) server. The selected local provider performs the review in both modes.
 
-Use **Commit Defender: Select Account Provider and Model**, then an **Analyze** command. Reviews support Codex on macOS with verified CLI versions 0.153.4/0.154.0, Azure OpenAI, OpenAI, Anthropic and Gemini APIs. Set provider/model in User Settings. API credentials use destination-bound OS storage; **Manage Model API Credential** provides migration from legacy plaintext settings. See [provider capabilities and setup](docs/standalone-review.md).
+Use **Commit Defender: Select Account Provider and Model**, then an **Analyze**
+command. Native Windows ARM64 account reviews were verified with Codex 0.153.4
+and `gpt-5.6-luna / high`; earlier macOS account reviews used Codex
+0.153.4/0.154.0. Azure OpenAI, OpenAI, Anthropic and Gemini API adapters are also
+available. Set provider/model in User Settings. API credentials use
+destination-bound OS storage; **Manage Model API Credential** provides explicit
+migration from legacy plaintext settings. See
+[provider capabilities and setup](docs/standalone-review.md).
+
+This release supplies a **Windows ARM64** VSIX. Windows x64 has not been
+execution-tested. macOS ARM64 regression and Linux ARM64 container tests do not
+establish support for every OS, CPU or model combination. See the
+[Windows support and recovery guide](docs/windows-native.md) for the verified
+environment, service lifecycle, opt-in hooks and remaining limits.
 
 To use central material, open **Central Review Connection** with a repository connection file and a `knowledge:read` key issued for `commit-defender`. **Browse PR review history** displays original comments, replies, body versions and source-linked guidance. Relevant active guidance and its historical sources are selected locally and pinned for each review. Results include the source URL, IDs and version hashes. [Central connection and cache behavior](docs/central-review.md) describes offline operation and access revocation.
 
