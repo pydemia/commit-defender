@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message2, Ctor) => {
       throw new Ctor(message2);
     };
-    var checkPath = (path37, originalPath, doThrow) => {
-      if (!isString(path37)) {
+    var checkPath = (path38, originalPath, doThrow) => {
+      if (!isString(path38)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path37) {
+      if (!path38) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path37)) {
+      if (checkPath.isNotRelative(path38)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path37) => REGEX_TEST_INVALID_PATH.test(path37);
+    var isNotRelative = (path38) => REGEX_TEST_INVALID_PATH.test(path38);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path37, checkUnignored) {
+      _testOne(path38, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path37);
+          const matched = rule.regex.test(path38);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path37 = originalPath && checkPath.convert(originalPath);
+        const path38 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path37,
+          path38,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path37, cache, checkUnignored, slices);
+        return this._t(path38, cache, checkUnignored, slices);
       }
-      _t(path37, cache, checkUnignored, slices) {
-        if (path37 in cache) {
-          return cache[path37];
+      _t(path38, cache, checkUnignored, slices) {
+        if (path38 in cache) {
+          return cache[path38];
         }
         if (!slices) {
-          slices = path37.split(SLASH);
+          slices = path38.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path37] = this._testOne(path37, checkUnignored);
+          return cache[path38] = this._testOne(path38, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path37] = parent.ignored ? parent : this._testOne(path37, checkUnignored);
+        return cache[path38] = parent.ignored ? parent : this._testOne(path38, checkUnignored);
       }
-      ignores(path37) {
-        return this._test(path37, this._ignoreCache, false).ignored;
+      ignores(path38) {
+        return this._test(path38, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path37) => !this.ignores(path37);
+        return (path38) => !this.ignores(path38);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path37) {
-        return this._test(path37, this._testCache, true);
+      test(path38) {
+        return this._test(path38, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path37) => checkPath(path37 && checkPath.convert(path37), path37, RETURN_FALSE);
+    var isPathValid = (path38) => checkPath(path38 && checkPath.convert(path38), path38, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path37) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path37) || isNotRelative(path37);
+      checkPath.isNotRelative = (path38) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path38) || isNotRelative(path38);
     }
   }
 });
@@ -453,16 +453,16 @@ var integer = (min = 0, max = Number.MAX_SAFE_INTEGER) => (value, at = "$") => {
 var boolean = (value, at = "$") => typeof value === "boolean" ? value : fail(at, "expected boolean");
 var literal = (expected) => (value, at = "$") => value === expected ? expected : fail(at, "unexpected literal");
 var choice = (values) => (value, at = "$") => typeof value === "string" && values.includes(value) ? value : fail(at, "unsupported value");
-var optional = (decode2) => (value, at) => value === void 0 ? void 0 : decode2(value, at);
-var list = (decode2, max = 1e5, min = 0) => (value, at = "$") => {
+var optional = (decode3) => (value, at) => value === void 0 ? void 0 : decode3(value, at);
+var list = (decode3, max = 1e5, min = 0) => (value, at = "$") => {
   if (!Array.isArray(value) || value.length < min || value.length > max)
     return fail(at, "invalid array");
-  return Array.from(value, (entry, index2) => decode2(entry, `${at}[${index2}]`));
+  return Array.from(value, (entry, index2) => decode3(entry, `${at}[${index2}]`));
 };
 var union = (...decoders) => (value, at = "$") => {
-  for (const decode2 of decoders) {
+  for (const decode3 of decoders) {
     try {
-      return decode2(value, at);
+      return decode3(value, at);
     } catch (error2) {
       if (!(error2 instanceof ContractError))
         throw error2;
@@ -478,8 +478,8 @@ var object = (shape) => (value, at = "$") => {
     if (!Object.hasOwn(shape, key3))
       fail(`${at}.${key3}`, "unknown field");
   const result = {};
-  for (const [key3, decode2] of Object.entries(shape)) {
-    const parsed = decode2(Object.hasOwn(record2, key3) ? record2[key3] : void 0, `${at}.${key3}`);
+  for (const [key3, decode3] of Object.entries(shape)) {
+    const parsed = decode3(Object.hasOwn(record2, key3) ? record2[key3] : void 0, `${at}.${key3}`);
     if (parsed !== void 0)
       Object.defineProperty(result, key3, {
         value: parsed,
@@ -490,8 +490,8 @@ var object = (shape) => (value, at = "$") => {
   }
   return result;
 };
-var refined = (decode2, check) => (value, at = "$") => {
-  const result = decode2(value, at);
+var refined = (decode3, check) => (value, at = "$") => {
+  const result = decode3(value, at);
   check(result, at);
   return result;
 };
@@ -1685,7 +1685,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/review-history.js
 var uuid = text(36, 36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
-var nullable = (decode2) => union(decode2, literal(null));
+var nullable = (decode3) => union(decode3, literal(null));
 var short = text(4096);
 var date = text(64);
 var side = nullable(choice(["LEFT", "RIGHT"]));
@@ -1868,16 +1868,16 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-core/dist/local-identity.js
-var import_node_child_process = require("node:child_process");
-var import_node_crypto = require("node:crypto");
-var import_node_fs = require("node:fs");
+var import_node_child_process2 = require("node:child_process");
+var import_node_crypto2 = require("node:crypto");
+var import_node_fs2 = require("node:fs");
 var import_node_os = require("node:os");
-var import_node_path = __toESM(require("node:path"), 1);
+var import_node_path2 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/local-errors.js
 var LocalStoreError = class extends Error {
@@ -1889,6 +1889,142 @@ var LocalStoreError = class extends Error {
   }
 };
 var errorCode = (error2) => error2 && typeof error2 === "object" && "code" in error2 && typeof error2.code === "string" ? error2.code : void 0;
+
+// node_modules/@gcr/client-core/dist/windows-native.js
+var import_node_child_process = require("node:child_process");
+var import_node_crypto = require("node:crypto");
+var import_node_fs = require("node:fs");
+var import_node_path = __toESM(require("node:path"), 1);
+var import_node_url = require("node:url");
+var import_meta = {};
+var maximum = 36 * 1024 * 1024;
+var directory = typeof __dirname === "string" ? __dirname : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
+function windowsNativeExecutable() {
+  if (process.platform !== "win32")
+    throw new LocalStoreError("unsupported-platform", "Windows helper required.");
+  try {
+    const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
+    const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
+    const hash4 = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
+    if (manifest.version !== "1.0.1" || hash4 !== manifest.sha256)
+      throw Error();
+    return executable;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Windows helper is unavailable.");
+  }
+}
+function decode(stdout) {
+  try {
+    const value = JSON.parse(stdout.trim());
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw Error();
+    return value;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Invalid Windows helper response.");
+  }
+}
+function checkWindowsStorage(result) {
+  if (result.error) {
+    const codes = [
+      "unsupported-platform",
+      "credential-unavailable",
+      "storage-unavailable",
+      "insecure-storage",
+      "corrupt-storage",
+      "commit-unknown",
+      "record-too-large"
+    ];
+    const code3 = codes.includes(result.error) ? result.error : "storage-unavailable";
+    throw new LocalStoreError(code3, `Windows operation failed (${code3}).`);
+  }
+  return result;
+}
+function windowsNativeSync(request) {
+  const input = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input) > maximum)
+    throw new LocalStoreError("record-too-large", "Windows request exceeds its limit.");
+  let stdout;
+  try {
+    stdout = (0, import_node_child_process.execFileSync)(windowsNativeExecutable(), [], {
+      input,
+      encoding: "utf8",
+      maxBuffer: maximum,
+      timeout: 15e3,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  } catch (error2) {
+    const result = error2;
+    if (result.status === 1 && result.stdout)
+      stdout = result.stdout;
+    else
+      throw new LocalStoreError("storage-unavailable", "Windows helper failed.");
+  }
+  return checkWindowsStorage(decode(stdout));
+}
+function windowsNative(request, options = {}) {
+  const input = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input) > maximum)
+    return Promise.reject(new LocalStoreError("record-too-large", "Windows request too large."));
+  if (options.signal?.aborted)
+    return Promise.resolve({ error: "cancelled" });
+  const executable = windowsNativeExecutable();
+  return new Promise((resolve4, reject) => {
+    const child = (0, import_node_child_process.spawn)(executable, [], {
+      windowsHide: true,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const chunks = [];
+    let bytes = 0;
+    let failure2;
+    const stop = (reason) => {
+      failure2 ??= reason;
+      child.kill();
+    };
+    const abort = () => stop("cancelled");
+    const timer = setTimeout(() => stop("timeout"), options.timeoutMs ?? 15e3);
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted)
+      abort();
+    child.stdout.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+      else
+        chunks.push(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+    });
+    child.on("error", () => {
+      failure2 ??= "executable-unavailable";
+    });
+    child.stdin.on("error", () => {
+      failure2 ??= "process-failed";
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
+      if (failure2) {
+        resolve4({ error: failure2 });
+        return;
+      }
+      try {
+        resolve4(decode(Buffer.concat(chunks).toString("utf8")));
+      } catch (error2) {
+        reject(error2);
+      }
+    });
+    if (request.operation === "process")
+      child.stdin.write(input);
+    else
+      child.stdin.end(input);
+  });
+}
 
 // node_modules/@gcr/client-core/dist/local-identity.js
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
@@ -1937,18 +2073,24 @@ function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   };
   return visit2(value, 0);
 }
-var contentHash = (value) => (0, import_node_crypto.createHash)("sha256").update(canonicalJson(value)).digest("hex");
+var contentHash = (value) => (0, import_node_crypto2.createHash)("sha256").update(canonicalJson(value)).digest("hex");
 function defaultLocalDataDirectory(platform = process.platform) {
+  if (platform === "win32") {
+    const directory2 = windowsNativeSync({ operation: "identity" }).dataDirectory;
+    if (!directory2 || !import_node_path2.default.isAbsolute(directory2))
+      throw new LocalStoreError("storage-unavailable", "Missing Windows data directory.");
+    return directory2;
+  }
   if (platform === "darwin")
-    return import_node_path.default.join((0, import_node_os.homedir)(), "Library", "Application Support", "CommitDefender");
+    return import_node_path2.default.join((0, import_node_os.homedir)(), "Library", "Application Support", "CommitDefender");
   if (platform === "linux") {
     const configured2 = process.env.XDG_DATA_HOME;
-    return import_node_path.default.join(configured2 && import_node_path.default.isAbsolute(configured2) ? configured2 : import_node_path.default.join((0, import_node_os.homedir)(), ".local", "share"), "CommitDefender");
+    return import_node_path2.default.join(configured2 && import_node_path2.default.isAbsolute(configured2) ? configured2 : import_node_path2.default.join((0, import_node_os.homedir)(), ".local", "share"), "CommitDefender");
   }
   throw new LocalStoreError("unsupported-platform", "Local storage requires a supported OS credential store.");
 }
 function discoverLocalIdentity(cwd, profileId) {
-  const git3 = (args) => (0, import_node_child_process.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
+  const git3 = (args) => (0, import_node_child_process2.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 1e4,
@@ -1956,9 +2098,9 @@ function discoverLocalIdentity(cwd, profileId) {
     env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }
   }).trim();
   try {
-    const root2 = (0, import_node_fs.realpathSync)(git3(["--path-format=absolute", "--show-toplevel"]));
-    const common3 = (0, import_node_fs.realpathSync)(git3(["--path-format=absolute", "--git-common-dir"]));
-    const directory = (0, import_node_fs.realpathSync)(git3(["--path-format=absolute", "--git-dir"]));
+    const root2 = (0, import_node_fs2.realpathSync)(git3(["--path-format=absolute", "--show-toplevel"]));
+    const common3 = (0, import_node_fs2.realpathSync)(git3(["--path-format=absolute", "--git-common-dir"]));
+    const directory2 = (0, import_node_fs2.realpathSync)(git3(["--path-format=absolute", "--git-dir"]));
     return clientIdentity({
       mode: "standalone",
       profileId,
@@ -1966,7 +2108,7 @@ function discoverLocalIdentity(cwd, profileId) {
       worktreeKey: contentHash({
         version: 1,
         commonDirectory: common3,
-        gitDirectory: directory,
+        gitDirectory: directory2,
         root: root2
       })
     });
@@ -2079,9 +2221,23 @@ function summarizeLocalReviews(reports, options) {
 }
 
 // node_modules/@gcr/client-core/dist/local-credentials.js
-var import_node_child_process2 = require("node:child_process");
+var import_node_child_process3 = require("node:child_process");
+async function windowsCredential(service, reference, action, secret) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: "credential",
+    service,
+    reference,
+    action,
+    ...secret ? { bytes: Buffer.from(secret).toString("base64") } : {}
+  }));
+  return {
+    code: result.missing ? 44 : 0,
+    stdout: result.bytes ? Buffer.from(result.bytes, "base64").toString("utf8") : "",
+    stderr: ""
+  };
+}
 var run = (file, args, input) => new Promise((resolve4, reject) => {
-  const child = (0, import_node_child_process2.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+  const child = (0, import_node_child_process3.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
   const stdout = [];
   const stderr = [];
   let bytes = 0;
@@ -2132,11 +2288,16 @@ var PlatformLocalKeyStore = class {
     this.platform = platform;
     this.command = command;
     token(service);
-    if (!["darwin", "linux"].includes(platform))
+    if (!["darwin", "linux", "win32"].includes(platform))
       throw new LocalStoreError("unsupported-platform", "No supported OS credential store adapter.");
   }
   async invoke(operation, reference, key3) {
     token(reference);
+    if (this.platform === "win32") {
+      if (operation === "write" && key3?.byteLength !== 32)
+        throw unavailable();
+      return windowsCredential(this.service, reference, operation, key3 ? Buffer.from(Buffer.from(key3).toString("base64")) : void 0);
+    }
     if (this.platform === "darwin") {
       if (operation === "write") {
         if (key3?.byteLength !== 32)
@@ -2160,7 +2321,7 @@ var PlatformLocalKeyStore = class {
   }
   async read(reference) {
     const result = await this.invoke("read", reference);
-    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+    if (["darwin", "win32"].includes(this.platform) && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
@@ -2186,7 +2347,7 @@ var PlatformLocalKeyStore = class {
   }
   async remove(reference) {
     const result = await this.invoke("remove", reference);
-    if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44))
+    if (result.code !== 0 && !(["darwin", "win32"].includes(this.platform) && result.code === 44))
       throw unavailable();
   }
 };
@@ -2202,13 +2363,15 @@ var PlatformCentralCredentialStore = class {
   constructor(platform = process.platform, command = run) {
     this.platform = platform;
     this.command = command;
-    if (!["darwin", "linux"].includes(platform))
+    if (!["darwin", "linux", "win32"].includes(platform))
       throw unavailable();
   }
   invoke(operation, reference, secret) {
     token(reference);
     if (secret !== void 0)
       validateCentralApiKey(secret);
+    if (this.platform === "win32")
+      return windowsCredential(this.service, reference, operation, secret ? Buffer.from(secret, "utf8") : void 0);
     if (this.platform === "darwin") {
       if (operation === "write")
         return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference} -s ${this.service} -w ${secret}
@@ -2233,7 +2396,7 @@ var PlatformCentralCredentialStore = class {
   }
   async read(reference) {
     const result = await this.invoke("read", reference);
-    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+    if (["darwin", "win32"].includes(this.platform) && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
@@ -2251,31 +2414,38 @@ var PlatformCentralCredentialStore = class {
 };
 
 // node_modules/@gcr/client-core/dist/local-records.js
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 var import_promises2 = require("node:fs/promises");
-var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_path4 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/private-files.js
-var import_node_crypto2 = require("node:crypto");
-var import_node_fs2 = require("node:fs");
+var import_node_crypto3 = require("node:crypto");
+var import_node_fs3 = require("node:fs");
 var import_promises = require("node:fs/promises");
-var import_node_path2 = __toESM(require("node:path"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
 function privateMode(stat, expected) {
   if (typeof process.getuid === "function" && stat.uid !== process.getuid() || (stat.mode & 63) !== 0) {
     throw new LocalStoreError("insecure-storage", `Local ${expected} must be owned by the current user with private permissions.`);
   }
 }
-async function privateRoot(directory) {
-  const created = await (0, import_promises.mkdir)(directory, { recursive: true, mode: 448 });
-  const stat = await (0, import_promises.lstat)(directory);
+async function privateRoot(directory2) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return result.path;
+  }
+  const created = await (0, import_promises.mkdir)(directory2, { recursive: true, mode: 448 });
+  const stat = await (0, import_promises.lstat)(directory2);
   if (!stat.isDirectory() || stat.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage root must be a real directory.");
   privateMode(stat, "directory");
-  const root2 = await (0, import_promises.realpath)(directory);
+  const root2 = await (0, import_promises.realpath)(directory2);
   if (created) {
     const first = await (0, import_promises.realpath)(created);
-    for (let current = root2; current === first || current.startsWith(first + import_node_path2.default.sep); current = import_node_path2.default.dirname(current)) {
-      await syncDirectory(import_node_path2.default.dirname(current));
+    for (let current = root2; current === first || current.startsWith(first + import_node_path3.default.sep); current = import_node_path3.default.dirname(current)) {
+      await syncDirectory(import_node_path3.default.dirname(current));
     }
   }
   return root2;
@@ -2283,11 +2453,18 @@ async function privateRoot(directory) {
 async function privateDirectory(parent, name) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name) || name === "." || name === "..")
     throw new LocalStoreError("insecure-storage", "Invalid local storage component.");
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(parent)
+    }));
+    return privateRoot(import_node_path3.default.join(parent, name));
+  }
   const parentStat = await (0, import_promises.lstat)(parent);
   if (!parentStat.isDirectory() || parentStat.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage parent is not a directory.");
   privateMode(parentStat, "directory");
-  const target = import_node_path2.default.join(parent, name);
+  const target = import_node_path3.default.join(parent, name);
   let created = false;
   try {
     await (0, import_promises.mkdir)(target, { mode: 448 });
@@ -2304,8 +2481,15 @@ async function privateDirectory(parent, name) {
     await syncDirectory(parent);
   return target;
 }
-async function syncDirectory(directory) {
-  const handle2 = await (0, import_promises.open)(directory, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+async function syncDirectory(directory2) {
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return;
+  }
+  const handle2 = await (0, import_promises.open)(directory2, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
   try {
     await handle2.sync();
   } finally {
@@ -2313,9 +2497,21 @@ async function syncDirectory(directory) {
   }
 }
 async function readPrivateFile(file, maxBytes) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "read",
+      path: import_node_path3.default.resolve(file),
+      maximum: maxBytes
+    }));
+    if (result.missing)
+      return void 0;
+    if (typeof result.bytes !== "string")
+      throw new LocalStoreError("corrupt-storage", "Missing Windows file result.");
+    return Buffer.from(result.bytes, "base64");
+  }
   let handle2;
   try {
-    handle2 = await (0, import_promises.open)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+    handle2 = await (0, import_promises.open)(file, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
   } catch (error2) {
     if (errorCode(error2) === "ENOENT")
       return void 0;
@@ -2344,9 +2540,19 @@ async function readPrivateFile(file, maxBytes) {
   }
 }
 async function publishImmutable(file, bytes) {
-  const directory = import_node_path2.default.dirname(file);
-  const temporary = import_node_path2.default.join(directory, `.pending-${(0, import_node_crypto2.randomUUID)()}`);
-  const handle2 = await (0, import_promises.open)(temporary, import_node_fs2.constants.O_WRONLY | import_node_fs2.constants.O_CREAT | import_node_fs2.constants.O_EXCL | import_node_fs2.constants.O_NOFOLLOW, 384);
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "publish",
+      path: import_node_path3.default.resolve(file),
+      bytes: Buffer.from(bytes).toString("base64")
+    }));
+    if (typeof result.published !== "boolean")
+      throw new LocalStoreError("commit-unknown", "Missing Windows publication result.");
+    return result.published;
+  }
+  const directory2 = import_node_path3.default.dirname(file);
+  const temporary = import_node_path3.default.join(directory2, `.pending-${(0, import_node_crypto3.randomUUID)()}`);
+  const handle2 = await (0, import_promises.open)(temporary, import_node_fs3.constants.O_WRONLY | import_node_fs3.constants.O_CREAT | import_node_fs3.constants.O_EXCL | import_node_fs3.constants.O_NOFOLLOW, 384);
   try {
     await handle2.writeFile(bytes);
     await handle2.sync();
@@ -2359,7 +2565,7 @@ async function publishImmutable(file, bytes) {
       throw error2;
     }
     try {
-      await syncDirectory(directory);
+      await syncDirectory(directory2);
     } catch {
       throw new LocalStoreError("commit-unknown", "Local file was published but durability could not be confirmed. Re-read before retrying.");
     }
@@ -2374,7 +2580,7 @@ async function publishImmutable(file, bytes) {
 var maximumRevision = 999999999999;
 var maximumPlaintext = 16 * 1024 * 1024;
 var maximumEnvelope = 24 * 1024 * 1024;
-var digest = (bytes) => (0, import_node_crypto3.createHash)("sha256").update(bytes).digest("hex");
+var digest = (bytes) => (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex");
 var corrupt = () => new LocalStoreError("corrupt-storage", "Local encrypted record is missing, malformed or fails authentication.");
 var conflict = () => new LocalStoreError("revision-conflict", "Local record changed. Reload it before applying this edit.");
 var validateId = (id4) => {
@@ -2405,8 +2611,8 @@ function binary(value, size) {
     throw corrupt();
   return bytes;
 }
-async function profileKey(directory, profileId, keys2) {
-  const referenceFile = import_node_path3.default.join(directory, "key-ref.json");
+async function profileKey(directory2, profileId, keys2) {
+  const referenceFile = import_node_path4.default.join(directory2, "key-ref.json");
   const read = async () => {
     const bytes = await readPrivateFile(referenceFile, 1024);
     if (!bytes)
@@ -2423,15 +2629,15 @@ async function profileKey(directory, profileId, keys2) {
   const existing = await read();
   if (existing)
     return existing;
-  if ((await (0, import_promises2.readdir)(directory)).some((name) => !name.startsWith(".pending-"))) {
+  if ((await (0, import_promises2.readdir)(directory2)).some((name) => !name.startsWith(".pending-"))) {
     const raced = await read();
     if (raced)
       return raced;
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
-  const id4 = (0, import_node_crypto3.randomUUID)();
+  const id4 = (0, import_node_crypto4.randomUUID)();
   const reference = `${profileId}.${id4}`;
-  const candidate = (0, import_node_crypto3.randomBytes)(32);
+  const candidate = (0, import_node_crypto4.randomBytes)(32);
   let preserve = false;
   try {
     await keys2.write(reference, candidate);
@@ -2458,9 +2664,9 @@ var LocalRecordStore = class _LocalRecordStore {
   directory;
   closed = false;
   #key;
-  constructor(scope, directory, key3) {
+  constructor(scope, directory2, key3) {
     this.scope = scope;
-    this.directory = directory;
+    this.directory = directory2;
     this.#key = key3;
   }
   static async open(options) {
@@ -2471,14 +2677,14 @@ var LocalRecordStore = class _LocalRecordStore {
     const local = await privateDirectory(profile, "local");
     const key3 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
     try {
-      let directory = local;
+      let directory2 = local;
       if (scope.kind === "repository") {
-        directory = await privateDirectory(directory, "repositories");
-        directory = await privateDirectory(directory, scope.repositoryKey);
-        directory = await privateDirectory(directory, scope.worktreeKey);
+        directory2 = await privateDirectory(directory2, "repositories");
+        directory2 = await privateDirectory(directory2, scope.repositoryKey);
+        directory2 = await privateDirectory(directory2, scope.worktreeKey);
       } else
-        directory = await privateDirectory(directory, "profile");
-      return new _LocalRecordStore(scope, directory, key3);
+        directory2 = await privateDirectory(directory2, "profile");
+      return new _LocalRecordStore(scope, directory2, key3);
     } catch (error2) {
       key3.fill(0);
       throw error2;
@@ -2511,7 +2717,7 @@ var LocalRecordStore = class _LocalRecordStore {
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
       try {
-        await (0, import_promises2.lstat)(import_node_path3.default.join(namespace, id4));
+        await (0, import_promises2.lstat)(import_node_path4.default.join(namespace, id4));
       } catch (error2) {
         if (errorCode(error2) === "ENOENT")
           return void 0;
@@ -2520,40 +2726,40 @@ var LocalRecordStore = class _LocalRecordStore {
     }
     return privateDirectory(namespace, id4);
   }
-  async head(directory) {
-    const entries = await (0, import_promises2.readdir)(directory);
+  async head(directory2) {
+    const entries = await (0, import_promises2.readdir)(directory2);
     if (entries.some((name2) => name2 !== "blobs" && !name2.startsWith(".pending-") && !/^\d{12}\.json$/.test(name2)))
       throw corrupt();
     const names = entries.filter((name2) => /^\d{12}\.json$/.test(name2)).sort();
     const name = names.at(-1);
     if (!name)
       return void 0;
-    const marker = parse(await readPrivateFile(import_node_path3.default.join(directory, name), 1024));
+    const marker = parse(await readPrivateFile(import_node_path4.default.join(directory2, name), 1024));
     onlyFields(marker, ["formatVersion", "revision", "blob", "sha256"]);
     if (marker.formatVersion !== 1 || marker.revision !== Number(name.slice(0, 12)) || !Number.isSafeInteger(marker.revision) || Number(marker.revision) < 1 || typeof marker.blob !== "string" || !/^[a-f0-9-]{36}\.enc$/.test(marker.blob) || typeof marker.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(marker.sha256))
       throw corrupt();
     return marker;
   }
   async read(kind, id4) {
-    const directory = await this.recordDirectory(kind, id4);
-    if (!directory)
+    const directory2 = await this.recordDirectory(kind, id4);
+    if (!directory2)
       return void 0;
     for (let attempt = 0; attempt < 3; attempt++) {
-      const marker = await this.head(directory);
+      const marker = await this.head(directory2);
       if (!marker)
         return void 0;
       try {
-        return await this.readRevision(directory, kind, id4, marker);
+        return await this.readRevision(directory2, kind, id4, marker);
       } catch (error2) {
-        if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
+        if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory2))?.revision === marker.revision)
           throw error2;
       }
     }
     throw conflict();
   }
-  async readRevision(directory, kind, id4, marker) {
-    const blobs = await privateDirectory(directory, "blobs");
-    const bytes = await readPrivateFile(import_node_path3.default.join(blobs, marker.blob), maximumEnvelope);
+  async readRevision(directory2, kind, id4, marker) {
+    const blobs = await privateDirectory(directory2, "blobs");
+    const bytes = await readPrivateFile(import_node_path4.default.join(blobs, marker.blob), maximumEnvelope);
     if (!bytes || digest(bytes) !== marker.sha256)
       throw corrupt();
     const envelope = parse(bytes);
@@ -2562,7 +2768,7 @@ var LocalRecordStore = class _LocalRecordStore {
       throw corrupt();
     let plaintext;
     try {
-      const decipher = (0, import_node_crypto3.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
+      const decipher = (0, import_node_crypto4.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
       decipher.setAAD(this.aad(kind, id4, marker.revision));
       decipher.setAuthTag(binary(envelope.tag, 16));
       plaintext = Buffer.concat([decipher.update(binary(envelope.ciphertext)), decipher.final()]);
@@ -2599,7 +2805,7 @@ var LocalRecordStore = class _LocalRecordStore {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision >= maximumRevision)
       throw conflict();
     const snapshot = canonicalJson(deleted ? { deleted: true } : { deleted: false, value }, maximumPlaintext);
-    const directory = await this.recordDirectory(kind, id4, true);
+    const directory2 = await this.recordDirectory(kind, id4, true);
     const previous3 = await this.read(kind, id4);
     if ((previous3?.revision ?? 0) !== expectedRevision || previous3?.deleted)
       throw conflict();
@@ -2607,8 +2813,8 @@ var LocalRecordStore = class _LocalRecordStore {
     const plaintext = Buffer.from(snapshot);
     let bytes;
     try {
-      const iv = (0, import_node_crypto3.randomBytes)(12);
-      const cipher = (0, import_node_crypto3.createCipheriv)("aes-256-gcm", this.#key, iv);
+      const iv = (0, import_node_crypto4.randomBytes)(12);
+      const cipher = (0, import_node_crypto4.createCipheriv)("aes-256-gcm", this.#key, iv);
       cipher.setAAD(this.aad(kind, id4, revision));
       const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       bytes = Buffer.from(canonicalJson({
@@ -2620,15 +2826,15 @@ var LocalRecordStore = class _LocalRecordStore {
     } finally {
       plaintext.fill(0);
     }
-    const blobs = await privateDirectory(directory, "blobs");
-    const blob = `${(0, import_node_crypto3.randomUUID)()}.enc`;
-    const blobPath = import_node_path3.default.join(blobs, blob);
+    const blobs = await privateDirectory(directory2, "blobs");
+    const blob = `${(0, import_node_crypto4.randomUUID)()}.enc`;
+    const blobPath = import_node_path4.default.join(blobs, blob);
     if (!await publishImmutable(blobPath, bytes))
       throw conflict();
     let preserve = false;
     try {
       const marker = { formatVersion: 1, revision, blob, sha256: digest(bytes) };
-      preserve = await publishImmutable(import_node_path3.default.join(directory, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
+      preserve = await publishImmutable(import_node_path4.default.join(directory2, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
       if (!preserve)
         throw conflict();
       return deleted ? { revision, deleted: true } : { revision, deleted: false, value: JSON.parse(snapshot).value };
@@ -2658,15 +2864,15 @@ var LocalRecordStore = class _LocalRecordStore {
     const current = await this.read(kind, id4);
     if (!current?.deleted)
       throw conflict();
-    const directory = await this.recordDirectory(kind, id4);
-    const marker = await this.head(directory);
-    const blobs = await privateDirectory(directory, "blobs");
+    const directory2 = await this.recordDirectory(kind, id4);
+    const marker = await this.head(directory2);
+    const blobs = await privateDirectory(directory2, "blobs");
     let complete = true;
     for (const name of await (0, import_promises2.readdir)(blobs)) {
       if (name === marker.blob || !/^[a-f0-9-]{36}\.enc$/.test(name))
         continue;
       try {
-        await (0, import_promises2.unlink)(import_node_path3.default.join(blobs, name));
+        await (0, import_promises2.unlink)(import_node_path4.default.join(blobs, name));
       } catch (error2) {
         if (errorCode(error2) !== "ENOENT")
           complete = false;
@@ -2682,7 +2888,7 @@ var LocalRecordStore = class _LocalRecordStore {
 };
 
 // node_modules/@gcr/client-core/dist/local-knowledge.js
-var import_node_crypto4 = require("node:crypto");
+var import_node_crypto5 = require("node:crypto");
 function withHash(value) {
   return localKnowledge({ ...value, hash: contentHash(value) });
 }
@@ -2749,7 +2955,7 @@ var LocalKnowledgeStore = class {
     const now = this.timestamp();
     const item = withHash({
       ...draft,
-      id: (0, import_node_crypto4.randomUUID)(),
+      id: (0, import_node_crypto5.randomUUID)(),
       scope: this.records.scope,
       revision: 1,
       state: "candidate",
@@ -3054,7 +3260,7 @@ var LocalHistoryStore = class {
 };
 
 // node_modules/@gcr/client-core/dist/source-policy.js
-var import_node_path4 = __toESM(require("node:path"), 1);
+var import_node_path5 = __toESM(require("node:path"), 1);
 var generated = /* @__PURE__ */ new Set([
   "node_modules",
   "__pycache__",
@@ -3238,7 +3444,7 @@ function sourcePathPolicy(patterns = []) {
       return "private-data";
     if (parts2.some((part) => generated.has(part)))
       return "generated";
-    if (binary2.has(import_node_path4.default.posix.extname(name)))
+    if (binary2.has(import_node_path5.default.posix.extname(name)))
       return "binary";
     if (matches(file))
       return "user-excluded";
@@ -3247,9 +3453,9 @@ function sourcePathPolicy(patterns = []) {
 }
 
 // node_modules/@gcr/client-core/dist/source-snapshot.js
-var import_node_crypto5 = require("node:crypto");
-var hash = (bytes) => (0, import_node_crypto5.createHash)("sha256").update(bytes).digest("hex");
-var blobId = (bytes, format) => (0, import_node_crypto5.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+var import_node_crypto6 = require("node:crypto");
+var hash = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
+var blobId = (bytes, format) => (0, import_node_crypto6.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 var key = (side2, file) => `${side2}:${file}`;
 function paths(values = []) {
   if (!Array.isArray(values) || values.length > 1e4)
@@ -3493,11 +3699,11 @@ var definition = { id: "gcr-standalone-review", revision: 1, reviewOnly: true, b
 var builtinReviewSkill = Object.freeze({ ...definition, hash: contentHash(definition) });
 
 // node_modules/@gcr/client-core/dist/central-cache.js
-var import_node_crypto8 = require("node:crypto");
-var import_node_path5 = __toESM(require("node:path"), 1);
+var import_node_crypto9 = require("node:crypto");
+var import_node_path6 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/central-binding.js
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 var KnowledgeSyncError = class extends Error {
   code;
   constructor(code3, message2) {
@@ -3551,12 +3757,12 @@ var TrustedCentralBinding = class {
       for (const [id4, value] of input.trustedKeys) {
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id4))
           throw invalid2();
-        const key3 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
+        const key3 = typeof value === "string" ? (0, import_node_crypto7.createPublicKey)(value) : value;
         if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
           throw invalid2();
-        this.#keys.set(id4, (0, import_node_crypto6.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
+        this.#keys.set(id4, (0, import_node_crypto7.createPublicKey)(key3.export({ type: "spki", format: "pem" })));
       }
-      this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
+      this.id = (0, import_node_crypto7.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
       Object.freeze(this);
     } catch {
       throw invalid2();
@@ -3568,7 +3774,7 @@ var TrustedCentralBinding = class {
 };
 
 // node_modules/@gcr/client-core/dist/knowledge-signature.js
-var import_node_crypto7 = require("node:crypto");
+var import_node_crypto8 = require("node:crypto");
 function verifyKnowledgeManifest(value, options) {
   const manifest = signedKnowledgeManifest(value);
   const payload = manifest.payload;
@@ -3580,11 +3786,11 @@ function verifyKnowledgeManifest(value, options) {
   const trusted = options.trustedKeys.get(payload.signingKeyId);
   if (!trusted)
     throw Error("Untrusted knowledge signing key");
-  const key3 = typeof trusted === "string" ? (0, import_node_crypto7.createPublicKey)(trusted) : trusted;
+  const key3 = typeof trusted === "string" ? (0, import_node_crypto8.createPublicKey)(trusted) : trusted;
   if (key3.type !== "public" || key3.asymmetricKeyType !== "ed25519")
     throw Error("Invalid knowledge verification key");
   const bytes = canonicalKnowledgeJson(payload);
-  if ((0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto7.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key3, Buffer.from(manifest.signature, "base64url")))
+  if ((0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto8.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key3, Buffer.from(manifest.signature, "base64url")))
     throw Error("Invalid knowledge manifest signature");
   const issued = Date.parse(payload.issuedAt), until = Date.parse(options.mode === "online" ? payload.refreshAfter : payload.offlineValidUntil);
   if (!Number.isFinite(options.now) || issued > options.now + 3e4 || options.now >= until)
@@ -3601,7 +3807,7 @@ function verifyKnowledgeManifest(value, options) {
 
 // node_modules/@gcr/client-core/dist/central-cache.js
 var parts = ["policy", "collective", "personal"];
-var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto9.createHash)("sha256").update(bytes).digest("hex");
 var error = (code3) => new KnowledgeSyncError(code3, {
   "invalid-binding": "Invalid central binding.",
   "repository-mismatch": "Local Git remotes no longer match the selected repository.",
@@ -3635,7 +3841,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("invalid-binding");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path5.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
+      dataDirectory: import_node_path6.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
     });
     return new _CentralKnowledgeCache(records, options.binding, options.now ?? Date.now);
   }
@@ -3809,7 +4015,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     if (options.signal?.aborted)
       cancel();
     const timer = setTimeout(() => controller.abort("timeout"), timeout);
-    const token2 = (0, import_node_crypto8.randomUUID)();
+    const token2 = (0, import_node_crypto9.randomUUID)();
     let generation;
     let authorizationUncertain = false;
     try {
@@ -3919,7 +4125,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         const bundle = this.bundle(parsed, part, manifest);
         this.check(controller.signal);
         await this.owned(token2, generation);
-        const id4 = (0, import_node_crypto8.randomUUID)();
+        const id4 = (0, import_node_crypto9.randomUUID)();
         await this.records.write("knowledge", id4, bundle, 0);
         refs[part] = id4;
       }
@@ -4109,7 +4315,7 @@ var localReviewTools = Object.freeze(["list_files", "read_file", "search_code"])
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
 var import_promises3 = require("node:timers/promises");
-var import_node_crypto9 = require("node:crypto");
+var import_node_crypto10 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/review-history.js
 function historyReadRoute(repositoryId, value) {
@@ -4326,7 +4532,7 @@ var KnowledgeHttpTransport = class {
       const bodies = "item" in data ? [data.item] : "items" in data ? data.items : [];
       for (const entry of bodies) {
         const item = "snapshot" in entry ? entry.snapshot : entry;
-        if ("body" in item && "contentHash" in item && (0, import_node_crypto9.createHash)("sha256").update(item.body).digest("hex") !== item.contentHash)
+        if ("body" in item && "contentHash" in item && (0, import_node_crypto10.createHash)("sha256").update(item.body).digest("hex") !== item.contentHash)
           throw Error("history-body-hash");
       }
       return data;
@@ -4456,11 +4662,11 @@ var ReviewSubmissionDeliveryError = class extends Error {
 };
 
 // node_modules/@gcr/client-core/dist/central-connection.js
-var import_node_path6 = __toESM(require("node:path"), 1);
-var import_node_crypto10 = require("node:crypto");
+var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_crypto11 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/repository-binding.js
-var import_node_child_process3 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 var mismatch = () => new KnowledgeSyncError("repository-mismatch", "Git remotes do not match the selected central repository. Check the repository and reconnect.");
 function canonicalRepositoryRemote(raw) {
   try {
@@ -4500,7 +4706,7 @@ function canonicalRepositoryRemote(raw) {
 function localRepositoryRemotes(root2) {
   const git3 = (args) => {
     try {
-      return (0, import_node_child_process3.execFileSync)("git", ["-C", root2, "--no-optional-locks", ...args], {
+      return (0, import_node_child_process4.execFileSync)("git", ["-C", root2, "--no-optional-locks", ...args], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         timeout: 1e4,
@@ -4563,7 +4769,7 @@ var CentralConnections = class _CentralConnections {
       throw denied();
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path6.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
+      dataDirectory: import_node_path7.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
     });
     return new _CentralConnections(records, options, options.credentials ?? new PlatformCentralCredentialStore());
   }
@@ -4684,7 +4890,7 @@ var CentralConnections = class _CentralConnections {
       ca: config.ca,
       offlineBehavior: behavior,
       ...mapped ? { repositoryBinding: mapped } : {},
-      credentialReference: "gcr-" + (0, import_node_crypto10.randomUUID)(),
+      credentialReference: "gcr-" + (0, import_node_crypto11.randomUUID)(),
       keyId: identity.keyId,
       clientId,
       expiresAt: identity.expiresAt
@@ -4803,7 +5009,7 @@ var CentralConnections = class _CentralConnections {
     const { generation } = await cache.connectionState();
     const records = await LocalRecordStore.open({
       ...this.options,
-      dataDirectory: import_node_path6.default.join(this.options.dataDirectory ?? defaultLocalDataDirectory(), "central-pr-history", id4)
+      dataDirectory: import_node_path7.default.join(this.options.dataDirectory ?? defaultLocalDataDirectory(), "central-pr-history", id4)
     });
     const key3 = contentHash(request);
     try {
@@ -5067,8 +5273,8 @@ var KnowledgeSyncLoop = class {
 };
 
 // node_modules/@gcr/client-core/dist/review-requests.js
-var import_node_path7 = __toESM(require("node:path"), 1);
-var import_node_crypto11 = require("node:crypto");
+var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_crypto12 = require("node:crypto");
 var ReviewRequestError = class extends Error {
   code;
   retryAt;
@@ -5105,7 +5311,7 @@ var ReviewRequests = class _ReviewRequests {
       throw new ReviewRequestError("request-invalid");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path7.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
+      dataDirectory: import_node_path8.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
     });
     return new _ReviewRequests(records, options.now ?? Date.now);
   }
@@ -5171,7 +5377,7 @@ var ReviewRequests = class _ReviewRequests {
   /** A caller renews its priority while waiting for or executing a manual review.
    * Expiration releases scheduling priority only; it never retries an unknown model. */
   async prioritizeManual(token2) {
-    const selected = token2 ?? (0, import_node_crypto11.randomUUID)();
+    const selected = token2 ?? (0, import_node_crypto12.randomUUID)();
     return this.retry(async () => {
       const state = await this.priorityState();
       const existing = state.value.holders.find((holder) => holder.token === selected);
@@ -5277,7 +5483,7 @@ var ReviewRequests = class _ReviewRequests {
         return { kind: "interrupted", request: state.value };
       if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
         return { kind: "finished", request: state.value };
-      const token2 = (0, import_node_crypto11.randomUUID)(), generation = state.value.generation + 1;
+      const token2 = (0, import_node_crypto12.randomUUID)(), generation = state.value.generation + 1;
       const request = await this.put(state, {
         ...state.value,
         state: "claimed",
@@ -5309,8 +5515,8 @@ var ReviewRequests = class _ReviewRequests {
   }
   async begin(lease, reason, limits = {}) {
     reviewTrigger(reason);
-    const minimum = limits.minimumIntervalMs ?? 0, maximum = limits.maximumReviewsPerHour ?? 1e3;
-    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum) || maximum < 1 || maximum > 1e3)
+    const minimum = limits.minimumIntervalMs ?? 0, maximum2 = limits.maximumReviewsPerHour ?? 1e3;
+    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum2) || maximum2 < 1 || maximum2 > 1e3)
       throw new ReviewRequestError("request-invalid");
     const owned = await this.owned(lease);
     if (owned.value.state !== "claimed")
@@ -5328,7 +5534,7 @@ var ReviewRequests = class _ReviewRequests {
       if (reservations.some((r) => r.key === lease.key && r.generation === lease.generation))
         return;
       const last = reservations.filter((r) => r.reason === reason).at(-1);
-      const retryAt = Math.max(reservations.length >= maximum ? reservations[reservations.length - maximum].at + 36e5 : 0, last ? last.at + minimum : 0);
+      const retryAt = Math.max(reservations.length >= maximum2 ? reservations[reservations.length - maximum2].at + 36e5 : 0, last ? last.at + minimum : 0);
       if (retryAt > now)
         throw new ReviewRequestError("request-deferred", retryAt);
       reservations.push({ key: lease.key, generation: lease.generation, at: now, reason });
@@ -5567,14 +5773,14 @@ var AutomaticReviewScheduler = class {
 };
 
 // node_modules/@gcr/client-core/dist/automatic-source.js
-var import_node_child_process4 = require("node:child_process");
-var import_node_fs3 = require("node:fs");
+var import_node_child_process5 = require("node:child_process");
+var import_node_fs4 = require("node:fs");
 var import_promises4 = require("node:fs/promises");
-var import_node_path8 = __toESM(require("node:path"), 1);
-var import_node_crypto12 = require("node:crypto");
+var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_crypto13 = require("node:crypto");
 async function git(cwd, args, input, allow = [0]) {
   return new Promise((resolve4, reject) => {
-    const child = (0, import_node_child_process4.execFile)("git", [
+    const child = (0, import_node_child_process5.execFile)("git", [
       ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
       "-c",
       "core.fsmonitor=false",
@@ -5752,8 +5958,8 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
   file = sourcePath(file);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path8.default.join(root2, file);
-  let parent = import_node_path8.default.dirname(absolute);
+  const absolute = import_node_path9.default.join(root2, file);
+  let parent = import_node_path9.default.dirname(absolute);
   for (; ; ) {
     try {
       if (await (0, import_promises4.realpath)(parent) !== parent)
@@ -5762,17 +5968,17 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     } catch (error2) {
       if (error2.code !== "ENOENT" || parent === root2)
         return void 0;
-      parent = import_node_path8.default.dirname(parent);
+      parent = import_node_path9.default.dirname(parent);
     }
   }
-  if (parent !== root2 && !parent.startsWith(root2 + import_node_path8.default.sep))
+  if (parent !== root2 && !parent.startsWith(root2 + import_node_path9.default.sep))
     return void 0;
   const ignored = knownChanged ? "" : await git(root2, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
     return void 0;
   let handle2;
   try {
-    handle2 = await (0, import_promises4.open)(absolute, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW | import_node_fs3.constants.O_NONBLOCK);
+    handle2 = await (0, import_promises4.open)(absolute, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
     const before = await handle2.stat();
     if (!before.isFile() || before.size > 2 * 1024 * 1024)
       return void 0;
@@ -5790,7 +5996,7 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
     if (buffer.subarray(0, length).includes(0))
       return void 0;
     const changed = knownChanged || await workingTreeChanged(root2, file);
-    return { hash: (0, import_node_crypto12.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
+    return { hash: (0, import_node_crypto13.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       const changed = knownChanged || await workingTreeChanged(root2, file);
@@ -5803,9 +6009,9 @@ async function readAutomaticFile(root2, file, excludes, knownChanged = false) {
 }
 
 // node_modules/@gcr/client-core/dist/service-jobs.js
-var import_node_path9 = __toESM(require("node:path"), 1);
+var import_node_path10 = __toESM(require("node:path"), 1);
 var import_promises5 = require("node:fs/promises");
-var import_node_crypto13 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/service-watch.js
 var uuidPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -5868,7 +6074,7 @@ var invalid3 = () => new LocalServiceError("service-invalid");
 function reviewOptions(input) {
   const value = structuredClone(input);
   value.maximumReviewsPerHour ??= 6;
-  if (!value || !["standalone", "centralized"].includes(value.mode) || typeof value.model !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(value.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(value.reasoningEffort) || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path9.default.isAbsolute(value.executorPath)))
+  if (!value || !["standalone", "centralized"].includes(value.mode) || typeof value.model !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(value.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(value.reasoningEffort) || value.mode === "standalone" && value.connectionId !== void 0 || value.centralClientId !== void 0 && (value.mode !== "centralized" || !["gcr-cli", "commit-defender"].includes(value.centralClientId)) || value.mode === "centralized" && (typeof value.connectionId !== "string" || !value.connectionId || value.connectionId.length > 128) || value.executorPath !== void 0 && (typeof value.executorPath !== "string" || !import_node_path10.default.isAbsolute(value.executorPath)))
     throw invalid3();
   for (const [field, max] of [
     ["durationMs", 6e5],
@@ -5900,7 +6106,7 @@ var ServiceJobs = class _ServiceJobs {
       throw invalid3();
     return new _ServiceJobs(await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
+      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "local-service")
     }), options.scope.profileId, options);
   }
   close() {
@@ -5952,7 +6158,7 @@ var ServiceJobs = class _ServiceJobs {
             throw new LocalServiceError("service-busy");
         }
       }
-      const token2 = (0, import_node_crypto13.randomUUID)();
+      const token2 = (0, import_node_crypto14.randomUUID)();
       try {
         await this.records.write("settings", "owner", { version: 1, pid: process.pid, token: token2 }, row?.revision ?? 0);
         return token2;
@@ -6003,7 +6209,7 @@ var ServiceJobs = class _ServiceJobs {
     if (!row || row.deleted)
       return;
     const value = row.value;
-    if (value.version !== 1 || value.key !== key3 || value.revision !== row.revision || !import_node_path9.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key3 || !Array.isArray(value.triggers))
+    if (value.version !== 1 || value.key !== key3 || value.revision !== row.revision || !import_node_path10.default.isAbsolute(value.root) || contentHash({ repositoryKey: value.repositoryKey, worktreeKey: value.worktreeKey }) !== key3 || !Array.isArray(value.triggers))
       throw invalid3();
     value.triggers.forEach((t) => reviewTrigger(t));
     reviewOptions(value.options);
@@ -6273,16 +6479,16 @@ var ServiceJobs = class _ServiceJobs {
 
 // node_modules/@gcr/client-core/dist/local-service.js
 var import_node_net = __toESM(require("node:net"), 1);
-var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_path11 = __toESM(require("node:path"), 1);
 var import_node_os2 = __toESM(require("node:os"), 1);
 var maximumFrame = 9 * 1024 * 1024;
 async function localServiceAddress(options) {
   if (process.platform === "win32")
     throw new LocalServiceError("service-unavailable");
-  const directory = await privateRoot(import_node_path10.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
-  const data = await privateRoot(import_node_path10.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
+  const directory2 = await privateRoot(import_node_path11.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
+  const data = await privateRoot(import_node_path11.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
   const key3 = contentHash({ profile: options.profileId, data });
-  const socket = import_node_path10.default.join(directory, key3.slice(0, 24));
+  const socket = import_node_path11.default.join(directory2, key3.slice(0, 24));
   if (Buffer.byteLength(socket) > 100)
     throw new LocalServiceError("service-unavailable");
   return socket;
@@ -6345,7 +6551,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6443,7 +6649,7 @@ var LocalReviewActivity = class {
 
 // src/extension.ts
 var fs10 = __toESM(require("fs"));
-var path36 = __toESM(require("path"));
+var path37 = __toESM(require("path"));
 var vscode21 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
@@ -6504,7 +6710,7 @@ var PRIORITY_META = {
 // src/sourcePolicy.ts
 var import_child_process = require("child_process");
 var fs = __toESM(require("fs"));
-var path11 = __toESM(require("path"));
+var path12 = __toESM(require("path"));
 
 // src/excludeFilter.ts
 var import_ignore = __toESM(require_ignore());
@@ -6632,12 +6838,12 @@ var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
   ".lock"
 ]);
 function isBinary(file) {
-  return BINARY_EXTENSIONS.has(path11.posix.extname(file).toLowerCase());
+  return BINARY_EXTENSIONS.has(path12.posix.extname(file).toLowerCase());
 }
 function normalizedSourcePath(value) {
   if (typeof value !== "string") return void 0;
-  const normalized = path11.sep === "\\" ? value.replaceAll("\\", "/") : value;
-  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path11.posix.isAbsolute(normalized) || path11.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
+  const normalized = path12.sep === "\\" ? value.replaceAll("\\", "/") : value;
+  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path12.posix.isAbsolute(normalized) || path12.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
   return normalized;
 }
 function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}) {
@@ -6674,7 +6880,7 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
     let denied2 = false;
     for (let index2 = 0; !options.gitTree && index2 < parts2.length; index2++) {
       try {
-        const stat = fs.lstatSync(path11.join(root2, ...parts2.slice(0, index2 + 1)));
+        const stat = fs.lstatSync(path12.join(root2, ...parts2.slice(0, index2 + 1)));
         if (stat.isSymbolicLink()) {
           deny("symlink");
           denied2 = true;
@@ -6720,7 +6926,7 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
 function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
   const selection = selectReviewInputs(repoRoot, [file], patterns, { purpose });
   if (selection.files.length !== 1) throw new Error(`Source excluded: ${file} (${selection.excluded[0]?.reason ?? "unreadable"})`);
-  const absolute = path11.join(fs.realpathSync(repoRoot), selection.files[0]);
+  const absolute = path12.join(fs.realpathSync(repoRoot), selection.files[0]);
   const fd = fs.openSync(absolute, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
   try {
     const opened = fs.fstatSync(fd);
@@ -6736,13 +6942,13 @@ function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
 
 // src/reviewSource.ts
 var import_crypto = require("crypto");
-var path13 = __toESM(require("path"));
+var path14 = __toESM(require("path"));
 
 // src/gitSnapshot.ts
 var import_child_process2 = require("child_process");
 var fs2 = __toESM(require("fs"));
 var os2 = __toESM(require("os"));
-var path12 = __toESM(require("path"));
+var path13 = __toESM(require("path"));
 function run2(repoRoot, args, input, indexFile) {
   return (0, import_child_process2.execFileSync)("git", [
     "--no-replace-objects",
@@ -6769,15 +6975,15 @@ function run2(repoRoot, args, input, indexFile) {
   });
 }
 function withTemporaryIndex(fn) {
-  const directory = fs2.mkdtempSync(path12.join(os2.tmpdir(), "cd-index-"));
+  const directory2 = fs2.mkdtempSync(path13.join(os2.tmpdir(), "cd-index-"));
   try {
-    return fn(path12.join(directory, "index"));
+    return fn(path13.join(directory2, "index"));
   } finally {
-    fs2.rmSync(directory, { recursive: true, force: true });
+    fs2.rmSync(directory2, { recursive: true, force: true });
   }
 }
 function captureIndexTree(repoRoot) {
-  const indexPath = path12.resolve(repoRoot, run2(repoRoot, ["rev-parse", "--git-path", "index"]).trim());
+  const indexPath = path13.resolve(repoRoot, run2(repoRoot, ["rev-parse", "--git-path", "index"]).trim());
   return withTemporaryIndex((index2) => {
     try {
       fs2.writeFileSync(index2, fs2.readFileSync(indexPath), { mode: 384 });
@@ -6985,7 +7191,7 @@ function rejectFindings(review, count) {
 function validateFindingAnchors(review, sources, singleFile) {
   let rejected = 0;
   review.file_comments = review.file_comments.flatMap((comment) => {
-    const file = singleFile && comment.file === path13.posix.basename(singleFile) ? singleFile : comment.file;
+    const file = singleFile && comment.file === path14.posix.basename(singleFile) ? singleFile : comment.file;
     const content3 = sources.get(file);
     if (!normalizedSourcePath(file) || content3 === void 0 || !validLine(comment.line, content3.split(/\r?\n/).length)) {
       rejected++;
@@ -14313,9 +14519,9 @@ function micromark(value, encoding, options) {
 // node_modules/micromark-util-decode-string/index.js
 var characterEscapeOrReference = /\\([!-/:-@[-`{-~])|&(#(?:\d{1,7}|x[\da-f]{1,6})|[\da-z]{1,31});/gi;
 function decodeString(value) {
-  return value.replace(characterEscapeOrReference, decode);
+  return value.replace(characterEscapeOrReference, decode2);
 }
-function decode($0, $1, $2) {
+function decode2($0, $1, $2) {
   if ($1) {
     return $1;
   }
@@ -16735,7 +16941,7 @@ var domain = {
   tokenize: tokenizeDomain,
   partial: true
 };
-var path14 = {
+var path15 = {
   tokenize: tokenizePath,
   partial: true
 };
@@ -16841,7 +17047,7 @@ function tokenizeWwwAutolink(effects, ok3, nok) {
     }
     effects.enter("literalAutolink");
     effects.enter("literalAutolinkWww");
-    return effects.check(wwwPrefix, effects.attempt(domain, effects.attempt(path14, wwwAfter), nok), nok)(code3);
+    return effects.check(wwwPrefix, effects.attempt(domain, effects.attempt(path15, wwwAfter), nok), nok)(code3);
   }
   function wwwAfter(code3) {
     effects.exit("literalAutolinkWww");
@@ -16891,7 +17097,7 @@ function tokenizeProtocolAutolink(effects, ok3, nok) {
     return nok(code3);
   }
   function afterProtocol(code3) {
-    return code3 === null || asciiControl(code3) || markdownLineEndingOrSpace(code3) || unicodeWhitespace(code3) || unicodePunctuation(code3) ? nok(code3) : effects.attempt(domain, effects.attempt(path14, protocolAfter), nok)(code3);
+    return code3 === null || asciiControl(code3) || markdownLineEndingOrSpace(code3) || unicodeWhitespace(code3) || unicodePunctuation(code3) ? nok(code3) : effects.attempt(domain, effects.attempt(path15, protocolAfter), nok)(code3);
   }
   function protocolAfter(code3) {
     effects.exit("literalAutolinkHttp");
@@ -17278,7 +17484,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path37, match) {
+function findUrl(_, protocol, domain2, path38, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -17291,7 +17497,7 @@ function findUrl(_, protocol, domain2, path37, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path37);
+  const parts2 = splitUrl(domain2 + path38);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -17845,7 +18051,7 @@ function esc(s) {
 }
 
 // src/reviewNavigation.ts
-var path15 = __toESM(require("path"));
+var path16 = __toESM(require("path"));
 var vscode2 = __toESM(require("vscode"));
 var import_crypto4 = require("crypto");
 var SOURCE_SCHEME = "commit-defender-source";
@@ -17925,7 +18131,7 @@ var ReviewNavigation = class {
       );
       return;
     }
-    const uri = vscode2.Uri.file(path15.join(repoRoot, file));
+    const uri = vscode2.Uri.file(path16.join(repoRoot, file));
     const editor = vscode2.workspace.textDocuments.find(
       (document3) => document3.uri.toString() === uri.toString()
     );
@@ -17968,10 +18174,10 @@ var import_crypto6 = require("crypto");
 var import_crypto5 = require("crypto");
 
 // src/diff.ts
-var path16 = __toESM(require("path"));
+var path17 = __toESM(require("path"));
 var MAX_CONTENT_CHARS = 8e4;
 function formatFileContent(file, content3) {
-  const ext = path16.extname(file).replace(/^\./, "");
+  const ext = path17.extname(file).replace(/^\./, "");
   return `### ${file}
 
 \`\`\`${ext}
@@ -18064,9 +18270,9 @@ function applyMarkers(comments2, sources) {
 
 // src/skills.ts
 var fs3 = __toESM(require("fs"));
-var path17 = __toESM(require("path"));
+var path18 = __toESM(require("path"));
 function loadSkillMaterial(repoRoot, excludePatterns = []) {
-  const skillDir = path17.join(repoRoot, ".commit-defender");
+  const skillDir = path18.join(repoRoot, ".commit-defender");
   let entries;
   try {
     if (fs3.lstatSync(skillDir).isSymbolicLink()) return { text: "", truncated: false };
@@ -18476,7 +18682,7 @@ var API_DEFAULT_ENDPOINTS = {
 var import_child_process3 = require("child_process");
 var import_promises6 = require("fs/promises");
 var import_os = require("os");
-var path18 = __toESM(require("path"));
+var path19 = __toESM(require("path"));
 var DEFAULT_OPENAI = API_DEFAULT_ENDPOINTS.openai;
 var DEFAULT_ANTHROPIC = API_DEFAULT_ENDPOINTS.anthropic;
 var DEFAULT_GEMINI = API_DEFAULT_ENDPOINTS.gemini;
@@ -18747,9 +18953,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises6.mkdtemp)(path18.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path18.join(dir, "review-request.md");
-  const schemaFile = path18.join(dir, "output-schema.json");
+  const dir = await (0, import_promises6.mkdtemp)(path19.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path19.join(dir, "review-request.md");
+  const schemaFile = path19.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises6.writeFile)(promptFile, `${req.systemPrompt}
@@ -18796,8 +19002,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises6.mkdtemp)(path18.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path18.join(dir, "output-schema.json");
+  const dir = await (0, import_promises6.mkdtemp)(path19.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path19.join(dir, "output-schema.json");
   try {
     await (0, import_promises6.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -19634,6 +19840,16 @@ function standaloneErrorMessage(code3) {
       return "The selected local executor is unavailable. Check the Codex executable, model and reasoning effort.";
     case "credential-unavailable":
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
+    case "insecure-storage":
+      return "The local data path has unsafe permissions or a filesystem link. Existing files were preserved; choose a private local data location.";
+    case "storage-unavailable":
+      return "The local storage helper or filesystem is unavailable. Check the installed extension and local disk access.";
+    case "unsupported-platform":
+      return "This execution environment or storage volume is unsupported. Windows manual review requires a local NTFS checkout.";
+    case "corrupt-storage":
+      return "Encrypted local data failed integrity verification. Existing data was preserved.";
+    case "commit-unknown":
+      return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
     case "central-snapshot-changed":
@@ -19678,6 +19894,11 @@ var safeCodes = /* @__PURE__ */ new Set([
   "model-failed",
   "executor-unavailable",
   "credential-unavailable",
+  "insecure-storage",
+  "storage-unavailable",
+  "unsupported-platform",
+  "corrupt-storage",
+  "commit-unknown",
   "needs-context",
   "central-snapshot-changed",
   "policy-unavailable",
@@ -20046,9 +20267,9 @@ var ReviewExecutionOwner = class {
 };
 
 // src/localKnowledge.ts
-var import_node_crypto14 = require("node:crypto");
+var import_node_crypto15 = require("node:crypto");
 var import_promises7 = require("node:fs/promises");
-var import_node_path11 = __toESM(require("node:path"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // src/localKnowledgeEditor.ts
 var escapeHtml = (value) => value.replace(
@@ -20177,7 +20398,7 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
     title: update.title,
     body: update.body,
     appliesTo: update.appliesTo,
-    sources: [{ kind: "user-note", id: (0, import_node_crypto14.randomUUID)() }],
+    sources: [{ kind: "user-note", id: (0, import_node_crypto15.randomUUID)() }],
     ...update.expiresAt ? { expiresAt: update.expiresAt } : {}
   };
   const draft = kind === "memory" ? {
@@ -20192,7 +20413,7 @@ async function readLocalHistory(location2, ports = {}) {
   const scope = knowledgeScope(location2);
   const dataDirectory = ports.dataDirectory ?? defaultLocalDataDirectory();
   try {
-    await (0, import_promises7.lstat)(import_node_path11.default.join(dataDirectory, "profiles", scope.profileId));
+    await (0, import_promises7.lstat)(import_node_path12.default.join(dataDirectory, "profiles", scope.profileId));
   } catch (error2) {
     if (error2 && typeof error2 === "object" && "code" in error2 && error2.code === "ENOENT")
       return [];
@@ -20246,7 +20467,7 @@ async function checkLocalContextFreshness(report, ports = {}, now = /* @__PURE__
 }
 
 // src/centralConnection.ts
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_path13 = __toESM(require("node:path"));
 function selectionKey(scope) {
   if (scope.kind !== "repository")
     throw new StandaloneReviewError("central-connection-required");
@@ -20311,7 +20532,7 @@ async function readCentralHistory(location2, selection, ports = {}) {
       const records = await LocalRecordStore.open({
         scope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path12.default.join(
+        dataDirectory: import_node_path13.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id
@@ -20359,12 +20580,12 @@ async function readSelectedHistory(location2, selection, ports = {}) {
 
 // src/automaticReviews.ts
 var vscode4 = __toESM(require("vscode"));
-var import_node_path14 = __toESM(require("node:path"));
+var import_node_path15 = __toESM(require("node:path"));
 var import_promises9 = require("node:fs/promises");
 
 // src/config.ts
 var fs4 = __toESM(require("fs"));
-var path21 = __toESM(require("path"));
+var path22 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
 function getStandaloneReviewSettings(fileCount, repoRoot) {
   const cfg = vscode3.workspace.getConfiguration("commitDefender", repoRoot ? vscode3.Uri.file(repoRoot) : void 0);
@@ -20434,7 +20655,7 @@ function resolveCodexPath(configured2) {
   const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
     for (const name of names) {
-      const candidate = path21.join(extensionPath, "bin", `${platform}-${arch}`, name);
+      const candidate = path22.join(extensionPath, "bin", `${platform}-${arch}`, name);
       if (fs4.existsSync(candidate)) {
         return candidate;
       }
@@ -20448,24 +20669,24 @@ function resolveExternalCliPath(configured2, name) {
   }
   const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
   const candidates = [];
-  for (const dir of (process.env.PATH ?? "").split(path21.delimiter).filter(Boolean)) {
+  for (const dir of (process.env.PATH ?? "").split(path22.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
-      candidates.push(path21.join(dir, executable));
+      candidates.push(path22.join(dir, executable));
     }
   }
   const userHome = process.env.HOME || process.env.USERPROFILE;
   if (userHome) {
     for (const dir of [".local/bin", "bin", ".npm-global/bin"]) {
       for (const executable of executableNames) {
-        candidates.push(path21.join(userHome, dir, executable));
+        candidates.push(path22.join(userHome, dir, executable));
       }
     }
-    const nvmVersions = path21.join(userHome, ".nvm", "versions", "node");
+    const nvmVersions = path22.join(userHome, ".nvm", "versions", "node");
     try {
       const versions = fs4.readdirSync(nvmVersions).sort((a, b) => b.localeCompare(a, void 0, { numeric: true, sensitivity: "base" }));
       for (const version of versions) {
         for (const executable of executableNames) {
-          candidates.push(path21.join(nvmVersions, version, "bin", executable));
+          candidates.push(path22.join(nvmVersions, version, "bin", executable));
         }
       }
     } catch {
@@ -20473,7 +20694,7 @@ function resolveExternalCliPath(configured2, name) {
   }
   for (const dir of ["/usr/local/bin", "/opt/homebrew/bin"]) {
     for (const executable of executableNames) {
-      candidates.push(path21.join(dir, executable));
+      candidates.push(path22.join(dir, executable));
     }
   }
   return candidates.find((candidate) => fs4.existsSync(candidate)) ?? configured2;
@@ -20509,11 +20730,11 @@ function automaticSettings(readUser, override) {
     const value = readUser(setting);
     if (typeof value === "boolean") result[field] = value;
   }
-  const minimum = readUser("automaticSaveIntervalSeconds"), maximum = readUser("automaticReviewsPerHour");
+  const minimum = readUser("automaticSaveIntervalSeconds"), maximum2 = readUser("automaticReviewsPerHour");
   if (typeof minimum === "number" && Number.isInteger(minimum) && minimum >= 10 && minimum <= 3600)
     result.minimumSaveIntervalMs = minimum * 1e3;
-  if (typeof maximum === "number" && Number.isInteger(maximum) && maximum >= 1 && maximum <= 100)
-    result.maximumReviewsPerHour = maximum;
+  if (typeof maximum2 === "number" && Number.isInteger(maximum2) && maximum2 >= 1 && maximum2 <= 100)
+    result.maximumReviewsPerHour = maximum2;
   if (override !== void 0) {
     if (!override || typeof override !== "object")
       return { ...result, paused: true };
@@ -20556,7 +20777,7 @@ function readAutomaticOverride(store, scope) {
 }
 
 // src/automaticStageCheckpoint.ts
-var import_node_path13 = __toESM(require("node:path"));
+var import_node_path14 = __toESM(require("node:path"));
 var import_promises8 = require("node:fs/promises");
 var id3 = "automatic-stage-observation-v1";
 var invalid5 = () => new Error("Saved automatic stage observation is invalid.");
@@ -20568,7 +20789,7 @@ var AutomaticStageCheckpoint = class {
     if (!create) {
       try {
         await (0, import_promises8.lstat)(
-          import_node_path13.default.join(
+          import_node_path14.default.join(
             this.ports.dataDirectory ?? defaultLocalDataDirectory(),
             "profiles",
             profileId
@@ -20733,8 +20954,8 @@ var AutomaticReviews = class {
       vscode4.workspace.onDidChangeTextDocument((e) => {
         if (!e.document.isDirty || !e.contentChanges.length) return;
         for (const [root2, value] of this.roots)
-          if (e.document.uri.fsPath.startsWith(root2 + import_node_path14.default.sep)) {
-            const file = import_node_path14.default.relative(root2, e.document.uri.fsPath).split(import_node_path14.default.sep).join("/");
+          if (e.document.uri.fsPath.startsWith(root2 + import_node_path15.default.sep)) {
+            const file = import_node_path15.default.relative(root2, e.document.uri.fsPath).split(import_node_path15.default.sep).join("/");
             if (value.backgroundReady && this.ports.backgroundSave)
               void this.track(
                 this.ports.backgroundSave(root2, { file, reason: "dirty" })
@@ -20955,8 +21176,8 @@ var AutomaticReviews = class {
     if (settings.paused || !settings.save && !settings.stage) return value;
     const watcher = vscode4.workspace.createFileSystemWatcher(
       new vscode4.RelativePattern(
-        vscode4.Uri.file(import_node_path14.default.dirname(observed.indexPath)),
-        import_node_path14.default.basename(observed.indexPath)
+        vscode4.Uri.file(import_node_path15.default.dirname(observed.indexPath)),
+        import_node_path15.default.basename(observed.indexPath)
       ),
       false,
       false,
@@ -20980,7 +21201,7 @@ var AutomaticReviews = class {
       );
       const changed = (uri) => {
         if (sourcePathPolicy(this.excludes())(
-          import_node_path14.default.relative(observed.root, uri.fsPath).split(import_node_path14.default.sep).join("/")
+          import_node_path15.default.relative(observed.root, uri.fsPath).split(import_node_path15.default.sep).join("/")
         ))
           return;
         const key3 = uri.toString();
@@ -21061,13 +21282,13 @@ var AutomaticReviews = class {
     const generation = this.generation, fileKey = uri.toString(), fileGeneration = (this.fileGeneration.get(fileKey) ?? 0) + 1;
     this.fileGeneration.set(fileKey, fileGeneration);
     try {
-      let absolute = import_node_path14.default.resolve(uri.fsPath);
-      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path14.default.sep)).sort((a, b) => b.length - a.length)[0];
+      let absolute = import_node_path15.default.resolve(uri.fsPath);
+      let root2 = [...this.roots.keys()].filter((r) => absolute.startsWith(r + import_node_path15.default.sep)).sort((a, b) => b.length - a.length)[0];
       if (!root2) {
-        const directory = await (0, import_promises9.realpath)(import_node_path14.default.dirname(absolute));
-        absolute = import_node_path14.default.join(directory, import_node_path14.default.basename(absolute));
+        const directory2 = await (0, import_promises9.realpath)(import_node_path15.default.dirname(absolute));
+        absolute = import_node_path15.default.join(directory2, import_node_path15.default.basename(absolute));
         const observed2 = await observeAutomaticRepository(
-          directory,
+          directory2,
           this.excludes()
         );
         if (generation !== this.generation) return;
@@ -21089,7 +21310,7 @@ var AutomaticReviews = class {
       const state = this.roots.get(root2);
       if (state.settings.paused || !state.settings.save || !state.backgroundReady)
         return;
-      const file = import_node_path14.default.relative(root2, absolute).split(import_node_path14.default.sep).join("/");
+      const file = import_node_path15.default.relative(root2, absolute).split(import_node_path15.default.sep).join("/");
       await this.scan(root2);
       const observed = await observeAutomaticFile(root2, file, this.excludes());
       if (generation !== this.generation || this.fileGeneration.get(fileKey) !== fileGeneration || !observed)
@@ -21181,7 +21402,7 @@ var AutomaticReviews = class {
   }
   async manage() {
     const choices = [...this.roots.keys()].map((root2) => ({
-      label: import_node_path14.default.basename(root2),
+      label: import_node_path15.default.basename(root2),
       description: root2,
       root: root2
     }));
@@ -21259,25 +21480,25 @@ var AutomaticReviews = class {
 
 // src/backgroundHooks.ts
 var import_promises11 = __toESM(require("node:fs/promises"));
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 var import_node_os3 = __toESM(require("node:os"));
-var import_node_crypto16 = require("node:crypto");
-var import_node_child_process6 = require("node:child_process");
+var import_node_crypto17 = require("node:crypto");
+var import_node_child_process7 = require("node:child_process");
 var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
 var import_promises10 = __toESM(require("node:fs/promises"));
-var import_node_path15 = __toESM(require("node:path"));
-var import_node_crypto15 = require("node:crypto");
-var import_node_child_process5 = require("node:child_process");
-var digest2 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
+var import_node_path16 = __toESM(require("node:path"));
+var import_node_crypto16 = require("node:crypto");
+var import_node_child_process6 = require("node:child_process");
+var digest2 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
 var quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
 function git2(root2, args, missing = false) {
   const env3 = { ...process.env };
   for (const key3 of Object.keys(env3))
     if (key3.startsWith("GIT_")) delete env3[key3];
   try {
-    return (0, import_node_child_process5.execFileSync)("git", ["-C", root2, ...args], {
+    return (0, import_node_child_process6.execFileSync)("git", ["-C", root2, ...args], {
       env: env3,
       encoding: "utf8",
       stdio: "pipe",
@@ -21289,17 +21510,17 @@ function git2(root2, args, missing = false) {
     throw new Error("Git hook configuration unavailable.");
   }
 }
-async function privateDirectory2(directory) {
-  await import_promises10.default.mkdir(directory, { recursive: true, mode: 448 });
-  const stat = await import_promises10.default.lstat(directory);
+async function privateDirectory2(directory2) {
+  await import_promises10.default.mkdir(directory2, { recursive: true, mode: 448 });
+  const stat = await import_promises10.default.lstat(directory2);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw new Error(
       "Hook storage must be a private directory owned by this OS user."
     );
-  return import_promises10.default.realpath(directory);
+  return import_promises10.default.realpath(directory2);
 }
 async function writeJson(file, value) {
-  const tmp = `${file}.${(0, import_node_crypto15.randomUUID)()}`;
+  const tmp = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
   try {
     await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
       flag: "wx",
@@ -21326,8 +21547,8 @@ async function readState(file) {
     throw error2;
   }
 }
-async function lock(directory) {
-  const file = import_node_path15.default.join(directory, "owner.lock");
+async function lock(directory2) {
+  const file = import_node_path16.default.join(directory2, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const handle2 = await import_promises10.default.open(file, "wx", 384);
@@ -21396,14 +21617,14 @@ async function location(root2, dataDirectory) {
     worktree ? "config.worktree" : "config"
   ]);
   const base2 = await privateDirectory2(
-    import_node_path15.default.join(dataDirectory, "managed-hooks")
+    import_node_path16.default.join(dataDirectory, "managed-hooks")
   );
-  const directory = await privateDirectory2(import_node_path15.default.join(base2, digest2(config)));
+  const directory2 = await privateDirectory2(import_node_path16.default.join(base2, digest2(config)));
   return {
     root: root2,
     config,
-    directory,
-    stateFile: import_node_path15.default.join(directory, "state.json")
+    directory: directory2,
+    stateFile: import_node_path16.default.join(directory2, "state.json")
   };
 }
 var configured = (root2, config) => {
@@ -21418,7 +21639,7 @@ async function verifyFiles(state) {
   for (const [name, hash4] of Object.entries(state.files)) {
     if (!/^[a-z][a-z0-9-]*$/.test(name))
       throw Error("Invalid managed hook name.");
-    const file = import_node_path15.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
+    const file = import_node_path16.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises10.default.readFile(file)) !== hash4)
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved."
@@ -21478,7 +21699,7 @@ async function configureManagedHooks(options) {
           "This worktree has hooks registered to another profile. Disable that registration first."
         );
       if (![route2.node, route2.cli, route2.dataDirectory, options.adapter].every(
-        import_node_path15.default.isAbsolute
+        import_node_path16.default.isAbsolute
       ) || !Number.isInteger(route2.waitMs) || route2.waitMs < 0 || route2.waitMs > 6e5 || !route2.triggers.length || route2.triggers.some((t) => !["commit", "push"].includes(t)))
         throw Error("Invalid hook route.");
       state.routes[loc.root] = structuredClone(route2);
@@ -21510,7 +21731,7 @@ async function configureManagedHooks(options) {
     const names = new Set(hookNames);
     try {
       for (const name of await import_promises10.default.readdir(
-        import_node_path15.default.resolve(loc.root, state.original)
+        import_node_path16.default.resolve(loc.root, state.original)
       ))
         if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
     } catch (error2) {
@@ -21520,7 +21741,7 @@ async function configureManagedHooks(options) {
         throw error2;
     }
     for (const name of names) {
-      const original = import_node_path15.default.join(state.original, name);
+      const original = import_node_path16.default.join(state.original, name);
       const text8 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
@@ -21529,11 +21750,11 @@ fi
 ` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi
 exit 0
 `;
-      const file = import_node_path15.default.join(loc.directory, name);
+      const file = import_node_path16.default.join(loc.directory, name);
       if (!state.files[name]) {
         await import_promises10.default.writeFile(file, text8, { flag: "wx", mode: 448 });
       } else {
-        const temporary = `${file}.${(0, import_node_crypto15.randomUUID)()}`;
+        const temporary = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
         try {
           await import_promises10.default.writeFile(temporary, text8, { flag: "wx", mode: 448 });
           await import_promises10.default.rename(temporary, file);
@@ -21572,14 +21793,14 @@ exit 0
 
 // src/backgroundHooks.ts
 var key2 = "background-hooks.v1";
-var hash3 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
-async function privateCopy(source2, directory, name) {
-  const bytes = await import_promises11.default.readFile(source2), targetDir = import_node_path16.default.join(directory, hash3(bytes));
+var hash3 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
+async function privateCopy(source2, directory2, name) {
+  const bytes = await import_promises11.default.readFile(source2), targetDir = import_node_path17.default.join(directory2, hash3(bytes));
   await import_promises11.default.mkdir(targetDir, { recursive: true, mode: 448 });
   const stat = await import_promises11.default.lstat(targetDir);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw Error("Service installation directory is not private.");
-  const target = import_node_path16.default.join(targetDir, name);
+  const target = import_node_path17.default.join(targetDir, name);
   try {
     await import_promises11.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
   } catch (error2) {
@@ -21596,7 +21817,7 @@ var BackgroundHooks = class {
     this.store = store;
     this.call = call;
   }
-  sessionId = (0, import_node_crypto16.randomUUID)();
+  sessionId = (0, import_node_crypto17.randomUUID)();
   epoch = 0;
   generations = /* @__PURE__ */ new Map();
   pending = Promise.resolve();
@@ -21657,7 +21878,7 @@ var BackgroundHooks = class {
     }
     await configureManagedHooks({
       root: owned.root,
-      adapter: import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs")
+      adapter: import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs")
     });
     await this.store.update(
       key2,
@@ -21832,7 +22053,7 @@ var BackgroundHooks = class {
       const env3 = { ...process.env };
       for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
       const node2 = JSON.parse(
-        (await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+        (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
           nodePath,
           [
             "-p",
@@ -21841,22 +22062,22 @@ var BackgroundHooks = class {
           { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4 }
         )).stdout
       );
-      if (node2.major < 22 || !import_node_path16.default.isAbsolute(node2.path))
+      if (node2.major < 22 || !import_node_path17.default.isAbsolute(node2.path))
         throw Error("Background review service requires Node.js 22 or newer.");
       const dataDirectory = defaultLocalDataDirectory(), location2 = { profileId: settings.profileId, dataDirectory };
-      const programs = import_node_path16.default.join(dataDirectory, "service-programs");
+      const programs = import_node_path17.default.join(dataDirectory, "service-programs");
       await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
       const cli = await privateCopy(
-        import_node_path16.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
+        import_node_path17.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
         "gcr.mjs"
       );
       const adapter = await privateCopy(
-        import_node_path16.default.join(this.extensionPath, "out/advisory-hook.cjs"),
+        import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs"),
         programs,
         "advisory.cjs"
       );
-      const started = await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+      const started = await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
         node2.path,
         [
           cli,
@@ -21884,7 +22105,7 @@ var BackgroundHooks = class {
         throw Error(
           "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
         );
-      const executorPath = import_node_path16.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process6.execFile)(
+      const executorPath = import_node_path17.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
         { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
@@ -22030,7 +22251,7 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallback
 
 // src/backgroundRecovery.ts
 var vscode5 = __toESM(require("vscode"));
-var import_node_path17 = __toESM(require("node:path"));
+var import_node_path18 = __toESM(require("node:path"));
 async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
   try {
     const jobs = (await hooks.status()).filter(
@@ -22044,7 +22265,7 @@ async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
     }
     const selected = await vscode5.window.showQuickPick(
       jobs.map((job2) => ({
-        label: `${import_node_path17.default.basename(job2.root)} \xB7 ${job2.trigger}`,
+        label: `${import_node_path18.default.basename(job2.root)} \xB7 ${job2.trigger}`,
         description: `${new Date(job2.createdAt).toLocaleString()} \xB7 ${job2.profileId}`,
         detail: `${job2.root} \xB7 ${job2.id}${job2.supportsRecovery ? "" : " \xB7 Service restart required"}`,
         job: job2
@@ -22157,9 +22378,9 @@ var CentralSynchronization = class {
 
 // src/centralConnectionView.ts
 var vscode8 = __toESM(require("vscode"));
-var import_node_fs4 = require("node:fs");
+var import_node_fs5 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
-var import_node_crypto17 = require("node:crypto");
+var import_node_crypto18 = require("node:crypto");
 
 // src/centralKnowledgeView.ts
 var vscode6 = __toESM(require("vscode"));
@@ -22422,7 +22643,7 @@ function centralStatusHtml(value) {
 async function readConfig(file) {
   const handle2 = await (0, import_promises12.open)(
     file,
-    import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NONBLOCK | import_node_fs4.constants.O_NOFOLLOW
+    import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NONBLOCK | import_node_fs5.constants.O_NOFOLLOW
   );
   try {
     if (!(await handle2.stat()).isFile())
@@ -22551,7 +22772,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const config = await readConfig(files[0].fsPath);
       config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
       const pins = config.trustedKeys.map(
-        (k) => `${k.id}: ${(0, import_node_crypto17.createHash)("sha256").update(k.pem).digest("hex")}`
+        (k) => `${k.id}: ${(0, import_node_crypto18.createHash)("sha256").update(k.pem).digest("hex")}`
       ).join(" \xB7 ");
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       const confirmed = await vscode8.window.showInformationMessage(
@@ -22784,7 +23005,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
 }
 
 // src/localKnowledgeView.ts
-var import_node_crypto18 = require("node:crypto");
+var import_node_crypto19 = require("node:crypto");
 var vscode9 = __toESM(require("vscode"));
 async function showLocalKnowledge(context, scope, changed) {
   const panel = vscode9.window.createWebviewPanel(
@@ -22811,7 +23032,7 @@ async function showLocalKnowledge(context, scope, changed) {
   });
   const render = (notice = "") => {
     if (closed) return;
-    nonce = (0, import_node_crypto18.randomBytes)(16).toString("hex");
+    nonce = (0, import_node_crypto19.randomBytes)(16).toString("hex");
     panel.webview.html = localKnowledgeHtml(
       nonce,
       `${scope.profileId} \xB7 ${scope.kind === "profile" ? "All repositories in this profile" : "This repository and worktree"}`,
@@ -22952,7 +23173,7 @@ async function showLocalKnowledge(context, scope, changed) {
 
 // src/modelCredentials.ts
 var import_promises13 = require("node:fs/promises");
-var import_node_path18 = __toESM(require("node:path"));
+var import_node_path19 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code3) {
@@ -23026,7 +23247,7 @@ function checkedReference(value, binding) {
   return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path18.default.join(
+  return import_node_path19.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -23035,7 +23256,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path18.default.join(
+    const file = import_node_path19.default.join(
       dataDirectory,
       "profiles",
       reference.profileId,
@@ -23168,9 +23389,9 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 }
 
 // src/hook/config.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path19 = __toESM(require("node:path"));
-var import_node_crypto19 = require("node:crypto");
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path20 = __toESM(require("node:path"));
+var import_node_crypto20 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
     super(
@@ -23183,10 +23404,10 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path19.default.join(import_node_fs5.default.realpathSync(repoRoot), ".commit-defender");
-  if (create) import_node_fs5.default.mkdirSync(dir, { recursive: true, mode: 448 });
+  const dir = import_node_path20.default.join(import_node_fs6.default.realpathSync(repoRoot), ".commit-defender");
+  if (create) import_node_fs6.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
-    const stat = import_node_fs5.default.lstatSync(dir);
+    const stat = import_node_fs6.default.lstatSync(dir);
     if (!stat.isDirectory() || stat.isSymbolicLink() || process.getuid && stat.uid !== process.getuid())
       throw failure();
   } catch (error2) {
@@ -23200,20 +23421,20 @@ function readHookConfigSnapshot(repoRoot) {
   const dir = safeDirectory(repoRoot, false);
   let fd;
   try {
-    fd = import_node_fs5.default.openSync(
-      import_node_path19.default.join(dir, "hook.json"),
-      import_node_fs5.default.constants.O_RDONLY | import_node_fs5.default.constants.O_NOFOLLOW | import_node_fs5.default.constants.O_NONBLOCK
+    fd = import_node_fs6.default.openSync(
+      import_node_path20.default.join(dir, "hook.json"),
+      import_node_fs6.default.constants.O_RDONLY | import_node_fs6.default.constants.O_NOFOLLOW | import_node_fs6.default.constants.O_NONBLOCK
     );
   } catch (error2) {
     if (error2.code === "ENOENT") return void 0;
     throw failure();
   }
   try {
-    const stat = import_node_fs5.default.fstatSync(fd);
+    const stat = import_node_fs6.default.fstatSync(fd);
     if (!stat.isFile() || stat.size > 1e6 || process.getuid && stat.uid !== process.getuid())
       throw failure();
     const bytes = Buffer.alloc(1000001);
-    const length = import_node_fs5.default.readSync(fd, bytes, 0, bytes.length, 0);
+    const length = import_node_fs6.default.readSync(fd, bytes, 0, bytes.length, 0);
     if (length > 1e6) throw failure();
     const text8 = bytes.subarray(0, length).toString("utf8");
     const raw = JSON.parse(text8);
@@ -23222,7 +23443,7 @@ function readHookConfigSnapshot(repoRoot) {
   } catch {
     throw failure();
   } finally {
-    import_node_fs5.default.closeSync(fd);
+    import_node_fs6.default.closeSync(fd);
   }
 }
 function configToHookJson(cfg, reference) {
@@ -23318,39 +23539,39 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path19.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path19.default.join(dir, `.hook-lock-${(0, import_node_crypto19.randomUUID)()}`);
+  const lock2 = import_node_path20.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path20.default.join(dir, `.hook-lock-${(0, import_node_crypto20.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
-    nonce: (0, import_node_crypto19.randomUUID)()
+    nonce: (0, import_node_crypto20.randomUUID)()
   });
-  import_node_fs5.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs5.default.writeFileSync(import_node_path19.default.join(prepared, "owner.json"), owner, {
+  import_node_fs6.default.mkdirSync(prepared, { mode: 448 });
+  import_node_fs6.default.writeFileSync(import_node_path20.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        import_node_fs5.default.renameSync(prepared, lock2);
+        import_node_fs6.default.renameSync(prepared, lock2);
         break;
       } catch (error2) {
         if (!["ENOTEMPTY", "EEXIST"].includes(
           error2.code ?? ""
         ) || attempt)
           throw failure();
-        const stat = import_node_fs5.default.lstatSync(lock2);
+        const stat = import_node_fs6.default.lstatSync(lock2);
         if (!stat.isDirectory() || stat.isSymbolicLink() || process.getuid && stat.uid !== process.getuid())
           throw failure();
-        const entries = import_node_fs5.default.readdirSync(lock2);
+        const entries = import_node_fs6.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path19.default.join(lock2, "owner.json");
-        const ownerStat = import_node_fs5.default.lstatSync(ownerPath);
+        const ownerPath = import_node_path20.default.join(lock2, "owner.json");
+        const ownerStat = import_node_fs6.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
-        const prior = import_node_fs5.default.readFileSync(ownerPath, "utf8");
+        const prior = import_node_fs6.default.readFileSync(ownerPath, "utf8");
         const parsed = JSON.parse(prior);
         if (parsed.format !== 1 || !Number.isSafeInteger(parsed.pid) || parsed.pid <= 0 || typeof parsed.nonce !== "string")
           throw failure();
@@ -23361,52 +23582,52 @@ function acquireLock(dir) {
           if (error3.code !== "ESRCH")
             throw failure();
         }
-        if (import_node_fs5.default.lstatSync(lock2).ino !== stat.ino || import_node_fs5.default.readFileSync(ownerPath, "utf8") !== prior)
+        if (import_node_fs6.default.lstatSync(lock2).ino !== stat.ino || import_node_fs6.default.readFileSync(ownerPath, "utf8") !== prior)
           throw failure();
-        import_node_fs5.default.unlinkSync(ownerPath);
-        import_node_fs5.default.rmdirSync(lock2);
+        import_node_fs6.default.unlinkSync(ownerPath);
+        import_node_fs6.default.rmdirSync(lock2);
       }
     }
   } catch {
-    import_node_fs5.default.rmSync(prepared, { recursive: true, force: true });
+    import_node_fs6.default.rmSync(prepared, { recursive: true, force: true });
     throw failure();
   }
   return () => {
-    if (import_node_fs5.default.readFileSync(import_node_path19.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs6.default.readFileSync(import_node_path20.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs5.default.unlinkSync(import_node_path19.default.join(lock2, "owner.json"));
-    import_node_fs5.default.rmdirSync(lock2);
+    import_node_fs6.default.unlinkSync(import_node_path20.default.join(lock2, "owner.json"));
+    import_node_fs6.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path19.default.join(dir, `.hook-config-${(0, import_node_crypto19.randomUUID)()}`);
+  const temporary = import_node_path20.default.join(dir, `.hook-config-${(0, import_node_crypto20.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    const fd = import_node_fs5.default.openSync(
+    const fd = import_node_fs6.default.openSync(
       temporary,
-      import_node_fs5.default.constants.O_CREAT | import_node_fs5.default.constants.O_EXCL | import_node_fs5.default.constants.O_WRONLY,
+      import_node_fs6.default.constants.O_CREAT | import_node_fs6.default.constants.O_EXCL | import_node_fs6.default.constants.O_WRONLY,
       384
     );
     try {
-      import_node_fs5.default.writeFileSync(fd, JSON.stringify(cfg, null, 2) + "\n");
-      import_node_fs5.default.fsyncSync(fd);
+      import_node_fs6.default.writeFileSync(fd, JSON.stringify(cfg, null, 2) + "\n");
+      import_node_fs6.default.fsyncSync(fd);
     } finally {
-      import_node_fs5.default.closeSync(fd);
+      import_node_fs6.default.closeSync(fd);
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs5.default.renameSync(temporary, import_node_path19.default.join(dir, "hook.json"));
-    const directory = import_node_fs5.default.openSync(dir, import_node_fs5.default.constants.O_RDONLY);
+    import_node_fs6.default.renameSync(temporary, import_node_path20.default.join(dir, "hook.json"));
+    const directory2 = import_node_fs6.default.openSync(dir, import_node_fs6.default.constants.O_RDONLY);
     try {
-      import_node_fs5.default.fsyncSync(directory);
+      import_node_fs6.default.fsyncSync(directory2);
     } finally {
-      import_node_fs5.default.closeSync(directory);
+      import_node_fs6.default.closeSync(directory2);
     }
   } finally {
-    import_node_fs5.default.rmSync(temporary, { force: true });
+    import_node_fs6.default.rmSync(temporary, { force: true });
     release();
   }
 }
@@ -23626,7 +23847,7 @@ async function manageModelCredential(repoRoot) {
 var vscode12 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path29 = __toESM(require("path"));
+var path30 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
@@ -23642,7 +23863,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path29.join(repoRoot, b.file);
+      const absPath = path30.join(repoRoot, b.file);
       const uriKey = vscode11.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -23680,7 +23901,7 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path30 = __toESM(require("path"));
+var path31 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
   _onDidChangeCodeLenses = new vscode12.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
@@ -23693,7 +23914,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path30.relative(last.repoRoot, document3.uri.fsPath).split(path30.sep).join("/");
+    const file = path31.relative(last.repoRoot, document3.uri.fsPath).split(path31.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -23724,7 +23945,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path31 = __toESM(require("path"));
+var path32 = __toESM(require("path"));
 var vscode13 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -23757,7 +23978,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode13.Uri.file(path31.join(repoRoot, b.file));
+    const uri = vscode13.Uri.file(path32.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode13.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -23779,7 +24000,7 @@ var CommentManager = class {
 };
 
 // src/diagnostics.ts
-var path32 = __toESM(require("path"));
+var path33 = __toESM(require("path"));
 var vscode14 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode14.DiagnosticSeverity.Error,
@@ -23799,7 +24020,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode14.Uri.file(path32.join(repoRoot, relFile));
+    const uri = vscode14.Uri.file(path33.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -23822,11 +24043,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path33 = __toESM(require("path"));
+var path34 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path33.relative(path33.resolve(repoRoot), path33.resolve(file)).split(path33.sep).join("/");
+  const relative4 = (file) => path34.relative(path34.resolve(repoRoot), path34.resolve(file)).split(path34.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -23841,18 +24062,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path33.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path34.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path33.join(dir, entry.name);
+      const absolute = path34.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path33.resolve(dirPath));
+  walk(path34.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -24187,7 +24408,7 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path34 = __toESM(require("path"));
+var path35 = __toESM(require("path"));
 var vscode17 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -24214,7 +24435,7 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path34.join(repoRoot, ".gitignore");
+  const gi = path35.join(repoRoot, ".gitignore");
   let text8 = "";
   try {
     text8 = fs9.readFileSync(gi, "utf8");
@@ -24229,7 +24450,7 @@ ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path34.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path35.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -24254,8 +24475,8 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path34.join(repoRoot, ".git", "hooks");
-  const hookPath = path34.join(hookDir, "pre-commit");
+  const hookDir = path35.join(repoRoot, ".git", "hooks");
+  const hookPath = path35.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
@@ -24304,7 +24525,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path34.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path35.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
@@ -24329,14 +24550,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path34.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path35.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path35 = __toESM(require("path"));
+var path36 = __toESM(require("path"));
 var vscode18 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -24407,11 +24628,11 @@ var PanelProvider = class {
     switch (node2.kind) {
       case "file": {
         const item = new vscode18.TreeItem(
-          path35.basename(node2.file),
+          path36.basename(node2.file),
           vscode18.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path35.dirname(node2.file);
+        const dir = path36.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
@@ -24508,7 +24729,7 @@ ${b.comment}`;
         kind: "file",
         id: id4,
         file,
-        absPath: path35.join(this._repoRoot, file),
+        absPath: path36.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id4, blocks)
       };
@@ -24671,17 +24892,17 @@ var StatusBarManager = class {
 
 // src/reviewChat.ts
 var vscode20 = __toESM(require("vscode"));
-var import_node_crypto21 = require("node:crypto");
+var import_node_crypto22 = require("node:crypto");
 
 // src/reviewChatView.ts
-var import_node_crypto20 = require("node:crypto");
+var import_node_crypto21 = require("node:crypto");
 var esc5 = (text8) => text8.replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
 var markdown = (text8) => safeMarkdownHtml(text8, () => void 0);
 var ReviewChatView = class {
-  id = (0, import_node_crypto20.randomBytes)(16).toString("hex");
+  id = (0, import_node_crypto21.randomBytes)(16).toString("hex");
   revision = 0;
   sources = /* @__PURE__ */ new Map();
   findings = /* @__PURE__ */ new Map();
@@ -24726,7 +24947,7 @@ var ReviewChatView = class {
     const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
-      const id4 = (0, import_node_crypto20.randomBytes)(12).toString("hex");
+      const id4 = (0, import_node_crypto21.randomBytes)(12).toString("hex");
       this.findings.set(id4, `Explain finding ${f.id}: ${f.title}`);
       return `<li><button class="link" data-finding="${id4}">${esc5(f.title)}</button></li>`;
     }).join("")}</ul></details>`;
@@ -24735,7 +24956,7 @@ var ReviewChatView = class {
         (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc5(q.question)}</p>${q.answer !== null ? `<div class="user">${esc5(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc5(option)}">${esc5(option)}</button>`).join("")}</div><small>Expires ${esc5(q.expiresAt)}</small>`}</section>`
       ).join("");
       const citations = (t.response?.citations ?? []).map((c, index2) => {
-        const id4 = (0, import_node_crypto20.randomBytes)(12).toString("hex");
+        const id4 = (0, import_node_crypto21.randomBytes)(12).toString("hex");
         this.sources.set(id4, { turnId: t.id, citation: index2 });
         return `<li><button class="link" data-source="${id4}">${esc5(c.location.side)} \xB7 ${esc5(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
       }).join("");
@@ -25019,7 +25240,7 @@ async function openReviewChat(report, repoRoot, context) {
         else if (view.state && (!turn || !["queued", "running"].includes(turn.status)))
           await execute({
             type: "send",
-            turnId: (0, import_node_crypto21.randomUUID)(),
+            turnId: (0, import_node_crypto22.randomUUID)(),
             content: message2.content
           });
       }
@@ -25200,7 +25421,7 @@ async function activate(context) {
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
     const cwd = await resolveRepoRoot() ?? vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path36.isAbsolute(executable) && !fs10.existsSync(executable)) {
+    if (path37.isAbsolute(executable) && !fs10.existsSync(executable)) {
       vscode21.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
@@ -25518,7 +25739,7 @@ async function activate(context) {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path36.relative(last.repoRoot, document3.uri.fsPath).split(path36.sep).join("/");
+    const file = path37.relative(last.repoRoot, document3.uri.fsPath).split(path37.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -25619,7 +25840,7 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode21.Uri.file(path36.join(repoRoot, file)).toString();
+          const uri = vscode21.Uri.file(path37.join(repoRoot, file)).toString();
           return vscode21.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
@@ -25688,7 +25909,7 @@ async function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path36.relative(resolvedRoot, resolvedFile);
+        const relPath = path37.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -25739,7 +25960,7 @@ async function activate(context) {
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path36.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path37.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -25864,7 +26085,7 @@ async function activate(context) {
       if (!(uri instanceof vscode21.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path36.relative(last.repoRoot, uri.fsPath).split(path36.sep).join("/");
+      const file = path37.relative(last.repoRoot, uri.fsPath).split(path37.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
@@ -25963,7 +26184,7 @@ async function activate(context) {
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path36.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path37.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
@@ -26076,7 +26297,7 @@ async function activate(context) {
     if (!vscode21.workspace.isTrusted || !vscode21.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path36.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path37.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -26115,10 +26336,10 @@ async function activate(context) {
     const folder = vscode21.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
-      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path36.sep) || canonicalRoot.startsWith(root2 + path36.sep);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path37.sep) || canonicalRoot.startsWith(root2 + path37.sep);
     });
     if (!folder) return;
-    const displayRoot = path36.resolve(folder.uri.fsPath, path36.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const displayRoot = path37.resolve(folder.uri.fsPath, path37.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
     const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
     if (scope.kind !== "repository") return;
     const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
@@ -26130,9 +26351,9 @@ async function activate(context) {
     const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode21.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
-        return fs10.realpathSync(document3.uri.fsPath) === path36.join(canonicalRoot, file);
+        return fs10.realpathSync(document3.uri.fsPath) === path37.join(canonicalRoot, file);
       } catch {
-        return path36.resolve(document3.uri.fsPath) === path36.resolve(displayRoot, file);
+        return path37.resolve(document3.uri.fsPath) === path37.resolve(displayRoot, file);
       }
     })?.getText());
     findingsStore.update(entry.report, displayRoot, blocks);
@@ -26201,7 +26422,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path36.relative(root2, current) || ".";
+    const rel = path37.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -26218,7 +26439,7 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path36.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path37.join(rel, name) });
     }
     const picked = await vscode21.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -26231,9 +26452,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path36.dirname(current);
+      current = path37.dirname(current);
     } else {
-      current = path36.join(current, picked.label.replace("$(folder) ", ""));
+      current = path37.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }

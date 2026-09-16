@@ -255,17 +255,17 @@ var require_ignore = __commonJS({
     var throwError = (message2, Ctor) => {
       throw new Ctor(message2);
     };
-    var checkPath = (path12, originalPath, doThrow) => {
-      if (!isString(path12)) {
+    var checkPath = (path13, originalPath, doThrow) => {
+      if (!isString(path13)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path12) {
+      if (!path13) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path12)) {
+      if (checkPath.isNotRelative(path13)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -274,7 +274,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path12) => REGEX_TEST_INVALID_PATH.test(path12);
+    var isNotRelative = (path13) => REGEX_TEST_INVALID_PATH.test(path13);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -333,7 +333,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path12, checkUnignored) {
+      _testOne(path13, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -341,7 +341,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path12);
+          const matched = rule.regex.test(path13);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -354,24 +354,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path12 = originalPath && checkPath.convert(originalPath);
+        const path13 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path12,
+          path13,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path12, cache, checkUnignored, slices);
+        return this._t(path13, cache, checkUnignored, slices);
       }
-      _t(path12, cache, checkUnignored, slices) {
-        if (path12 in cache) {
-          return cache[path12];
+      _t(path13, cache, checkUnignored, slices) {
+        if (path13 in cache) {
+          return cache[path13];
         }
         if (!slices) {
-          slices = path12.split(SLASH);
+          slices = path13.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path12] = this._testOne(path12, checkUnignored);
+          return cache[path13] = this._testOne(path13, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -379,24 +379,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path12] = parent.ignored ? parent : this._testOne(path12, checkUnignored);
+        return cache[path13] = parent.ignored ? parent : this._testOne(path13, checkUnignored);
       }
-      ignores(path12) {
-        return this._test(path12, this._ignoreCache, false).ignored;
+      ignores(path13) {
+        return this._test(path13, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path12) => !this.ignores(path12);
+        return (path13) => !this.ignores(path13);
       }
       filter(paths) {
         return makeArray(paths).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path12) {
-        return this._test(path12, this._testCache, true);
+      test(path13) {
+        return this._test(path13, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path12) => checkPath(path12 && checkPath.convert(path12), path12, RETURN_FALSE);
+    var isPathValid = (path13) => checkPath(path13 && checkPath.convert(path13), path13, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -407,14 +407,14 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path12) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path12) || isNotRelative(path12);
+      checkPath.isNotRelative = (path13) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path13) || isNotRelative(path13);
     }
   }
 });
 
 // src/hook/config.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/ai/apiEndpoints.ts
 var API_DEFAULT_ENDPOINTS = {
@@ -425,7 +425,7 @@ var API_DEFAULT_ENDPOINTS = {
 
 // src/modelCredentials.ts
 var import_promises3 = require("node:fs/promises");
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -452,16 +452,16 @@ var integer = (min = 0, max = Number.MAX_SAFE_INTEGER) => (value, at = "$") => {
 var boolean = (value, at = "$") => typeof value === "boolean" ? value : fail(at, "expected boolean");
 var literal = (expected) => (value, at = "$") => value === expected ? expected : fail(at, "unexpected literal");
 var choice = (values) => (value, at = "$") => typeof value === "string" && values.includes(value) ? value : fail(at, "unsupported value");
-var optional = (decode) => (value, at) => value === void 0 ? void 0 : decode(value, at);
-var list = (decode, max = 1e5, min = 0) => (value, at = "$") => {
+var optional = (decode2) => (value, at) => value === void 0 ? void 0 : decode2(value, at);
+var list = (decode2, max = 1e5, min = 0) => (value, at = "$") => {
   if (!Array.isArray(value) || value.length < min || value.length > max)
     return fail(at, "invalid array");
-  return Array.from(value, (entry, index) => decode(entry, `${at}[${index}]`));
+  return Array.from(value, (entry, index) => decode2(entry, `${at}[${index}]`));
 };
 var union = (...decoders) => (value, at = "$") => {
-  for (const decode of decoders) {
+  for (const decode2 of decoders) {
     try {
-      return decode(value, at);
+      return decode2(value, at);
     } catch (error) {
       if (!(error instanceof ContractError))
         throw error;
@@ -477,8 +477,8 @@ var object = (shape) => (value, at = "$") => {
     if (!Object.hasOwn(shape, key))
       fail(`${at}.${key}`, "unknown field");
   const result = {};
-  for (const [key, decode] of Object.entries(shape)) {
-    const parsed = decode(Object.hasOwn(record, key) ? record[key] : void 0, `${at}.${key}`);
+  for (const [key, decode2] of Object.entries(shape)) {
+    const parsed = decode2(Object.hasOwn(record, key) ? record[key] : void 0, `${at}.${key}`);
     if (parsed !== void 0)
       Object.defineProperty(result, key, {
         value: parsed,
@@ -489,8 +489,8 @@ var object = (shape) => (value, at = "$") => {
   }
   return result;
 };
-var refined = (decode, check) => (value, at = "$") => {
-  const result = decode(value, at);
+var refined = (decode2, check) => (value, at = "$") => {
+  const result = decode2(value, at);
   check(result, at);
   return result;
 };
@@ -1555,7 +1555,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/review-history.js
 var uuid = text(36, 36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
-var nullable = (decode) => union(decode, literal(null));
+var nullable = (decode2) => union(decode2, literal(null));
 var short = text(4096);
 var date = text(64);
 var side = nullable(choice(["LEFT", "RIGHT"]));
@@ -1727,14 +1727,14 @@ var reviewHistoryGuidancePage = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-core/dist/local-identity.js
-var import_node_crypto = require("node:crypto");
+var import_node_crypto2 = require("node:crypto");
 var import_node_os = require("node:os");
-var import_node_path = __toESM(require("node:path"), 1);
+var import_node_path2 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/local-errors.js
 var LocalStoreError = class extends Error {
@@ -1746,6 +1746,142 @@ var LocalStoreError = class extends Error {
   }
 };
 var errorCode = (error) => error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : void 0;
+
+// node_modules/@gcr/client-core/dist/windows-native.js
+var import_node_child_process = require("node:child_process");
+var import_node_crypto = require("node:crypto");
+var import_node_fs = require("node:fs");
+var import_node_path = __toESM(require("node:path"), 1);
+var import_node_url = require("node:url");
+var import_meta = {};
+var maximum = 36 * 1024 * 1024;
+var directory = typeof __dirname === "string" ? __dirname : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
+function windowsNativeExecutable() {
+  if (process.platform !== "win32")
+    throw new LocalStoreError("unsupported-platform", "Windows helper required.");
+  try {
+    const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
+    const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
+    const hash = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
+    if (manifest.version !== "1.0.1" || hash !== manifest.sha256)
+      throw Error();
+    return executable;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Windows helper is unavailable.");
+  }
+}
+function decode(stdout) {
+  try {
+    const value = JSON.parse(stdout.trim());
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw Error();
+    return value;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Invalid Windows helper response.");
+  }
+}
+function checkWindowsStorage(result) {
+  if (result.error) {
+    const codes = [
+      "unsupported-platform",
+      "credential-unavailable",
+      "storage-unavailable",
+      "insecure-storage",
+      "corrupt-storage",
+      "commit-unknown",
+      "record-too-large"
+    ];
+    const code = codes.includes(result.error) ? result.error : "storage-unavailable";
+    throw new LocalStoreError(code, `Windows operation failed (${code}).`);
+  }
+  return result;
+}
+function windowsNativeSync(request) {
+  const input = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input) > maximum)
+    throw new LocalStoreError("record-too-large", "Windows request exceeds its limit.");
+  let stdout;
+  try {
+    stdout = (0, import_node_child_process.execFileSync)(windowsNativeExecutable(), [], {
+      input,
+      encoding: "utf8",
+      maxBuffer: maximum,
+      timeout: 15e3,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  } catch (error) {
+    const result = error;
+    if (result.status === 1 && result.stdout)
+      stdout = result.stdout;
+    else
+      throw new LocalStoreError("storage-unavailable", "Windows helper failed.");
+  }
+  return checkWindowsStorage(decode(stdout));
+}
+function windowsNative(request, options = {}) {
+  const input = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input) > maximum)
+    return Promise.reject(new LocalStoreError("record-too-large", "Windows request too large."));
+  if (options.signal?.aborted)
+    return Promise.resolve({ error: "cancelled" });
+  const executable = windowsNativeExecutable();
+  return new Promise((resolve2, reject) => {
+    const child = (0, import_node_child_process.spawn)(executable, [], {
+      windowsHide: true,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const chunks = [];
+    let bytes = 0;
+    let failure2;
+    const stop = (reason) => {
+      failure2 ??= reason;
+      child.kill();
+    };
+    const abort = () => stop("cancelled");
+    const timer = setTimeout(() => stop("timeout"), options.timeoutMs ?? 15e3);
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted)
+      abort();
+    child.stdout.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+      else
+        chunks.push(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+    });
+    child.on("error", () => {
+      failure2 ??= "executable-unavailable";
+    });
+    child.stdin.on("error", () => {
+      failure2 ??= "process-failed";
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
+      if (failure2) {
+        resolve2({ error: failure2 });
+        return;
+      }
+      try {
+        resolve2(decode(Buffer.concat(chunks).toString("utf8")));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    if (request.operation === "process")
+      child.stdin.write(input);
+    else
+      child.stdin.end(input);
+  });
+}
 
 // node_modules/@gcr/client-core/dist/local-identity.js
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
@@ -1794,21 +1930,41 @@ function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   };
   return visit(value, 0);
 }
-var contentHash = (value) => (0, import_node_crypto.createHash)("sha256").update(canonicalJson(value)).digest("hex");
+var contentHash = (value) => (0, import_node_crypto2.createHash)("sha256").update(canonicalJson(value)).digest("hex");
 function defaultLocalDataDirectory(platform = process.platform) {
+  if (platform === "win32") {
+    const directory2 = windowsNativeSync({ operation: "identity" }).dataDirectory;
+    if (!directory2 || !import_node_path2.default.isAbsolute(directory2))
+      throw new LocalStoreError("storage-unavailable", "Missing Windows data directory.");
+    return directory2;
+  }
   if (platform === "darwin")
-    return import_node_path.default.join((0, import_node_os.homedir)(), "Library", "Application Support", "CommitDefender");
+    return import_node_path2.default.join((0, import_node_os.homedir)(), "Library", "Application Support", "CommitDefender");
   if (platform === "linux") {
     const configured = process.env.XDG_DATA_HOME;
-    return import_node_path.default.join(configured && import_node_path.default.isAbsolute(configured) ? configured : import_node_path.default.join((0, import_node_os.homedir)(), ".local", "share"), "CommitDefender");
+    return import_node_path2.default.join(configured && import_node_path2.default.isAbsolute(configured) ? configured : import_node_path2.default.join((0, import_node_os.homedir)(), ".local", "share"), "CommitDefender");
   }
   throw new LocalStoreError("unsupported-platform", "Local storage requires a supported OS credential store.");
 }
 
 // node_modules/@gcr/client-core/dist/local-credentials.js
-var import_node_child_process = require("node:child_process");
+var import_node_child_process2 = require("node:child_process");
+async function windowsCredential(service, reference, action, secret) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: "credential",
+    service,
+    reference,
+    action,
+    ...secret ? { bytes: Buffer.from(secret).toString("base64") } : {}
+  }));
+  return {
+    code: result.missing ? 44 : 0,
+    stdout: result.bytes ? Buffer.from(result.bytes, "base64").toString("utf8") : "",
+    stderr: ""
+  };
+}
 var run = (file, args, input) => new Promise((resolve2, reject) => {
-  const child = (0, import_node_child_process.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+  const child = (0, import_node_child_process2.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
   const stdout = [];
   const stderr = [];
   let bytes = 0;
@@ -1859,11 +2015,16 @@ var PlatformLocalKeyStore = class {
     this.platform = platform;
     this.command = command;
     token(service);
-    if (!["darwin", "linux"].includes(platform))
+    if (!["darwin", "linux", "win32"].includes(platform))
       throw new LocalStoreError("unsupported-platform", "No supported OS credential store adapter.");
   }
   async invoke(operation, reference, key) {
     token(reference);
+    if (this.platform === "win32") {
+      if (operation === "write" && key?.byteLength !== 32)
+        throw unavailable();
+      return windowsCredential(this.service, reference, operation, key ? Buffer.from(Buffer.from(key).toString("base64")) : void 0);
+    }
     if (this.platform === "darwin") {
       if (operation === "write") {
         if (key?.byteLength !== 32)
@@ -1887,7 +2048,7 @@ var PlatformLocalKeyStore = class {
   }
   async read(reference) {
     const result = await this.invoke("read", reference);
-    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+    if (["darwin", "win32"].includes(this.platform) && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
@@ -1913,37 +2074,44 @@ var PlatformLocalKeyStore = class {
   }
   async remove(reference) {
     const result = await this.invoke("remove", reference);
-    if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44))
+    if (result.code !== 0 && !(["darwin", "win32"].includes(this.platform) && result.code === 44))
       throw unavailable();
   }
 };
 
 // node_modules/@gcr/client-core/dist/local-records.js
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 var import_promises2 = require("node:fs/promises");
-var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_path4 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/private-files.js
-var import_node_crypto2 = require("node:crypto");
-var import_node_fs = require("node:fs");
+var import_node_crypto3 = require("node:crypto");
+var import_node_fs2 = require("node:fs");
 var import_promises = require("node:fs/promises");
-var import_node_path2 = __toESM(require("node:path"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
 function privateMode(stat, expected) {
   if (typeof process.getuid === "function" && stat.uid !== process.getuid() || (stat.mode & 63) !== 0) {
     throw new LocalStoreError("insecure-storage", `Local ${expected} must be owned by the current user with private permissions.`);
   }
 }
-async function privateRoot(directory) {
-  const created = await (0, import_promises.mkdir)(directory, { recursive: true, mode: 448 });
-  const stat = await (0, import_promises.lstat)(directory);
+async function privateRoot(directory2) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return result.path;
+  }
+  const created = await (0, import_promises.mkdir)(directory2, { recursive: true, mode: 448 });
+  const stat = await (0, import_promises.lstat)(directory2);
   if (!stat.isDirectory() || stat.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage root must be a real directory.");
   privateMode(stat, "directory");
-  const root = await (0, import_promises.realpath)(directory);
+  const root = await (0, import_promises.realpath)(directory2);
   if (created) {
     const first = await (0, import_promises.realpath)(created);
-    for (let current = root; current === first || current.startsWith(first + import_node_path2.default.sep); current = import_node_path2.default.dirname(current)) {
-      await syncDirectory(import_node_path2.default.dirname(current));
+    for (let current = root; current === first || current.startsWith(first + import_node_path3.default.sep); current = import_node_path3.default.dirname(current)) {
+      await syncDirectory(import_node_path3.default.dirname(current));
     }
   }
   return root;
@@ -1951,11 +2119,18 @@ async function privateRoot(directory) {
 async function privateDirectory(parent, name) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name) || name === "." || name === "..")
     throw new LocalStoreError("insecure-storage", "Invalid local storage component.");
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(parent)
+    }));
+    return privateRoot(import_node_path3.default.join(parent, name));
+  }
   const parentStat = await (0, import_promises.lstat)(parent);
   if (!parentStat.isDirectory() || parentStat.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage parent is not a directory.");
   privateMode(parentStat, "directory");
-  const target = import_node_path2.default.join(parent, name);
+  const target = import_node_path3.default.join(parent, name);
   let created = false;
   try {
     await (0, import_promises.mkdir)(target, { mode: 448 });
@@ -1972,8 +2147,15 @@ async function privateDirectory(parent, name) {
     await syncDirectory(parent);
   return target;
 }
-async function syncDirectory(directory) {
-  const handle = await (0, import_promises.open)(directory, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+async function syncDirectory(directory2) {
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return;
+  }
+  const handle = await (0, import_promises.open)(directory2, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
   try {
     await handle.sync();
   } finally {
@@ -1981,9 +2163,21 @@ async function syncDirectory(directory) {
   }
 }
 async function readPrivateFile(file, maxBytes) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "read",
+      path: import_node_path3.default.resolve(file),
+      maximum: maxBytes
+    }));
+    if (result.missing)
+      return void 0;
+    if (typeof result.bytes !== "string")
+      throw new LocalStoreError("corrupt-storage", "Missing Windows file result.");
+    return Buffer.from(result.bytes, "base64");
+  }
   let handle;
   try {
-    handle = await (0, import_promises.open)(file, import_node_fs.constants.O_RDONLY | import_node_fs.constants.O_NOFOLLOW);
+    handle = await (0, import_promises.open)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
   } catch (error) {
     if (errorCode(error) === "ENOENT")
       return void 0;
@@ -2012,9 +2206,19 @@ async function readPrivateFile(file, maxBytes) {
   }
 }
 async function publishImmutable(file, bytes) {
-  const directory = import_node_path2.default.dirname(file);
-  const temporary = import_node_path2.default.join(directory, `.pending-${(0, import_node_crypto2.randomUUID)()}`);
-  const handle = await (0, import_promises.open)(temporary, import_node_fs.constants.O_WRONLY | import_node_fs.constants.O_CREAT | import_node_fs.constants.O_EXCL | import_node_fs.constants.O_NOFOLLOW, 384);
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "publish",
+      path: import_node_path3.default.resolve(file),
+      bytes: Buffer.from(bytes).toString("base64")
+    }));
+    if (typeof result.published !== "boolean")
+      throw new LocalStoreError("commit-unknown", "Missing Windows publication result.");
+    return result.published;
+  }
+  const directory2 = import_node_path3.default.dirname(file);
+  const temporary = import_node_path3.default.join(directory2, `.pending-${(0, import_node_crypto3.randomUUID)()}`);
+  const handle = await (0, import_promises.open)(temporary, import_node_fs2.constants.O_WRONLY | import_node_fs2.constants.O_CREAT | import_node_fs2.constants.O_EXCL | import_node_fs2.constants.O_NOFOLLOW, 384);
   try {
     await handle.writeFile(bytes);
     await handle.sync();
@@ -2027,7 +2231,7 @@ async function publishImmutable(file, bytes) {
       throw error;
     }
     try {
-      await syncDirectory(directory);
+      await syncDirectory(directory2);
     } catch {
       throw new LocalStoreError("commit-unknown", "Local file was published but durability could not be confirmed. Re-read before retrying.");
     }
@@ -2042,7 +2246,7 @@ async function publishImmutable(file, bytes) {
 var maximumRevision = 999999999999;
 var maximumPlaintext = 16 * 1024 * 1024;
 var maximumEnvelope = 24 * 1024 * 1024;
-var digest = (bytes) => (0, import_node_crypto3.createHash)("sha256").update(bytes).digest("hex");
+var digest = (bytes) => (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex");
 var corrupt = () => new LocalStoreError("corrupt-storage", "Local encrypted record is missing, malformed or fails authentication.");
 var conflict = () => new LocalStoreError("revision-conflict", "Local record changed. Reload it before applying this edit.");
 var validateId = (id2) => {
@@ -2073,8 +2277,8 @@ function binary(value, size) {
     throw corrupt();
   return bytes;
 }
-async function profileKey(directory, profileId, keys2) {
-  const referenceFile = import_node_path3.default.join(directory, "key-ref.json");
+async function profileKey(directory2, profileId, keys2) {
+  const referenceFile = import_node_path4.default.join(directory2, "key-ref.json");
   const read = async () => {
     const bytes = await readPrivateFile(referenceFile, 1024);
     if (!bytes)
@@ -2091,15 +2295,15 @@ async function profileKey(directory, profileId, keys2) {
   const existing = await read();
   if (existing)
     return existing;
-  if ((await (0, import_promises2.readdir)(directory)).some((name) => !name.startsWith(".pending-"))) {
+  if ((await (0, import_promises2.readdir)(directory2)).some((name) => !name.startsWith(".pending-"))) {
     const raced = await read();
     if (raced)
       return raced;
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
-  const id2 = (0, import_node_crypto3.randomUUID)();
+  const id2 = (0, import_node_crypto4.randomUUID)();
   const reference = `${profileId}.${id2}`;
-  const candidate = (0, import_node_crypto3.randomBytes)(32);
+  const candidate = (0, import_node_crypto4.randomBytes)(32);
   let preserve = false;
   try {
     await keys2.write(reference, candidate);
@@ -2126,9 +2330,9 @@ var LocalRecordStore = class _LocalRecordStore {
   directory;
   closed = false;
   #key;
-  constructor(scope, directory, key) {
+  constructor(scope, directory2, key) {
     this.scope = scope;
-    this.directory = directory;
+    this.directory = directory2;
     this.#key = key;
   }
   static async open(options) {
@@ -2139,14 +2343,14 @@ var LocalRecordStore = class _LocalRecordStore {
     const local = await privateDirectory(profile, "local");
     const key = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
     try {
-      let directory = local;
+      let directory2 = local;
       if (scope.kind === "repository") {
-        directory = await privateDirectory(directory, "repositories");
-        directory = await privateDirectory(directory, scope.repositoryKey);
-        directory = await privateDirectory(directory, scope.worktreeKey);
+        directory2 = await privateDirectory(directory2, "repositories");
+        directory2 = await privateDirectory(directory2, scope.repositoryKey);
+        directory2 = await privateDirectory(directory2, scope.worktreeKey);
       } else
-        directory = await privateDirectory(directory, "profile");
-      return new _LocalRecordStore(scope, directory, key);
+        directory2 = await privateDirectory(directory2, "profile");
+      return new _LocalRecordStore(scope, directory2, key);
     } catch (error) {
       key.fill(0);
       throw error;
@@ -2179,7 +2383,7 @@ var LocalRecordStore = class _LocalRecordStore {
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
       try {
-        await (0, import_promises2.lstat)(import_node_path3.default.join(namespace, id2));
+        await (0, import_promises2.lstat)(import_node_path4.default.join(namespace, id2));
       } catch (error) {
         if (errorCode(error) === "ENOENT")
           return void 0;
@@ -2188,40 +2392,40 @@ var LocalRecordStore = class _LocalRecordStore {
     }
     return privateDirectory(namespace, id2);
   }
-  async head(directory) {
-    const entries = await (0, import_promises2.readdir)(directory);
+  async head(directory2) {
+    const entries = await (0, import_promises2.readdir)(directory2);
     if (entries.some((name2) => name2 !== "blobs" && !name2.startsWith(".pending-") && !/^\d{12}\.json$/.test(name2)))
       throw corrupt();
     const names = entries.filter((name2) => /^\d{12}\.json$/.test(name2)).sort();
     const name = names.at(-1);
     if (!name)
       return void 0;
-    const marker = parse(await readPrivateFile(import_node_path3.default.join(directory, name), 1024));
+    const marker = parse(await readPrivateFile(import_node_path4.default.join(directory2, name), 1024));
     onlyFields(marker, ["formatVersion", "revision", "blob", "sha256"]);
     if (marker.formatVersion !== 1 || marker.revision !== Number(name.slice(0, 12)) || !Number.isSafeInteger(marker.revision) || Number(marker.revision) < 1 || typeof marker.blob !== "string" || !/^[a-f0-9-]{36}\.enc$/.test(marker.blob) || typeof marker.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(marker.sha256))
       throw corrupt();
     return marker;
   }
   async read(kind, id2) {
-    const directory = await this.recordDirectory(kind, id2);
-    if (!directory)
+    const directory2 = await this.recordDirectory(kind, id2);
+    if (!directory2)
       return void 0;
     for (let attempt = 0; attempt < 3; attempt++) {
-      const marker = await this.head(directory);
+      const marker = await this.head(directory2);
       if (!marker)
         return void 0;
       try {
-        return await this.readRevision(directory, kind, id2, marker);
+        return await this.readRevision(directory2, kind, id2, marker);
       } catch (error) {
-        if (!(error instanceof LocalStoreError) || error.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
+        if (!(error instanceof LocalStoreError) || error.code !== "corrupt-storage" || (await this.head(directory2))?.revision === marker.revision)
           throw error;
       }
     }
     throw conflict();
   }
-  async readRevision(directory, kind, id2, marker) {
-    const blobs = await privateDirectory(directory, "blobs");
-    const bytes = await readPrivateFile(import_node_path3.default.join(blobs, marker.blob), maximumEnvelope);
+  async readRevision(directory2, kind, id2, marker) {
+    const blobs = await privateDirectory(directory2, "blobs");
+    const bytes = await readPrivateFile(import_node_path4.default.join(blobs, marker.blob), maximumEnvelope);
     if (!bytes || digest(bytes) !== marker.sha256)
       throw corrupt();
     const envelope = parse(bytes);
@@ -2230,7 +2434,7 @@ var LocalRecordStore = class _LocalRecordStore {
       throw corrupt();
     let plaintext;
     try {
-      const decipher = (0, import_node_crypto3.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
+      const decipher = (0, import_node_crypto4.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
       decipher.setAAD(this.aad(kind, id2, marker.revision));
       decipher.setAuthTag(binary(envelope.tag, 16));
       plaintext = Buffer.concat([decipher.update(binary(envelope.ciphertext)), decipher.final()]);
@@ -2267,7 +2471,7 @@ var LocalRecordStore = class _LocalRecordStore {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision >= maximumRevision)
       throw conflict();
     const snapshot = canonicalJson(deleted ? { deleted: true } : { deleted: false, value }, maximumPlaintext);
-    const directory = await this.recordDirectory(kind, id2, true);
+    const directory2 = await this.recordDirectory(kind, id2, true);
     const previous = await this.read(kind, id2);
     if ((previous?.revision ?? 0) !== expectedRevision || previous?.deleted)
       throw conflict();
@@ -2275,8 +2479,8 @@ var LocalRecordStore = class _LocalRecordStore {
     const plaintext = Buffer.from(snapshot);
     let bytes;
     try {
-      const iv = (0, import_node_crypto3.randomBytes)(12);
-      const cipher = (0, import_node_crypto3.createCipheriv)("aes-256-gcm", this.#key, iv);
+      const iv = (0, import_node_crypto4.randomBytes)(12);
+      const cipher = (0, import_node_crypto4.createCipheriv)("aes-256-gcm", this.#key, iv);
       cipher.setAAD(this.aad(kind, id2, revision));
       const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       bytes = Buffer.from(canonicalJson({
@@ -2288,15 +2492,15 @@ var LocalRecordStore = class _LocalRecordStore {
     } finally {
       plaintext.fill(0);
     }
-    const blobs = await privateDirectory(directory, "blobs");
-    const blob = `${(0, import_node_crypto3.randomUUID)()}.enc`;
-    const blobPath = import_node_path3.default.join(blobs, blob);
+    const blobs = await privateDirectory(directory2, "blobs");
+    const blob = `${(0, import_node_crypto4.randomUUID)()}.enc`;
+    const blobPath = import_node_path4.default.join(blobs, blob);
     if (!await publishImmutable(blobPath, bytes))
       throw conflict();
     let preserve = false;
     try {
       const marker = { formatVersion: 1, revision, blob, sha256: digest(bytes) };
-      preserve = await publishImmutable(import_node_path3.default.join(directory, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
+      preserve = await publishImmutable(import_node_path4.default.join(directory2, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
       if (!preserve)
         throw conflict();
       return deleted ? { revision, deleted: true } : { revision, deleted: false, value: JSON.parse(snapshot).value };
@@ -2326,15 +2530,15 @@ var LocalRecordStore = class _LocalRecordStore {
     const current = await this.read(kind, id2);
     if (!current?.deleted)
       throw conflict();
-    const directory = await this.recordDirectory(kind, id2);
-    const marker = await this.head(directory);
-    const blobs = await privateDirectory(directory, "blobs");
+    const directory2 = await this.recordDirectory(kind, id2);
+    const marker = await this.head(directory2);
+    const blobs = await privateDirectory(directory2, "blobs");
     let complete = true;
     for (const name of await (0, import_promises2.readdir)(blobs)) {
       if (name === marker.blob || !/^[a-f0-9-]{36}\.enc$/.test(name))
         continue;
       try {
-        await (0, import_promises2.unlink)(import_node_path3.default.join(blobs, name));
+        await (0, import_promises2.unlink)(import_node_path4.default.join(blobs, name));
       } catch (error) {
         if (errorCode(error) !== "ENOENT")
           complete = false;
@@ -2375,7 +2579,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2453,7 +2657,7 @@ function checkedReference(value, binding) {
   return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path4.default.join(
+  return import_node_path5.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -2462,7 +2666,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path4.default.join(
+    const file = import_node_path5.default.join(
       dataDirectory,
       "profiles",
       reference.profileId,
@@ -2520,10 +2724,10 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path5.default.join(import_node_fs2.default.realpathSync(repoRoot), ".commit-defender");
-  if (create) import_node_fs2.default.mkdirSync(dir, { recursive: true, mode: 448 });
+  const dir = import_node_path6.default.join(import_node_fs3.default.realpathSync(repoRoot), ".commit-defender");
+  if (create) import_node_fs3.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
-    const stat = import_node_fs2.default.lstatSync(dir);
+    const stat = import_node_fs3.default.lstatSync(dir);
     if (!stat.isDirectory() || stat.isSymbolicLink() || process.getuid && stat.uid !== process.getuid())
       throw failure();
   } catch (error) {
@@ -2537,20 +2741,20 @@ function readHookConfigSnapshot(repoRoot) {
   const dir = safeDirectory(repoRoot, false);
   let fd;
   try {
-    fd = import_node_fs2.default.openSync(
-      import_node_path5.default.join(dir, "hook.json"),
-      import_node_fs2.default.constants.O_RDONLY | import_node_fs2.default.constants.O_NOFOLLOW | import_node_fs2.default.constants.O_NONBLOCK
+    fd = import_node_fs3.default.openSync(
+      import_node_path6.default.join(dir, "hook.json"),
+      import_node_fs3.default.constants.O_RDONLY | import_node_fs3.default.constants.O_NOFOLLOW | import_node_fs3.default.constants.O_NONBLOCK
     );
   } catch (error) {
     if (error.code === "ENOENT") return void 0;
     throw failure();
   }
   try {
-    const stat = import_node_fs2.default.fstatSync(fd);
+    const stat = import_node_fs3.default.fstatSync(fd);
     if (!stat.isFile() || stat.size > 1e6 || process.getuid && stat.uid !== process.getuid())
       throw failure();
     const bytes = Buffer.alloc(1000001);
-    const length = import_node_fs2.default.readSync(fd, bytes, 0, bytes.length, 0);
+    const length = import_node_fs3.default.readSync(fd, bytes, 0, bytes.length, 0);
     if (length > 1e6) throw failure();
     const text2 = bytes.subarray(0, length).toString("utf8");
     const raw = JSON.parse(text2);
@@ -2559,7 +2763,7 @@ function readHookConfigSnapshot(repoRoot) {
   } catch {
     throw failure();
   } finally {
-    import_node_fs2.default.closeSync(fd);
+    import_node_fs3.default.closeSync(fd);
   }
 }
 var providers = [
@@ -2632,7 +2836,7 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
 // src/sourcePolicy.ts
 var import_child_process = require("child_process");
 var fs2 = __toESM(require("fs"));
-var path6 = __toESM(require("path"));
+var path7 = __toESM(require("path"));
 
 // src/excludeFilter.ts
 var import_ignore = __toESM(require_ignore());
@@ -2760,12 +2964,12 @@ var BINARY_EXTENSIONS = /* @__PURE__ */ new Set([
   ".lock"
 ]);
 function isBinary(file) {
-  return BINARY_EXTENSIONS.has(path6.posix.extname(file).toLowerCase());
+  return BINARY_EXTENSIONS.has(path7.posix.extname(file).toLowerCase());
 }
 function normalizedSourcePath(value) {
   if (typeof value !== "string") return void 0;
-  const normalized = path6.sep === "\\" ? value.replaceAll("\\", "/") : value;
-  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path6.posix.isAbsolute(normalized) || path6.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
+  const normalized = path7.sep === "\\" ? value.replaceAll("\\", "/") : value;
+  if (!normalized || /[\x00-\x1f\x7f\\]/.test(normalized) || path7.posix.isAbsolute(normalized) || path7.win32.isAbsolute(normalized) || normalized.split("/").some((part) => !part || part === "." || part === "..")) return void 0;
   return normalized;
 }
 function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}) {
@@ -2802,7 +3006,7 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
     let denied = false;
     for (let index = 0; !options.gitTree && index < parts.length; index++) {
       try {
-        const stat = fs2.lstatSync(path6.join(root, ...parts.slice(0, index + 1)));
+        const stat = fs2.lstatSync(path7.join(root, ...parts.slice(0, index + 1)));
         if (stat.isSymbolicLink()) {
           deny("symlink");
           denied = true;
@@ -2848,7 +3052,7 @@ function selectReviewInputs(repoRoot, inputs, excludePatterns = [], options = {}
 function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
   const selection = selectReviewInputs(repoRoot, [file], patterns, { purpose });
   if (selection.files.length !== 1) throw new Error(`Source excluded: ${file} (${selection.excluded[0]?.reason ?? "unreadable"})`);
-  const absolute = path6.join(fs2.realpathSync(repoRoot), selection.files[0]);
+  const absolute = path7.join(fs2.realpathSync(repoRoot), selection.files[0]);
   const fd = fs2.openSync(absolute, fs2.constants.O_RDONLY | (fs2.constants.O_NOFOLLOW ?? 0));
   try {
     const opened = fs2.fstatSync(fd);
@@ -2866,7 +3070,7 @@ function readReviewFile(repoRoot, file, patterns = [], purpose = "source") {
 var import_child_process2 = require("child_process");
 var fs3 = __toESM(require("fs"));
 var os = __toESM(require("os"));
-var path7 = __toESM(require("path"));
+var path8 = __toESM(require("path"));
 function run2(repoRoot, args, input, indexFile) {
   return (0, import_child_process2.execFileSync)("git", [
     "--no-replace-objects",
@@ -2893,15 +3097,15 @@ function run2(repoRoot, args, input, indexFile) {
   });
 }
 function withTemporaryIndex(fn) {
-  const directory = fs3.mkdtempSync(path7.join(os.tmpdir(), "cd-index-"));
+  const directory2 = fs3.mkdtempSync(path8.join(os.tmpdir(), "cd-index-"));
   try {
-    return fn(path7.join(directory, "index"));
+    return fn(path8.join(directory2, "index"));
   } finally {
-    fs3.rmSync(directory, { recursive: true, force: true });
+    fs3.rmSync(directory2, { recursive: true, force: true });
   }
 }
 function captureIndexTree(repoRoot) {
-  const indexPath = path7.resolve(repoRoot, run2(repoRoot, ["rev-parse", "--git-path", "index"]).trim());
+  const indexPath = path8.resolve(repoRoot, run2(repoRoot, ["rev-parse", "--git-path", "index"]).trim());
   return withTemporaryIndex((index) => {
     try {
       fs3.writeFileSync(index, fs3.readFileSync(indexPath), { mode: 384 });
@@ -3084,10 +3288,10 @@ function resolveExitCode(report, policy = "legacy-hook") {
 var import_crypto2 = require("crypto");
 
 // src/diff.ts
-var path8 = __toESM(require("path"));
+var path9 = __toESM(require("path"));
 var MAX_CONTENT_CHARS = 8e4;
 function formatFileContent(file, content) {
-  const ext = path8.extname(file).replace(/^\./, "");
+  const ext = path9.extname(file).replace(/^\./, "");
   return `### ${file}
 
 \`\`\`${ext}
@@ -3123,7 +3327,7 @@ function captureWorkingFiles(repoRoot, files, patterns) {
 
 // src/reviewSource.ts
 var import_crypto = require("crypto");
-var path9 = __toESM(require("path"));
+var path10 = __toESM(require("path"));
 function sourceHash(text2) {
   return (0, import_crypto.createHash)("sha256").update(text2).digest("hex");
 }
@@ -3183,7 +3387,7 @@ function rejectFindings(review, count) {
 function validateFindingAnchors(review, sources, singleFile) {
   let rejected = 0;
   review.file_comments = review.file_comments.flatMap((comment) => {
-    const file = singleFile && comment.file === path9.posix.basename(singleFile) ? singleFile : comment.file;
+    const file = singleFile && comment.file === path10.posix.basename(singleFile) ? singleFile : comment.file;
     const content = sources.get(file);
     if (!normalizedSourcePath(file) || content === void 0 || !validLine(comment.line, content.split(/\r?\n/).length)) {
       rejected++;
@@ -3253,9 +3457,9 @@ function applyMarkers(comments, sources) {
 
 // src/skills.ts
 var fs4 = __toESM(require("fs"));
-var path10 = __toESM(require("path"));
+var path11 = __toESM(require("path"));
 function loadSkillMaterial(repoRoot, excludePatterns = []) {
-  const skillDir = path10.join(repoRoot, ".commit-defender");
+  const skillDir = path11.join(repoRoot, ".commit-defender");
   let entries;
   try {
     if (fs4.lstatSync(skillDir).isSymbolicLink()) return { text: "", truncated: false };
@@ -3658,7 +3862,7 @@ Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
 var import_child_process3 = require("child_process");
 var import_promises4 = require("fs/promises");
 var import_os = require("os");
-var path11 = __toESM(require("path"));
+var path12 = __toESM(require("path"));
 var DEFAULT_OPENAI = API_DEFAULT_ENDPOINTS.openai;
 var DEFAULT_ANTHROPIC = API_DEFAULT_ENDPOINTS.anthropic;
 var DEFAULT_GEMINI = API_DEFAULT_ENDPOINTS.gemini;
@@ -3929,9 +4133,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises4.mkdtemp)(path11.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path11.join(dir, "review-request.md");
-  const schemaFile = path11.join(dir, "output-schema.json");
+  const dir = await (0, import_promises4.mkdtemp)(path12.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path12.join(dir, "review-request.md");
+  const schemaFile = path12.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises4.writeFile)(promptFile, `${req.systemPrompt}
@@ -3978,8 +4182,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises4.mkdtemp)(path11.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path11.join(dir, "output-schema.json");
+  const dir = await (0, import_promises4.mkdtemp)(path12.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path12.join(dir, "output-schema.json");
   try {
     await (0, import_promises4.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);

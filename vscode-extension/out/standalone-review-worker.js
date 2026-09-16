@@ -26,7 +26,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var import_node_worker_threads = require("node:worker_threads");
 
 // src/standaloneReview.ts
-var import_node_path17 = __toESM(require("node:path"));
+var import_node_path18 = __toESM(require("node:path"));
 
 // node_modules/@gcr/client-contract/dist/codec.js
 var ContractError = class extends Error {
@@ -53,16 +53,16 @@ var integer = (min = 0, max = Number.MAX_SAFE_INTEGER) => (value, at = "$") => {
 var boolean = (value, at = "$") => typeof value === "boolean" ? value : fail(at, "expected boolean");
 var literal = (expected) => (value, at = "$") => value === expected ? expected : fail(at, "unexpected literal");
 var choice = (values) => (value, at = "$") => typeof value === "string" && values.includes(value) ? value : fail(at, "unsupported value");
-var optional = (decode) => (value, at) => value === void 0 ? void 0 : decode(value, at);
-var list = (decode, max = 1e5, min = 0) => (value, at = "$") => {
+var optional = (decode2) => (value, at) => value === void 0 ? void 0 : decode2(value, at);
+var list = (decode2, max = 1e5, min = 0) => (value, at = "$") => {
   if (!Array.isArray(value) || value.length < min || value.length > max)
     return fail(at, "invalid array");
-  return Array.from(value, (entry, index) => decode(entry, `${at}[${index}]`));
+  return Array.from(value, (entry, index) => decode2(entry, `${at}[${index}]`));
 };
 var union = (...decoders) => (value, at = "$") => {
-  for (const decode of decoders) {
+  for (const decode2 of decoders) {
     try {
-      return decode(value, at);
+      return decode2(value, at);
     } catch (error2) {
       if (!(error2 instanceof ContractError))
         throw error2;
@@ -78,8 +78,8 @@ var object = (shape2) => (value, at = "$") => {
     if (!Object.hasOwn(shape2, key4))
       fail(`${at}.${key4}`, "unknown field");
   const result = {};
-  for (const [key4, decode] of Object.entries(shape2)) {
-    const parsed = decode(Object.hasOwn(record2, key4) ? record2[key4] : void 0, `${at}.${key4}`);
+  for (const [key4, decode2] of Object.entries(shape2)) {
+    const parsed = decode2(Object.hasOwn(record2, key4) ? record2[key4] : void 0, `${at}.${key4}`);
     if (parsed !== void 0)
       Object.defineProperty(result, key4, {
         value: parsed,
@@ -90,8 +90,8 @@ var object = (shape2) => (value, at = "$") => {
   }
   return result;
 };
-var refined = (decode, check) => (value, at = "$") => {
-  const result = decode(value, at);
+var refined = (decode2, check) => (value, at = "$") => {
+  const result = decode2(value, at);
   check(result, at);
   return result;
 };
@@ -1334,7 +1334,7 @@ var REVIEW_SUBMISSION_RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
 
 // node_modules/@gcr/client-contract/dist/review-history.js
 var uuid = text(36, 36, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
-var nullable = (decode) => union(decode, literal(null));
+var nullable = (decode2) => union(decode2, literal(null));
 var short = text(4096);
 var date = text(64);
 var side = nullable(choice(["LEFT", "RIGHT"]));
@@ -1517,16 +1517,16 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-core/dist/local-identity.js
-var import_node_child_process = require("node:child_process");
-var import_node_crypto = require("node:crypto");
-var import_node_fs = require("node:fs");
-var import_node_os = require("node:os");
-var import_node_path = __toESM(require("node:path"), 1);
+var import_node_child_process2 = require("node:child_process");
+var import_node_crypto2 = require("node:crypto");
+var import_node_fs2 = require("node:fs");
+var import_node_os2 = require("node:os");
+var import_node_path2 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/local-errors.js
 var LocalStoreError = class extends Error {
@@ -1538,6 +1538,152 @@ var LocalStoreError = class extends Error {
   }
 };
 var errorCode = (error2) => error2 && typeof error2 === "object" && "code" in error2 && typeof error2.code === "string" ? error2.code : void 0;
+
+// node_modules/@gcr/client-core/dist/windows-native.js
+var import_node_child_process = require("node:child_process");
+var import_node_crypto = require("node:crypto");
+var import_node_fs = require("node:fs");
+var import_node_path = __toESM(require("node:path"), 1);
+var import_node_os = __toESM(require("node:os"), 1);
+var import_node_url = require("node:url");
+var import_meta = {};
+var maximum = 36 * 1024 * 1024;
+var directory = typeof __dirname === "string" ? __dirname : import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url));
+var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
+function windowsPrivateTemporary(prefix) {
+  if (!/^[a-z0-9-]+$/.test(prefix))
+    throw Error("Invalid temporary prefix.");
+  const target = import_node_path.default.join(import_node_os.default.tmpdir(), `${prefix}${(0, import_node_crypto.randomUUID)()}`);
+  const result = windowsNativeSync({ operation: "directory", path: target });
+  if (!result.path)
+    throw new LocalStoreError("storage-unavailable", "Missing temporary path.");
+  return result.path;
+}
+function windowsNativeExecutable() {
+  if (process.platform !== "win32")
+    throw new LocalStoreError("unsupported-platform", "Windows helper required.");
+  try {
+    const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
+    const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
+    const hash4 = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
+    if (manifest.version !== "1.0.1" || hash4 !== manifest.sha256)
+      throw Error();
+    return executable;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Windows helper is unavailable.");
+  }
+}
+function decode(stdout) {
+  try {
+    const value = JSON.parse(stdout.trim());
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw Error();
+    return value;
+  } catch {
+    throw new LocalStoreError("storage-unavailable", "Invalid Windows helper response.");
+  }
+}
+function checkWindowsStorage(result) {
+  if (result.error) {
+    const codes = [
+      "unsupported-platform",
+      "credential-unavailable",
+      "storage-unavailable",
+      "insecure-storage",
+      "corrupt-storage",
+      "commit-unknown",
+      "record-too-large"
+    ];
+    const code = codes.includes(result.error) ? result.error : "storage-unavailable";
+    throw new LocalStoreError(code, `Windows operation failed (${code}).`);
+  }
+  return result;
+}
+function windowsNativeSync(request) {
+  const input2 = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input2) > maximum)
+    throw new LocalStoreError("record-too-large", "Windows request exceeds its limit.");
+  let stdout;
+  try {
+    stdout = (0, import_node_child_process.execFileSync)(windowsNativeExecutable(), [], {
+      input: input2,
+      encoding: "utf8",
+      maxBuffer: maximum,
+      timeout: 15e3,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+  } catch (error2) {
+    const result = error2;
+    if (result.status === 1 && result.stdout)
+      stdout = result.stdout;
+    else
+      throw new LocalStoreError("storage-unavailable", "Windows helper failed.");
+  }
+  return checkWindowsStorage(decode(stdout));
+}
+function windowsNative(request, options = {}) {
+  const input2 = JSON.stringify(request) + "\n";
+  if (Buffer.byteLength(input2) > maximum)
+    return Promise.reject(new LocalStoreError("record-too-large", "Windows request too large."));
+  if (options.signal?.aborted)
+    return Promise.resolve({ error: "cancelled" });
+  const executable = windowsNativeExecutable();
+  return new Promise((resolve, reject) => {
+    const child = (0, import_node_child_process.spawn)(executable, [], {
+      windowsHide: true,
+      shell: false,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    const chunks = [];
+    let bytes = 0;
+    let failure;
+    const stop = (reason) => {
+      failure ??= reason;
+      child.kill();
+    };
+    const abort = () => stop("cancelled");
+    const timer = setTimeout(() => stop("timeout"), options.timeoutMs ?? 15e3);
+    options.signal?.addEventListener("abort", abort, { once: true });
+    if (options.signal?.aborted)
+      abort();
+    child.stdout.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+      else
+        chunks.push(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > maximum)
+        stop("output-limit");
+    });
+    child.on("error", () => {
+      failure ??= "executable-unavailable";
+    });
+    child.stdin.on("error", () => {
+      failure ??= "process-failed";
+    });
+    child.on("close", () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", abort);
+      if (failure) {
+        resolve({ error: failure });
+        return;
+      }
+      try {
+        resolve(decode(Buffer.concat(chunks).toString("utf8")));
+      } catch (error2) {
+        reject(error2);
+      }
+    });
+    if (request.operation === "process")
+      child.stdin.write(input2);
+    else
+      child.stdin.end(input2);
+  });
+}
 
 // node_modules/@gcr/client-core/dist/local-identity.js
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
@@ -1586,18 +1732,24 @@ function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   };
   return visit(value, 0);
 }
-var contentHash = (value) => (0, import_node_crypto.createHash)("sha256").update(canonicalJson(value)).digest("hex");
+var contentHash = (value) => (0, import_node_crypto2.createHash)("sha256").update(canonicalJson(value)).digest("hex");
 function defaultLocalDataDirectory(platform = process.platform) {
+  if (platform === "win32") {
+    const directory2 = windowsNativeSync({ operation: "identity" }).dataDirectory;
+    if (!directory2 || !import_node_path2.default.isAbsolute(directory2))
+      throw new LocalStoreError("storage-unavailable", "Missing Windows data directory.");
+    return directory2;
+  }
   if (platform === "darwin")
-    return import_node_path.default.join((0, import_node_os.homedir)(), "Library", "Application Support", "CommitDefender");
+    return import_node_path2.default.join((0, import_node_os2.homedir)(), "Library", "Application Support", "CommitDefender");
   if (platform === "linux") {
     const configured = process.env.XDG_DATA_HOME;
-    return import_node_path.default.join(configured && import_node_path.default.isAbsolute(configured) ? configured : import_node_path.default.join((0, import_node_os.homedir)(), ".local", "share"), "CommitDefender");
+    return import_node_path2.default.join(configured && import_node_path2.default.isAbsolute(configured) ? configured : import_node_path2.default.join((0, import_node_os2.homedir)(), ".local", "share"), "CommitDefender");
   }
   throw new LocalStoreError("unsupported-platform", "Local storage requires a supported OS credential store.");
 }
 function discoverLocalIdentity(cwd, profileId) {
-  const git2 = (args) => (0, import_node_child_process.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
+  const git2 = (args) => (0, import_node_child_process2.execFileSync)("git", ["-C", cwd, "--no-optional-locks", "rev-parse", ...args], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
     timeout: 1e4,
@@ -1605,9 +1757,9 @@ function discoverLocalIdentity(cwd, profileId) {
     env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }
   }).trim();
   try {
-    const root = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--show-toplevel"]));
-    const common3 = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-common-dir"]));
-    const directory = (0, import_node_fs.realpathSync)(git2(["--path-format=absolute", "--git-dir"]));
+    const root = (0, import_node_fs2.realpathSync)(git2(["--path-format=absolute", "--show-toplevel"]));
+    const common3 = (0, import_node_fs2.realpathSync)(git2(["--path-format=absolute", "--git-common-dir"]));
+    const directory2 = (0, import_node_fs2.realpathSync)(git2(["--path-format=absolute", "--git-dir"]));
     return clientIdentity({
       mode: "standalone",
       profileId,
@@ -1615,7 +1767,7 @@ function discoverLocalIdentity(cwd, profileId) {
       worktreeKey: contentHash({
         version: 1,
         commonDirectory: common3,
-        gitDirectory: directory,
+        gitDirectory: directory2,
         root
       })
     });
@@ -1625,9 +1777,23 @@ function discoverLocalIdentity(cwd, profileId) {
 }
 
 // node_modules/@gcr/client-core/dist/local-credentials.js
-var import_node_child_process2 = require("node:child_process");
+var import_node_child_process3 = require("node:child_process");
+async function windowsCredential(service, reference2, action, secret) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: "credential",
+    service,
+    reference: reference2,
+    action,
+    ...secret ? { bytes: Buffer.from(secret).toString("base64") } : {}
+  }));
+  return {
+    code: result.missing ? 44 : 0,
+    stdout: result.bytes ? Buffer.from(result.bytes, "base64").toString("utf8") : "",
+    stderr: ""
+  };
+}
 var run = (file, args, input2) => new Promise((resolve, reject) => {
-  const child = (0, import_node_child_process2.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+  const child = (0, import_node_child_process3.spawn)(file, [...args], { stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
   const stdout = [];
   const stderr = [];
   let bytes = 0;
@@ -1678,11 +1844,16 @@ var PlatformLocalKeyStore = class {
     this.platform = platform;
     this.command = command;
     token(service);
-    if (!["darwin", "linux"].includes(platform))
+    if (!["darwin", "linux", "win32"].includes(platform))
       throw new LocalStoreError("unsupported-platform", "No supported OS credential store adapter.");
   }
   async invoke(operation, reference2, key4) {
     token(reference2);
+    if (this.platform === "win32") {
+      if (operation === "write" && key4?.byteLength !== 32)
+        throw unavailable();
+      return windowsCredential(this.service, reference2, operation, key4 ? Buffer.from(Buffer.from(key4).toString("base64")) : void 0);
+    }
     if (this.platform === "darwin") {
       if (operation === "write") {
         if (key4?.byteLength !== 32)
@@ -1706,7 +1877,7 @@ var PlatformLocalKeyStore = class {
   }
   async read(reference2) {
     const result = await this.invoke("read", reference2);
-    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+    if (["darwin", "win32"].includes(this.platform) && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
@@ -1732,7 +1903,7 @@ var PlatformLocalKeyStore = class {
   }
   async remove(reference2) {
     const result = await this.invoke("remove", reference2);
-    if (result.code !== 0 && !(this.platform === "darwin" && result.code === 44))
+    if (result.code !== 0 && !(["darwin", "win32"].includes(this.platform) && result.code === 44))
       throw unavailable();
   }
 };
@@ -1748,13 +1919,15 @@ var PlatformCentralCredentialStore = class {
   constructor(platform = process.platform, command = run) {
     this.platform = platform;
     this.command = command;
-    if (!["darwin", "linux"].includes(platform))
+    if (!["darwin", "linux", "win32"].includes(platform))
       throw unavailable();
   }
   invoke(operation, reference2, secret) {
     token(reference2);
     if (secret !== void 0)
       validateCentralApiKey(secret);
+    if (this.platform === "win32")
+      return windowsCredential(this.service, reference2, operation, secret ? Buffer.from(secret, "utf8") : void 0);
     if (this.platform === "darwin") {
       if (operation === "write")
         return this.command("/usr/bin/security", ["-i"], `add-generic-password -a ${reference2} -s ${this.service} -w ${secret}
@@ -1779,7 +1952,7 @@ var PlatformCentralCredentialStore = class {
   }
   async read(reference2) {
     const result = await this.invoke("read", reference2);
-    if (this.platform === "darwin" && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
+    if (["darwin", "win32"].includes(this.platform) && result.code === 44 || this.platform === "linux" && result.code === 1 && !result.stderr.trim() && !result.stdout.trim())
       return void 0;
     if (result.code !== 0)
       throw unavailable();
@@ -1797,31 +1970,38 @@ var PlatformCentralCredentialStore = class {
 };
 
 // node_modules/@gcr/client-core/dist/local-records.js
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 var import_promises2 = require("node:fs/promises");
-var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_path4 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/private-files.js
-var import_node_crypto2 = require("node:crypto");
-var import_node_fs2 = require("node:fs");
+var import_node_crypto3 = require("node:crypto");
+var import_node_fs3 = require("node:fs");
 var import_promises = require("node:fs/promises");
-var import_node_path2 = __toESM(require("node:path"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
 function privateMode(stat2, expected) {
   if (typeof process.getuid === "function" && stat2.uid !== process.getuid() || (stat2.mode & 63) !== 0) {
     throw new LocalStoreError("insecure-storage", `Local ${expected} must be owned by the current user with private permissions.`);
   }
 }
-async function privateRoot(directory) {
-  const created = await (0, import_promises.mkdir)(directory, { recursive: true, mode: 448 });
-  const stat2 = await (0, import_promises.lstat)(directory);
+async function privateRoot(directory2) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return result.path;
+  }
+  const created = await (0, import_promises.mkdir)(directory2, { recursive: true, mode: 448 });
+  const stat2 = await (0, import_promises.lstat)(directory2);
   if (!stat2.isDirectory() || stat2.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage root must be a real directory.");
   privateMode(stat2, "directory");
-  const root = await (0, import_promises.realpath)(directory);
+  const root = await (0, import_promises.realpath)(directory2);
   if (created) {
     const first = await (0, import_promises.realpath)(created);
-    for (let current = root; current === first || current.startsWith(first + import_node_path2.default.sep); current = import_node_path2.default.dirname(current)) {
-      await syncDirectory(import_node_path2.default.dirname(current));
+    for (let current = root; current === first || current.startsWith(first + import_node_path3.default.sep); current = import_node_path3.default.dirname(current)) {
+      await syncDirectory(import_node_path3.default.dirname(current));
     }
   }
   return root;
@@ -1829,11 +2009,18 @@ async function privateRoot(directory) {
 async function privateDirectory(parent, name) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name) || name === "." || name === "..")
     throw new LocalStoreError("insecure-storage", "Invalid local storage component.");
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(parent)
+    }));
+    return privateRoot(import_node_path3.default.join(parent, name));
+  }
   const parentStat = await (0, import_promises.lstat)(parent);
   if (!parentStat.isDirectory() || parentStat.isSymbolicLink())
     throw new LocalStoreError("insecure-storage", "Local storage parent is not a directory.");
   privateMode(parentStat, "directory");
-  const target = import_node_path2.default.join(parent, name);
+  const target = import_node_path3.default.join(parent, name);
   let created = false;
   try {
     await (0, import_promises.mkdir)(target, { mode: 448 });
@@ -1850,8 +2037,15 @@ async function privateDirectory(parent, name) {
     await syncDirectory(parent);
   return target;
 }
-async function syncDirectory(directory) {
-  const handle = await (0, import_promises.open)(directory, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+async function syncDirectory(directory2) {
+  if (process.platform === "win32") {
+    checkWindowsStorage(await windowsNative({
+      operation: "validate-directory",
+      path: import_node_path3.default.resolve(directory2)
+    }));
+    return;
+  }
+  const handle = await (0, import_promises.open)(directory2, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
   try {
     await handle.sync();
   } finally {
@@ -1859,9 +2053,21 @@ async function syncDirectory(directory) {
   }
 }
 async function readPrivateFile(file, maxBytes) {
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "read",
+      path: import_node_path3.default.resolve(file),
+      maximum: maxBytes
+    }));
+    if (result.missing)
+      return void 0;
+    if (typeof result.bytes !== "string")
+      throw new LocalStoreError("corrupt-storage", "Missing Windows file result.");
+    return Buffer.from(result.bytes, "base64");
+  }
   let handle;
   try {
-    handle = await (0, import_promises.open)(file, import_node_fs2.constants.O_RDONLY | import_node_fs2.constants.O_NOFOLLOW);
+    handle = await (0, import_promises.open)(file, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW);
   } catch (error2) {
     if (errorCode(error2) === "ENOENT")
       return void 0;
@@ -1890,9 +2096,19 @@ async function readPrivateFile(file, maxBytes) {
   }
 }
 async function publishImmutable(file, bytes) {
-  const directory = import_node_path2.default.dirname(file);
-  const temporary = import_node_path2.default.join(directory, `.pending-${(0, import_node_crypto2.randomUUID)()}`);
-  const handle = await (0, import_promises.open)(temporary, import_node_fs2.constants.O_WRONLY | import_node_fs2.constants.O_CREAT | import_node_fs2.constants.O_EXCL | import_node_fs2.constants.O_NOFOLLOW, 384);
+  if (process.platform === "win32") {
+    const result = checkWindowsStorage(await windowsNative({
+      operation: "publish",
+      path: import_node_path3.default.resolve(file),
+      bytes: Buffer.from(bytes).toString("base64")
+    }));
+    if (typeof result.published !== "boolean")
+      throw new LocalStoreError("commit-unknown", "Missing Windows publication result.");
+    return result.published;
+  }
+  const directory2 = import_node_path3.default.dirname(file);
+  const temporary = import_node_path3.default.join(directory2, `.pending-${(0, import_node_crypto3.randomUUID)()}`);
+  const handle = await (0, import_promises.open)(temporary, import_node_fs3.constants.O_WRONLY | import_node_fs3.constants.O_CREAT | import_node_fs3.constants.O_EXCL | import_node_fs3.constants.O_NOFOLLOW, 384);
   try {
     await handle.writeFile(bytes);
     await handle.sync();
@@ -1905,7 +2121,7 @@ async function publishImmutable(file, bytes) {
       throw error2;
     }
     try {
-      await syncDirectory(directory);
+      await syncDirectory(directory2);
     } catch {
       throw new LocalStoreError("commit-unknown", "Local file was published but durability could not be confirmed. Re-read before retrying.");
     }
@@ -1920,7 +2136,7 @@ async function publishImmutable(file, bytes) {
 var maximumRevision = 999999999999;
 var maximumPlaintext = 16 * 1024 * 1024;
 var maximumEnvelope = 24 * 1024 * 1024;
-var digest = (bytes) => (0, import_node_crypto3.createHash)("sha256").update(bytes).digest("hex");
+var digest = (bytes) => (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex");
 var corrupt = () => new LocalStoreError("corrupt-storage", "Local encrypted record is missing, malformed or fails authentication.");
 var conflict = () => new LocalStoreError("revision-conflict", "Local record changed. Reload it before applying this edit.");
 var validateId = (id3) => {
@@ -1951,8 +2167,8 @@ function binary(value, size) {
     throw corrupt();
   return bytes;
 }
-async function profileKey(directory, profileId, keys2) {
-  const referenceFile = import_node_path3.default.join(directory, "key-ref.json");
+async function profileKey(directory2, profileId, keys2) {
+  const referenceFile = import_node_path4.default.join(directory2, "key-ref.json");
   const read = async () => {
     const bytes = await readPrivateFile(referenceFile, 1024);
     if (!bytes)
@@ -1969,15 +2185,15 @@ async function profileKey(directory, profileId, keys2) {
   const existing = await read();
   if (existing)
     return existing;
-  if ((await (0, import_promises2.readdir)(directory)).some((name) => !name.startsWith(".pending-"))) {
+  if ((await (0, import_promises2.readdir)(directory2)).some((name) => !name.startsWith(".pending-"))) {
     const raced = await read();
     if (raced)
       return raced;
     throw new LocalStoreError("credential-unavailable", "Local data exists without its OS key reference.");
   }
-  const id3 = (0, import_node_crypto3.randomUUID)();
+  const id3 = (0, import_node_crypto4.randomUUID)();
   const reference2 = `${profileId}.${id3}`;
-  const candidate = (0, import_node_crypto3.randomBytes)(32);
+  const candidate = (0, import_node_crypto4.randomBytes)(32);
   let preserve = false;
   try {
     await keys2.write(reference2, candidate);
@@ -2004,9 +2220,9 @@ var LocalRecordStore = class _LocalRecordStore {
   directory;
   closed = false;
   #key;
-  constructor(scope, directory, key4) {
+  constructor(scope, directory2, key4) {
     this.scope = scope;
-    this.directory = directory;
+    this.directory = directory2;
     this.#key = key4;
   }
   static async open(options) {
@@ -2017,14 +2233,14 @@ var LocalRecordStore = class _LocalRecordStore {
     const local = await privateDirectory(profile, "local");
     const key4 = await profileKey(local, scope.profileId, options.keys ?? new PlatformLocalKeyStore());
     try {
-      let directory = local;
+      let directory2 = local;
       if (scope.kind === "repository") {
-        directory = await privateDirectory(directory, "repositories");
-        directory = await privateDirectory(directory, scope.repositoryKey);
-        directory = await privateDirectory(directory, scope.worktreeKey);
+        directory2 = await privateDirectory(directory2, "repositories");
+        directory2 = await privateDirectory(directory2, scope.repositoryKey);
+        directory2 = await privateDirectory(directory2, scope.worktreeKey);
       } else
-        directory = await privateDirectory(directory, "profile");
-      return new _LocalRecordStore(scope, directory, key4);
+        directory2 = await privateDirectory(directory2, "profile");
+      return new _LocalRecordStore(scope, directory2, key4);
     } catch (error2) {
       key4.fill(0);
       throw error2;
@@ -2057,7 +2273,7 @@ var LocalRecordStore = class _LocalRecordStore {
     const namespace = await privateDirectory(this.directory, kind);
     if (!create) {
       try {
-        await (0, import_promises2.lstat)(import_node_path3.default.join(namespace, id3));
+        await (0, import_promises2.lstat)(import_node_path4.default.join(namespace, id3));
       } catch (error2) {
         if (errorCode(error2) === "ENOENT")
           return void 0;
@@ -2066,40 +2282,40 @@ var LocalRecordStore = class _LocalRecordStore {
     }
     return privateDirectory(namespace, id3);
   }
-  async head(directory) {
-    const entries = await (0, import_promises2.readdir)(directory);
+  async head(directory2) {
+    const entries = await (0, import_promises2.readdir)(directory2);
     if (entries.some((name2) => name2 !== "blobs" && !name2.startsWith(".pending-") && !/^\d{12}\.json$/.test(name2)))
       throw corrupt();
     const names = entries.filter((name2) => /^\d{12}\.json$/.test(name2)).sort();
     const name = names.at(-1);
     if (!name)
       return void 0;
-    const marker = parse(await readPrivateFile(import_node_path3.default.join(directory, name), 1024));
+    const marker = parse(await readPrivateFile(import_node_path4.default.join(directory2, name), 1024));
     onlyFields(marker, ["formatVersion", "revision", "blob", "sha256"]);
     if (marker.formatVersion !== 1 || marker.revision !== Number(name.slice(0, 12)) || !Number.isSafeInteger(marker.revision) || Number(marker.revision) < 1 || typeof marker.blob !== "string" || !/^[a-f0-9-]{36}\.enc$/.test(marker.blob) || typeof marker.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(marker.sha256))
       throw corrupt();
     return marker;
   }
   async read(kind, id3) {
-    const directory = await this.recordDirectory(kind, id3);
-    if (!directory)
+    const directory2 = await this.recordDirectory(kind, id3);
+    if (!directory2)
       return void 0;
     for (let attempt = 0; attempt < 3; attempt++) {
-      const marker = await this.head(directory);
+      const marker = await this.head(directory2);
       if (!marker)
         return void 0;
       try {
-        return await this.readRevision(directory, kind, id3, marker);
+        return await this.readRevision(directory2, kind, id3, marker);
       } catch (error2) {
-        if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory))?.revision === marker.revision)
+        if (!(error2 instanceof LocalStoreError) || error2.code !== "corrupt-storage" || (await this.head(directory2))?.revision === marker.revision)
           throw error2;
       }
     }
     throw conflict();
   }
-  async readRevision(directory, kind, id3, marker) {
-    const blobs = await privateDirectory(directory, "blobs");
-    const bytes = await readPrivateFile(import_node_path3.default.join(blobs, marker.blob), maximumEnvelope);
+  async readRevision(directory2, kind, id3, marker) {
+    const blobs = await privateDirectory(directory2, "blobs");
+    const bytes = await readPrivateFile(import_node_path4.default.join(blobs, marker.blob), maximumEnvelope);
     if (!bytes || digest(bytes) !== marker.sha256)
       throw corrupt();
     const envelope = parse(bytes);
@@ -2108,7 +2324,7 @@ var LocalRecordStore = class _LocalRecordStore {
       throw corrupt();
     let plaintext;
     try {
-      const decipher = (0, import_node_crypto3.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
+      const decipher = (0, import_node_crypto4.createDecipheriv)("aes-256-gcm", this.#key, binary(envelope.iv, 12));
       decipher.setAAD(this.aad(kind, id3, marker.revision));
       decipher.setAuthTag(binary(envelope.tag, 16));
       plaintext = Buffer.concat([decipher.update(binary(envelope.ciphertext)), decipher.final()]);
@@ -2145,7 +2361,7 @@ var LocalRecordStore = class _LocalRecordStore {
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || expectedRevision >= maximumRevision)
       throw conflict();
     const snapshot = canonicalJson(deleted ? { deleted: true } : { deleted: false, value }, maximumPlaintext);
-    const directory = await this.recordDirectory(kind, id3, true);
+    const directory2 = await this.recordDirectory(kind, id3, true);
     const previous = await this.read(kind, id3);
     if ((previous?.revision ?? 0) !== expectedRevision || previous?.deleted)
       throw conflict();
@@ -2153,8 +2369,8 @@ var LocalRecordStore = class _LocalRecordStore {
     const plaintext = Buffer.from(snapshot);
     let bytes;
     try {
-      const iv = (0, import_node_crypto3.randomBytes)(12);
-      const cipher = (0, import_node_crypto3.createCipheriv)("aes-256-gcm", this.#key, iv);
+      const iv = (0, import_node_crypto4.randomBytes)(12);
+      const cipher = (0, import_node_crypto4.createCipheriv)("aes-256-gcm", this.#key, iv);
       cipher.setAAD(this.aad(kind, id3, revision));
       const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
       bytes = Buffer.from(canonicalJson({
@@ -2166,15 +2382,15 @@ var LocalRecordStore = class _LocalRecordStore {
     } finally {
       plaintext.fill(0);
     }
-    const blobs = await privateDirectory(directory, "blobs");
-    const blob = `${(0, import_node_crypto3.randomUUID)()}.enc`;
-    const blobPath = import_node_path3.default.join(blobs, blob);
+    const blobs = await privateDirectory(directory2, "blobs");
+    const blob = `${(0, import_node_crypto4.randomUUID)()}.enc`;
+    const blobPath = import_node_path4.default.join(blobs, blob);
     if (!await publishImmutable(blobPath, bytes))
       throw conflict();
     let preserve = false;
     try {
       const marker = { formatVersion: 1, revision, blob, sha256: digest(bytes) };
-      preserve = await publishImmutable(import_node_path3.default.join(directory, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
+      preserve = await publishImmutable(import_node_path4.default.join(directory2, `${String(revision).padStart(12, "0")}.json`), Buffer.from(canonicalJson(marker)));
       if (!preserve)
         throw conflict();
       return deleted ? { revision, deleted: true } : { revision, deleted: false, value: JSON.parse(snapshot).value };
@@ -2204,15 +2420,15 @@ var LocalRecordStore = class _LocalRecordStore {
     const current = await this.read(kind, id3);
     if (!current?.deleted)
       throw conflict();
-    const directory = await this.recordDirectory(kind, id3);
-    const marker = await this.head(directory);
-    const blobs = await privateDirectory(directory, "blobs");
+    const directory2 = await this.recordDirectory(kind, id3);
+    const marker = await this.head(directory2);
+    const blobs = await privateDirectory(directory2, "blobs");
     let complete = true;
     for (const name of await (0, import_promises2.readdir)(blobs)) {
       if (name === marker.blob || !/^[a-f0-9-]{36}\.enc$/.test(name))
         continue;
       try {
-        await (0, import_promises2.unlink)(import_node_path3.default.join(blobs, name));
+        await (0, import_promises2.unlink)(import_node_path4.default.join(blobs, name));
       } catch (error2) {
         if (errorCode(error2) !== "ENOENT")
           complete = false;
@@ -2228,7 +2444,7 @@ var LocalRecordStore = class _LocalRecordStore {
 };
 
 // node_modules/@gcr/client-core/dist/local-knowledge.js
-var import_node_crypto4 = require("node:crypto");
+var import_node_crypto5 = require("node:crypto");
 function withHash(value) {
   return localKnowledge({ ...value, hash: contentHash(value) });
 }
@@ -2295,7 +2511,7 @@ var LocalKnowledgeStore = class {
     const now = this.timestamp();
     const item = withHash({
       ...draft,
-      id: (0, import_node_crypto4.randomUUID)(),
+      id: (0, import_node_crypto5.randomUUID)(),
       scope: this.records.scope,
       revision: 1,
       state: "candidate",
@@ -2600,7 +2816,7 @@ var LocalHistoryStore = class {
 };
 
 // node_modules/@gcr/client-core/dist/source-policy.js
-var import_node_path4 = __toESM(require("node:path"), 1);
+var import_node_path5 = __toESM(require("node:path"), 1);
 var generated = /* @__PURE__ */ new Set([
   "node_modules",
   "__pycache__",
@@ -2784,7 +3000,7 @@ function sourcePathPolicy(patterns = []) {
       return "private-data";
     if (parts2.some((part) => generated.has(part)))
       return "generated";
-    if (binary2.has(import_node_path4.default.posix.extname(name)))
+    if (binary2.has(import_node_path5.default.posix.extname(name)))
       return "binary";
     if (matches2(file))
       return "user-excluded";
@@ -2793,18 +3009,18 @@ function sourcePathPolicy(patterns = []) {
 }
 
 // node_modules/@gcr/client-core/dist/source-snapshot.js
-var import_node_crypto5 = require("node:crypto");
-var import_node_fs4 = require("node:fs");
-var import_node_path6 = __toESM(require("node:path"), 1);
+var import_node_crypto6 = require("node:crypto");
+var import_node_fs5 = require("node:fs");
+var import_node_path7 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/source-git.js
-var import_node_child_process3 = require("node:child_process");
-var import_node_fs3 = require("node:fs");
-var import_node_os2 = require("node:os");
-var import_node_path5 = __toESM(require("node:path"), 1);
+var import_node_child_process4 = require("node:child_process");
+var import_node_fs4 = require("node:fs");
+var import_node_os3 = require("node:os");
+var import_node_path6 = __toESM(require("node:path"), 1);
 var SourceGit = class {
   deadline;
-  directory = (0, import_node_fs3.mkdtempSync)(import_node_path5.default.join((0, import_node_os2.tmpdir)(), "gcr-source-"));
+  directory = process.platform === "win32" ? windowsPrivateTemporary("gcr-source-") : (0, import_node_fs4.mkdtempSync)(import_node_path6.default.join((0, import_node_os3.tmpdir)(), "gcr-source-"));
   root;
   index;
   objectFormat;
@@ -2815,8 +3031,14 @@ var SourceGit = class {
   constructor(cwd, deadline, indexFile = process.env.GIT_INDEX_FILE) {
     this.deadline = deadline;
     this.root = cwd;
-    this.index = import_node_path5.default.join(this.directory, "index");
+    this.index = import_node_path6.default.join(this.directory, "index");
     this.environment = {
+      ...process.platform === "win32" ? {
+        SystemRoot: process.env.SystemRoot,
+        USERPROFILE: this.directory,
+        TEMP: this.directory,
+        TMP: this.directory
+      } : {},
       PATH: process.env.PATH,
       LC_ALL: "C",
       HOME: this.directory,
@@ -2827,22 +3049,22 @@ var SourceGit = class {
       GIT_OPTIONAL_LOCKS: "0",
       GIT_LFS_SKIP_SMUDGE: "1",
       GIT_ALLOW_PROTOCOL: "",
-      ...indexFile ? { GIT_INDEX_FILE: import_node_path5.default.resolve(cwd, indexFile) } : {}
+      ...indexFile ? { GIT_INDEX_FILE: import_node_path6.default.resolve(cwd, indexFile) } : {}
     };
     try {
-      this.root = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--show-toplevel"]).trim());
+      this.root = (0, import_node_fs4.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--show-toplevel"]).trim());
       const format = this.text(["rev-parse", "--show-object-format"]).trim();
       if (format !== "sha1" && format !== "sha256")
         throw new SourceCaptureError("source-unavailable");
       this.objectFormat = format;
-      const common3 = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim());
-      const directory = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-dir"]).trim());
+      const common3 = (0, import_node_fs4.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-common-dir"]).trim());
+      const directory2 = (0, import_node_fs4.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-dir"]).trim());
       this.repository = {
         repositoryKey: contentHash({ version: 1, commonDirectory: common3 }),
         worktreeKey: contentHash({
           version: 1,
           commonDirectory: common3,
-          gitDirectory: directory,
+          gitDirectory: directory2,
           root: this.root
         })
       };
@@ -2854,10 +3076,10 @@ var SourceGit = class {
         "--git-path",
         "index"
       ]).trim();
-      const objects = (0, import_node_fs3.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-path", "objects"]).trim());
-      const objectDirectory = import_node_path5.default.join(this.directory, "objects");
-      (0, import_node_fs3.mkdirSync)(objectDirectory, { mode: 448 });
-      (0, import_node_fs3.mkdirSync)(import_node_path5.default.join(this.directory, "empty-worktree"), { mode: 448 });
+      const objects = (0, import_node_fs4.realpathSync)(this.text(["rev-parse", "--path-format=absolute", "--git-path", "objects"]).trim());
+      const objectDirectory = import_node_path6.default.join(this.directory, "objects");
+      (0, import_node_fs4.mkdirSync)(objectDirectory, { mode: 448 });
+      (0, import_node_fs4.mkdirSync)(import_node_path6.default.join(this.directory, "empty-worktree"), { mode: 448 });
       this.environment.GIT_OBJECT_DIRECTORY = objectDirectory;
       this.environment.GIT_ALTERNATE_OBJECT_DIRECTORIES = JSON.stringify(objects);
       this.environment.GIT_INDEX_FILE = this.index;
@@ -2866,25 +3088,38 @@ var SourceGit = class {
         return;
       }
       try {
-        const fd = (0, import_node_fs3.openSync)(originalIndex, import_node_fs3.constants.O_RDONLY | import_node_fs3.constants.O_NOFOLLOW | import_node_fs3.constants.O_NONBLOCK);
+        if (process.platform === "win32") {
+          const result = windowsNativeSync({
+            operation: "snapshot-read",
+            path: originalIndex,
+            maximum: 24 * 1024 * 1024
+          });
+          if (!result.missing) {
+            if (typeof result.bytes !== "string")
+              throw new SourceCaptureError("source-unavailable");
+            (0, import_node_fs4.writeFileSync)(this.index, Buffer.from(result.bytes, "base64"));
+          }
+          return;
+        }
+        const fd = (0, import_node_fs4.openSync)(originalIndex, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
         try {
-          const before = (0, import_node_fs3.fstatSync)(fd);
+          const before = (0, import_node_fs4.fstatSync)(fd);
           if (!before.isFile() || before.size > 64 * 1024 * 1024)
             throw new SourceCaptureError("capture-limit");
           const buffer = Buffer.alloc(before.size + 1);
           let length = 0;
           while (length < buffer.length) {
-            const received = (0, import_node_fs3.readSync)(fd, buffer, length, buffer.length - length, null);
+            const received = (0, import_node_fs4.readSync)(fd, buffer, length, buffer.length - length, null);
             if (!received)
               break;
             length += received;
           }
-          const after = (0, import_node_fs3.fstatSync)(fd);
+          const after = (0, import_node_fs4.fstatSync)(fd);
           if (length !== before.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs)
             throw new SourceCaptureError("snapshot-changed");
-          (0, import_node_fs3.writeFileSync)(this.index, buffer.subarray(0, length), { mode: 384 });
+          (0, import_node_fs4.writeFileSync)(this.index, buffer.subarray(0, length), { mode: 384 });
         } finally {
-          (0, import_node_fs3.closeSync)(fd);
+          (0, import_node_fs4.closeSync)(fd);
         }
       } catch (error2) {
         if (error2.code !== "ENOENT")
@@ -2903,7 +3138,7 @@ var SourceGit = class {
     if (remaining <= 0)
       throw new SourceCaptureError("capture-limit");
     try {
-      return (0, import_node_child_process3.execFileSync)("git", [
+      return (0, import_node_child_process4.execFileSync)("git", [
         "--no-replace-objects",
         ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
         "-C",
@@ -2930,7 +3165,7 @@ var SourceGit = class {
       ], {
         // Even tree-only commands can refresh/smudge a racy index and invoke
         // a clean filter. Index writes/diffs see an empty worktree, never source.
-        env: ["read-tree", "write-tree", "update-index", "diff"].includes(args[0] ?? "") ? { ...this.environment, GIT_WORK_TREE: import_node_path5.default.join(this.directory, "empty-worktree") } : this.environment,
+        env: ["read-tree", "write-tree", "update-index", "diff"].includes(args[0] ?? "") ? { ...this.environment, GIT_WORK_TREE: import_node_path6.default.join(this.directory, "empty-worktree") } : this.environment,
         input: input2,
         maxBuffer,
         timeout: Math.min(remaining, 1e4),
@@ -3004,45 +3239,45 @@ var SourceGit = class {
   ignoredInTree(tree, files) {
     if (!files.length)
       return [];
-    const directory = (0, import_node_fs3.mkdtempSync)(import_node_path5.default.join(this.directory, "ignore-"));
+    const directory2 = (0, import_node_fs4.mkdtempSync)(import_node_path6.default.join(this.directory, "ignore-"));
     let bytes = 0;
     for (const [file, entry] of tree) {
-      if (import_node_path5.default.posix.basename(file) !== ".gitignore" || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))
+      if (import_node_path6.default.posix.basename(file) !== ".gitignore" || entry.type !== "blob" || !["100644", "100755"].includes(entry.mode))
         continue;
-      const prefix = import_node_path5.default.posix.dirname(file);
+      const prefix = import_node_path6.default.posix.dirname(file);
       if (prefix !== "." && !files.some((candidate) => candidate.startsWith(prefix + "/")))
         continue;
       if (entry.size === null || entry.size > 1048576 || (bytes += entry.size) > 4194304)
         throw new SourceCaptureError("capture-limit");
-      const target = import_node_path5.default.resolve(directory, file);
-      if (!target.startsWith(directory + import_node_path5.default.sep))
+      const target = import_node_path6.default.resolve(directory2, file);
+      if (!target.startsWith(directory2 + import_node_path6.default.sep))
         throw new SourceCaptureError("source-unavailable");
-      (0, import_node_fs3.mkdirSync)(import_node_path5.default.dirname(target), { recursive: true, mode: 448 });
-      (0, import_node_fs3.writeFileSync)(target, this.run(["cat-file", "blob", this.oid(entry.oid)], void 0, 1048577), { mode: 384 });
+      (0, import_node_fs4.mkdirSync)(import_node_path6.default.dirname(target), { recursive: true, mode: 448 });
+      (0, import_node_fs4.writeFileSync)(target, this.run(["cat-file", "blob", this.oid(entry.oid)], void 0, 1048577), { mode: 384 });
     }
     this.environment.GIT_DIR = this.text(["rev-parse", "--absolute-git-dir"]).trim();
-    this.environment.GIT_WORK_TREE = directory;
+    this.environment.GIT_WORK_TREE = directory2;
     try {
       return this.text(["check-ignore", "--no-index", "-z", "--stdin"], files.map((file) => `./${file}\0`).join(""), void 0, [0, 1]).split("\0").filter(Boolean).map((file) => file.replace(/^\.\//, ""));
     } finally {
       delete this.environment.GIT_WORK_TREE;
       delete this.environment.GIT_DIR;
-      (0, import_node_fs3.rmSync)(directory, { recursive: true, force: true });
+      (0, import_node_fs4.rmSync)(directory2, { recursive: true, force: true });
     }
   }
   close() {
-    (0, import_node_fs3.rmSync)(this.directory, { recursive: true, force: true });
+    (0, import_node_fs4.rmSync)(this.directory, { recursive: true, force: true });
   }
 };
 
 // node_modules/@gcr/client-core/dist/source-snapshot.js
-var hash = (bytes) => (0, import_node_crypto5.createHash)("sha256").update(bytes).digest("hex");
-var blobId = (bytes, format) => (0, import_node_crypto5.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+var hash = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
+var blobId = (bytes, format) => (0, import_node_crypto6.createHash)(format).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
 var key = (side2, file) => `${side2}:${file}`;
-var limit = (value, fallback, maximum) => {
+var limit = (value, fallback, maximum2) => {
   if (value === void 0)
     return fallback;
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
+  if (!Number.isSafeInteger(value) || value < 1 || value > maximum2)
     throw new SourceCaptureError("invalid-source-request");
   return value;
 };
@@ -3348,7 +3583,7 @@ function captureLocalSource(input2) {
       const parts2 = file.split("/");
       for (let index = 1; index < parts2.length; index++) {
         try {
-          const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git2.root, ...parts2.slice(0, index)));
+          const stat2 = (0, import_node_fs5.lstatSync)(import_node_path7.default.join(git2.root, ...parts2.slice(0, index)));
           if (stat2.isSymbolicLink()) {
             for (const side2 of ["base", "source"])
               exclude(file, side2, "symlink", "ignore-path-symlink");
@@ -3456,7 +3691,7 @@ function captureLocalSource(input2) {
           try {
             const parts2 = file.split("/");
             for (let index = 1; index <= parts2.length; index++) {
-              const stat2 = (0, import_node_fs4.lstatSync)(import_node_path6.default.join(git2.root, ...parts2.slice(0, index)));
+              const stat2 = (0, import_node_fs5.lstatSync)(import_node_path7.default.join(git2.root, ...parts2.slice(0, index)));
               if (stat2.isSymbolicLink()) {
                 exclude(file, side2, "symlink");
                 break;
@@ -3468,23 +3703,33 @@ function captureLocalSource(input2) {
             }
             if (denied2.has(key(side2, file)))
               continue;
-            const absolute = import_node_path6.default.join(git2.root, file);
-            fd = (0, import_node_fs4.openSync)(absolute, import_node_fs4.constants.O_RDONLY | import_node_fs4.constants.O_NOFOLLOW | import_node_fs4.constants.O_NONBLOCK);
-            const opened = (0, import_node_fs4.fstatSync)(fd);
-            if (!opened.isFile() || (0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== signature(opened))
+            const absolute = import_node_path7.default.join(git2.root, file);
+            if (process.platform !== "win32")
+              fd = (0, import_node_fs5.openSync)(absolute, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW | import_node_fs5.constants.O_NONBLOCK);
+            const opened = fd === void 0 ? (0, import_node_fs5.lstatSync)(absolute) : (0, import_node_fs5.fstatSync)(fd);
+            if (!opened.isFile() || (0, import_node_fs5.realpathSync)(absolute) !== absolute || signature((0, import_node_fs5.lstatSync)(absolute)) !== signature(opened))
               throw new SourceCaptureError("snapshot-changed");
             if (!admit(file, side2, opened.size))
               continue;
-            const buffer = Buffer.alloc(opened.size + 1);
+            const native = process.platform === "win32" ? windowsNativeSync({
+              operation: "snapshot-read",
+              path: absolute,
+              maximum: Math.max(1, opened.size)
+            }) : void 0;
+            if (native && typeof native.bytes !== "string")
+              throw new SourceCaptureError("snapshot-changed");
+            const buffer = native ? Buffer.from(native.bytes, "base64") : Buffer.alloc(opened.size + 1);
             let length = 0;
-            while (length < buffer.length) {
-              const received = (0, import_node_fs4.readSync)(fd, buffer, length, buffer.length - length, null);
+            if (native)
+              length = buffer.length;
+            while (!native && length < buffer.length) {
+              const received = (0, import_node_fs5.readSync)(fd, buffer, length, buffer.length - length, null);
               if (!received)
                 break;
               length += received;
             }
             const body2 = buffer.subarray(0, length);
-            if (body2.length !== opened.size || signature((0, import_node_fs4.fstatSync)(fd)) !== signature(opened))
+            if (body2.length !== opened.size || signature(fd === void 0 ? (0, import_node_fs5.lstatSync)(absolute) : (0, import_node_fs5.fstatSync)(fd)) !== signature(opened))
               throw new SourceCaptureError("snapshot-changed");
             observations.push({ file, signature: signature(opened) });
             const captured = {
@@ -3510,7 +3755,7 @@ function captureLocalSource(input2) {
               exclude(file, side2, "unreadable");
           } finally {
             if (fd !== void 0)
-              (0, import_node_fs4.closeSync)(fd);
+              (0, import_node_fs5.closeSync)(fd);
           }
         } else if (entry) {
           if (entry.size === null)
@@ -3547,8 +3792,8 @@ function captureLocalSource(input2) {
     }
     for (const observation of observations) {
       try {
-        const absolute = import_node_path6.default.join(git2.root, observation.file);
-        if ((0, import_node_fs4.realpathSync)(absolute) !== absolute || signature((0, import_node_fs4.lstatSync)(absolute)) !== observation.signature)
+        const absolute = import_node_path7.default.join(git2.root, observation.file);
+        if ((0, import_node_fs5.realpathSync)(absolute) !== absolute || signature((0, import_node_fs5.lstatSync)(absolute)) !== observation.signature)
           throw new SourceCaptureError("snapshot-changed");
       } catch {
         throw new SourceCaptureError("snapshot-changed");
@@ -3558,8 +3803,8 @@ function captureLocalSource(input2) {
       throw new SourceCaptureError("snapshot-changed");
     if (workingWrites.length) {
       const names = workingWrites.map(({ body: body2 }, index) => {
-        const name = import_node_path6.default.join(git2.directory, `blob-${index}`);
-        (0, import_node_fs4.writeFileSync)(name, body2, { mode: 384 });
+        const name = import_node_path7.default.join(git2.directory, `blob-${index}`);
+        (0, import_node_fs5.writeFileSync)(name, body2, { mode: 384 });
         return JSON.stringify(name);
       });
       const oids = git2.text(["hash-object", "-w", "--no-filters", "--stdin-paths"], `${names.join("\n")}
@@ -3688,7 +3933,7 @@ function resolveReviewMode(settings = {}) {
 }
 
 // node_modules/@gcr/client-core/dist/source-language.js
-var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_path8 = __toESM(require("node:path"), 1);
 var languages = {
   ".py": "python",
   ".pyi": "python",
@@ -3730,15 +3975,15 @@ var languages = {
 };
 function sourceLanguage(file) {
   sourcePath(file);
-  return languages[import_node_path7.default.posix.extname(file).toLowerCase()];
+  return languages[import_node_path8.default.posix.extname(file).toLowerCase()];
 }
 
 // node_modules/@gcr/client-core/dist/central-cache.js
-var import_node_crypto8 = require("node:crypto");
-var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_crypto9 = require("node:crypto");
+var import_node_path9 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-core/dist/central-binding.js
-var import_node_crypto6 = require("node:crypto");
+var import_node_crypto7 = require("node:crypto");
 var KnowledgeSyncError = class extends Error {
   code;
   constructor(code, message2) {
@@ -3792,12 +4037,12 @@ var TrustedCentralBinding = class {
       for (const [id3, value] of input2.trustedKeys) {
         if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id3))
           throw invalid2();
-        const key4 = typeof value === "string" ? (0, import_node_crypto6.createPublicKey)(value) : value;
+        const key4 = typeof value === "string" ? (0, import_node_crypto7.createPublicKey)(value) : value;
         if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
           throw invalid2();
-        this.#keys.set(id3, (0, import_node_crypto6.createPublicKey)(key4.export({ type: "spki", format: "pem" })));
+        this.#keys.set(id3, (0, import_node_crypto7.createPublicKey)(key4.export({ type: "spki", format: "pem" })));
       }
-      this.id = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
+      this.id = (0, import_node_crypto7.createHash)("sha256").update(canonicalJson({ serverUrl: this.serverUrl, audience: this.audience })).digest("hex");
       Object.freeze(this);
     } catch {
       throw invalid2();
@@ -3809,7 +4054,7 @@ var TrustedCentralBinding = class {
 };
 
 // node_modules/@gcr/client-core/dist/knowledge-signature.js
-var import_node_crypto7 = require("node:crypto");
+var import_node_crypto8 = require("node:crypto");
 function verifyKnowledgeManifest(value, options) {
   const manifest = signedKnowledgeManifest(value);
   const payload = manifest.payload;
@@ -3821,11 +4066,11 @@ function verifyKnowledgeManifest(value, options) {
   const trusted = options.trustedKeys.get(payload.signingKeyId);
   if (!trusted)
     throw Error("Untrusted knowledge signing key");
-  const key4 = typeof trusted === "string" ? (0, import_node_crypto7.createPublicKey)(trusted) : trusted;
+  const key4 = typeof trusted === "string" ? (0, import_node_crypto8.createPublicKey)(trusted) : trusted;
   if (key4.type !== "public" || key4.asymmetricKeyType !== "ed25519")
     throw Error("Invalid knowledge verification key");
   const bytes = canonicalKnowledgeJson(payload);
-  if ((0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto7.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key4, Buffer.from(manifest.signature, "base64url")))
+  if ((0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex") !== manifest.manifestHash || !(0, import_node_crypto8.verify)(null, Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + bytes), key4, Buffer.from(manifest.signature, "base64url")))
     throw Error("Invalid knowledge manifest signature");
   const issued = Date.parse(payload.issuedAt), until = Date.parse(options.mode === "online" ? payload.refreshAfter : payload.offlineValidUntil);
   if (!Number.isFinite(options.now) || issued > options.now + 3e4 || options.now >= until)
@@ -3842,7 +4087,7 @@ function verifyKnowledgeManifest(value, options) {
 
 // node_modules/@gcr/client-core/dist/central-cache.js
 var parts = ["policy", "collective", "personal"];
-var hash2 = (bytes) => (0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex");
+var hash2 = (bytes) => (0, import_node_crypto9.createHash)("sha256").update(bytes).digest("hex");
 var error = (code) => new KnowledgeSyncError(code, {
   "invalid-binding": "Invalid central binding.",
   "repository-mismatch": "Local Git remotes no longer match the selected repository.",
@@ -3876,7 +4121,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
       throw error("invalid-binding");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path8.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
+      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-cache", options.binding.id)
     });
     return new _CentralKnowledgeCache(records, options.binding, options.now ?? Date.now);
   }
@@ -4050,7 +4295,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
     if (options.signal?.aborted)
       cancel();
     const timer = setTimeout(() => controller2.abort("timeout"), timeout);
-    const token2 = (0, import_node_crypto8.randomUUID)();
+    const token2 = (0, import_node_crypto9.randomUUID)();
     let generation;
     let authorizationUncertain = false;
     try {
@@ -4160,7 +4405,7 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         const bundle = this.bundle(parsed, part, manifest);
         this.check(controller2.signal);
         await this.owned(token2, generation);
-        const id3 = (0, import_node_crypto8.randomUUID)();
+        const id3 = (0, import_node_crypto9.randomUUID)();
         await this.records.write("knowledge", id3, bundle, 0);
         refs[part] = id3;
       }
@@ -4627,10 +4872,10 @@ var LocalReviewContext = class {
     return this.#data.validUntil;
   }
 };
-var bounded = (value, fallback, maximum) => {
+var bounded = (value, fallback, maximum2) => {
   if (value === void 0)
     return fallback;
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
+  if (!Number.isSafeInteger(value) || value < 1 || value > maximum2)
     throw Error("invalid-context-budget");
   return value;
 };
@@ -5045,10 +5290,10 @@ var ReviewPolicyError = class extends Error {
     this.name = "ReviewPolicyError";
   }
 };
-var integer2 = (value, fallback, maximum) => {
+var integer2 = (value, fallback, maximum2) => {
   if (value === void 0)
     return fallback;
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
+  if (!Number.isSafeInteger(value) || value < 1 || value > maximum2)
     throw new ReviewPolicyError("policy-unavailable");
   return value;
 };
@@ -5246,7 +5491,7 @@ function resolveLocalExecutionPolicy(input2) {
 }
 
 // node_modules/@gcr/client-core/dist/review-source-port.js
-var import_node_crypto9 = require("node:crypto");
+var import_node_crypto10 = require("node:crypto");
 var LocalReviewSourcePort = class {
   snapshot;
   policy;
@@ -5308,7 +5553,7 @@ var LocalReviewSourcePort = class {
         if (result.status !== "available" || !this.policy.allowSource(result.source))
           throw new ReviewPolicyError("policy-unavailable");
         read = {
-          id: (0, import_node_crypto9.randomUUID)(),
+          id: (0, import_node_crypto10.randomUUID)(),
           location: {
             path: file,
             side: side2,
@@ -5374,7 +5619,7 @@ var LocalReviewSourcePort = class {
 };
 
 // node_modules/@gcr/client-core/dist/review-runner.js
-var import_node_crypto10 = require("node:crypto");
+var import_node_crypto11 = require("node:crypto");
 var import_node_perf_hooks2 = require("node:perf_hooks");
 var key3 = (source2) => `${source2.side}:${source2.path}`;
 var outputRejections = {
@@ -5476,7 +5721,7 @@ async function runLocalReview(input2) {
   const started = import_node_perf_hooks2.performance.now();
   const report = {
     contractVersion: 1,
-    runId: (0, import_node_crypto10.randomUUID)(),
+    runId: (0, import_node_crypto11.randomUUID)(),
     identity,
     status: "failed",
     trigger: input2.trigger ?? "manual",
@@ -5509,9 +5754,9 @@ async function runLocalReview(input2) {
       return read;
     });
   };
-  const requirements = (path19) => {
-    const change = selected.find((change2) => change2.path === path19);
-    return snapshot.sourceFiles.filter((source3) => source3.side === "base" ? source3.path === (change.oldPath ?? path19) : source3.path === path19);
+  const requirements = (path20) => {
+    const change = selected.find((change2) => change2.path === path20);
+    return snapshot.sourceFiles.filter((source3) => source3.side === "base" ? source3.path === (change.oldPath ?? path20) : source3.path === path20);
   };
   let portFailure;
   const source2 = {
@@ -5526,7 +5771,7 @@ async function runLocalReview(input2) {
       }
     }
   };
-  const decode = (response) => {
+  const decode2 = (response) => {
     const seen = /* @__PURE__ */ new Set();
     for (const file of response.files) {
       if (seen.has(key3(file)))
@@ -5563,7 +5808,7 @@ async function runLocalReview(input2) {
       resolveReads(finding.counterEvidence.readIds);
       const confirmed = finding.counterEvidence.status === "reviewed" && !!finding.counterEvidence.summary && finding.counterEvidence.readIds.length > 0 && !!finding.rationale && finding.conditions.length > 0 && requirements(anchorRead.location.path).every((source3) => coverage(source3, resolveReads(readIds)));
       return {
-        id: (0, import_node_crypto10.randomUUID)(),
+        id: (0, import_node_crypto11.randomUUID)(),
         title: finding.title,
         problem: finding.problem,
         impact: finding.impact,
@@ -5597,7 +5842,7 @@ async function runLocalReview(input2) {
         policy: { enforcement: "advisory" }
       };
     });
-    report.questions = response.questions.map((question) => ({ id: (0, import_node_crypto10.randomUUID)(), ...question }));
+    report.questions = response.questions.map((question) => ({ id: (0, import_node_crypto11.randomUUID)(), ...question }));
     report.summary = response.summary;
     if (report.files.some((file) => file.status !== "completed"))
       report.problems.push({
@@ -5710,7 +5955,7 @@ async function runLocalReview(input2) {
     } catch {
       throw invalid3("invalid-schema");
     }
-    decode(response);
+    decode2(response);
     if (updated) {
       report.status = "superseded";
       report.problems.push({
@@ -5799,7 +6044,7 @@ async function runLocalReview(input2) {
 var import_node_http = require("node:http");
 var import_node_https = require("node:https");
 var import_promises3 = require("node:timers/promises");
-var import_node_crypto11 = require("node:crypto");
+var import_node_crypto12 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/review-history.js
 async function loadSelectedSourceHistory(selection, read) {
@@ -6067,7 +6312,7 @@ var KnowledgeHttpTransport = class {
       const bodies = "item" in data ? [data.item] : "items" in data ? data.items : [];
       for (const entry of bodies) {
         const item = "snapshot" in entry ? entry.snapshot : entry;
-        if ("body" in item && "contentHash" in item && (0, import_node_crypto11.createHash)("sha256").update(item.body).digest("hex") !== item.contentHash)
+        if ("body" in item && "contentHash" in item && (0, import_node_crypto12.createHash)("sha256").update(item.body).digest("hex") !== item.contentHash)
           throw Error("history-body-hash");
       }
       return data;
@@ -6197,11 +6442,11 @@ var ReviewSubmissionDeliveryError = class extends Error {
 };
 
 // node_modules/@gcr/client-core/dist/central-connection.js
-var import_node_path9 = __toESM(require("node:path"), 1);
-var import_node_crypto12 = require("node:crypto");
+var import_node_path10 = __toESM(require("node:path"), 1);
+var import_node_crypto13 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/repository-binding.js
-var import_node_child_process4 = require("node:child_process");
+var import_node_child_process5 = require("node:child_process");
 var mismatch = () => new KnowledgeSyncError("repository-mismatch", "Git remotes do not match the selected central repository. Check the repository and reconnect.");
 function canonicalRepositoryRemote(raw) {
   try {
@@ -6241,7 +6486,7 @@ function canonicalRepositoryRemote(raw) {
 function localRepositoryRemotes(root) {
   const git2 = (args) => {
     try {
-      return (0, import_node_child_process4.execFileSync)("git", ["-C", root, "--no-optional-locks", ...args], {
+      return (0, import_node_child_process5.execFileSync)("git", ["-C", root, "--no-optional-locks", ...args], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         timeout: 1e4,
@@ -6304,7 +6549,7 @@ var CentralConnections = class _CentralConnections {
       throw denied();
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path9.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
+      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "central-connections")
     });
     return new _CentralConnections(records, options, options.credentials ?? new PlatformCentralCredentialStore());
   }
@@ -6425,7 +6670,7 @@ var CentralConnections = class _CentralConnections {
       ca: config.ca,
       offlineBehavior: behavior,
       ...mapped ? { repositoryBinding: mapped } : {},
-      credentialReference: "gcr-" + (0, import_node_crypto12.randomUUID)(),
+      credentialReference: "gcr-" + (0, import_node_crypto13.randomUUID)(),
       keyId: identity.keyId,
       clientId,
       expiresAt: identity.expiresAt
@@ -6544,7 +6789,7 @@ var CentralConnections = class _CentralConnections {
     const { generation } = await cache.connectionState();
     const records = await LocalRecordStore.open({
       ...this.options,
-      dataDirectory: import_node_path9.default.join(this.options.dataDirectory ?? defaultLocalDataDirectory(), "central-pr-history", id3)
+      dataDirectory: import_node_path10.default.join(this.options.dataDirectory ?? defaultLocalDataDirectory(), "central-pr-history", id3)
     });
     const key4 = contentHash(request);
     try {
@@ -6797,8 +7042,8 @@ async function resolveReviewExecution(input2) {
 }
 
 // node_modules/@gcr/client-core/dist/review-requests.js
-var import_node_path10 = __toESM(require("node:path"), 1);
-var import_node_crypto13 = require("node:crypto");
+var import_node_path11 = __toESM(require("node:path"), 1);
+var import_node_crypto14 = require("node:crypto");
 var import_promises4 = require("node:timers/promises");
 var ReviewRequestError = class extends Error {
   code;
@@ -6836,7 +7081,7 @@ var ReviewRequests = class _ReviewRequests {
       throw new ReviewRequestError("request-invalid");
     const records = await LocalRecordStore.open({
       ...options,
-      dataDirectory: import_node_path10.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
+      dataDirectory: import_node_path11.default.join(options.dataDirectory ?? defaultLocalDataDirectory(), "review-requests")
     });
     return new _ReviewRequests(records, options.now ?? Date.now);
   }
@@ -6902,7 +7147,7 @@ var ReviewRequests = class _ReviewRequests {
   /** A caller renews its priority while waiting for or executing a manual review.
    * Expiration releases scheduling priority only; it never retries an unknown model. */
   async prioritizeManual(token2) {
-    const selected = token2 ?? (0, import_node_crypto13.randomUUID)();
+    const selected = token2 ?? (0, import_node_crypto14.randomUUID)();
     return this.retry(async () => {
       const state = await this.priorityState();
       const existing = state.value.holders.find((holder) => holder.token === selected);
@@ -7008,7 +7253,7 @@ var ReviewRequests = class _ReviewRequests {
         return { kind: "interrupted", request: state.value };
       if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
         return { kind: "finished", request: state.value };
-      const token2 = (0, import_node_crypto13.randomUUID)(), generation = state.value.generation + 1;
+      const token2 = (0, import_node_crypto14.randomUUID)(), generation = state.value.generation + 1;
       const request = await this.put(state, {
         ...state.value,
         state: "claimed",
@@ -7040,8 +7285,8 @@ var ReviewRequests = class _ReviewRequests {
   }
   async begin(lease, reason, limits = {}) {
     reviewTrigger(reason);
-    const minimum = limits.minimumIntervalMs ?? 0, maximum = limits.maximumReviewsPerHour ?? 1e3;
-    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum) || maximum < 1 || maximum > 1e3)
+    const minimum = limits.minimumIntervalMs ?? 0, maximum2 = limits.maximumReviewsPerHour ?? 1e3;
+    if (!Number.isInteger(minimum) || minimum < 0 || minimum > 36e5 || !Number.isInteger(maximum2) || maximum2 < 1 || maximum2 > 1e3)
       throw new ReviewRequestError("request-invalid");
     const owned = await this.owned(lease);
     if (owned.value.state !== "claimed")
@@ -7059,7 +7304,7 @@ var ReviewRequests = class _ReviewRequests {
       if (reservations.some((r) => r.key === lease.key && r.generation === lease.generation))
         return;
       const last = reservations.filter((r) => r.reason === reason).at(-1);
-      const retryAt = Math.max(reservations.length >= maximum ? reservations[reservations.length - maximum].at + 36e5 : 0, last ? last.at + minimum : 0);
+      const retryAt = Math.max(reservations.length >= maximum2 ? reservations[reservations.length - maximum2].at + 36e5 : 0, last ? last.at + minimum : 0);
       if (retryAt > now)
         throw new ReviewRequestError("request-deferred", retryAt);
       reservations.push({ key: lease.key, generation: lease.generation, at: now, reason });
@@ -7296,14 +7541,14 @@ async function executeReviewRequest(input2) {
 }
 
 // node_modules/@gcr/client-core/dist/automatic-source.js
-var import_node_child_process5 = require("node:child_process");
-var import_node_fs5 = require("node:fs");
+var import_node_child_process6 = require("node:child_process");
+var import_node_fs6 = require("node:fs");
 var import_promises5 = require("node:fs/promises");
-var import_node_path11 = __toESM(require("node:path"), 1);
-var import_node_crypto14 = require("node:crypto");
+var import_node_path12 = __toESM(require("node:path"), 1);
+var import_node_crypto15 = require("node:crypto");
 async function git(cwd, args, input2, allow = [0]) {
   return new Promise((resolve, reject) => {
-    const child = (0, import_node_child_process5.execFile)("git", [
+    const child = (0, import_node_child_process6.execFile)("git", [
       ...args[0] === "check-ignore" ? [] : ["--literal-pathspecs"],
       "-c",
       "core.fsmonitor=false",
@@ -7406,8 +7651,8 @@ async function readAutomaticFile(root, file, excludes, knownChanged = false) {
   file = sourcePath(file);
   if (sourcePathPolicy(excludes)(file))
     return void 0;
-  const absolute = import_node_path11.default.join(root, file);
-  let parent = import_node_path11.default.dirname(absolute);
+  const absolute = import_node_path12.default.join(root, file);
+  let parent = import_node_path12.default.dirname(absolute);
   for (; ; ) {
     try {
       if (await (0, import_promises5.realpath)(parent) !== parent)
@@ -7416,17 +7661,17 @@ async function readAutomaticFile(root, file, excludes, knownChanged = false) {
     } catch (error2) {
       if (error2.code !== "ENOENT" || parent === root)
         return void 0;
-      parent = import_node_path11.default.dirname(parent);
+      parent = import_node_path12.default.dirname(parent);
     }
   }
-  if (parent !== root && !parent.startsWith(root + import_node_path11.default.sep))
+  if (parent !== root && !parent.startsWith(root + import_node_path12.default.sep))
     return void 0;
   const ignored = knownChanged ? "" : await git(root, ["check-ignore", "--no-index", "-z", "--stdin"], `./${file}\0`, [0, 1]);
   if (ignored)
     return void 0;
   let handle;
   try {
-    handle = await (0, import_promises5.open)(absolute, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NOFOLLOW | import_node_fs5.constants.O_NONBLOCK);
+    handle = await (0, import_promises5.open)(absolute, import_node_fs6.constants.O_RDONLY | import_node_fs6.constants.O_NOFOLLOW | import_node_fs6.constants.O_NONBLOCK);
     const before = await handle.stat();
     if (!before.isFile() || before.size > 2 * 1024 * 1024)
       return void 0;
@@ -7444,7 +7689,7 @@ async function readAutomaticFile(root, file, excludes, knownChanged = false) {
     if (buffer.subarray(0, length).includes(0))
       return void 0;
     const changed = knownChanged || await workingTreeChanged(root, file);
-    return { hash: (0, import_node_crypto14.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
+    return { hash: (0, import_node_crypto15.createHash)("sha256").update(buffer.subarray(0, length)).digest("hex"), changed };
   } catch (error2) {
     if (error2.code === "ENOENT") {
       const changed = knownChanged || await workingTreeChanged(root, file);
@@ -7460,7 +7705,7 @@ async function readAutomaticFile(root, file, excludes, knownChanged = false) {
 var maximumFrame = 9 * 1024 * 1024;
 
 // node_modules/@gcr/client-core/dist/review-conversations.js
-var import_node_crypto15 = require("node:crypto");
+var import_node_crypto16 = require("node:crypto");
 var ReviewConversationError = class extends Error {
   code;
   constructor(code) {
@@ -7589,7 +7834,7 @@ var ReviewConversationStore = class {
       throw new ReviewConversationError("quota-exceeded");
     const previousUsage = { ...turn.usage };
     turn.status = "running";
-    turn.worker = (0, import_node_crypto15.randomUUID)();
+    turn.worker = (0, import_node_crypto16.randomUUID)();
     turn.usage = { ...chat.limits, modelCalls: previousUsage.modelCalls + 1 };
     turn.updatedAt = chat.updatedAt = this.time(chat.updatedAt);
     return { stored: await this.write(stored), previousUsage };
@@ -7605,7 +7850,7 @@ var ReviewConversationStore = class {
     const question = reviewChatQuestionInput(input2.question);
     const at = this.time(stored.conversation.updatedAt);
     turn.questions.push({
-      id: (0, import_node_crypto15.randomUUID)(),
+      id: (0, import_node_crypto16.randomUUID)(),
       callId: input2.callId,
       ...question,
       answer: null,
@@ -7744,22 +7989,22 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var import_node_crypto18 = require("node:crypto");
-var import_node_fs6 = require("node:fs");
+var import_node_crypto20 = require("node:crypto");
+var import_node_fs7 = require("node:fs");
 var import_promises8 = require("node:fs/promises");
-var import_node_os4 = __toESM(require("node:os"), 1);
-var import_node_path15 = __toESM(require("node:path"), 1);
+var import_node_os5 = __toESM(require("node:os"), 1);
+var import_node_path16 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/codex-config.js
-var import_node_path12 = __toESM(require("node:path"), 1);
+var import_node_path13 = __toESM(require("node:path"), 1);
 
 // node_modules/@gcr/client-executors/dist/process.js
-var import_node_child_process6 = require("node:child_process");
+var import_node_child_process7 = require("node:child_process");
 var ExecutorError = class extends Error {
   code;
   constructor(code) {
@@ -7769,15 +8014,43 @@ var ExecutorError = class extends Error {
   }
 };
 async function runManagedProcess(input2) {
-  if (!["darwin", "linux"].includes(process.platform))
+  if (!["darwin", "linux", "win32"].includes(process.platform))
     throw new ExecutorError("executor-unavailable");
   if (input2.signal?.aborted)
     throw new ExecutorError("cancelled");
-  const maximum = input2.outputBytes ?? 4 * 1024 * 1024;
-  if (!Number.isSafeInteger(input2.timeoutMs) || input2.timeoutMs < 1 || input2.timeoutMs > 6e5 || !Number.isSafeInteger(maximum) || maximum < 1 || maximum > 16 * 1024 * 1024 || Buffer.byteLength(input2.stdin) > 2 * 1024 * 1024)
+  const maximum2 = input2.outputBytes ?? 4 * 1024 * 1024;
+  if (!Number.isSafeInteger(input2.timeoutMs) || input2.timeoutMs < 1 || input2.timeoutMs > 6e5 || !Number.isSafeInteger(maximum2) || maximum2 < 1 || maximum2 > 16 * 1024 * 1024 || Buffer.byteLength(input2.stdin) > 2 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
+  if (process.platform === "win32") {
+    const result = await windowsNative({
+      operation: "process",
+      command: input2.command,
+      args: input2.args,
+      cwd: input2.cwd,
+      env: { SystemRoot: process.env.SystemRoot, ...input2.env },
+      stdin: input2.stdin,
+      timeout: input2.timeoutMs,
+      maximum: maximum2
+    }, {
+      ...input2.signal ? { signal: input2.signal } : {},
+      timeoutMs: input2.timeoutMs + 3e3
+    });
+    if (result.error) {
+      const known = [
+        "cancelled",
+        "timeout",
+        "output-limit",
+        "executable-unavailable",
+        "cleanup-failed"
+      ];
+      throw new ExecutorError(known.includes(result.error) ? result.error : "process-failed");
+    }
+    if (typeof result.code !== "number" || typeof result.stdout !== "string" || typeof result.stderr !== "string")
+      throw new ExecutorError("process-failed");
+    return { code: result.code, stdout: result.stdout, stderr: result.stderr };
+  }
   return new Promise((resolve, reject) => {
-    const child = (0, import_node_child_process6.spawn)(input2.command, [...input2.args], {
+    const child = (0, import_node_child_process7.spawn)(input2.command, [...input2.args], {
       cwd: input2.cwd,
       env: { ...input2.env },
       detached: true,
@@ -7854,7 +8127,7 @@ async function runManagedProcess(input2) {
     const collect = (target, chunk) => {
       if (failure || done)
         return;
-      if (chunk.length > maximum - total) {
+      if (chunk.length > maximum2 - total) {
         stop(new ExecutorError("output-limit"));
         return;
       }
@@ -7938,7 +8211,7 @@ function codexReviewArgs(root, sourceUrl, conversation = false, model = CODEX_RE
     instructions: CODEX_REVIEW_INSTRUCTIONS,
     developer_instructions: "",
     model_reasoning_effort: effort,
-    model_catalog_json: import_node_path12.default.join(root, "models.json"),
+    model_catalog_json: import_node_path13.default.join(root, "models.json"),
     project_doc_max_bytes: 0,
     web_search: "disabled",
     "agents.enabled": false,
@@ -7951,8 +8224,8 @@ function codexReviewArgs(root, sourceUrl, conversation = false, model = CODEX_RE
     "history.persistence": "none",
     "analytics.enabled": false,
     "feedback.enabled": false,
-    sqlite_home: import_node_path12.default.join(root, "state"),
-    log_dir: import_node_path12.default.join(root, "logs"),
+    sqlite_home: import_node_path13.default.join(root, "state"),
+    log_dir: import_node_path13.default.join(root, "logs"),
     "otel.exporter": "none",
     "otel.trace_exporter": "none",
     "otel.metrics_exporter": "none",
@@ -8021,6 +8294,17 @@ function codexAccountEnvironment() {
   const env = {};
   for (const key4 of [
     "PATH",
+    ...process.platform === "win32" ? [
+      "SystemRoot",
+      "WINDIR",
+      "USERPROFILE",
+      "LOCALAPPDATA",
+      "APPDATA",
+      "TEMP",
+      "TMP",
+      "PATHEXT",
+      "ComSpec"
+    ] : [],
     "HOME",
     "CODEX_HOME",
     "LANG",
@@ -8035,7 +8319,8 @@ function codexAccountEnvironment() {
     "http_proxy",
     "all_proxy"
   ]) {
-    const value = process.env[key4];
+    const actual = process.platform === "win32" ? Object.keys(process.env).find((name) => name.toLowerCase() === key4.toLowerCase()) : key4;
+    const value = actual ? process.env[actual] : void 0;
     if (value !== void 0)
       env[key4] = value;
   }
@@ -8046,20 +8331,42 @@ function codexAccountEnvironment() {
 // node_modules/@gcr/client-executors/dist/catalog-probe.js
 var import_node_http3 = require("node:http");
 var import_promises7 = require("node:fs/promises");
-var import_node_path14 = __toESM(require("node:path"), 1);
-var import_node_crypto17 = require("node:crypto");
+var import_node_path15 = __toESM(require("node:path"), 1);
+var import_node_crypto19 = require("node:crypto");
 
 // node_modules/@gcr/client-executors/dist/codex-isolation.js
 var import_promises6 = require("node:fs/promises");
-var import_node_os3 = __toESM(require("node:os"), 1);
-var import_node_path13 = __toESM(require("node:path"), 1);
+var import_node_crypto17 = require("node:crypto");
+var import_node_os4 = __toESM(require("node:os"), 1);
+var import_node_path14 = __toESM(require("node:path"), 1);
 async function runIsolatedCodex(input2) {
+  if (process.platform === "win32") {
+    const original = input2.env.CODEX_HOME ?? import_node_path14.default.join(input2.env.USERPROFILE ?? import_node_os4.default.homedir(), ".codex");
+    const root = import_node_path14.default.join(import_node_path14.default.dirname(input2.cwd), `account-${(0, import_node_crypto17.randomUUID)()}`);
+    try {
+      checkWindowsStorage(await windowsNative({ operation: "directory", path: root }));
+      const linked = checkWindowsStorage(await windowsNative({
+        operation: "auth-link",
+        source: import_node_path14.default.join(original, "auth.json"),
+        path: import_node_path14.default.join(root, "auth.json")
+      }));
+      if (linked.missing && !input2.args.includes('model_provider="gcr_fixture"'))
+        throw new ExecutorError("executor-unavailable");
+      return await runManagedProcess({
+        ...input2,
+        env: { ...input2.env, CODEX_HOME: root },
+        args: [...input2.args, "-c", 'cli_auth_credentials_store="file"']
+      });
+    } finally {
+      await (0, import_promises6.rm)(root, { recursive: true, force: true });
+    }
+  }
   if (process.platform !== "darwin")
     throw new ExecutorError("executor-unavailable");
-  const authHome = await (0, import_promises6.realpath)(input2.env.CODEX_HOME ?? import_node_path13.default.join(input2.env.HOME ?? import_node_os3.default.homedir(), ".codex"));
+  const authHome = await (0, import_promises6.realpath)(input2.env.CODEX_HOME ?? import_node_path14.default.join(input2.env.HOME ?? import_node_os4.default.homedir(), ".codex"));
   const denied2 = [];
   for (const name of ["AGENTS.md", "AGENTS.override.md"]) {
-    const file = import_node_path13.default.join(authHome, name);
+    const file = import_node_path14.default.join(authHome, name);
     try {
       const info = await (0, import_promises6.lstat)(file);
       if (!info.isFile() || info.isSymbolicLink())
@@ -8082,7 +8389,7 @@ async function runIsolatedCodex(input2) {
 }
 
 // node_modules/@gcr/client-executors/dist/source-bridge.js
-var import_node_crypto16 = require("node:crypto");
+var import_node_crypto18 = require("node:crypto");
 var import_node_http2 = require("node:http");
 var fixedSourceTools = [
   {
@@ -8168,7 +8475,7 @@ var reviewQuestionTool = {
   }
 };
 async function startSourceBridge(port2, questions) {
-  const token2 = (0, import_node_crypto16.randomBytes)(32).toString("hex");
+  const token2 = (0, import_node_crypto18.randomBytes)(32).toString("hex");
   const authorization = Buffer.from(`Bearer ${token2}`);
   const tools = questions ? [...fixedSourceTools, reviewQuestionTool] : fixedSourceTools;
   const sockets = /* @__PURE__ */ new Set();
@@ -8176,7 +8483,7 @@ async function startSourceBridge(port2, questions) {
   let requestCount = 0;
   const server = (0, import_node_http2.createServer)(async (req, res) => {
     const supplied = Buffer.from(req.headers.authorization ?? "");
-    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto16.timingSafeEqual)(supplied, authorization)) {
+    if (req.headers.host !== host || req.headers.origin !== void 0 || supplied.length !== authorization.length || !(0, import_node_crypto18.timingSafeEqual)(supplied, authorization)) {
       res.writeHead(403).end();
       return;
     }
@@ -8241,7 +8548,7 @@ async function startSourceBridge(port2, questions) {
             break;
           }
           try {
-            const text3 = name === "ask_user" && questions ? await questions.askUser((0, import_node_crypto16.createHash)("sha256").update(JSON.stringify([token2, id3])).digest("hex"), reviewChatQuestionInput(params?.arguments)) : await port2.execute(name, params?.arguments ?? {});
+            const text3 = name === "ask_user" && questions ? await questions.askUser((0, import_node_crypto18.createHash)("sha256").update(JSON.stringify([token2, id3])).digest("hex"), reviewChatQuestionInput(params?.arguments)) : await port2.execute(name, params?.arguments ?? {});
             if (typeof text3 !== "string" || Buffer.byteLength(text3) > 1048576)
               throw Error("output");
             result = { content: [{ type: "text", text: text3 }], isError: false };
@@ -8316,11 +8623,21 @@ function catalogNames(request) {
   return tools.flatMap((tool) => tool.type === "namespace" && Array.isArray(tool.tools) ? tool.tools.map((child) => `${String(tool.name)}.${String(child.name)}`) : [`${String(tool.type)}.${String(tool.name)}`]).sort();
 }
 async function probeCodexCatalog(command, root, observe, conversation = false, model = CODEX_REVIEW_MODEL, effort = CODEX_REVIEW_EFFORT) {
-  const canary = `DO_NOT_LOAD_${(0, import_node_crypto17.randomBytes)(16).toString("hex")}`;
+  const canary = `DO_NOT_LOAD_${(0, import_node_crypto19.randomBytes)(16).toString("hex")}`;
   for (const name of ["auth", "cwd"])
-    await (0, import_promises7.mkdir)(import_node_path14.default.join(root, name), { mode: 448 });
-  await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
-  await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+    await (0, import_promises7.mkdir)(import_node_path15.default.join(root, name), { mode: 448 });
+  await (0, import_promises7.writeFile)(import_node_path15.default.join(root, "auth", "AGENTS.md"), `${canary}_home`, { mode: 384 });
+  await (0, import_promises7.writeFile)(import_node_path15.default.join(root, "auth", "AGENTS.override.md"), `${canary}_override`, {
+    mode: 384
+  });
+  await (0, import_promises7.writeFile)(import_node_path15.default.join(root, "cwd", "AGENTS.md"), `${canary}_cwd`, { mode: 384 });
+  const skill2 = import_node_path15.default.join(root, "auth", ".agents", "skills", "unexpected");
+  await (0, import_promises7.mkdir)(skill2, { recursive: true, mode: 448 });
+  await (0, import_promises7.writeFile)(import_node_path15.default.join(skill2, "SKILL.md"), `---
+name: unexpected
+description: ${canary}_skill
+---
+${canary}_skill`, { mode: 384 });
   const bridge = await startSourceBridge({
     async execute() {
       throw Error("Probe never provides source.");
@@ -8370,7 +8687,7 @@ async function probeCodexCatalog(command, root, observe, conversation = false, m
     const address = server.address();
     if (!address || typeof address === "string")
       throw new ExecutorError("executor-unavailable");
-    await (0, import_promises7.writeFile)(import_node_path14.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
+    await (0, import_promises7.writeFile)(import_node_path15.default.join(root, "auth", "config.toml"), `developer_instructions = ${JSON.stringify(`${canary}_config`)}
 [mcp_servers.unexpected]
 url = "http://127.0.0.1:${address.port}/unexpected"
 `, { mode: 384 });
@@ -8388,11 +8705,13 @@ url = "http://127.0.0.1:${address.port}/unexpected"
     const processResult = await runIsolatedCodex({
       command,
       args,
-      cwd: import_node_path14.default.join(root, "cwd"),
+      cwd: import_node_path15.default.join(root, "cwd"),
       env: {
-        PATH: "/usr/bin:/bin",
-        HOME: import_node_path14.default.join(root, "auth"),
-        CODEX_HOME: import_node_path14.default.join(root, "auth"),
+        ...process.platform === "win32" ? codexAccountEnvironment() : {},
+        ...process.platform === "win32" ? { USERPROFILE: import_node_path15.default.join(root, "auth") } : {},
+        PATH: process.platform === "win32" ? process.env.PATH : "/usr/bin:/bin",
+        HOME: import_node_path15.default.join(root, "auth"),
+        CODEX_HOME: import_node_path15.default.join(root, "auth"),
         LANG: "en_US.UTF-8",
         GCR_FIXED_SOURCE_TOKEN: bridge.token
       },
@@ -8406,7 +8725,7 @@ url = "http://127.0.0.1:${address.port}/unexpected"
       requestCount: requests.length,
       invalidRequest,
       canaryLoaded: !!request && JSON.stringify(request).includes(canary),
-      canarySources: ["home", "cwd", "config"].filter((source2) => JSON.stringify(request).includes(`${canary}_${source2}`)),
+      canarySources: ["home", "override", "cwd", "config", "skill"].filter((source2) => JSON.stringify(request).includes(`${canary}_${source2}`)),
       tools: request ? catalogNames(request) : []
     });
     if (invalidRequest || !request || request.model !== model || request.reasoning?.effort !== effort || JSON.stringify(request).includes(canary))
@@ -8430,21 +8749,23 @@ url = "http://127.0.0.1:${address.port}/unexpected"
 }
 
 // node_modules/@gcr/client-executors/dist/codex.js
-var hash3 = (value) => (0, import_node_crypto18.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto20.createHash)("sha256").update(value).digest("hex");
 async function binaryHash(command) {
   const info = await (0, import_promises8.stat)(command);
   if (!info.isFile() || info.size > 512 * 1024 * 1024)
     throw new ExecutorError("executor-unavailable");
-  const digest2 = (0, import_node_crypto18.createHash)("sha256");
-  for await (const bytes of (0, import_node_fs6.createReadStream)(command))
+  const digest2 = (0, import_node_crypto20.createHash)("sha256");
+  for await (const bytes of (0, import_node_fs7.createReadStream)(command))
     digest2.update(bytes);
   return digest2.digest("hex");
 }
 async function executablePath(value) {
-  const candidates = value.includes(import_node_path15.default.sep) ? [import_node_path15.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path15.default.delimiter).filter(Boolean).map((directory) => import_node_path15.default.join(directory, value));
+  const candidates = import_node_path16.default.isAbsolute(value) || value.includes(import_node_path16.default.sep) ? [import_node_path16.default.resolve(value)] : (process.env.PATH ?? "").split(import_node_path16.default.delimiter).filter(Boolean).map((directory2) => import_node_path16.default.join(directory2, process.platform === "win32" && !import_node_path16.default.extname(value) ? `${value}.exe` : value));
   for (const candidate of candidates) {
+    if (process.platform === "win32" && !candidate.toLowerCase().endsWith(".exe"))
+      continue;
     try {
-      await (0, import_promises8.access)(candidate, import_node_fs6.constants.X_OK);
+      await (0, import_promises8.access)(candidate, import_node_fs7.constants.X_OK);
       return await (0, import_promises8.realpath)(candidate);
     } catch {
     }
@@ -8498,13 +8819,13 @@ var CodexAccountExecutor = class {
       throw new ExecutorError("cancelled");
     if (await binaryHash(this.command) !== this.fingerprint)
       throw new ExecutorError("executor-unavailable");
-    const root = await (0, import_promises8.mkdtemp)(import_node_path15.default.join(import_node_os4.default.tmpdir(), "gcr-codex-review-"));
+    const root = process.platform === "win32" ? windowsPrivateTemporary("gcr-codex-review-") : await (0, import_promises8.mkdtemp)(import_node_path16.default.join(import_node_os5.default.tmpdir(), "gcr-codex-review-"));
     const started = performance.now();
     let bridge;
     try {
-      const cwd = import_node_path15.default.join(root, "cwd");
+      const cwd = import_node_path16.default.join(root, "cwd");
       await (0, import_promises8.mkdir)(cwd, { mode: 448 });
-      await (0, import_promises8.writeFile)(import_node_path15.default.join(root, "models.json"), this.catalog, { mode: 384 });
+      await (0, import_promises8.writeFile)(import_node_path16.default.join(root, "models.json"), this.catalog, { mode: 384 });
       bridge = await startSourceBridge(input2.source, questions);
       const args = codexReviewArgs(root, bridge.url, !!questions, this.model, this.effort);
       const prompt = codexReviewPrompt(input2.prompt, input2.responseSchema);
@@ -8557,13 +8878,18 @@ var CodexAccountExecutor = class {
   }
 };
 async function prepareCodexAccountExecutor(options) {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(options.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(options.reasoningEffort) || process.platform !== "darwin")
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(options.model) || !["none", "minimal", "low", "medium", "high", "xhigh"].includes(options.reasoningEffort) || !["darwin", "win32"].includes(process.platform))
     throw new ExecutorError("executor-unavailable");
   const command = await executablePath(options.executablePath ?? "codex");
-  const root = await (0, import_promises8.mkdtemp)(import_node_path15.default.join(import_node_os4.default.tmpdir(), "gcr-codex-probe-"));
+  const root = process.platform === "win32" ? windowsPrivateTemporary("gcr-codex-probe-") : await (0, import_promises8.mkdtemp)(import_node_path16.default.join(import_node_os5.default.tmpdir(), "gcr-codex-probe-"));
   try {
     const fingerprint = await binaryHash(command);
-    const env = { PATH: "/usr/bin:/bin", HOME: root, CODEX_HOME: root };
+    const env = {
+      ...process.platform === "win32" ? codexAccountEnvironment() : {},
+      PATH: process.platform === "win32" ? process.env.PATH : "/usr/bin:/bin",
+      HOME: root,
+      CODEX_HOME: root
+    };
     const version = await runManagedProcess({
       command,
       args: ["--version"],
@@ -8588,11 +8914,11 @@ async function prepareCodexAccountExecutor(options) {
     if (bundled.code !== 0)
       throw new ExecutorError("executor-unavailable");
     const catalog = reviewModelCatalog(bundled.stdout, options.model, options.reasoningEffort);
-    await (0, import_promises8.writeFile)(import_node_path15.default.join(root, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises8.writeFile)(import_node_path16.default.join(root, "models.json"), catalog, { mode: 384 });
     const tools = await probeCodexCatalog(command, root, void 0, false, options.model, options.reasoningEffort);
-    const conversationRoot = import_node_path15.default.join(root, "conversation");
+    const conversationRoot = import_node_path16.default.join(root, "conversation");
     await (0, import_promises8.mkdir)(conversationRoot, { mode: 448 });
-    await (0, import_promises8.writeFile)(import_node_path15.default.join(conversationRoot, "models.json"), catalog, { mode: 384 });
+    await (0, import_promises8.writeFile)(import_node_path16.default.join(conversationRoot, "models.json"), catalog, { mode: 384 });
     const conversationTools = await probeCodexCatalog(command, conversationRoot, void 0, true, options.model, options.reasoningEffort);
     if (await binaryHash(command) !== fingerprint)
       throw new ExecutorError("executor-unavailable");
@@ -8612,7 +8938,7 @@ async function prepareCodexAccountExecutor(options) {
       settings: codexReviewArgs("/gcr/run", "http://127.0.0.1/source", false, options.model, options.reasoningEffort),
       isolation: "macos-global-instruction-deny-v1",
       responseFormat: "prompt-json-schema-v1",
-      authHome: environment.CODEX_HOME ?? import_node_path15.default.join(import_node_os4.default.homedir(), ".codex")
+      authHome: environment.CODEX_HOME ?? import_node_path16.default.join(import_node_os5.default.homedir(), ".codex")
     }));
     return new CodexAccountExecutor(command, fingerprint, catalog, configHash, environment, cliVersion, options.model, options.reasoningEffort);
   } catch (error2) {
@@ -8627,7 +8953,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.42",
+  version: "0.1.0-alpha.44",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -8642,7 +8968,7 @@ var API_DEFAULT_ENDPOINTS = {
 var import_child_process = require("child_process");
 var import_promises9 = require("fs/promises");
 var import_os = require("os");
-var path16 = __toESM(require("path"));
+var path17 = __toESM(require("path"));
 var DEFAULT_OPENAI = API_DEFAULT_ENDPOINTS.openai;
 var DEFAULT_ANTHROPIC = API_DEFAULT_ENDPOINTS.anthropic;
 var DEFAULT_GEMINI = API_DEFAULT_ENDPOINTS.gemini;
@@ -8913,9 +9239,9 @@ async function callAntigravityCli(req) {
   }
 }
 async function withAntigravityFiles(req, fn) {
-  const dir = await (0, import_promises9.mkdtemp)(path16.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
-  const promptFile = path16.join(dir, "review-request.md");
-  const schemaFile = path16.join(dir, "output-schema.json");
+  const dir = await (0, import_promises9.mkdtemp)(path17.join((0, import_os.tmpdir)(), "commit-defender-agy-"));
+  const promptFile = path17.join(dir, "review-request.md");
+  const schemaFile = path17.join(dir, "output-schema.json");
   try {
     await Promise.all([
       (0, import_promises9.writeFile)(promptFile, `${req.systemPrompt}
@@ -8962,8 +9288,8 @@ async function withSchemaFile(schema, fn) {
   if (!schema) {
     return fn(void 0);
   }
-  const dir = await (0, import_promises9.mkdtemp)(path16.join((0, import_os.tmpdir)(), "commit-defender-"));
-  const file = path16.join(dir, "output-schema.json");
+  const dir = await (0, import_promises9.mkdtemp)(path17.join((0, import_os.tmpdir)(), "commit-defender-"));
+  const file = path17.join(dir, "output-schema.json");
   try {
     await (0, import_promises9.writeFile)(file, JSON.stringify(schema), { encoding: "utf8", mode: 384 });
     return await fn(file);
@@ -9341,7 +9667,7 @@ async function callGemini(req) {
 
 // src/modelCredentials.ts
 var import_promises10 = require("node:fs/promises");
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code) {
@@ -9415,7 +9741,7 @@ function checkedReference(value, binding) {
   return reference2;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path16.default.join(
+  return import_node_path17.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -9424,7 +9750,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference2, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path16.default.join(
+    const file = import_node_path17.default.join(
       dataDirectory,
       "profiles",
       reference2.profileId,
@@ -9532,6 +9858,16 @@ function standaloneErrorMessage(code) {
       return "The selected local executor is unavailable. Check the Codex executable, model and reasoning effort.";
     case "credential-unavailable":
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
+    case "insecure-storage":
+      return "The local data path has unsafe permissions or a filesystem link. Existing files were preserved; choose a private local data location.";
+    case "storage-unavailable":
+      return "The local storage helper or filesystem is unavailable. Check the installed extension and local disk access.";
+    case "unsupported-platform":
+      return "This execution environment or storage volume is unsupported. Windows manual review requires a local NTFS checkout.";
+    case "corrupt-storage":
+      return "Encrypted local data failed integrity verification. Existing data was preserved.";
+    case "commit-unknown":
+      return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
     case "central-snapshot-changed":
@@ -9576,6 +9912,11 @@ var safeCodes = /* @__PURE__ */ new Set([
   "model-failed",
   "executor-unavailable",
   "credential-unavailable",
+  "insecure-storage",
+  "storage-unavailable",
+  "unsupported-platform",
+  "corrupt-storage",
+  "commit-unknown",
   "needs-context",
   "central-snapshot-changed",
   "policy-unavailable",
@@ -9690,7 +10031,7 @@ async function prepareLocalProviderExecutor(settings, ports = {}) {
 }
 
 // src/standaloneReview.ts
-var import_node_crypto19 = require("node:crypto");
+var import_node_crypto21 = require("node:crypto");
 function checkAbort(signal) {
   if (signal.aborted)
     throw new StandaloneReviewError(
@@ -9795,7 +10136,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
           if (!expected) throw new StandaloneReviewError("source-changed");
           if (read.status === "available") {
             const bytes = Buffer.from(read.text, "utf8");
-            const oid = (0, import_node_crypto19.createHash)(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+            const oid = (0, import_node_crypto21.createHash)(snapshot.identity.objectFormat).update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
             if (oid !== expected.oid)
               throw new StandaloneReviewError("source-changed");
           } else if (expected.status !== "D")
@@ -9899,7 +10240,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       const records = await LocalRecordStore.open({
         scope: repositoryScope,
         ...ports.keys ? { keys: ports.keys } : {},
-        dataDirectory: import_node_path17.default.join(
+        dataDirectory: import_node_path18.default.join(
           ports.dataDirectory ?? defaultLocalDataDirectory(),
           "central-review-history",
           identity.id

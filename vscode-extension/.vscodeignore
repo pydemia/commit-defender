@@ -21,3 +21,6 @@ vendor/**
 scripts/**
 
 !out/review-chat-worker.js
+
+!out/windows-native.exe
+!out/windows-native.json
