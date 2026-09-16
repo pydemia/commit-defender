@@ -138,14 +138,13 @@ export async function centralFixture(
       signing.privateKey,
     ).toString("base64url"),
   };
-  const configFile = path.join(root, "tls.cnf"),
-    certFile = path.join(root, "tls.crt"),
-    keyFile = path.join(root, "tls.key");
+  const configFile = path.join(root, "tls.cnf");
   fs.writeFileSync(
     configFile,
     "[req]\nprompt=no\ndistinguished_name=dn\nx509_extensions=ext\n[dn]\nCN=Fixture\n[ext]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:127.0.0.1\n",
   );
-  execFileSync(
+  // Keep the disposable TLS private key in the captured pipe, never a file.
+  const tlsOutput = execFileSync(
     "openssl",
     [
       "req",
@@ -158,12 +157,16 @@ export async function centralFixture(
       "-config",
       configFile,
       "-keyout",
-      keyFile,
+      "-",
       "-out",
-      certFile,
+      "-",
     ],
-    { stdio: "ignore", timeout: 15000 },
+    { stdio: ["ignore", "pipe", "ignore"], timeout: 15000,
+      encoding: "utf8", windowsHide: true },
   );
+  const tlsKey = tlsOutput.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/)?.[0];
+  const tlsCert = tlsOutput.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/)?.[0];
+  if (!tlsKey || !tlsCert) throw Error("Local TLS fixture generation failed");
   const requestMethods: string[] = [];
   const requestMetadata: Array<{ method: string; route: string;
     queryKeys: string[]; bodyBytes: number }> = [];
@@ -182,7 +185,7 @@ export async function centralFixture(
     reviewStatusCode = 200;
   const decisions = new Map<string, ReviewSubmissionStatus["decision"]>();
   const server = createServer(
-    { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) },
+    { key: tlsKey, cert: tlsCert },
     (req, res) => {
       calls++;
       requestMethods.push(req.method ?? "");
@@ -436,7 +439,7 @@ export async function centralFixture(
             .toString(),
         },
       ],
-      ca: fs.readFileSync(certFile, "utf8"),
+      ca: tlsCert,
     },
     get calls() {
       return calls;

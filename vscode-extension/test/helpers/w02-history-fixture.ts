@@ -54,6 +54,9 @@ export function w02HistoryFixture(records: string) {
       upstreamState: "present" }, createdAt: timestamp, reviewedAt: timestamp,
   });
   const revision = contentHash({ source, reply, guidance });
+  const { id: _id, pullRequestId: _pull, observationHash: _hash,
+    parentId: _parent, reviewSourceId: _review, replyCount: _count,
+    lastObservedAt: _last, ...observation } = source;
   const common = { schemaVersion: 1, repositoryId, revision };
   const pull = (number: number) => ({
     id: comparison.pulls.find((p: any) => p.number === number)
@@ -85,7 +88,7 @@ export function w02HistoryFixture(records: string) {
     if (route === `/pulls/917/messages/${source.id}/history`) return {
       ...common, sourceId: source.id, nextCursor: null, items: [{ id: "1",
         observationHash: source.observationHash, observedAt: timestamp,
-        syncStartedAt: timestamp, snapshot: source }],
+        syncStartedAt: timestamp, snapshot: observation }],
     };
     for (const item of [source, reply])
       if (route === `/pulls/917/messages/${item.id}`)
