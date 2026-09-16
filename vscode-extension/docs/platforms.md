@@ -54,6 +54,6 @@ Linux 자동 service를 경유한 실제 모델 호출도 이번 검증 범위�
 합성 검사는 모델에게 결함을 판단시킨 증거가 아니다. target 이름이나 AnyCPU
 helper만으로 해당 OS/CPU 전체 지원이 검증된 것으로 해석하지 않는다.
 
-현재 Marketplace의 2.12.5는 Windows ARM64다. 개발 후보 생성·로컬 설치·실행 중인
+이전 2.12.5는 Windows ARM64만 게시했다. 로컬 설치·실행 중인
 Host·service·Marketplace 버전은 서로 다를 수 있다. 사용자 Host를 강제로
 재로드하거나 기존 service를 임의로 교체하지 않는다.
