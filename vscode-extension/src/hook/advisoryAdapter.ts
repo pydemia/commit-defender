@@ -3,6 +3,10 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync, execFileSync } from "node:child_process";
 import type { ManagedHookState } from "./managedHooks.js";
+import {
+  windowsPrivateDirectory, windowsReadPrivateFileSync,
+  windowsRemovePrivateFile,
+} from "../windowsPrivateFiles.js";
 
 /** Runs from a private immutable copy, independently of the extension installation. */
 export async function advisoryHook(
@@ -19,9 +23,20 @@ export async function advisoryHook(
     } catch {
       return 0;
     }
-    const result = spawnSync(original, args, {
-      stdio: [input ?? "inherit", "inherit", "inherit"],
-    });
+    // Git for Windows owns shebang dispatch for the existing hook. The model
+    // and enqueue process still use native executables with shell disabled.
+    const result = process.platform === "win32"
+      ? spawnSync("git", [
+          "-c", `core.hooksPath=${path.resolve(path.dirname(original))}`,
+          "hook", "run", "--ignore-missing",
+          ...(spool ? [`--to-stdin=${spool}`] : []), hook, "--", ...args,
+        ], {
+          stdio: ["inherit", "inherit", "inherit"],
+          windowsHide: true, shell: false,
+        })
+      : spawnSync(original, args, {
+          stdio: [input ?? "inherit", "inherit", "inherit"],
+        });
     if (result.signal) {
       process.kill(process.pid, result.signal);
       return 128;
@@ -31,6 +46,8 @@ export async function advisoryHook(
   try {
     // Only pre-push needs stdin twice; preserve every byte for the original hook.
     if (hook === "pre-push") {
+      if (process.platform === "win32")
+        await windowsPrivateDirectory(path.dirname(stateFile));
       spool = path.join(path.dirname(stateFile), `stdin-${randomUUID()}`);
       const fd = fs.openSync(spool, "wx", 0o600);
       try {
@@ -49,12 +66,15 @@ export async function advisoryHook(
     if (code !== 0) return code;
     try {
       const state = JSON.parse(
-        fs.readFileSync(stateFile, "utf8"),
+        process.platform === "win32"
+          ? windowsReadPrivateFileSync(stateFile)?.toString("utf8") ?? ""
+          : fs.readFileSync(stateFile, "utf8"),
       ) as ManagedHookState;
       const root = fs.realpathSync(
         execFileSync("git", ["rev-parse", "--show-toplevel"], {
           encoding: "utf8",
           stdio: "pipe",
+          windowsHide: true,
         }).trim(),
       );
       const route = state.routes[root];
@@ -84,6 +104,8 @@ export async function advisoryHook(
       const result = spawnSync(route.node, args, {
         encoding: "utf8",
         timeout: 45000,
+        windowsHide: true,
+        shell: false,
         maxBuffer: 4 * 1024 * 1024,
         stdio: [input ?? "ignore", "pipe", "pipe"],
       });
@@ -115,6 +137,8 @@ export async function advisoryHook(
             {
               encoding: "utf8",
               timeout: Math.min(5000, Math.max(1, deadline - Date.now())),
+              windowsHide: true,
+              shell: false,
               stdio: ["ignore", "pipe", "pipe"],
             },
           );
@@ -142,6 +166,9 @@ export async function advisoryHook(
     return 0;
   } finally {
     if (input !== undefined) fs.closeSync(input);
-    if (spool) fs.rmSync(spool, { force: true });
+    if (spool) {
+      if (process.platform === "win32") windowsRemovePrivateFile(spool);
+      else fs.rmSync(spool, { force: true });
+    }
   }
 }

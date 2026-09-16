@@ -3,19 +3,43 @@ import test from "node:test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, type SpawnSyncOptionsWithStringEncoding } from "node:child_process";
 import {
   configureManagedHooks,
   type HookRoute,
 } from "../src/hook/managedHooks.js";
 
+const shellPath = (value: string) => process.platform === "win32"
+  ? value.replace(/\\/g, "/") : value;
+function invokeHook(
+  overlay: string, hook: string, args: string[],
+  options: SpawnSyncOptionsWithStringEncoding,
+) {
+  if (process.platform !== "win32")
+    return spawnSync(path.join(overlay, hook), args, options);
+  const input = options.input === undefined ? undefined
+    : path.join(String(options.cwd), "hook-fixture-stdin");
+  if (input) fs.writeFileSync(input, options.input!);
+  try {
+    return spawnSync("git", [
+      "-c", `core.hooksPath=${overlay}`, "hook", "run",
+      ...(input ? [`--to-stdin=${input}`] : []), hook, "--", ...args,
+    ], { ...options, windowsHide: true, shell: false });
+  } finally {
+    if (input) fs.rmSync(input);
+  }
+}
+
 function fixture(t: test.TestContext) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cd-managed 'hooks-")),
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cd-managed 한글 'hooks-")),
     repo = path.join(root, "repo");
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(repo);
+  const globalConfig = path.join(root, "empty-gitconfig");
+  fs.writeFileSync(globalConfig, "");
   const env = {
     ...process.env,
-    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_GLOBAL: globalConfig,
     GIT_CONFIG_NOSYSTEM: "1",
   };
   const git = (cwd: string, ...args: string[]) =>
@@ -63,7 +87,6 @@ function fixture(t: test.TestContext) {
           .split("\n")
           .map((s) => JSON.parse(s))
       : [];
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return {
     root,
     repo,
@@ -85,7 +108,7 @@ test("preserves original hook bytes, exit status, stdout and every pre-push stdi
   const original =
     "#!/bin/sh\ncat > " +
     "'" +
-    capture.replace(/'/g, "'\\''") +
+    shellPath(capture).replace(/'/g, "'\\''") +
     "'" +
     '\nprintf "original output\\n"\nexit "${GCR_ORIGINAL_EXIT:-0}"\n';
   const originalPath = path.join(originalDir, "pre-push");
@@ -101,7 +124,7 @@ test("preserves original hook bytes, exit status, stdout and every pre-push stdi
     "b".repeat(40) +
     "\n\u0000trailing bytes\n";
   const invoke = (code: number, failure = false) =>
-    spawnSync(path.join(overlay, "pre-push"), ["origin", "local-fixture"], {
+    invokeHook(overlay, "pre-push", ["origin", "local-fixture"], {
       cwd: f.repo,
       env: {
         ...f.env,
@@ -113,11 +136,22 @@ test("preserves original hook bytes, exit status, stdout and every pre-push stdi
     });
   const blocked = invoke(7);
   assert.equal(blocked.status, 7);
-  assert.equal(blocked.stdout, "original output\n");
+  if (process.platform === "win32") {
+    // Git redirects hook stdout to stderr. Compare the original Git path,
+    // instead of attributing Git's behavior to the managed adapter.
+    const baseline = invokeHook(originalDir, "pre-push", ["origin", "local-fixture"], {
+      cwd: f.repo, env: { ...f.env, GCR_ORIGINAL_EXIT: "7" },
+      input, encoding: "utf8",
+    });
+    assert.equal(blocked.status, baseline.status);
+    assert.equal(blocked.stdout, baseline.stdout);
+    assert.equal(blocked.stderr, baseline.stderr);
+  } else assert.equal(blocked.stdout, "original output\n");
   assert.equal(f.records().length, 0);
   const accepted = invoke(0);
   assert.equal(accepted.status, 0);
-  assert.equal(accepted.stdout, "original output\n");
+  assert.equal(accepted.stdout, process.platform === "win32" ? "" : "original output\n");
+  if (process.platform === "win32") assert.match(accepted.stderr, /original output\n/);
   assert.equal(fs.readFileSync(capture, "utf8"), input);
   assert.equal(f.records()[0].input, input);
   assert(f.records()[0].argv.includes("enqueue-push"));
@@ -125,7 +159,8 @@ test("preserves original hook bytes, exit status, stdout and every pre-push stdi
   assert.equal(unavailable.status, 0);
   assert.match(unavailable.stderr, /unconfirmed/);
   assert.equal(fs.readFileSync(originalPath, "utf8"), original);
-  assert.equal(fs.statSync(originalPath).mode & 0o777, 0o755);
+  if (process.platform !== "win32")
+    assert.equal(fs.statSync(originalPath).mode & 0o777, 0o755);
   await f.remove();
   assert.equal(f.git(f.repo, "config", "core.hooksPath"), ".hooks");
   assert.equal(fs.readFileSync(originalPath, "utf8"), original);
@@ -178,7 +213,7 @@ test("forwards later-created hooks and preserves user changes to hooksPath on un
   const marker = path.join(f.root, "post-commit");
   fs.writeFileSync(
     path.join(f.repo, ".git/hooks/post-commit"),
-    "#!/bin/sh\ntouch " + "'" + marker.replace(/'/g, "'\\''") + "'" + "\n",
+    "#!/bin/sh\ntouch " + "'" + shellPath(marker).replace(/'/g, "'\\''") + "'" + "\n",
     { mode: 0o700 },
   );
   f.git(f.repo, "commit", "--allow-empty", "-m", "forward");
@@ -194,7 +229,7 @@ test("detects edits to owned wrappers and falls back to original when Node is mi
     path.join(f.repo, ".git/hooks/pre-commit"),
     "#!/bin/sh\ntouch " +
       "'" +
-      marker.replace(/'/g, "'\\''") +
+      shellPath(marker).replace(/'/g, "'\\''") +
       "'" +
       "\nexit 4\n",
     { mode: 0o700 },
@@ -205,7 +240,9 @@ test("detects edits to owned wrappers and falls back to original when Node is mi
   });
   const overlay = f.git(f.repo, "config", "core.hooksPath");
   assert.equal(
-    spawnSync(path.join(overlay, "pre-commit"), [], { cwd: f.repo, env: f.env })
+    invokeHook(overlay, "pre-commit", [], {
+      cwd: f.repo, env: f.env, encoding: "utf8",
+    })
       .status,
     4,
   );

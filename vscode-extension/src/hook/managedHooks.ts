@@ -3,6 +3,10 @@ import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { defaultLocalDataDirectory } from "@gcr/client-core";
+import {
+  windowsPrivateDirectory, windowsReadPrivateFile,
+  windowsWritePrivateFile, windowsRemovePrivateFile,
+} from "../windowsPrivateFiles.js";
 
 export interface HookRoute {
   profileId: string;
@@ -24,7 +28,11 @@ export interface ManagedHookState {
 }
 const digest = (value: string | Uint8Array) =>
   createHash("sha256").update(value).digest("hex");
-const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+const quote = (value: string) => {
+  const shellPath = process.platform === "win32"
+    ? value.replace(/\\/g, "/") : value;
+  return `'${shellPath.replace(/'/g, "'\\''")}'`;
+};
 function git(root: string, args: string[], missing = false) {
   const env = { ...process.env };
   for (const key of Object.keys(env))
@@ -35,6 +43,7 @@ function git(root: string, args: string[], missing = false) {
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15000,
+      windowsHide: true,
     }).trimEnd();
   } catch (error) {
     if (missing && (error as { status?: number }).status === 1)
@@ -43,6 +52,7 @@ function git(root: string, args: string[], missing = false) {
   }
 }
 async function privateDirectory(directory: string) {
+  if (process.platform === "win32") return windowsPrivateDirectory(directory);
   await fs.mkdir(directory, { recursive: true, mode: 0o700 });
   const stat = await fs.lstat(directory);
   if (
@@ -57,6 +67,11 @@ async function privateDirectory(directory: string) {
   return fs.realpath(directory);
 }
 async function writeJson(file: string, value: unknown) {
+  if (process.platform === "win32") {
+    await windowsWritePrivateFile(file,
+      Buffer.from(JSON.stringify(value, null, 2) + "\n"), true);
+    return;
+  }
   const tmp = `${file}.${randomUUID()}`;
   try {
     await fs.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
@@ -70,17 +85,19 @@ async function writeJson(file: string, value: unknown) {
 }
 async function readState(file: string): Promise<ManagedHookState | undefined> {
   try {
+    const bytes = process.platform === "win32" ? await windowsReadPrivateFile(file) : undefined;
+    if (process.platform === "win32" && !bytes) return;
     const stat = await fs.lstat(file);
     if (
       !stat.isFile() ||
       stat.isSymbolicLink() ||
-      stat.uid !== process.getuid?.() ||
-      stat.mode & 0o077 ||
+      (process.platform !== "win32" &&
+        (stat.uid !== process.getuid?.() || stat.mode & 0o077)) ||
       stat.size > 1048576
     )
       throw Error("Invalid hook state.");
     const state = JSON.parse(
-      await fs.readFile(file, "utf8"),
+      bytes ? bytes.toString("utf8") : await fs.readFile(file, "utf8"),
     ) as ManagedHookState;
     if (
       state.version !== 1 ||
@@ -99,13 +116,23 @@ async function lock(directory: string) {
   const file = path.join(directory, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      if (process.platform === "win32") {
+        const published = await windowsWritePrivateFile(
+          file, Buffer.from(JSON.stringify({ pid: process.pid })),
+        );
+        if (!published) throw Object.assign(Error("Lock exists."), { code: "EEXIST" });
+        return async () => { windowsRemovePrivateFile(file); };
+      }
       const handle = await fs.open(file, "wx", 0o600);
       await handle.writeFile(JSON.stringify({ pid: process.pid }));
       await handle.close();
       return () => fs.unlink(file);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const raw = await fs.readFile(file, "utf8"),
+      const readLock = async () => process.platform === "win32"
+        ? (await windowsReadPrivateFile(file))?.toString("utf8") ?? ""
+        : fs.readFile(file, "utf8");
+      const raw = await readLock(),
         row = JSON.parse(raw);
       if (!Number.isSafeInteger(row.pid) || row.pid < 1)
         throw Error("Hook installation lock is invalid.");
@@ -115,9 +142,10 @@ async function lock(directory: string) {
       } catch (failure) {
         if ((failure as NodeJS.ErrnoException).code !== "ESRCH") throw failure;
       }
-      if ((await fs.readFile(file, "utf8")) !== raw)
+      if ((await readLock()) !== raw)
         throw Error("Hook installation lock changed.");
-      await fs.unlink(file);
+      if (process.platform === "win32") windowsRemovePrivateFile(file);
+      else await fs.unlink(file);
     }
   }
   throw Error("Hook installation is busy.");
@@ -196,7 +224,9 @@ async function verifyFiles(state: ManagedHookState) {
     if (
       !stat.isFile() ||
       stat.isSymbolicLink() ||
-      digest(await fs.readFile(file)) !== hash
+      digest(process.platform === "win32"
+        ? await windowsReadPrivateFile(file) ?? Buffer.alloc(0)
+        : await fs.readFile(file)) !== hash
     )
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved.",
@@ -212,8 +242,6 @@ export interface ManagedHookOptions {
 /** Overlay the effective hook directory; never overwrite, rename or delete original hooks.
  * Shared repository config uses per-worktree routes, preserving all other worktrees. */
 export async function configureManagedHooks(options: ManagedHookOptions) {
-  if (process.platform === "win32")
-    throw Error("Managed hooks currently require a Unix host.");
   const loc = await location(
     options.root,
     options.storage ?? defaultLocalDataDirectory(),
@@ -326,7 +354,12 @@ export async function configureManagedHooks(options: ManagedHookOptions) {
       const original = path.join(state.original, name);
       const text = `#!/bin/sh\n# Commit Defender managed forwarding hook v1\n${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then\n  exec ${quote(route.node)} ${quote(options.adapter)} ${quote(loc.stateFile)} ${quote(name)} ${quote(original)} "$@"\nfi\n` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi\nexit 0\n`;
       const file = path.join(loc.directory, name);
-      if (!state.files[name]) {
+      if (process.platform === "win32") {
+        const published = await windowsWritePrivateFile(
+          file, Buffer.from(text), Boolean(state.files[name]),
+        );
+        if (!published) throw Error("Unowned managed hook file exists.");
+      } else if (!state.files[name]) {
         // Never replace an unowned file, even inside our private overlay.
         await fs.writeFile(file, text, { flag: "wx", mode: 0o700 });
       } else {

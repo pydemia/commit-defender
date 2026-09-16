@@ -59,7 +59,9 @@ async function until(check: () => boolean | Promise<boolean>, label: string) {
 for (let mask = 0; mask < 16; mask++) {
   test(
     `runtime trigger matrix ${mask.toString(2).padStart(4, "0")} (push commit stage save)`,
-    { timeout: 90000 },
+    // Native ACL/IPC probes add process startup cost; this is a synthetic
+    // integration-test deadline, independent of the model request budget.
+    { timeout: process.platform === "win32" ? 180000 : 90000 },
     async (t) => {
       reset();
       const f = fixture();
@@ -92,7 +94,7 @@ for (let mask = 0; mask < 16; mask++) {
         provider: "codex",
         model: "gpt-6-astra",
         reasoningEffort: "xhigh",
-        executablePath: "/usr/bin/false",
+        executablePath: process.platform === "win32" ? process.execPath : "/usr/bin/false",
         workspaceTrusted: true,
         durationMs: 120000,
         excludePatterns: [],
@@ -255,7 +257,7 @@ for (let mask = 0; mask < 16; mask++) {
         } finally {
           await service.close();
           await assert.rejects(
-            callLocalService(location, { action: "status" }),
+            callLocalService(location, { action: "status" }, 500),
             (error: unknown) =>
               (error as { code?: string }).code === "service-unavailable",
           );
@@ -280,7 +282,7 @@ for (let mask = 0; mask < 16; mask++) {
         aiProvider: "codex",
         model: "gpt-6-astra",
         reviewReasoningEffort: "xhigh",
-        codexPath: "/usr/bin/false",
+        codexPath: settings.executablePath,
         ...Object.fromEntries(
           fields.map((field) => [
             `runOn${field[0].toUpperCase()}${field.slice(1)}`,

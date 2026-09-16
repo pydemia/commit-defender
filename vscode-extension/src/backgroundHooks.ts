@@ -16,6 +16,10 @@ import { configureManagedHooks } from "./hook/managedHooks.js";
 import type { AutomaticSettings } from "./automaticSettings.js";
 import type { StandaloneReviewSettings } from "./standaloneReviewProtocol.js";
 import type { SelectionStore } from "./centralConnection.js";
+import { windowsEnvironmentValue } from "@gcr/client-core/windows-native";
+import {
+  windowsPrivateDirectory, windowsReadPrivateFile, windowsWritePrivateFile,
+} from "./windowsPrivateFiles.js";
 const key = "background-hooks.v1";
 interface Owned {
   root: string;
@@ -34,6 +38,28 @@ export type BackgroundReviewJob = ServiceJob & {
 const hash = (value: Uint8Array) =>
   createHash("sha256").update(value).digest("hex");
 async function privateCopy(source: string, directory: string, name: string) {
+  if (process.platform === "win32") {
+    const files = await Promise.all([
+      { source, name },
+      ...["windows-native.exe", "windows-native.json"].map((name) => ({
+        source: path.join(path.dirname(source), name), name,
+      })),
+    ].map(async (file) => ({ ...file, bytes: await fs.readFile(file.source) })));
+    const identity = Buffer.from(JSON.stringify(
+      files.map((file) => [file.name, hash(file.bytes)]),
+    ));
+    const targetDir = await windowsPrivateDirectory(
+      path.join(directory, hash(identity)),
+    );
+    for (const file of files) {
+      const target = path.join(targetDir, file.name);
+      await windowsWritePrivateFile(target, file.bytes);
+      const installed = await windowsReadPrivateFile(target, 24 * 1024 * 1024);
+      if (!installed || hash(installed) !== hash(file.bytes))
+        throw Error("Installed service artifact does not match this extension.");
+    }
+    return path.join(targetDir, name);
+  }
   const bytes = await fs.readFile(source),
     targetDir = path.join(directory, hash(bytes));
   await fs.mkdir(targetDir, { recursive: true, mode: 0o700 });
@@ -59,6 +85,25 @@ async function privateCopy(source: string, directory: string, name: string) {
   )
     throw Error("Installed service artifact does not match this extension.");
   return target;
+}
+async function windowsExecutable(value: string) {
+  const candidates = path.isAbsolute(value) || /[\\/]/.test(value)
+    ? [path.resolve(value)]
+    : (windowsEnvironmentValue("PATH") ?? "").split(path.delimiter)
+        .filter(Boolean).map((directory) => path.join(
+          directory, path.extname(value) ? value : `${value}.exe`,
+        ));
+  for (const candidate of candidates) {
+    if (!candidate.toLowerCase().endsWith(".exe")) continue;
+    try {
+      if ((await fs.stat(candidate)).isFile()) return await fs.realpath(candidate);
+    } catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes(
+        (error as NodeJS.ErrnoException).code ?? "",
+      )) throw error;
+    }
+  }
+  throw Error("Selected native Windows executable is unavailable.");
 }
 /** Explicit extension-owned grants survive host exit; repository settings cannot create them. */
 export class BackgroundHooks {
@@ -368,12 +413,12 @@ export class BackgroundHooks {
       const node = JSON.parse(
         (
           await promisify(execFile)(
-            nodePath,
+            process.platform === "win32" ? await windowsExecutable(nodePath) : nodePath,
             [
               "-p",
               'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})',
             ],
-            { cwd: os.homedir(), env, timeout: 10000 },
+            { cwd: os.homedir(), env, timeout: 10000, windowsHide: true },
           )
         ).stdout,
       );
@@ -382,7 +427,8 @@ export class BackgroundHooks {
       const dataDirectory = defaultLocalDataDirectory(),
         location = { profileId: settings.profileId, dataDirectory };
       const programs = path.join(dataDirectory, "service-programs");
-      await fs.mkdir(programs, { recursive: true, mode: 0o700 });
+      if (process.platform === "win32") await windowsPrivateDirectory(programs);
+      else await fs.mkdir(programs, { recursive: true, mode: 0o700 });
       const cli = await privateCopy(
         path.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
@@ -404,7 +450,7 @@ export class BackgroundHooks {
           "--data-dir",
           dataDirectory,
         ],
-        { cwd: os.homedir(), env, timeout: 65000 },
+        { cwd: os.homedir(), env, timeout: 65000, windowsHide: true },
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -425,7 +471,9 @@ export class BackgroundHooks {
         throw Error(
           "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension’s bundled CLI.",
         );
-      const executorPath = path.isAbsolute(settings.executablePath)
+      const executorPath = process.platform === "win32"
+        ? await windowsExecutable(settings.executablePath)
+        : path.isAbsolute(settings.executablePath)
         ? settings.executablePath
         : (
             await promisify(execFile)(
