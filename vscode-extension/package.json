@@ -722,7 +722,8 @@
         "test:local-provider-executor": "esbuild test/local-provider-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/local-provider-executor.test.cjs && node --test out-test/local-provider-executor.test.cjs",
         "test:central-history": "esbuild test/central-history.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-history.test.cjs && node --test out-test/central-history.test.cjs",
         "prepare-native": "node scripts/prepare-native.mjs",
-        "bundle:w01-native-host": "esbuild test/w01-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/w01-diagnostic-worker.cjs && esbuild test/w01-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w01-native-host.cjs && npm run prepare-native"
+        "bundle:w01-native-host": "esbuild test/w01-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/w01-diagnostic-worker.cjs && esbuild test/w01-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w01-native-host.cjs && npm run prepare-native",
+        "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native"
     },
     "dependencies": {
         "ignore": "^5.3.1",
