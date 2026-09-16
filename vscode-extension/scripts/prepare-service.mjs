@@ -3,15 +3,15 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
-const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.37");
+const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.38");
 const manifest = JSON.parse(
   await readFile(path.join(directory, "manifest.json"), "utf8"),
 );
 const entry = manifest.packages.find((p) => p.name === "@gcr/cli");
-assert.equal(entry.version, "0.1.0-alpha.37");
+assert.equal(entry.version, "0.1.0-alpha.38");
 assert.equal(
   entry.sha256,
-  "5a9f0aee5066643b0b33e3c3b3e8dbba7a726cbe48dc6718078738456c4b0a70",
+  "01a7e41379e9f1f22d76a16cf89090345df986a1a2e542c147cb76d7d09631e5",
 );
 const file = path.join(directory, entry.file);
 assert.equal(
@@ -26,11 +26,27 @@ const bytes = execFileSync("tar", ["-xOzf", file, "package/dist/main.js"], {
 const output = path.resolve("out/gcr-service");
 await mkdir(output, { recursive: true });
 await writeFile(path.join(output, "main.mjs"), bytes);
+const extract = (name) => execFileSync(
+  "tar", ["-xOzf", file, "package/dist/" + name],
+  { maxBuffer: 4 * 1024 * 1024 },
+);
+const nativeBytes = extract("windows-native.exe");
+const nativeManifestBytes = extract("windows-native.json");
+const native = JSON.parse(nativeManifestBytes);
+const hash = (value) => createHash("sha256").update(value).digest("hex");
+assert.equal(native.version, "1.0.3");
+assert.equal(native.sha256, hash(nativeBytes));
+assert.equal(native.sourceSha256, hash(extract("windows-native.cs")));
+await writeFile(path.join(output, "windows-native.exe"), nativeBytes);
+await writeFile(path.join(output, "windows-native.json"), nativeManifestBytes);
 await writeFile(
   path.join(output, "manifest.json"),
   JSON.stringify(
     {
       ...entry,
+      sourceSha: manifest.sourceSha,
+      clientPackages: manifest.packages.filter((p) => p.name !== "@gcr/cli"),
+      native,
       bundleSha256: createHash("sha256").update(bytes).digest("hex"),
     },
     null,

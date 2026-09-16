@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message2, Ctor) => {
       throw new Ctor(message2);
     };
-    var checkPath = (path38, originalPath, doThrow) => {
-      if (!isString(path38)) {
+    var checkPath = (path39, originalPath, doThrow) => {
+      if (!isString(path39)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path38) {
+      if (!path39) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path38)) {
+      if (checkPath.isNotRelative(path39)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path38) => REGEX_TEST_INVALID_PATH.test(path38);
+    var isNotRelative = (path39) => REGEX_TEST_INVALID_PATH.test(path39);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path38, checkUnignored) {
+      _testOne(path39, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path38);
+          const matched = rule.regex.test(path39);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path38 = originalPath && checkPath.convert(originalPath);
+        const path39 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path38,
+          path39,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path38, cache, checkUnignored, slices);
+        return this._t(path39, cache, checkUnignored, slices);
       }
-      _t(path38, cache, checkUnignored, slices) {
-        if (path38 in cache) {
-          return cache[path38];
+      _t(path39, cache, checkUnignored, slices) {
+        if (path39 in cache) {
+          return cache[path39];
         }
         if (!slices) {
-          slices = path38.split(SLASH);
+          slices = path39.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path38] = this._testOne(path38, checkUnignored);
+          return cache[path39] = this._testOne(path39, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path38] = parent.ignored ? parent : this._testOne(path38, checkUnignored);
+        return cache[path39] = parent.ignored ? parent : this._testOne(path39, checkUnignored);
       }
-      ignores(path38) {
-        return this._test(path38, this._ignoreCache, false).ignored;
+      ignores(path39) {
+        return this._test(path39, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path38) => !this.ignores(path38);
+        return (path39) => !this.ignores(path39);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path38) {
-        return this._test(path38, this._testCache, true);
+      test(path39) {
+        return this._test(path39, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path38) => checkPath(path38 && checkPath.convert(path38), path38, RETURN_FALSE);
+    var isPathValid = (path39) => checkPath(path39 && checkPath.convert(path39), path39, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path38) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path38) || isNotRelative(path38);
+      checkPath.isNotRelative = (path39) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path39) || isNotRelative(path39);
     }
   }
 });
@@ -1900,6 +1900,10 @@ var import_meta = {};
 var maximum = 36 * 1024 * 1024;
 var directory = typeof import_meta.url === "string" ? import_node_path.default.dirname((0, import_node_url.fileURLToPath)(import_meta.url)) : __dirname;
 var nativeDirectory = import_node_path.default.basename(directory) === "src" ? import_node_path.default.join(directory, "..", "dist") : directory;
+function windowsEnvironmentValue(name) {
+  const key3 = Object.keys(process.env).find((key4) => key4.toLowerCase() === name.toLowerCase());
+  return key3 === void 0 ? void 0 : process.env[key3];
+}
 function windowsNativeExecutable() {
   if (process.platform !== "win32")
     throw new LocalStoreError("unsupported-platform", "Windows helper required.");
@@ -1907,7 +1911,7 @@ function windowsNativeExecutable() {
     const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
     const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
     const hash4 = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
-    if (manifest.version !== "1.0.2" || hash4 !== manifest.sha256)
+    if (manifest.version !== "1.0.3" || hash4 !== manifest.sha256)
       throw Error();
     return executable;
   } catch {
@@ -2111,7 +2115,9 @@ var storageOperations = /* @__PURE__ */ new Set([
   "directory",
   "validate-directory",
   "read",
-  "publish"
+  "publish",
+  "replace-private",
+  "remove-private"
 ]);
 function windowsNative(request, options = {}) {
   const input = JSON.stringify(request) + "\n";
@@ -2124,7 +2130,7 @@ function windowsNative(request, options = {}) {
     storageSession ??= new WindowsStorageSession(executable, () => {
       storageSession = void 0;
     });
-    return storageSession.request(input, request.operation === "publish", options);
+    return storageSession.request(input, ["publish", "replace-private", "remove-private"].includes(String(request.operation)), options);
   }
   return new Promise((resolve4, reject) => {
     const child = (0, import_node_child_process.spawn)(executable, [], {
@@ -6637,10 +6643,23 @@ var ServiceJobs = class _ServiceJobs {
 var import_node_net = __toESM(require("node:net"), 1);
 var import_node_path11 = __toESM(require("node:path"), 1);
 var import_node_os2 = __toESM(require("node:os"), 1);
+
+// node_modules/@gcr/client-core/dist/windows-service-pipe.js
+var maximumLine = 12 * 1024 * 1024 + 256;
+
+// node_modules/@gcr/client-core/dist/local-service.js
 var maximumFrame = 9 * 1024 * 1024;
 async function localServiceAddress(options) {
-  if (process.platform === "win32")
-    throw new LocalServiceError("service-unavailable");
+  if (process.platform === "win32") {
+    const { directoryId } = checkWindowsStorage(await windowsNative({
+      operation: "directory",
+      path: import_node_path11.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory())
+    }));
+    const { sid } = windowsNativeSync({ operation: "identity" });
+    if (!sid || !directoryId)
+      throw new LocalServiceError("service-unavailable");
+    return "gcr-service-v1-" + contentHash({ sid, profile: options.profileId, directoryId });
+  }
   const directory2 = await privateRoot(import_node_path11.default.join(import_node_os2.default.tmpdir(), `gcr-service-${process.getuid?.() ?? "user"}`));
   const data = await privateRoot(import_node_path11.default.resolve(options.dataDirectory ?? defaultLocalDataDirectory()));
   const key3 = contentHash({ profile: options.profileId, data });
@@ -6654,6 +6673,37 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
   const body2 = Buffer.from(JSON.stringify(request) + "\n");
   if (body2.length > maximumFrame)
     throw new LocalServiceError("service-capacity");
+  if (process.platform === "win32") {
+    const result = await windowsNative({
+      operation: "pipe-call",
+      name: address,
+      bytes: body2.toString("base64"),
+      timeout: timeoutMs
+    }, { timeoutMs: timeoutMs + 2e3 });
+    if (result.error || typeof result.bytes !== "string")
+      throw new LocalServiceError(result.error === "service-denied" ? "service-denied" : "service-unavailable");
+    const bytes = Buffer.from(result.bytes, "base64");
+    if (bytes.length > maximumFrame)
+      throw new LocalServiceError("service-capacity");
+    let reply;
+    try {
+      reply = JSON.parse(new TextDecoder("utf8", { fatal: true }).decode(bytes));
+      if (!reply || typeof reply.ok !== "boolean")
+        throw new Error();
+    } catch {
+      throw new LocalServiceError("service-invalid");
+    }
+    if (reply.ok)
+      return reply.value;
+    throw new LocalServiceError([
+      "service-unavailable",
+      "service-busy",
+      "service-invalid",
+      "service-denied",
+      "service-capacity",
+      "service-interrupted"
+    ].includes(reply.error ?? "") ? reply.error : "service-invalid");
+  }
   return new Promise((resolve4, reject) => {
     const socket = import_node_net.default.createConnection(address);
     let received = Buffer.alloc(0), settled = false;
@@ -6707,7 +6757,7 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.48",
+  version: "0.1.0-alpha.49",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -6805,7 +6855,7 @@ var LocalReviewActivity = class {
 
 // src/extension.ts
 var fs10 = __toESM(require("fs"));
-var path37 = __toESM(require("path"));
+var path38 = __toESM(require("path"));
 var vscode21 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
@@ -17640,7 +17690,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path38, match) {
+function findUrl(_, protocol, domain2, path39, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -17653,7 +17703,7 @@ function findUrl(_, protocol, domain2, path38, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path38);
+  const parts2 = splitUrl(domain2 + path39);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -21636,7 +21686,7 @@ var AutomaticReviews = class {
 
 // src/backgroundHooks.ts
 var import_promises11 = __toESM(require("node:fs/promises"));
-var import_node_path17 = __toESM(require("node:path"));
+var import_node_path18 = __toESM(require("node:path"));
 var import_node_os3 = __toESM(require("node:os"));
 var import_node_crypto17 = require("node:crypto");
 var import_node_child_process7 = require("node:child_process");
@@ -21644,11 +21694,51 @@ var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
 var import_promises10 = __toESM(require("node:fs/promises"));
-var import_node_path16 = __toESM(require("node:path"));
+var import_node_path17 = __toESM(require("node:path"));
 var import_node_crypto16 = require("node:crypto");
 var import_node_child_process6 = require("node:child_process");
+
+// src/windowsPrivateFiles.ts
+var import_node_path16 = __toESM(require("node:path"));
+async function windowsPrivateDirectory(directory2) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: "directory",
+    path: import_node_path16.default.resolve(directory2)
+  }));
+  if (!result.path) throw Error("Private Windows directory unavailable.");
+  return result.path;
+}
+async function windowsReadPrivateFile(file, maximum2 = 1048576) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: "read",
+    path: import_node_path16.default.resolve(file),
+    maximum: maximum2
+  }));
+  if (result.missing) return void 0;
+  if (typeof result.bytes !== "string")
+    throw Error("Private Windows file unavailable.");
+  return Buffer.from(result.bytes, "base64");
+}
+async function windowsWritePrivateFile(file, bytes, replace = false) {
+  const result = checkWindowsStorage(await windowsNative({
+    operation: replace ? "replace-private" : "publish",
+    path: import_node_path16.default.resolve(file),
+    bytes: Buffer.from(bytes).toString("base64")
+  }));
+  if (typeof result.published !== "boolean")
+    throw Error("Private Windows publication unconfirmed.");
+  return result.published;
+}
+function windowsRemovePrivateFile(file) {
+  windowsNativeSync({ operation: "remove-private", path: import_node_path16.default.resolve(file) });
+}
+
+// src/hook/managedHooks.ts
 var digest2 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
-var quote = (value) => `'${value.replace(/'/g, "'\\''")}'`;
+var quote = (value) => {
+  const shellPath = process.platform === "win32" ? value.replace(/\\/g, "/") : value;
+  return `'${shellPath.replace(/'/g, "'\\''")}'`;
+};
 function git2(root2, args, missing = false) {
   const env3 = { ...process.env };
   for (const key3 of Object.keys(env3))
@@ -21658,7 +21748,8 @@ function git2(root2, args, missing = false) {
       env: env3,
       encoding: "utf8",
       stdio: "pipe",
-      timeout: 15e3
+      timeout: 15e3,
+      windowsHide: true
     }).trimEnd();
   } catch (error2) {
     if (missing && error2.status === 1)
@@ -21667,6 +21758,7 @@ function git2(root2, args, missing = false) {
   }
 }
 async function privateDirectory2(directory2) {
+  if (process.platform === "win32") return windowsPrivateDirectory(directory2);
   await import_promises10.default.mkdir(directory2, { recursive: true, mode: 448 });
   const stat = await import_promises10.default.lstat(directory2);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
@@ -21676,6 +21768,14 @@ async function privateDirectory2(directory2) {
   return import_promises10.default.realpath(directory2);
 }
 async function writeJson(file, value) {
+  if (process.platform === "win32") {
+    await windowsWritePrivateFile(
+      file,
+      Buffer.from(JSON.stringify(value, null, 2) + "\n"),
+      true
+    );
+    return;
+  }
   const tmp = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
   try {
     await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
@@ -21689,11 +21789,13 @@ async function writeJson(file, value) {
 }
 async function readState(file) {
   try {
+    const bytes = process.platform === "win32" ? await windowsReadPrivateFile(file) : void 0;
+    if (process.platform === "win32" && !bytes) return;
     const stat = await import_promises10.default.lstat(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63 || stat.size > 1048576)
+    if (!stat.isFile() || stat.isSymbolicLink() || process.platform !== "win32" && (stat.uid !== process.getuid?.() || stat.mode & 63) || stat.size > 1048576)
       throw Error("Invalid hook state.");
     const state = JSON.parse(
-      await import_promises10.default.readFile(file, "utf8")
+      bytes ? bytes.toString("utf8") : await import_promises10.default.readFile(file, "utf8")
     );
     if (state.version !== 1 || !state.routes || !state.files || !Array.isArray(state.previous))
       throw Error("Invalid hook state.");
@@ -21704,16 +21806,27 @@ async function readState(file) {
   }
 }
 async function lock(directory2) {
-  const file = import_node_path16.default.join(directory2, "owner.lock");
+  const file = import_node_path17.default.join(directory2, "owner.lock");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      if (process.platform === "win32") {
+        const published = await windowsWritePrivateFile(
+          file,
+          Buffer.from(JSON.stringify({ pid: process.pid }))
+        );
+        if (!published) throw Object.assign(Error("Lock exists."), { code: "EEXIST" });
+        return async () => {
+          windowsRemovePrivateFile(file);
+        };
+      }
       const handle2 = await import_promises10.default.open(file, "wx", 384);
       await handle2.writeFile(JSON.stringify({ pid: process.pid }));
       await handle2.close();
       return () => import_promises10.default.unlink(file);
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
-      const raw = await import_promises10.default.readFile(file, "utf8"), row = JSON.parse(raw);
+      const readLock = async () => process.platform === "win32" ? (await windowsReadPrivateFile(file))?.toString("utf8") ?? "" : import_promises10.default.readFile(file, "utf8");
+      const raw = await readLock(), row = JSON.parse(raw);
       if (!Number.isSafeInteger(row.pid) || row.pid < 1)
         throw Error("Hook installation lock is invalid.");
       try {
@@ -21722,9 +21835,10 @@ async function lock(directory2) {
       } catch (failure2) {
         if (failure2.code !== "ESRCH") throw failure2;
       }
-      if (await import_promises10.default.readFile(file, "utf8") !== raw)
+      if (await readLock() !== raw)
         throw Error("Hook installation lock changed.");
-      await import_promises10.default.unlink(file);
+      if (process.platform === "win32") windowsRemovePrivateFile(file);
+      else await import_promises10.default.unlink(file);
     }
   }
   throw Error("Hook installation is busy.");
@@ -21773,14 +21887,14 @@ async function location(root2, dataDirectory) {
     worktree ? "config.worktree" : "config"
   ]);
   const base2 = await privateDirectory2(
-    import_node_path16.default.join(dataDirectory, "managed-hooks")
+    import_node_path17.default.join(dataDirectory, "managed-hooks")
   );
-  const directory2 = await privateDirectory2(import_node_path16.default.join(base2, digest2(config)));
+  const directory2 = await privateDirectory2(import_node_path17.default.join(base2, digest2(config)));
   return {
     root: root2,
     config,
     directory: directory2,
-    stateFile: import_node_path16.default.join(directory2, "state.json")
+    stateFile: import_node_path17.default.join(directory2, "state.json")
   };
 }
 var configured = (root2, config) => {
@@ -21795,16 +21909,14 @@ async function verifyFiles(state) {
   for (const [name, hash4] of Object.entries(state.files)) {
     if (!/^[a-z][a-z0-9-]*$/.test(name))
       throw Error("Invalid managed hook name.");
-    const file = import_node_path16.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || digest2(await import_promises10.default.readFile(file)) !== hash4)
+    const file = import_node_path17.default.join(state.directory, name), stat = await import_promises10.default.lstat(file);
+    if (!stat.isFile() || stat.isSymbolicLink() || digest2(process.platform === "win32" ? await windowsReadPrivateFile(file) ?? Buffer.alloc(0) : await import_promises10.default.readFile(file)) !== hash4)
       throw Error(
         "A managed hook was changed outside Commit Defender; files were preserved."
       );
   }
 }
 async function configureManagedHooks(options) {
-  if (process.platform === "win32")
-    throw Error("Managed hooks currently require a Unix host.");
   const loc = await location(
     options.root,
     options.storage ?? defaultLocalDataDirectory()
@@ -21855,7 +21967,7 @@ async function configureManagedHooks(options) {
           "This worktree has hooks registered to another profile. Disable that registration first."
         );
       if (![route2.node, route2.cli, route2.dataDirectory, options.adapter].every(
-        import_node_path16.default.isAbsolute
+        import_node_path17.default.isAbsolute
       ) || !Number.isInteger(route2.waitMs) || route2.waitMs < 0 || route2.waitMs > 6e5 || !route2.triggers.length || route2.triggers.some((t) => !["commit", "push"].includes(t)))
         throw Error("Invalid hook route.");
       state.routes[loc.root] = structuredClone(route2);
@@ -21887,7 +21999,7 @@ async function configureManagedHooks(options) {
     const names = new Set(hookNames);
     try {
       for (const name of await import_promises10.default.readdir(
-        import_node_path16.default.resolve(loc.root, state.original)
+        import_node_path17.default.resolve(loc.root, state.original)
       ))
         if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
     } catch (error2) {
@@ -21897,7 +22009,7 @@ async function configureManagedHooks(options) {
         throw error2;
     }
     for (const name of names) {
-      const original = import_node_path16.default.join(state.original, name);
+      const original = import_node_path17.default.join(state.original, name);
       const text8 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
@@ -21906,8 +22018,15 @@ fi
 ` : ""}if [ -x ${quote(original)} ]; then exec ${quote(original)} "$@"; fi
 exit 0
 `;
-      const file = import_node_path16.default.join(loc.directory, name);
-      if (!state.files[name]) {
+      const file = import_node_path17.default.join(loc.directory, name);
+      if (process.platform === "win32") {
+        const published = await windowsWritePrivateFile(
+          file,
+          Buffer.from(text8),
+          Boolean(state.files[name])
+        );
+        if (!published) throw Error("Unowned managed hook file exists.");
+      } else if (!state.files[name]) {
         await import_promises10.default.writeFile(file, text8, { flag: "wx", mode: 448 });
       } else {
         const temporary = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
@@ -21951,12 +22070,35 @@ exit 0
 var key2 = "background-hooks.v1";
 var hash3 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
 async function privateCopy(source2, directory2, name) {
-  const bytes = await import_promises11.default.readFile(source2), targetDir = import_node_path17.default.join(directory2, hash3(bytes));
+  if (process.platform === "win32") {
+    const files = await Promise.all([
+      { source: source2, name },
+      ...["windows-native.exe", "windows-native.json"].map((name2) => ({
+        source: import_node_path18.default.join(import_node_path18.default.dirname(source2), name2),
+        name: name2
+      }))
+    ].map(async (file) => ({ ...file, bytes: await import_promises11.default.readFile(file.source) })));
+    const identity = Buffer.from(JSON.stringify(
+      files.map((file) => [file.name, hash3(file.bytes)])
+    ));
+    const targetDir2 = await windowsPrivateDirectory(
+      import_node_path18.default.join(directory2, hash3(identity))
+    );
+    for (const file of files) {
+      const target2 = import_node_path18.default.join(targetDir2, file.name);
+      await windowsWritePrivateFile(target2, file.bytes);
+      const installed2 = await windowsReadPrivateFile(target2, 24 * 1024 * 1024);
+      if (!installed2 || hash3(installed2) !== hash3(file.bytes))
+        throw Error("Installed service artifact does not match this extension.");
+    }
+    return import_node_path18.default.join(targetDir2, name);
+  }
+  const bytes = await import_promises11.default.readFile(source2), targetDir = import_node_path18.default.join(directory2, hash3(bytes));
   await import_promises11.default.mkdir(targetDir, { recursive: true, mode: 448 });
   const stat = await import_promises11.default.lstat(targetDir);
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid?.() || stat.mode & 63)
     throw Error("Service installation directory is not private.");
-  const target = import_node_path17.default.join(targetDir, name);
+  const target = import_node_path18.default.join(targetDir, name);
   try {
     await import_promises11.default.writeFile(target, bytes, { flag: "wx", mode: 384 });
   } catch (error2) {
@@ -21966,6 +22108,23 @@ async function privateCopy(source2, directory2, name) {
   if (!installed.isFile() || installed.isSymbolicLink() || hash3(await import_promises11.default.readFile(target)) !== hash3(bytes))
     throw Error("Installed service artifact does not match this extension.");
   return target;
+}
+async function windowsExecutable(value) {
+  const candidates = import_node_path18.default.isAbsolute(value) || /[\\/]/.test(value) ? [import_node_path18.default.resolve(value)] : (windowsEnvironmentValue("PATH") ?? "").split(import_node_path18.default.delimiter).filter(Boolean).map((directory2) => import_node_path18.default.join(
+    directory2,
+    import_node_path18.default.extname(value) ? value : `${value}.exe`
+  ));
+  for (const candidate of candidates) {
+    if (!candidate.toLowerCase().endsWith(".exe")) continue;
+    try {
+      if ((await import_promises11.default.stat(candidate)).isFile()) return await import_promises11.default.realpath(candidate);
+    } catch (error2) {
+      if (!["ENOENT", "ENOTDIR"].includes(
+        error2.code ?? ""
+      )) throw error2;
+    }
+  }
+  throw Error("Selected native Windows executable is unavailable.");
 }
 var BackgroundHooks = class {
   constructor(extensionPath, store, call = callLocalService) {
@@ -22034,7 +22193,7 @@ var BackgroundHooks = class {
     }
     await configureManagedHooks({
       root: owned.root,
-      adapter: import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs")
+      adapter: import_node_path18.default.join(this.extensionPath, "out/advisory-hook.cjs")
     });
     await this.store.update(
       key2,
@@ -22210,26 +22369,27 @@ var BackgroundHooks = class {
       for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
       const node2 = JSON.parse(
         (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
-          nodePath,
+          process.platform === "win32" ? await windowsExecutable(nodePath) : nodePath,
           [
             "-p",
             'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})'
           ],
-          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4 }
+          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4, windowsHide: true }
         )).stdout
       );
-      if (node2.major < 22 || !import_node_path17.default.isAbsolute(node2.path))
+      if (node2.major < 22 || !import_node_path18.default.isAbsolute(node2.path))
         throw Error("Background review service requires Node.js 22 or newer.");
       const dataDirectory = defaultLocalDataDirectory(), location2 = { profileId: settings.profileId, dataDirectory };
-      const programs = import_node_path17.default.join(dataDirectory, "service-programs");
-      await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
+      const programs = import_node_path18.default.join(dataDirectory, "service-programs");
+      if (process.platform === "win32") await windowsPrivateDirectory(programs);
+      else await import_promises11.default.mkdir(programs, { recursive: true, mode: 448 });
       const cli = await privateCopy(
-        import_node_path17.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
+        import_node_path18.default.join(this.extensionPath, "out/gcr-service/main.mjs"),
         programs,
         "gcr.mjs"
       );
       const adapter = await privateCopy(
-        import_node_path17.default.join(this.extensionPath, "out/advisory-hook.cjs"),
+        import_node_path18.default.join(this.extensionPath, "out/advisory-hook.cjs"),
         programs,
         "advisory.cjs"
       );
@@ -22244,7 +22404,7 @@ var BackgroundHooks = class {
           "--data-dir",
           dataDirectory
         ],
-        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3 }
+        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3, windowsHide: true }
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -22261,7 +22421,7 @@ var BackgroundHooks = class {
         throw Error(
           "This running service cannot handle editor Save events. After its active reviews finish, restart it with this extension\u2019s bundled CLI."
         );
-      const executorPath = import_node_path17.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
+      const executorPath = process.platform === "win32" ? await windowsExecutable(settings.executablePath) : import_node_path18.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
         { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
@@ -22407,7 +22567,7 @@ function mergeLocalHistory(current, reports, repoRoot, scope, audience, fallback
 
 // src/backgroundRecovery.ts
 var vscode5 = __toESM(require("vscode"));
-var import_node_path18 = __toESM(require("node:path"));
+var import_node_path19 = __toESM(require("node:path"));
 async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
   try {
     const jobs = (await hooks.status()).filter(
@@ -22421,7 +22581,7 @@ async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
     }
     const selected = await vscode5.window.showQuickPick(
       jobs.map((job2) => ({
-        label: `${import_node_path18.default.basename(job2.root)} \xB7 ${job2.trigger}`,
+        label: `${import_node_path19.default.basename(job2.root)} \xB7 ${job2.trigger}`,
         description: `${new Date(job2.createdAt).toLocaleString()} \xB7 ${job2.profileId}`,
         detail: `${job2.root} \xB7 ${job2.id}${job2.supportsRecovery ? "" : " \xB7 Service restart required"}`,
         job: job2
@@ -23329,7 +23489,7 @@ async function showLocalKnowledge(context, scope, changed) {
 
 // src/modelCredentials.ts
 var import_promises13 = require("node:fs/promises");
-var import_node_path19 = __toESM(require("node:path"));
+var import_node_path20 = __toESM(require("node:path"));
 var MODEL_CREDENTIAL_SERVICE = "com.commitdefender.model-credentials.v1";
 var ModelCredentialError = class extends Error {
   constructor(code3) {
@@ -23403,7 +23563,7 @@ function checkedReference(value, binding) {
   return reference;
 }
 function modelCredentialDataDirectory(ports = {}) {
-  return import_node_path19.default.join(
+  return import_node_path20.default.join(
     ports.dataDirectory ?? defaultLocalDataDirectory(),
     "model-credentials",
     "v1"
@@ -23412,7 +23572,7 @@ function modelCredentialDataDirectory(ports = {}) {
 async function openStore(reference, create, ports) {
   const dataDirectory = modelCredentialDataDirectory(ports);
   if (!create) {
-    const file = import_node_path19.default.join(
+    const file = import_node_path20.default.join(
       dataDirectory,
       "profiles",
       reference.profileId,
@@ -23546,7 +23706,7 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 
 // src/hook/config.ts
 var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path20 = __toESM(require("node:path"));
+var import_node_path21 = __toESM(require("node:path"));
 var import_node_crypto20 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
@@ -23560,7 +23720,7 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path20.default.join(import_node_fs6.default.realpathSync(repoRoot), ".commit-defender");
+  const dir = import_node_path21.default.join(import_node_fs6.default.realpathSync(repoRoot), ".commit-defender");
   if (create) import_node_fs6.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
     const stat = import_node_fs6.default.lstatSync(dir);
@@ -23578,7 +23738,7 @@ function readHookConfigSnapshot(repoRoot) {
   let fd;
   try {
     fd = import_node_fs6.default.openSync(
-      import_node_path20.default.join(dir, "hook.json"),
+      import_node_path21.default.join(dir, "hook.json"),
       import_node_fs6.default.constants.O_RDONLY | import_node_fs6.default.constants.O_NOFOLLOW | import_node_fs6.default.constants.O_NONBLOCK
     );
   } catch (error2) {
@@ -23695,15 +23855,15 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path20.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path20.default.join(dir, `.hook-lock-${(0, import_node_crypto20.randomUUID)()}`);
+  const lock2 = import_node_path21.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path21.default.join(dir, `.hook-lock-${(0, import_node_crypto20.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
     nonce: (0, import_node_crypto20.randomUUID)()
   });
   import_node_fs6.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs6.default.writeFileSync(import_node_path20.default.join(prepared, "owner.json"), owner, {
+  import_node_fs6.default.writeFileSync(import_node_path21.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
@@ -23723,7 +23883,7 @@ function acquireLock(dir) {
         const entries = import_node_fs6.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path20.default.join(lock2, "owner.json");
+        const ownerPath = import_node_path21.default.join(lock2, "owner.json");
         const ownerStat = import_node_fs6.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
@@ -23749,16 +23909,16 @@ function acquireLock(dir) {
     throw failure();
   }
   return () => {
-    if (import_node_fs6.default.readFileSync(import_node_path20.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs6.default.readFileSync(import_node_path21.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs6.default.unlinkSync(import_node_path20.default.join(lock2, "owner.json"));
+    import_node_fs6.default.unlinkSync(import_node_path21.default.join(lock2, "owner.json"));
     import_node_fs6.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path20.default.join(dir, `.hook-config-${(0, import_node_crypto20.randomUUID)()}`);
+  const temporary = import_node_path21.default.join(dir, `.hook-config-${(0, import_node_crypto20.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
@@ -23775,7 +23935,7 @@ function publishConfig(repoRoot, cfg, expectedText) {
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs6.default.renameSync(temporary, import_node_path20.default.join(dir, "hook.json"));
+    import_node_fs6.default.renameSync(temporary, import_node_path21.default.join(dir, "hook.json"));
     const directory2 = import_node_fs6.default.openSync(dir, import_node_fs6.default.constants.O_RDONLY);
     try {
       import_node_fs6.default.fsyncSync(directory2);
@@ -24003,7 +24163,7 @@ async function manageModelCredential(repoRoot) {
 var vscode12 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path30 = __toESM(require("path"));
+var path31 = __toESM(require("path"));
 var vscode11 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
@@ -24019,7 +24179,7 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path30.join(repoRoot, b.file);
+      const absPath = path31.join(repoRoot, b.file);
       const uriKey = vscode11.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
@@ -24057,7 +24217,7 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path31 = __toESM(require("path"));
+var path32 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
   _onDidChangeCodeLenses = new vscode12.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
@@ -24070,7 +24230,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path31.relative(last.repoRoot, document3.uri.fsPath).split(path31.sep).join("/");
+    const file = path32.relative(last.repoRoot, document3.uri.fsPath).split(path32.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -24101,7 +24261,7 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path32 = __toESM(require("path"));
+var path33 = __toESM(require("path"));
 var vscode13 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
@@ -24134,7 +24294,7 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode13.Uri.file(path32.join(repoRoot, b.file));
+    const uri = vscode13.Uri.file(path33.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
     const range = new vscode13.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
@@ -24156,7 +24316,7 @@ var CommentManager = class {
 };
 
 // src/diagnostics.ts
-var path33 = __toESM(require("path"));
+var path34 = __toESM(require("path"));
 var vscode14 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
   P3: vscode14.DiagnosticSeverity.Error,
@@ -24176,7 +24336,7 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode14.Uri.file(path33.join(repoRoot, relFile));
+    const uri = vscode14.Uri.file(path34.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
@@ -24199,11 +24359,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path34 = __toESM(require("path"));
+var path35 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path34.relative(path34.resolve(repoRoot), path34.resolve(file)).split(path34.sep).join("/");
+  const relative4 = (file) => path35.relative(path35.resolve(repoRoot), path35.resolve(file)).split(path35.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -24218,18 +24378,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path34.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path35.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path34.join(dir, entry.name);
+      const absolute = path35.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path34.resolve(dirPath));
+  walk(path35.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -24564,7 +24724,7 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path35 = __toESM(require("path"));
+var path36 = __toESM(require("path"));
 var vscode17 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
@@ -24591,7 +24751,7 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path35.join(repoRoot, ".gitignore");
+  const gi = path36.join(repoRoot, ".gitignore");
   let text8 = "";
   try {
     text8 = fs9.readFileSync(gi, "utf8");
@@ -24606,7 +24766,7 @@ ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path35.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path36.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -24631,8 +24791,8 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path35.join(repoRoot, ".git", "hooks");
-  const hookPath = path35.join(hookDir, "pre-commit");
+  const hookDir = path36.join(repoRoot, ".git", "hooks");
+  const hookPath = path36.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
@@ -24681,7 +24841,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path35.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path36.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
@@ -24706,14 +24866,14 @@ async function uninstallHook(repoRoot) {
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path35.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path36.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path36 = __toESM(require("path"));
+var path37 = __toESM(require("path"));
 var vscode18 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
@@ -24784,11 +24944,11 @@ var PanelProvider = class {
     switch (node2.kind) {
       case "file": {
         const item = new vscode18.TreeItem(
-          path36.basename(node2.file),
+          path37.basename(node2.file),
           vscode18.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path36.dirname(node2.file);
+        const dir = path37.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
@@ -24885,7 +25045,7 @@ ${b.comment}`;
         kind: "file",
         id: id4,
         file,
-        absPath: path36.join(this._repoRoot, file),
+        absPath: path37.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id4, blocks)
       };
@@ -25577,7 +25737,7 @@ async function activate(context) {
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
     const cwd = await resolveRepoRoot() ?? vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path37.isAbsolute(executable) && !fs10.existsSync(executable)) {
+    if (path38.isAbsolute(executable) && !fs10.existsSync(executable)) {
       vscode21.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
@@ -25895,7 +26055,7 @@ async function activate(context) {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path37.relative(last.repoRoot, document3.uri.fsPath).split(path37.sep).join("/");
+    const file = path38.relative(last.repoRoot, document3.uri.fsPath).split(path38.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -25996,7 +26156,7 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode21.Uri.file(path37.join(repoRoot, file)).toString();
+          const uri = vscode21.Uri.file(path38.join(repoRoot, file)).toString();
           return vscode21.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
@@ -26065,7 +26225,7 @@ async function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path37.relative(resolvedRoot, resolvedFile);
+        const relPath = path38.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -26116,7 +26276,7 @@ async function activate(context) {
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path37.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path38.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -26241,7 +26401,7 @@ async function activate(context) {
       if (!(uri instanceof vscode21.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path37.relative(last.repoRoot, uri.fsPath).split(path37.sep).join("/");
+      const file = path38.relative(last.repoRoot, uri.fsPath).split(path38.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
@@ -26340,7 +26500,7 @@ async function activate(context) {
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path37.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path38.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
@@ -26453,7 +26613,7 @@ async function activate(context) {
     if (!vscode21.workspace.isTrusted || !vscode21.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path37.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path38.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -26492,10 +26652,10 @@ async function activate(context) {
     const folder = vscode21.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
-      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path37.sep) || canonicalRoot.startsWith(root2 + path37.sep);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path38.sep) || canonicalRoot.startsWith(root2 + path38.sep);
     });
     if (!folder) return;
-    const displayRoot = path37.resolve(folder.uri.fsPath, path37.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const displayRoot = path38.resolve(folder.uri.fsPath, path38.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
     const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
     if (scope.kind !== "repository") return;
     const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
@@ -26507,9 +26667,9 @@ async function activate(context) {
     const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode21.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
-        return fs10.realpathSync(document3.uri.fsPath) === path37.join(canonicalRoot, file);
+        return fs10.realpathSync(document3.uri.fsPath) === path38.join(canonicalRoot, file);
       } catch {
-        return path37.resolve(document3.uri.fsPath) === path37.resolve(displayRoot, file);
+        return path38.resolve(document3.uri.fsPath) === path38.resolve(displayRoot, file);
       }
     })?.getText());
     findingsStore.update(entry.report, displayRoot, blocks);
@@ -26578,7 +26738,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path37.relative(root2, current) || ".";
+    const rel = path38.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -26595,7 +26755,7 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path37.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path38.join(rel, name) });
     }
     const picked = await vscode21.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
@@ -26608,9 +26768,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path37.dirname(current);
+      current = path38.dirname(current);
     } else {
-      current = path37.join(current, picked.label.replace("$(folder) ", ""));
+      current = path38.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }

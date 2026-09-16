@@ -1,8 +1,8 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "format": "CLI AnyCPU / .NET Framework 4.x",
   "buildArchitecture": "arm64",
   "license": "Apache-2.0",
-  "sha256": "7ebc154f3a3aedb6361cf306e6dc756171dcf68c89407b537004ab129c1c704d",
-  "sourceSha256": "2f21a82b2d14baab9f3de4ff416e607a1db7bae549efb6ed4553c40532d5d9e7"
+  "sha256": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+  "sourceSha256": "51a74074de427637046c943879b70e9f950f2b61962ef73a273067ee17ce589e"
 }

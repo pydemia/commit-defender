@@ -1570,7 +1570,7 @@ function windowsNativeExecutable() {
     const executable = import_node_path.default.join(nativeDirectory, "windows-native.exe");
     const manifest = JSON.parse((0, import_node_fs.readFileSync)(import_node_path.default.join(nativeDirectory, "windows-native.json"), "utf8"));
     const hash4 = (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs.readFileSync)(executable)).digest("hex");
-    if (manifest.version !== "1.0.2" || hash4 !== manifest.sha256)
+    if (manifest.version !== "1.0.3" || hash4 !== manifest.sha256)
       throw Error();
     return executable;
   } catch {
@@ -1774,7 +1774,9 @@ var storageOperations = /* @__PURE__ */ new Set([
   "directory",
   "validate-directory",
   "read",
-  "publish"
+  "publish",
+  "replace-private",
+  "remove-private"
 ]);
 function windowsNative(request, options = {}) {
   const input2 = JSON.stringify(request) + "\n";
@@ -1787,7 +1789,7 @@ function windowsNative(request, options = {}) {
     storageSession ??= new WindowsStorageSession(executable, () => {
       storageSession = void 0;
     });
-    return storageSession.request(input2, request.operation === "publish", options);
+    return storageSession.request(input2, ["publish", "replace-private", "remove-private"].includes(String(request.operation)), options);
   }
   return new Promise((resolve, reject) => {
     const child = (0, import_node_child_process.spawn)(executable, [], {
@@ -7873,6 +7875,9 @@ async function readAutomaticFile(root, file, excludes, knownChanged = false) {
   }
 }
 
+// node_modules/@gcr/client-core/dist/windows-service-pipe.js
+var maximumLine = 12 * 1024 * 1024 + 256;
+
 // node_modules/@gcr/client-core/dist/local-service.js
 var maximumFrame = 9 * 1024 * 1024;
 
@@ -8161,7 +8166,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.48",
+  version: "0.1.0-alpha.49",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -9125,7 +9130,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.48",
+  version: "0.1.0-alpha.49",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

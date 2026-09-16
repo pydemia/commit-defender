@@ -24,3 +24,7 @@ scripts/**
 
 !out/windows-native.exe
 !out/windows-native.json
+
+!out/gcr-service/windows-native.exe
+!out/gcr-service/windows-native.json
+tmp/**
