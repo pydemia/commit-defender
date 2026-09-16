@@ -60,7 +60,8 @@ try {
   const configuration = path.join(root, 'configuration.json');
   await writeFile(configuration, JSON.stringify({ workspace, profileId,
     model: 'gpt-5.6-luna', reasoningEffort: 'high', durationMs: 240000,
-    executablePath: process.env.W03_CODEX, maximumReviewInvocations: 1,
+    executablePath: process.env.W03_CODEX,
+    maximumReviewInvocations: process.env.W03_LIFECYCLE_ONLY === '1' ? 0 : 1,
   }));
   const userData = path.join(root, 'user-data');
   await mkdir(path.join(userData, 'User'), { recursive: true });
@@ -124,6 +125,10 @@ try {
     }, { timeoutMs: 485000 });
     await writeFile(process.env.W03_EVIDENCE + '.host.log',
       (result.stdout ?? '') + '\n' + (result.stderr ?? ''));
+    const hostProof = JSON.parse(await readFile(process.env.W03_EVIDENCE, 'utf8'));
+    hostProof.hostLauncher = { code: result.code ?? null,
+      error: result.error ?? null };
+    await writeFile(process.env.W03_EVIDENCE, JSON.stringify(hostProof, null, 2) + '\n');
     if (result.error || result.code !== 0)
       throw Error(`Verification Host failed: ${result.error ?? result.code}`);
     assert.equal(JSON.parse(await readFile(process.env.W03_EVIDENCE, 'utf8')).status, 'passed');

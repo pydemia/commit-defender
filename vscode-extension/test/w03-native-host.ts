@@ -26,7 +26,8 @@ async function until<T>(read: () => Promise<T>, done: (value: T) => boolean, ms:
 export async function run() {
   assert.equal(process.platform, "win32");
   const config = JSON.parse(fs.readFileSync(process.env.W03_CONFIGURATION!, "utf8"));
-  assert.equal(config.maximumReviewInvocations, 1);
+  const lifecycleOnly = config.maximumReviewInvocations === 0;
+  assert([0, 1].includes(config.maximumReviewInvocations));
   assert.equal(config.model, "gpt-5.6-luna");
   assert.equal(config.reasoningEffort, "high");
   assert.equal(config.durationMs, 240000);
@@ -43,7 +44,8 @@ export async function run() {
     extensionSha256: sha256(path.join(extension.extensionPath, "out/extension.js")),
     standaloneWorkerSha256: sha256(path.join(extension.extensionPath, "out/standalone-review-worker.js")),
     syntheticResponse: false, realModel: false, modelCalls: 0,
-    maximumReviewInvocations: 1, timeoutMs: 240000,
+    maximumReviewInvocations: config.maximumReviewInvocations,
+    lifecycleOnly, timeoutMs: 240000,
     trigger: "commit", centralConnection: false,
     accountSource: "existing default Codex account via auth-only NTFS link",
     expected: "completed report identifies subtraction instead of addition in sum.ts; stored report can be reopened",
@@ -70,9 +72,11 @@ export async function run() {
     for (const field of ["Save", "Stage", "Commit", "Push"])
       assert.equal(cfg.get(`runOn${field}`), false);
     // Catalog/auth preparation does not submit a model review.
-    await prepareCodexAccountExecutor({ executablePath: config.executablePath,
-      model: config.model, reasoningEffort: config.reasoningEffort });
-    proof.catalogPreparation = "passed; zero review invocations";
+    if (!lifecycleOnly) {
+      await prepareCodexAccountExecutor({ executablePath: config.executablePath,
+        model: config.model, reasoningEffort: config.reasoningEffort });
+      proof.catalogPreparation = "passed; zero review invocations";
+    }
     await cfg.update("runOnCommit", true, vscode.ConfigurationTarget.Global);
     await until(async () => {
       try {
@@ -120,6 +124,11 @@ export async function run() {
     };
     proof.status = "call-planned";
     save();
+    if (lifecycleOnly) {
+      proof.status = "passed";
+      proof.expected = "service startup, opt-in and graceful shutdown; zero model calls";
+      return;
+    }
     // This is the sole review trigger. There is no retry or second commit.
     proof.startedAt = new Date().toISOString();
     proof.status = "running";
@@ -202,6 +211,17 @@ export async function run() {
         return reg && reg.triggers.length === 0 && git("config", "core.hooksPath") === ".hooks";
       }, Boolean, 30000);
       proof.pauseRestoredHooksAndRevokedGrants = true;
+      // The acceptance launcher owns the Host process tree. Stop the disposable
+      // service before quitting the Host, so its supervisor need not kill it.
+      await callLocalService(location, { action: "stop" });
+      await until(async () => {
+        try { process.kill(proof.servicePid, 0); return false; }
+        catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ESRCH") return true;
+          throw error;
+        }
+      }, Boolean, 30000);
+      proof.serviceStoppedBeforeHostExit = true;
     }
     } catch (error) {
       proof.cleanupFailure = error instanceof Error ? error.message : "Host cleanup unconfirmed";
