@@ -1,0 +1,23 @@
+{
+  "platform": "win32",
+  "arch": "arm64",
+  "node": "v24.18.1",
+  "vscode": "1.137.0",
+  "extensionVersion": "2.12.0",
+  "extensionPath": "C:\\Users\\pydemia\\.vscode\\extensions\\pydemia.commit-defender-2.12.0",
+  "workerSha256": "f4dee2c4b5327e9ae6db23292d417d9a3130cc24e7d005fe19a9e2a15c1490ae",
+  "realModel": true,
+  "syntheticResponse": false,
+  "centralConnection": false,
+  "maximumReviewInvocations": 1,
+  "timeoutMs": 240000,
+  "modelCalls": 0,
+  "accountSource": "existing default local Codex auth.json; NTFS auth-only link",
+  "fixture": "sum changes addition to subtraction with consumer and tests",
+  "expected": "completed review identifies incorrect negative totals in sum.ts",
+  "status": "failed",
+  "failure": "The expression evaluated to a falsy value:\n\n  (vscode.workspace.isTrusted)\n",
+  "testHostExited": true,
+  "temporaryProfileAndKeyRemoved": true,
+  "fixtureDefectReproduced": true
+}

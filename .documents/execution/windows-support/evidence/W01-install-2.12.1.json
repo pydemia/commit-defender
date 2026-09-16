@@ -1,0 +1,20 @@
+{
+  "gcrSource": "1bdb62bb56fd237f8bde7bce7397a5bf2c839f38",
+  "cdSource": "54c8287b12f9f42c7b03e8c41e21fee0d35d9997",
+  "packageVersion": "0.1.0-alpha.46",
+  "vsix": "commit-defender-2.12.1-win32-arm64.vsix",
+  "vsixSha256": "45fd75097efc58ce5e24262e39eabe063fc772d07159011c4bf63073fa423a70",
+  "installedVersion": "2.12.1",
+  "installedPath": "c:\\Users\\pydemia\\.vscode\\extensions\\pydemia.commit-defender-2.12.1",
+  "originalUserHostReloaded": false,
+  "originalUserHostAppliedVersion": "not verified; no forced reload",
+  "helper": {
+    "version": "1.0.1",
+    "format": "CLI AnyCPU / .NET Framework 4.x",
+    "buildArchitecture": "arm64",
+    "license": "Apache-2.0",
+    "sha256": "d3da4c5fe88f41d0def4df93e4ff839bd182b7e5a56bdc64c20e4174e0e75ff8",
+    "sourceSha256": "b4fc197075cd3cdbd7add06fd8165487d9519fa0259546b4016afeb1e223d35e"
+  },
+  "installedPayloadMatchesBuild": true
+}
