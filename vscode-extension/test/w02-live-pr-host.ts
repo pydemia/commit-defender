@@ -5,7 +5,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { CentralConnections, PlatformCentralCredentialStore } from "@gcr/client-core";
-import { reviewHistoryDetail, reviewHistoryMessagePage } from "@gcr/client-contract";
+import {
+  canonicalKnowledgeJson, reviewHistoryDetail, reviewHistoryGuidance,
+  reviewHistoryMessagePage, reviewHistoryVersionPage,
+  type ReviewHistoryRequest,
+} from "@gcr/client-contract";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { prepareStandaloneWorker } from "../src/standaloneWorkerClient.js";
 import { readCentralHistory } from "../src/centralConnection.js";
@@ -56,7 +60,7 @@ export async function run() {
     connectionId = connection.id;
     manager.close();
     manager = await CentralConnections.open({ scope });
-    const requests: any[] = [
+    const requests: ReviewHistoryRequest[] = [
       { kind: "pulls", pullNumber: 3 },
       { kind: "messages", pullNumber: 3 },
       { kind: "message", pullNumber: 3, sourceId: live.source.id },
@@ -90,9 +94,21 @@ export async function run() {
       connectionId, requests[4], "offline")).data);
     assert.equal(replyDetail.item.contentHash, live.reply.contentHash);
     assert.equal(createHash("sha256").update(replyDetail.item.body).digest("hex"), live.reply.contentHash);
-    const versions: any = (await manager.readHistory(connectionId, requests[5], "offline")).data;
-    assert(versions.items.length >= 1);
-    proof.bodyVersions = versions.items.map((item: any) => ({ id: item.id, contentHash: item.contentHash }));
+    const versions = reviewHistoryVersionPage((await manager.readHistory(
+      connectionId, requests[5], "offline")).data);
+    assert(versions.items.length >= 2, "Collect original and edited body versions");
+    assert.deepEqual(versions.items.map(item => item.contentHash),
+      live.bodyVersions.map((item: { contentHash: string }) => item.contentHash));
+    proof.bodyVersions = versions.items.map(item => ({ id: item.id, contentHash: item.contentHash }));
+    const guidance = reviewHistoryGuidance((await manager.readHistory(
+      connectionId, requests[8], "offline")).data);
+    assert.equal(guidance.id, live.guidance.id);
+    assert.equal(guidance.revision, live.guidance.revision);
+    assert.equal(guidance.state, "active");
+    assert.equal(guidance.needsReview, false);
+    assert.equal(guidance.source.contentHash, live.source.contentHash);
+    assert.equal(createHash("sha256").update(canonicalKnowledgeJson(guidance.content))
+      .digest("hex"), live.guidance.contentSha256);
     proof.sourceParity = { sourceId: detail.item.id, url: detail.item.htmlUrl,
       contentHash: detail.item.contentHash, observationHash: detail.item.observationHash,
       githubOriginalBodyVerified: true, replyBodyVerified: true,
