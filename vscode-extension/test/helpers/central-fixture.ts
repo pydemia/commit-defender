@@ -31,7 +31,12 @@ export async function centralFixture(
   root: string,
   instructions = "CD_CENTRAL_POLICY: inspect source, base and related callers.",
   codeCriterion = false,
-  history?: { repositoryId: string; respond(url: string): unknown },
+  history?: {
+    repositoryId: string;
+    respond(url: string): unknown;
+    memories?: Extract<CentralKnowledgeBundle,
+      { component: "collective" }>["memories"];
+  },
 ) {
   const audience = {
     serverId: "server",
@@ -80,7 +85,7 @@ export async function centralFixture(
       ...common,
       component: "collective",
       ownerUserId: null,
-      memories: [],
+      memories: history?.memories ?? [],
     },
     personal: {
       ...common,
@@ -160,6 +165,8 @@ export async function centralFixture(
     { stdio: "ignore", timeout: 15000 },
   );
   const requestMethods: string[] = [];
+  const requestMetadata: Array<{ method: string; route: string;
+    queryKeys: string[]; bodyBytes: number }> = [];
   let firstManifestFailure = false;
   let errorCode: string | undefined;
   let status = 200,
@@ -179,6 +186,11 @@ export async function centralFixture(
     (req, res) => {
       calls++;
       requestMethods.push(req.method ?? "");
+      const observed = new URL(req.url ?? "/", "https://fixture.invalid");
+      const metadata = { method: req.method ?? "", route: observed.pathname,
+        queryKeys: [...observed.searchParams.keys()], bodyBytes: 0 };
+      requestMetadata.push(metadata);
+      req.on("data", (chunk: Buffer) => { metadata.bodyBytes += chunk.length; });
       res.setHeader("content-type", "application/json");
       if (
         req.headers.authorization !== `Bearer ${secret}` ||
@@ -400,6 +412,7 @@ export async function centralFixture(
       return payload.snapshotId;
     },
     get requestMethods() { return [...requestMethods]; },
+    get requestMetadata() { return structuredClone(requestMetadata); },
     get submissionCalls() {
       return submissionCalls;
     },

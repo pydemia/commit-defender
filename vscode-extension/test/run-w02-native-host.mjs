@@ -7,6 +7,7 @@ import os from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { defaultLocalDataDirectory, PlatformLocalKeyStore } from '@gcr/client-core';
 import { windowsNative } from '@gcr/client-core/windows-native';
+import { g04Fixture } from './helpers/g04-fixtures.mjs';
 
 assert.equal(process.platform, 'win32');
 for (const key of ['W02_EXTENSION', 'W02_CODEX', 'W02_VSCODE', 'W02_EVIDENCE'])
@@ -14,6 +15,9 @@ for (const key of ['W02_EXTENSION', 'W02_CODEX', 'W02_VSCODE', 'W02_EVIDENCE'])
 const root = await mkdtemp(path.join(os.tmpdir(), 'cd-w02-host-'));
 const workspace = path.join(root, '한글 공백 workspace');
 const profileId = `w02-${randomUUID()}`;
+const realCase = process.env.W02_CASE;
+const scenario = realCase ? g04Fixture(realCase) : undefined;
+if (scenario) assert(path.isAbsolute(process.env.W02_RECORDS));
 const git = (...args) => execFileSync('git', ['-C', workspace,
   '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
   '-c', 'user.name=W02 Fixture', '-c', 'user.email=fixture@example.invalid',
@@ -22,36 +26,46 @@ let hostExited = false;
 try {
   await mkdir(workspace);
   git('init', '-b', 'main');
-  const files = {
+  const files = scenario?.base ?? {
     'sum.ts': 'export function sum(values: number[]): number {\r\n  return values.reduce((total, value) => total + value, 0);\r\n}\r\n',
     'consumer.ts': "import { sum } from './sum.ts';\nexport function invoiceTotal(prices: number[]) { return sum(prices); }\n",
     'sum.test.ts': "import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { invoiceTotal } from './consumer.ts';\ntest('adds prices', () => assert.equal(invoiceTotal([2, 3]), 5));\ntest('empty total', () => assert.equal(invoiceTotal([]), 0));\n",
     'package.json': '{"name":"w02-synthetic-fixture","private":true,"type":"module"}\n',
   };
-  for (const [name, value] of Object.entries(files)) await writeFile(path.join(workspace, name), value);
-  git('add', '.'); git('commit', '-m', 'synthetic W02 baseline');
-  await writeFile(path.join(workspace, 'sum.ts'), files['sum.ts'].replace('total + value', 'total - value'));
-  await writeFile(path.join(workspace, '.env'), 'W02_EXCLUDED_SECRET=synthetic\n');
-  git('add', 'sum.ts');
-  let defectConfirmed = false;
-  try {
-    execFileSync(process.execPath, ['--test', '--test-reporter=tap', 'sum.test.ts'], {
-      cwd: workspace, encoding: 'utf8', windowsHide: true, stdio: 'pipe',
-    });
-  } catch (error) {
-    assert.equal(error.status, 1);
-    assert(String(error.stdout).includes('not ok 1'));
-    assert(String(error.stdout).includes('ok 2'));
-    defectConfirmed = true;
+  const target = scenario?.target ?? 'sum.ts';
+  for (const name of Object.keys(files)) {
+    await mkdir(path.dirname(path.join(workspace, name)), { recursive: true });
+    await writeFile(path.join(workspace, name), files[name]);
   }
-  assert(defectConfirmed, 'The fixture must reproduce the defect before a model call');
+  git('add', '.'); git('commit', '-m', 'fixed W02 fixture context');
+  await writeFile(path.join(workspace, target), scenario?.source ?? files['sum.ts'].replace('total + value', 'total - value'));
+  await writeFile(path.join(workspace, '.env'), 'W02_EXCLUDED_SECRET=synthetic\n');
+  git('add', target);
+  let defectConfirmed = false;
+  if (!scenario) {
+    try {
+      execFileSync(process.execPath, ['--test', '--test-reporter=tap', 'sum.test.ts'], {
+        cwd: workspace, encoding: 'utf8', windowsHide: true, stdio: 'pipe',
+      });
+    } catch (error) {
+      assert.equal(error.status, 1);
+      assert(String(error.stdout).includes('not ok 1'));
+      assert(String(error.stdout).includes('ok 2'));
+      defectConfirmed = true;
+    }
+  }
+  if (!scenario) assert(defectConfirmed, 'The fixture must reproduce the defect before a model call');
   await writeFile(process.env.W02_EVIDENCE, JSON.stringify({
     status: 'host-starting', realModel: false, modelCalls: 0,
-    fixtureDefectReproduced: true,
+    fixtureDefectReproduced: defectConfirmed,
   }, null, 2) + '\n');
   const configuration = path.join(root, 'configuration.json');
   await writeFile(configuration, JSON.stringify({ workspace, profileId,
-    syntheticResponse: true, maximumReviewInvocations: 0,
+    syntheticResponse: !scenario, maximumReviewInvocations: scenario ? 1 : 0,
+    case: realCase, target, records: process.env.W02_RECORDS,
+    fixtureBaseSha: git('rev-parse', 'HEAD').toString().trim(),
+    fixtureTreeSha: git('write-tree').toString().trim(),
+    cliEvents: process.env.W02_EVIDENCE + '.provider.jsonl',
     executablePath: process.env.W02_CODEX,
   }));
   const userData = path.join(root, 'user-data');
@@ -90,7 +104,7 @@ try {
     capabilities: { untrustedWorkspaces: { supported: true } },
   }));
   await writeFile(path.join(harness, 'extension.cjs'),
-    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve('out-test/w02-native-host.cjs'))}).run();}catch(e){console.error(e);}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
+    `exports.activate=async()=>{try{await require(${JSON.stringify(path.resolve(scenario ? 'out-test/w02-model-host.cjs' : 'out-test/w02-native-host.cjs'))}).run();}catch(e){console.error(e);}finally{await require('vscode').commands.executeCommand('workbench.action.quit');}};`);
   try {
     const environment = { ...process.env, W02_CONFIGURATION: configuration,
       W02_EVIDENCE: process.env.W02_EVIDENCE };
@@ -143,7 +157,7 @@ try {
     const proof = JSON.parse(await readFile(process.env.W02_EVIDENCE, 'utf8'));
     proof.testHostExited = true;
     proof.temporaryProfileAndKeyRemoved = true;
-    proof.fixtureDefectReproduced = true;
+    proof.fixtureDefectReproduced = scenario ? 'not executed; boundary tests supplied as fixed source' : true;
     await writeFile(process.env.W02_EVIDENCE, JSON.stringify(proof, null, 2) + '\n');
   } else { await rm(root, { recursive: true, force: true }); }
 }
