@@ -89,6 +89,16 @@ export function standaloneErrorMessage(code: string): string {
       return "The selected local executor is unavailable. Check the Codex executable, model and reasoning effort.";
     case "credential-unavailable":
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
+    case "insecure-storage":
+      return "The local data path has unsafe permissions or a filesystem link. Existing files were preserved; choose a private local data location.";
+    case "storage-unavailable":
+      return "The local storage helper or filesystem is unavailable. Check the installed extension and local disk access.";
+    case "unsupported-platform":
+      return "This execution environment or storage volume is unsupported. Windows manual review requires a local NTFS checkout.";
+    case "corrupt-storage":
+      return "Encrypted local data failed integrity verification. Existing data was preserved.";
+    case "commit-unknown":
+      return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
     case "central-snapshot-changed":
@@ -134,6 +144,11 @@ const safeCodes = new Set([
   "model-failed",
   "executor-unavailable",
   "credential-unavailable",
+  "insecure-storage",
+  "storage-unavailable",
+  "unsupported-platform",
+  "corrupt-storage",
+  "commit-unknown",
   "needs-context",
   "central-snapshot-changed",
   "policy-unavailable",

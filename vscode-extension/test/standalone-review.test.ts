@@ -587,6 +587,12 @@ test("unsupported mode/provider/model and an untrusted workspace stop before sou
   });
   assert(!safe.message.includes("secret"));
   assert.equal(safe.code, "preparation-failed");
+  for (const code of ["insecure-storage", "storage-unavailable",
+    "unsupported-platform", "corrupt-storage", "commit-unknown"]) {
+    const failure = standaloneError({ code, message: "private credential" });
+    assert.equal(failure.code, code);
+    assert(!failure.message.includes("private credential"));
+  }
 });
 
 test("a cancelled preparation releases its stores and never invokes the executor", async (t) => {
