@@ -10,7 +10,7 @@ export async function openConnectionGuide(
   try {
     await vscode.commands.executeCommand(
       'workbench.action.openWalkthrough',
-      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
+      { category: `${context.extension.id}#gcrConnection${language.toUpperCase()}`, step: 'overview' },
       false,
     );
   } catch {
@@ -23,7 +23,7 @@ export async function openConnectionGuide(
 /** Keep settings in the native UI; opening it does not change their values. */
 export async function openCommitDefenderSettings(): Promise<void> {
   try {
-    await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:pydemia.commit-defender');
+    await vscode.commands.executeCommand('workbench.action.openSettings2', '@ext:pydemia.commit-defender');
   } catch {
     await vscode.window.showErrorMessage(
       'Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender.',

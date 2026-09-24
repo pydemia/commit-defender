@@ -30,7 +30,7 @@ exports.run = async () => {
   await new Promise(r => setTimeout(r, 700));
   const settingsTabs = tabs();
   assert(settingsTabs.some(t => /Settings|설정/.test(t.label)), 'Native settings tab must open');
-  await vscode.commands.executeCommand('commitDefender.openConnectionGuide', 'en');
+  await vscode.commands.executeCommand('commitDefender.openConnectionGuide', process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en');
   if (process.env.CD_GUIDE_INSPECT === '1') {
     fs.writeFileSync(process.env.CD_GUIDE_READY, 'ready');
     const deadline = Date.now() + 15 * 60_000;

@@ -20,7 +20,8 @@ try {
     'commitDefender.localProfile': 'cd-guide-' + randomUUID(),
     'commitDefender.runOnStage': false, 'commitDefender.preCommitHook': 'disable',
     'telemetry.telemetryLevel': 'off', 'update.mode': 'none', 'extensions.autoUpdate': false,
-    'window.title': 'Commit Defender Guide Verification',
+    'window.title': 'Commit Defender Guide Verification ' + path.basename(temp),
+    'workbench.settings.editor': 'json',
   }));
   const executable = process.env.VSCODE_EXECUTABLE_PATH;
   await runTests({
@@ -29,6 +30,7 @@ try {
     extensionTestsPath: path.join(root, 'test/connection-guide-host.cjs'),
     extensionTestsEnv: {
       VSCODE_DEV: '', CD_GUIDE_INSPECT: process.env.CD_GUIDE_INSPECT || '0',
+      CD_GUIDE_INSPECT_LANGUAGE: process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en',
       CD_GUIDE_READY: path.join(proof, 'ready'), CD_GUIDE_CONTINUE: path.join(proof, 'continue'),
       CD_GUIDE_PROOF: path.join(proof, 'host.json'),
       CD_GUIDE_DELIVERY: process.env.CD_TEST_EXTENSION_PATH ? 'packaged-extension' : 'source-checkout',
