@@ -2,9 +2,11 @@
 
 ## 2.12.7
 
-- Open the bundled Korean GCR setup guide from the Command Palette, central
+- Open the bundled English/Korean GCR setup guide from the Command Palette, central
   connection menu, or sidebar help icon. Use VS Code Markdown preview with a
   text fallback when preview is unavailable; reading needs no GCR login.
+  Follow the VS Code display language, default to English, and offer links
+  between languages.
 - Cover reader keys, local account/model selection, HTTPS, synchronization,
   source evidence, and connection troubleshooting. Existing review runtime
   dependencies and account settings are unchanged.

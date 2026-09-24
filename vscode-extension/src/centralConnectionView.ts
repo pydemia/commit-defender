@@ -170,9 +170,9 @@ export async function manageCentralConnection(
     const choice = await vscode.window.showQuickPick(
       [
         {
-          label: "GCR connection guide (연결 가이드)",
+          label: "GCR connection guide",
           action: "guide",
-          description: "계정·모델 선택, reader key 발급, 연결과 첫 리뷰",
+          description: "Reader key, account/model, connection and first review",
         },
         {
           label: "Connect with API key…",
