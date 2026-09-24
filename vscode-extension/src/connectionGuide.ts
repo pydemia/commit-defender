@@ -8,9 +8,14 @@ export async function openConnectionGuide(
   const language = requestedLanguage === 'en' || requestedLanguage === 'ko'
     ? requestedLanguage : /^ko(?:-|$)/i.test(vscode.env.language) ? 'ko' : 'en';
   try {
+    // Leave the current walkthrough before a manual language switch. VS Code
+    // can otherwise retain the previous category in an already open Welcome tab.
+    if (requestedLanguage === 'en' || requestedLanguage === 'ko') {
+      await vscode.commands.executeCommand('welcome.goBack');
+    }
     await vscode.commands.executeCommand(
       'workbench.action.openWalkthrough',
-      { category: `${context.extension.id}#gcrConnection${language.toUpperCase()}`, step: 'overview' },
+      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
       false,
     );
   } catch {
