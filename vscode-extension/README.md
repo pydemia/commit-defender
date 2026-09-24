@@ -24,6 +24,10 @@ Guide** or use the help icon in the Commit Defender sidebar. The bundled
 cover reader keys, local model selection, synchronization, and the first
 review. The command follows the VS Code display language (Korean or English
 fallback), and both guides can be read offline.
+The guide uses VS Code's built-in Walkthrough viewer, with rendered steps and
+buttons for account selection, GCR connection, and Settings. Run **Commit
+Defender: Open Settings** for the native settings UI, or use the sidebar gear.
+Guide rendering does not depend on the Markdown preview Service Worker.
 
 1. Install **Commit Defender** (`pydemia.commit-defender`) from Marketplace, or
    use **Extensions → Install from VSIX…** with a supplied package. Open a

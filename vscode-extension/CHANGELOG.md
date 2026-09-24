@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.12.8
+
+- Render the bilingual GCR guide in VS Code's native Walkthrough viewer, with
+  static diagrams and buttons for account/model selection and GCR connection.
+  Follow the display language, default to English, and offer language switching.
+  Guide rendering no longer depends on the Markdown preview Service Worker.
+- Add Open Settings to the Command Palette, guide, and sidebar to open the
+  native settings UI filtered to Commit Defender. Opening it preserves values.
+- Identify Commit Defender and the operation in previously unattributed error
+  notifications for central connections, review preparation, history activity,
+  local knowledge, model credentials, and review conversations/recovery.
+
 ## 2.12.7
 
 - Open the bundled English/Korean GCR setup guide from the Command Palette, central

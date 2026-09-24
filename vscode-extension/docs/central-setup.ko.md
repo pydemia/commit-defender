@@ -6,6 +6,12 @@ Commit Defender(CD)는 Git Code Reviewer(GCR)에 저장된 리뷰 이력·Skill�
 
 이 문서는 확장에 포함되어 있어 인터넷이나 GCR 연결 없이도 읽을 수 있습니다. 명령 팔레트의 **Commit Defender: GCR Connection Guide**, CD 사이드바 상단의 도움말 아이콘, 또는 **Central Review Connection → GCR connection guide**에서 다시 여실 수 있습니다. VS Code 표시 언어가 한국어이면 이 문서를, 그 외에는 영문 가이드를 엽니다. 상단 링크로 언어를 바꿀 수도 있습니다.
 
+가이드 명령은 VS Code 내장 **Walkthrough** 뷰어로 안내문과 흐름도를 렌더링합니다. 각 단계의 버튼에서 계정 선택·GCR 연결·설정 화면을 바로 열 수 있습니다. 텍스트 편집기나 Markdown 미리보기는 사용하지 않습니다. 첫 단계의 링크로 언어를 바꿀 수 있습니다. 단계 체크는 읽은 페이지를 표시하며 인증·리뷰 성공 여부를 나타내지 않습니다.
+
+**Commit Defender: Open Settings**는 CD 항목으로 필터링된 VS Code 기본 설정 UI를 엽니다. 계정·provider·모델·reasoning은 **사용자(User)** 설정에서 지정하십시오. reader key와 모델 API key는 설정 파일 대신 전용 자격 증명 입력창에 넣습니다. 직접 편집하기 전까지 기존 설정은 바뀌지 않습니다.
+
+가이드의 정적 SVG는 내장 뷰어에서 Service Worker 등록 없이 표시합니다. 다른 웹뷰의 `Error loading webview`는 GCR 로그인이나 reader key 실패를 뜻하지 않습니다. CD 자체 오류 알림은 **Commit Defender:**와 발생 작업을 표시합니다. VS Code 내부 오류 화면에는 CD의 알림 처리가 적용되지 않습니다.
+
 ## 1. GCR에서 reader key와 연결 파일 준비
 
 사용 중인 GCR 웹사이트의 **프로필**(`/profile`)에 로그인합니다.

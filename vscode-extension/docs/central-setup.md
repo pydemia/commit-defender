@@ -14,6 +14,23 @@ Review Connection → GCR connection guide**. The guide follows your VS Code
 display language: Korean for `ko` locales, English otherwise. Use the link
 above to switch languages manually.
 
+The command opens VS Code's built-in **Walkthrough** viewer, with rendered
+instructions, diagrams, and buttons for account selection, GCR connection,
+and **Open Settings**. It does not open a text editor or Markdown preview.
+The first step includes a language link. Step checks track pages read, not
+successful authentication or review execution.
+
+**Commit Defender: Open Settings** opens VS Code's graphical Settings filtered
+to this extension. Use **User** settings for account, provider, model, and
+reasoning. Reader and model API keys belong in their credential dialogs, not
+Settings. Existing settings remain unchanged until you edit them.
+
+The guide uses the native viewer's static SVG path, which does not register a
+Service Worker. A VS Code `Error loading webview` elsewhere does not indicate
+a GCR login or reader-key failure. CD's own error notifications start with
+**Commit Defender:** and identify the operation; VS Code's internal error
+screen is outside CD's notification handler.
+
 ## 1. Prepare a reader key and connection file in GCR
 
 Sign in to your GCR website and open **Profile** (`/profile`). On a Korean GCR
