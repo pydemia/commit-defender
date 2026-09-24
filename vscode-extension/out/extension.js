@@ -6847,7 +6847,7 @@ var LocalReviewActivity = class {
       this.panel?.dispose();
       this.panel = void 0;
       void vscode.window.showErrorMessage(
-        "Local review activity could not be loaded. Check the selected profile, connection and OS credential store."
+        "Commit Defender: Local review activity could not be loaded. Check the selected profile, connection and OS credential store."
       );
     }
   }
@@ -22614,7 +22614,7 @@ async function recoverBackgroundReview(hooks, refreshHistory, assertCurrent) {
     return job;
   } catch (error2) {
     await vscode5.window.showErrorMessage(
-      `Review recovery did not complete: ${error2 instanceof Error ? error2.message : "unavailable"}`
+      `Commit Defender: Review recovery did not complete \u2014 ${error2 instanceof Error ? error2.message : "unavailable"}`
     );
   }
 }
@@ -22915,13 +22915,27 @@ async function browseCentralHistory(context, read, validate) {
 
 // src/connectionGuide.ts
 var vscode8 = __toESM(require("vscode"));
-async function openConnectionGuide(context) {
-  const filename = /^ko(?:-|$)/i.test(vscode8.env.language) ? "central-setup.ko.md" : "central-setup.md";
-  const uri = vscode8.Uri.joinPath(context.extensionUri, "docs", filename);
+async function openConnectionGuide(context, requestedLanguage) {
+  const language = requestedLanguage === "en" || requestedLanguage === "ko" ? requestedLanguage : /^ko(?:-|$)/i.test(vscode8.env.language) ? "ko" : "en";
   try {
-    await vscode8.commands.executeCommand("markdown.showPreview", uri);
+    await vscode8.commands.executeCommand(
+      "workbench.action.openWalkthrough",
+      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
+      false
+    );
   } catch {
-    await vscode8.window.showTextDocument(uri, { preview: true });
+    await vscode8.window.showErrorMessage(
+      "Commit Defender: GCR connection guide could not be opened. Check the extension installation and try again."
+    );
+  }
+}
+async function openCommitDefenderSettings() {
+  try {
+    await vscode8.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
+  } catch {
+    await vscode8.window.showErrorMessage(
+      "Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender."
+    );
   }
 }
 
@@ -23335,7 +23349,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     });
     context.subscriptions.push(panel);
   } catch (error2) {
-    void vscode9.window.showErrorMessage(standaloneError(error2).message);
+    void vscode9.window.showErrorMessage(`Commit Defender: Central review connection \u2014 ${standaloneError(error2).message}`);
   } finally {
     activeViews.delete(key3);
   }
@@ -23388,7 +23402,7 @@ async function showLocalKnowledge(context, scope, changed) {
   const reportError = (error2) => {
     const code3 = errorCode(error2);
     const message2 = code3 === "revision-conflict" ? "This entry changed in another process. Refresh before editing again. Your attempted revision was not saved." : code3 === "credential-unavailable" ? "The OS credential store is unavailable. No plaintext fallback was used." : code3 === "commit-unknown" ? "Storage could not confirm this change. Refresh and verify the current revision before retrying." : "The operation could not be completed. Check the fields and local storage, then refresh before retrying.";
-    void vscode10.window.showErrorMessage(message2);
+    void vscode10.window.showErrorMessage(`Commit Defender: Local Memory and Skills \u2014 ${message2}`);
   };
   panel.webview.onDidReceiveMessage(async (message2) => {
     if (closed || busy || !message2 || typeof message2 !== "object") return;
@@ -24168,7 +24182,7 @@ async function manageModelCredential(repoRoot) {
     );
   } catch {
     void vscode11.window.showErrorMessage(
-      "Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
+      "Commit Defender: Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
       "Open User Settings"
     ).then((action) => {
       if (action === "Open User Settings")
@@ -25439,7 +25453,7 @@ async function openReviewChat(report, repoRoot, context) {
   const initial = settings(), fingerprint = contentHash(initial);
   if (initial.profileId !== core.identity.client.profileId || !initial.workspaceTrusted || scope.kind !== "repository" || scope.repositoryKey !== core.identity.client.repositoryKey || scope.worktreeKey !== core.identity.client.worktreeKey) {
     void vscode21.window.showErrorMessage(
-      "Reopen this review from the current trusted workspace and profile."
+      "Commit Defender: Review discussion \u2014 reopen this review from the current trusted workspace and profile."
     );
     return;
   }
@@ -25594,7 +25608,11 @@ var settleExecutions;
 async function activate(context) {
   context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.openConnectionGuide",
-    () => openConnectionGuide(context)
+    (language) => openConnectionGuide(context, language)
+  ));
+  context.subscriptions.push(vscode22.commands.registerCommand(
+    "commitDefender.openSettings",
+    openCommitDefenderSettings
   ));
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
@@ -25979,7 +25997,7 @@ async function activate(context) {
       const repoRoot = await resolveRepoRoot();
       const profileId = localProfile();
       if (!repoRoot || !vscode22.workspace.isTrusted) {
-        void vscode22.window.showWarningMessage("Open and trust a Git worktree before managing central review.");
+        void vscode22.window.showWarningMessage("Commit Defender: Open and trust a Git worktree before managing central review.");
         return;
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
@@ -26026,7 +26044,7 @@ async function activate(context) {
         const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
         await showLocalKnowledge(context, scope, refreshVisibleContext);
       } catch {
-        void vscode22.window.showErrorMessage("Local knowledge could not be opened. Check the profile and OS credential store.");
+        void vscode22.window.showErrorMessage("Commit Defender: Local Memory and Skills could not be opened. Check the profile and OS credential store.");
       }
     }),
     vscode22.window.onDidChangeWindowState((event) => {
@@ -26100,7 +26118,7 @@ async function activate(context) {
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope2));
     } catch (error2) {
       if (automatic) throw error2;
-      void vscode22.window.showErrorMessage(standaloneError(error2).message);
+      void vscode22.window.showErrorMessage(`Commit Defender: Review setup \u2014 ${standaloneError(error2).message}`);
       return;
     }
     if (feedback) {
@@ -26152,7 +26170,7 @@ async function activate(context) {
         statusBar.setError(message2);
         getOutputChannel().appendLine(`[Commit Defender] ${message2}`);
         void vscode22.window.showErrorMessage(
-          error2 instanceof Error ? error2.message : "Local review preparation failed.",
+          `Commit Defender: Review preparation \u2014 ${error2 instanceof Error ? error2.message : "Local review preparation failed."}`,
           "Central Review Connection\u2026",
           "Choose Account and Model\u2026",
           "Open User Settings"
@@ -26452,7 +26470,7 @@ async function activate(context) {
     try {
       await openReviewChat(selected.report, selected.repoRoot, context);
     } catch {
-      void vscode22.window.showErrorMessage("The review conversation could not be opened. Check the current workspace and review connection.");
+      void vscode22.window.showErrorMessage("Commit Defender: The review conversation could not be opened. Check the current workspace and review connection.");
     }
   }));
   context.subscriptions.push(vscode22.commands.registerCommand(
