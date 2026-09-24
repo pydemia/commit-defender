@@ -1,0 +1,64 @@
+{
+  "vsixSha256": "0ef2861cee32e9c97e9a5bad1650c394dec744b780798df41fea3e82e9902f05",
+  "runtimeChanged": [
+    "out/extension.js"
+  ],
+  "runtimeFileCount": 11,
+  "runtimeSha256": {
+    "out/advisory-hook.cjs": "e8270bb445528abab7493172a0b08c343451822d4efa310b928cee11e0919217",
+    "out/extension.js": "3ab6152589cdeffd8e9978bc7730d52ebcaffce55bebccfc2709e22b7f68dd91",
+    "out/hook-cli.js": "42318d2952e197f456d5e2186b55d9ee72e804f3311e2ecc135f0d4c89e5ed2c",
+    "out/review-chat-worker.js": "9f482716685c292c6f55b99302c27ca70d1633996c9e96dc25122bee202b4878",
+    "out/standalone-review-worker.js": "58e83a2b8f457bcc29504630fef999aeb0aa89a91df692cdbc82ca9a83c6e74e",
+    "out/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+    "out/windows-native.json": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575",
+    "out/gcr-service/main.mjs": "c245681b326264ec81af7ebba610c19762c711634921f1f084fd720dd86af656",
+    "out/gcr-service/manifest.json": "8f8c37bc3e7aae3f20c95b602eadcacddf2ae7d880e716dd6937e6772c67e613",
+    "out/gcr-service/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+    "out/gcr-service/windows-native.json": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575"
+  },
+  "languageLinksInArtifact": true,
+  "settingsUnchanged": true,
+  "installedVersion": "2.12.7",
+  "installedPath": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.12.7",
+  "installedRuntimeAndGuidesMatchVsix": true,
+  "date": "2026-09-24",
+  "sourceSha": "368d71fb503d7f3e1391e7acb9617b5ef2e3c6c5",
+  "gcrUnchangedSourceSha": "5620858a51315e52a5779577d7ed914f144dbe8b",
+  "vsceVersion": "4.0.0",
+  "centralViewRegression": {
+    "passed": 6,
+    "failed": 0,
+    "openssl": "Homebrew OpenSSL 3"
+  },
+  "typecheck": "passed",
+  "hostChecks": [
+    {
+      "version": "2.12.7",
+      "realExtensionHost": true,
+      "guideInArtifact": true,
+      "language": "en",
+      "guide": "central-setup.md",
+      "vscodeVersion": "1.137.0",
+      "markdownPreviewOpened": true,
+      "modelCalls": 0,
+      "settingsUnchanged": true
+    },
+    {
+      "version": "2.12.7",
+      "realExtensionHost": true,
+      "guideInArtifact": true,
+      "language": "ko",
+      "guide": "central-setup.ko.md",
+      "vscodeVersion": "1.137.0",
+      "markdownPreviewOpened": true,
+      "modelCalls": 0,
+      "settingsUnchanged": true
+    }
+  ],
+  "userExtensionHostReloaded": false,
+  "marketplacePublished": false,
+  "modelCalls": 0,
+  "screenshotCaptured": false,
+  "testResourcesCleaned": true
+}
