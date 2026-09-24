@@ -22918,9 +22918,12 @@ var vscode8 = __toESM(require("vscode"));
 async function openConnectionGuide(context, requestedLanguage) {
   const language = requestedLanguage === "en" || requestedLanguage === "ko" ? requestedLanguage : /^ko(?:-|$)/i.test(vscode8.env.language) ? "ko" : "en";
   try {
+    if (requestedLanguage === "en" || requestedLanguage === "ko") {
+      await vscode8.commands.executeCommand("welcome.goBack");
+    }
     await vscode8.commands.executeCommand(
       "workbench.action.openWalkthrough",
-      { category: `${context.extension.id}#gcrConnection${language.toUpperCase()}`, step: "overview" },
+      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
       false
     );
   } catch {
