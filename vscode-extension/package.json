@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.12.6",
+    "version": "2.12.7",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -168,6 +168,11 @@
             {
                 "command": "commitDefender.localReviewActivity",
                 "title": "Commit Defender: Local Review Activity"
+            },
+            {
+                "command": "commitDefender.openConnectionGuide",
+                "title": "Commit Defender: GCR Connection Guide",
+                "icon": "$(question)"
             }
         ],
         "configuration": {
@@ -638,6 +643,13 @@
                     "command": "commitDefender.openReviewChat",
                     "when": "view == commitDefender.history && viewItem == historyEntry",
                     "group": "inline"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "commitDefender.openConnectionGuide",
+                    "when": "view == commitDefender.history",
+                    "group": "navigation"
                 }
             ]
         },

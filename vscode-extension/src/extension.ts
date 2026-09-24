@@ -19,6 +19,7 @@ import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
+import { openConnectionGuide } from './connectionGuide.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
@@ -46,6 +47,9 @@ let settleExecutions: (() => Promise<void>) | undefined;
 
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  context.subscriptions.push(vscode.commands.registerCommand(
+    'commitDefender.openConnectionGuide', () => openConnectionGuide(context),
+  ));
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
   reviewNavigation.register(context);

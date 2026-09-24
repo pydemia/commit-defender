@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.12.7
+
+- Open the bundled Korean GCR setup guide from the Command Palette, central
+  connection menu, or sidebar help icon. Use VS Code Markdown preview with a
+  text fallback when preview is unavailable; reading needs no GCR login.
+- Cover reader keys, local account/model selection, HTTPS, synchronization,
+  source evidence, and connection troubleshooting. Existing review runtime
+  dependencies and account settings are unchanged.
+
 ## 2.12.6
 
 - Restore a complete Details-page guide with setup examples, review workflows,

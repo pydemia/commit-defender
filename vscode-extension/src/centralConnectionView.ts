@@ -27,6 +27,7 @@ import {
 } from "./standaloneReviewProtocol.js";
 import { showCentralKnowledge } from "./centralKnowledgeView.js";
 import { browseCentralHistory } from './centralHistoryView.js';
+import { openConnectionGuide } from './connectionGuide.js';
 
 const esc = (value: unknown) =>
   String(value).replace(
@@ -169,6 +170,11 @@ export async function manageCentralConnection(
     const choice = await vscode.window.showQuickPick(
       [
         {
+          label: "GCR connection guide (연결 가이드)",
+          action: "guide",
+          description: "계정·모델 선택, reader key 발급, 연결과 첫 리뷰",
+        },
+        {
           label: "Connect with API key…",
           action: "connect",
           description: "Choose trusted server configuration and enter a key",
@@ -224,6 +230,10 @@ export async function manageCentralConnection(
       },
     );
     if (!choice) return;
+    if (choice.action === "guide") {
+      await openConnectionGuide(context);
+      return;
+    }
     actions.assertCurrent();
     knowledgePanel?.dispose();
     knowledgePanel = undefined;
