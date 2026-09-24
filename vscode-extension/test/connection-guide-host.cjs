@@ -19,6 +19,15 @@ exports.run = async () => {
   const tabs = () => vscode.window.tabGroups.all.flatMap(g => g.tabs).map(t => ({
     label: t.label, input: t.input?.constructor?.name ?? 'native',
   }));
+  await vscode.commands.executeCommand('commitDefender.openConnectionGuide', process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en');
+  if (process.env.CD_GUIDE_INSPECT === '1') {
+    fs.writeFileSync(process.env.CD_GUIDE_READY, 'ready');
+    const deadline = Date.now() + 15 * 60_000;
+    while (!fs.existsSync(process.env.CD_GUIDE_CONTINUE)) {
+      assert(Date.now() < deadline, 'UI inspection deadline exceeded');
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
   const observed = [];
   for (const language of [undefined, 'ko', 'en']) {
     await vscode.commands.executeCommand('commitDefender.openConnectionGuide', language);
@@ -30,15 +39,6 @@ exports.run = async () => {
   await new Promise(r => setTimeout(r, 700));
   const settingsTabs = tabs();
   assert(settingsTabs.some(t => /Settings|설정/.test(t.label)), 'Native settings tab must open');
-  await vscode.commands.executeCommand('commitDefender.openConnectionGuide', process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en');
-  if (process.env.CD_GUIDE_INSPECT === '1') {
-    fs.writeFileSync(process.env.CD_GUIDE_READY, 'ready');
-    const deadline = Date.now() + 15 * 60_000;
-    while (!fs.existsSync(process.env.CD_GUIDE_CONTINUE)) {
-      assert(Date.now() < deadline, 'UI inspection deadline exceeded');
-      await new Promise(r => setTimeout(r, 500));
-    }
-  }
   assert.equal(JSON.stringify(vscode.workspace.getConfiguration('commitDefender')), config);
   fs.writeFileSync(process.env.CD_GUIDE_PROOF, JSON.stringify({
     version: ext.packageJSON.version, vscodeVersion: vscode.version,
