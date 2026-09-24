@@ -6856,7 +6856,7 @@ var LocalReviewActivity = class {
 // src/extension.ts
 var fs10 = __toESM(require("fs"));
 var path38 = __toESM(require("path"));
-var vscode21 = __toESM(require("vscode"));
+var vscode22 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
 function reviewStatus2(review) {
@@ -22693,7 +22693,7 @@ var CentralSynchronization = class {
 };
 
 // src/centralConnectionView.ts
-var vscode8 = __toESM(require("vscode"));
+var vscode9 = __toESM(require("vscode"));
 var import_node_fs5 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
 var import_node_crypto18 = require("node:crypto");
@@ -22913,6 +22913,17 @@ async function browseCentralHistory(context, read, validate) {
   }
 }
 
+// src/connectionGuide.ts
+var vscode8 = __toESM(require("vscode"));
+async function openConnectionGuide(context) {
+  const uri = vscode8.Uri.joinPath(context.extensionUri, "docs", "central-setup.ko.md");
+  try {
+    await vscode8.commands.executeCommand("markdown.showPreview", uri);
+  } catch {
+    await vscode8.window.showTextDocument(uri, { preview: true });
+  }
+}
+
 // src/centralConnectionView.ts
 var esc4 = (value) => String(value).replace(
   /[&<>"']/g,
@@ -22993,9 +23004,9 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     selection = value;
     await actions.refresh();
   };
-  const progress = (title, work) => vscode8.window.withProgress(
+  const progress = (title, work) => vscode9.window.withProgress(
     {
-      location: vscode8.ProgressLocation.Notification,
+      location: vscode9.ProgressLocation.Notification,
       title,
       cancellable: true
     },
@@ -23016,8 +23027,13 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
   try {
     actions.assertCurrent();
     selection = readSelection(context.globalState, scope);
-    const choice2 = await vscode8.window.showQuickPick(
+    const choice2 = await vscode9.window.showQuickPick(
       [
+        {
+          label: "GCR connection guide (\uC5F0\uACB0 \uAC00\uC774\uB4DC)",
+          action: "guide",
+          description: "\uACC4\uC815\xB7\uBAA8\uB378 \uC120\uD0DD, reader key \uBC1C\uAE09, \uC5F0\uACB0\uACFC \uCCAB \uB9AC\uBDF0"
+        },
         {
           label: "Connect with API key\u2026",
           action: "connect",
@@ -23070,6 +23086,10 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       }
     );
     if (!choice2) return;
+    if (choice2.action === "guide") {
+      await openConnectionGuide(context);
+      return;
+    }
     actions.assertCurrent();
     knowledgePanel?.dispose();
     knowledgePanel = void 0;
@@ -23078,7 +23098,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       return;
     }
     if (choice2.action === "connect") {
-      const files = await vscode8.window.showOpenDialog({
+      const files = await vscode9.window.showOpenDialog({
         title: "Choose trusted central connection configuration",
         canSelectMany: false,
         filters: { JSON: ["json"] }
@@ -23091,7 +23111,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         (k) => `${k.id}: ${(0, import_node_crypto18.createHash)("sha256").update(k.pem).digest("hex")}`
       ).join(" \xB7 ");
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
-      const confirmed = await vscode8.window.showInformationMessage(
+      const confirmed = await vscode9.window.showInformationMessage(
         `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
         {
           modal: true,
@@ -23100,7 +23120,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         "Connect"
       );
       if (confirmed !== "Connect") return;
-      let secret = await vscode8.window.showInputBox({
+      let secret = await vscode9.window.showInputBox({
         title: "Central API key",
         prompt: `Key for ${config.serverUrl}. Stored in the OS credential store.`,
         password: true,
@@ -23144,7 +23164,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
             freshness: "online",
             offlineBehavior: behavior
           });
-          void vscode8.window.showInformationMessage(
+          void vscode9.window.showInformationMessage(
             "Central knowledge could not be activated. The confirmed local fallback policy is available; reconnect to use central knowledge."
           );
         } else throw cause;
@@ -23158,7 +23178,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const entries = connections.filter(
         (c) => c.status === "connected" && c.clientId === "commit-defender"
       );
-      const picked = await vscode8.window.showQuickPick(
+      const picked = await vscode9.window.showQuickPick(
         entries.map((c) => ({
           label: c.serverUrl,
           description: `Repository ${c.audience.repositoryId} \xB7 User ${c.audience.userId}`,
@@ -23176,7 +23196,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           offlineBehavior: selection?.mode === "centralized" && selection.connectionId === picked.id ? selection.offlineBehavior ?? "pause" : connections.find((c) => c.id === picked.id)?.offlineBehavior ?? "pause"
         });
       else if (!entries.length)
-        void vscode8.window.showInformationMessage(
+        void vscode9.window.showInformationMessage(
           "No active Commit Defender connection exists in this profile and worktree."
         );
       return;
@@ -23241,7 +23261,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       return;
     }
     if (choice2.action === "fallback") {
-      const picked = await vscode8.window.showQuickPick(
+      const picked = await vscode9.window.showQuickPick(
         [
           {
             label: "Cache, then standalone",
@@ -23286,7 +23306,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       actions.assertCurrent();
       const result = await withManager((manager) => manager.disconnect(id4));
       await actions.refresh();
-      void vscode8.window.showInformationMessage(
+      void vscode9.window.showInformationMessage(
         result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`
       );
       return;
@@ -23299,10 +23319,10 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     actions.assertCurrent();
     const status = await withManager((manager) => manager.status(id4));
     actions.assertCurrent();
-    const panel = vscode8.window.createWebviewPanel(
+    const panel = vscode9.window.createWebviewPanel(
       "commitDefender.centralConnection",
       "Central review connection",
-      vscode8.ViewColumn.Active,
+      vscode9.ViewColumn.Active,
       { enableScripts: false, localResourceRoots: [] }
     );
     panel.webview.html = centralStatusHtml({
@@ -23314,7 +23334,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     });
     context.subscriptions.push(panel);
   } catch (error2) {
-    void vscode8.window.showErrorMessage(standaloneError(error2).message);
+    void vscode9.window.showErrorMessage(standaloneError(error2).message);
   } finally {
     activeViews.delete(key3);
   }
@@ -23322,12 +23342,12 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
 
 // src/localKnowledgeView.ts
 var import_node_crypto19 = require("node:crypto");
-var vscode9 = __toESM(require("vscode"));
+var vscode10 = __toESM(require("vscode"));
 async function showLocalKnowledge(context, scope, changed) {
-  const panel = vscode9.window.createWebviewPanel(
+  const panel = vscode10.window.createWebviewPanel(
     "commitDefender.localKnowledge",
     "Local Memory and Skills",
-    vscode9.ViewColumn.Active,
+    vscode10.ViewColumn.Active,
     {
       enableScripts: true,
       localResourceRoots: [],
@@ -23367,7 +23387,7 @@ async function showLocalKnowledge(context, scope, changed) {
   const reportError = (error2) => {
     const code3 = errorCode(error2);
     const message2 = code3 === "revision-conflict" ? "This entry changed in another process. Refresh before editing again. Your attempted revision was not saved." : code3 === "credential-unavailable" ? "The OS credential store is unavailable. No plaintext fallback was used." : code3 === "commit-unknown" ? "Storage could not confirm this change. Refresh and verify the current revision before retrying." : "The operation could not be completed. Check the fields and local storage, then refresh before retrying.";
-    void vscode9.window.showErrorMessage(message2);
+    void vscode10.window.showErrorMessage(message2);
   };
   panel.webview.onDidReceiveMessage(async (message2) => {
     if (closed || busy || !message2 || typeof message2 !== "object") return;
@@ -23411,7 +23431,7 @@ async function showLocalKnowledge(context, scope, changed) {
         await refresh();
       } else if (action === "delete" && selected) {
         const entry = selected;
-        const answer = await vscode9.window.showWarningMessage(
+        const answer = await vscode10.window.showWarningMessage(
           `Delete local ${entry.kind} \u201C${entry.title}\u201D?`,
           { modal: true },
           "Delete"
@@ -23428,7 +23448,7 @@ async function showLocalKnowledge(context, scope, changed) {
         );
       } else if (action === "export" && selected) {
         const entry = selected;
-        const uri = await vscode9.window.showSaveDialog({
+        const uri = await vscode10.window.showSaveDialog({
           title: "Export local knowledge as a new plaintext JSON file",
           filters: { JSON: ["json"] }
         });
@@ -23441,7 +23461,7 @@ async function showLocalKnowledge(context, scope, changed) {
           "Exported a plaintext copy to the selected file. Existing files are never overwritten."
         );
       } else if (action === "import") {
-        const uris = await vscode9.window.showOpenDialog({
+        const uris = await vscode10.window.showOpenDialog({
           title: "Import an exported local knowledge JSON file",
           canSelectMany: false,
           filters: { JSON: ["json"] }
@@ -23682,7 +23702,7 @@ async function resolveModelRuntimeConfig(cfg, profileId, ports = {}) {
 }
 
 // src/modelCredentialView.ts
-var vscode10 = __toESM(require("vscode"));
+var vscode11 = __toESM(require("vscode"));
 
 // src/modelCredentialSettings.ts
 async function migrateSettingsModelCredential(profileId, binding, expectedSecret, settings, ports = {}) {
@@ -23989,7 +24009,7 @@ async function migrateHookModelCredential(repoRoot, profileId, ports = {}, expec
 
 // src/modelCredentialView.ts
 async function manageModelCredential(repoRoot) {
-  const settings = () => vscode10.workspace.getConfiguration("commitDefender");
+  const settings = () => vscode11.workspace.getConfiguration("commitDefender");
   const profile = () => settings().inspect("localProfile")?.globalValue ?? "default";
   const profileId = profile();
   const legacy = settings().inspect("apiKey");
@@ -24036,7 +24056,7 @@ async function manageModelCredential(repoRoot) {
       detail
     });
   }
-  const chosen = await vscode10.window.showQuickPick(choices, {
+  const chosen = await vscode11.window.showQuickPick(choices, {
     title: `Model API credential \xB7 ${profileId}`
   });
   if (!chosen) return;
@@ -24045,7 +24065,7 @@ async function manageModelCredential(repoRoot) {
     if (chosen.operation === "hook") {
       if (!repoRoot || !hook) throw Error("Hook changed.");
       await migrateHookModelCredential(repoRoot, profileId, {}, hook.text);
-      void vscode10.window.showInformationMessage(
+      void vscode11.window.showInformationMessage(
         "The hook now resolves its model API key from encrypted OS-backed storage. Other plaintext copies were preserved."
       );
       return;
@@ -24065,7 +24085,7 @@ async function manageModelCredential(repoRoot) {
       await settings().update(
         "modelCredentialRef",
         ref,
-        vscode10.ConfigurationTarget.Global
+        vscode11.ConfigurationTarget.Global
       );
     };
     if (chosen.operation === "reuse") {
@@ -24075,13 +24095,13 @@ async function manageModelCredential(repoRoot) {
         profileId
       );
       await writeReference(ref);
-      void vscode10.window.showInformationMessage(
+      void vscode11.window.showInformationMessage(
         "Verified stored model credential selected. Existing plaintext copies were preserved."
       );
       return;
     }
     if (chosen.operation === "enter") {
-      const secret = await vscode10.window.showInputBox({
+      const secret = await vscode11.window.showInputBox({
         title: "Store model API key",
         prompt: `${binding.provider} \xB7 ${binding.endpoint} \xB7 ${binding.model || "provider default model"}`,
         password: true,
@@ -24097,7 +24117,7 @@ async function manageModelCredential(repoRoot) {
         if (!(error2 instanceof ModelCredentialError) || error2.code !== "credential-conflict")
           throw error2;
         const revision = await modelCredentialRevision(profileId, binding);
-        const action2 = await vscode10.window.showWarningMessage(
+        const action2 = await vscode11.window.showWarningMessage(
           `Replace the stored key for ${binding.provider} at ${binding.endpoint} (${binding.model || "provider default model"}) in profile ${profileId}? Existing references for this destination will use the replacement.`,
           { modal: true },
           "Replace Key"
@@ -24115,19 +24135,19 @@ async function manageModelCredential(repoRoot) {
       await writeReference(ref);
       if ((await resolveModelRuntimeConfig(getConfig(), profileId)).apiKey !== secret)
         throw Error("Reference was not verified.");
-      void vscode10.window.showInformationMessage(
+      void vscode11.window.showInformationMessage(
         "Model API key saved and reopened successfully. Existing plaintext settings were preserved; migrate each copy when ready."
       );
       return;
     }
-    const target = chosen.operation === "user" ? vscode10.ConfigurationTarget.Global : vscode10.ConfigurationTarget.Workspace;
+    const target = chosen.operation === "user" ? vscode11.ConfigurationTarget.Global : vscode11.ConfigurationTarget.Workspace;
     const readLegacy = () => {
       const value = settings().inspect("apiKey");
       return chosen.operation === "user" ? value?.globalValue : value?.workspaceValue;
     };
     const expected = chosen.operation === "user" ? legacy?.globalValue : legacy?.workspaceValue;
     if (!expected) throw Error("Credential changed.");
-    const action = await vscode10.window.showWarningMessage(
+    const action = await vscode11.window.showWarningMessage(
       `Migrate the ${chosen.operation === "user" ? "User" : "Workspace"} API key for ${binding.provider} at ${binding.endpoint} (${binding.model || "provider default model"})? The selected plaintext value will be removed after verification.`,
       { modal: true },
       "Migrate"
@@ -24142,16 +24162,16 @@ async function manageModelCredential(repoRoot) {
         await settings().update("apiKey", void 0, target);
       }
     });
-    void vscode10.window.showInformationMessage(
+    void vscode11.window.showInformationMessage(
       "The selected API key setting was migrated and removed. Other plaintext copies were preserved."
     );
   } catch {
-    void vscode10.window.showErrorMessage(
+    void vscode11.window.showErrorMessage(
       "Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
       "Open User Settings"
     ).then((action) => {
       if (action === "Open User Settings")
-        return vscode10.commands.executeCommand(
+        return vscode11.commands.executeCommand(
           "workbench.action.openSettings",
           "@ext:pydemia.commit-defender"
         );
@@ -24160,16 +24180,16 @@ async function manageModelCredential(repoRoot) {
 }
 
 // src/codeLens.ts
-var vscode12 = __toESM(require("vscode"));
+var vscode13 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
 var path31 = __toESM(require("path"));
-var vscode11 = __toESM(require("vscode"));
+var vscode12 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
   _last;
   /** Fires whenever the store is updated or cleared. */
-  onDidChange = new vscode11.EventEmitter();
+  onDidChange = new vscode12.EventEmitter();
   /** Populate the store from a completed AnalysisReport. */
   update(report, repoRoot, displayBlocks) {
     const blocks = normalizeReport(report);
@@ -24180,7 +24200,7 @@ var FindingsStore = class {
         continue;
       }
       const absPath = path31.join(repoRoot, b.file);
-      const uriKey = vscode11.Uri.file(absPath).toString();
+      const uriKey = vscode12.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
       const bucket = set.byLine.get(line0) ?? [];
@@ -24219,7 +24239,7 @@ var findingsStore = new FindingsStore();
 // src/codeLens.ts
 var path32 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
-  _onDidChangeCodeLenses = new vscode12.EventEmitter();
+  _onDidChangeCodeLenses = new vscode13.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
   constructor() {
     findingsStore.onDidChange.event(() => this._onDidChangeCodeLenses.fire());
@@ -24249,7 +24269,7 @@ var SuggestionCodeLensProvider = class {
       const meta = metaForBlock(worst);
       const count = blocks.length;
       const first = blocks[0].comment.split("\n")[0];
-      lenses.push(new vscode12.CodeLens(new vscode12.Range(line0, 0, line0, 0), {
+      lenses.push(new vscode13.CodeLens(new vscode13.Range(line0, 0, line0, 0), {
         title: `${meta.emoji} ${count} finding${count > 1 ? "s" : ""}`,
         tooltip: first,
         command: "commitDefender.showLineSuggestion",
@@ -24262,7 +24282,7 @@ var SuggestionCodeLensProvider = class {
 
 // src/comments.ts
 var path33 = __toESM(require("path"));
-var vscode13 = __toESM(require("vscode"));
+var vscode14 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
   clearAll() {
@@ -24294,9 +24314,9 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode13.Uri.file(path33.join(repoRoot, b.file));
+    const uri = vscode14.Uri.file(path33.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
-    const range = new vscode13.Range(line, 0, line, 0);
+    const range = new vscode14.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
     const pov = b.category && b.priority !== "P0" ? ` \xB7 ${formatCategory(b.category)}` : "";
     const header2 = `${meta.emoji} ${b.priority} ${meta.label}${pov}`;
@@ -24305,11 +24325,11 @@ var CommentManager = class {
     const comment = {
       author: { name: "Commit Defender" },
       body: md,
-      mode: vscode13.CommentMode.Preview
+      mode: vscode14.CommentMode.Preview
     };
     const thread = ctrl.createCommentThread(uri, range, [comment]);
     thread.label = header2;
-    thread.collapsibleState = vscode13.CommentThreadCollapsibleState.Expanded;
+    thread.collapsibleState = vscode14.CommentThreadCollapsibleState.Expanded;
     thread.canReply = false;
     this.threads.push(thread);
   }
@@ -24317,12 +24337,12 @@ var CommentManager = class {
 
 // src/diagnostics.ts
 var path34 = __toESM(require("path"));
-var vscode14 = __toESM(require("vscode"));
+var vscode15 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
-  P3: vscode14.DiagnosticSeverity.Error,
-  P2: vscode14.DiagnosticSeverity.Warning,
-  P1: vscode14.DiagnosticSeverity.Information,
-  P0: vscode14.DiagnosticSeverity.Hint
+  P3: vscode15.DiagnosticSeverity.Error,
+  P2: vscode15.DiagnosticSeverity.Warning,
+  P1: vscode15.DiagnosticSeverity.Information,
+  P0: vscode15.DiagnosticSeverity.Hint
 };
 function applyDiagnostics(blocks, repoRoot, collection) {
   collection.clear();
@@ -24336,17 +24356,17 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode14.Uri.file(path34.join(repoRoot, relFile));
+    const uri = vscode15.Uri.file(path34.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
-      const range = new vscode14.Range(line, col, line, col);
+      const range = new vscode15.Range(line, col, line, col);
       const cat = b.category ? formatCategory(b.category) : "";
       const catPart = cat ? `\xB7${cat}` : "";
       const prefix = `[${b.priority}${catPart}]`;
       const body2 = b.comment.split("\n")[0].trim();
       const message2 = b.source === "lint" && b.rule ? `${prefix} ${b.rule} \u2014 ${body2}` : `${prefix} ${body2}`;
-      const diag = new vscode14.Diagnostic(range, message2, PRIORITY_SEVERITY[b.priority]);
+      const diag = new vscode15.Diagnostic(range, message2, PRIORITY_SEVERITY[b.priority]);
       diag.source = `commit-defender \xB7 ${b.source}`;
       if (b.source === "lint" && b.rule) {
         diag.code = b.rule;
@@ -24406,14 +24426,14 @@ async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
 }
 
 // src/historyProvider.ts
-var vscode15 = __toESM(require("vscode"));
+var vscode16 = __toESM(require("vscode"));
 var HistoryProvider = class {
   _history = [];
   _blocks = [];
   _lastReport;
   _isRunning = false;
   _cfg;
-  _emitter = new vscode15.EventEmitter();
+  _emitter = new vscode16.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   constructor(cfg) {
     this._cfg = cfg;
@@ -24465,16 +24485,16 @@ var HistoryProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "section": {
-        const collapsed = node2.collapsed ? vscode15.TreeItemCollapsibleState.Collapsed : vscode15.TreeItemCollapsibleState.Expanded;
-        const item = new vscode15.TreeItem(node2.label, collapsed);
-        item.iconPath = new vscode15.ThemeIcon(node2.icon);
+        const collapsed = node2.collapsed ? vscode16.TreeItemCollapsibleState.Collapsed : vscode16.TreeItemCollapsibleState.Expanded;
+        const item = new vscode16.TreeItem(node2.label, collapsed);
+        item.iconPath = new vscode16.ThemeIcon(node2.icon);
         item.id = node2.id;
         return item;
       }
       case "command": {
-        const item = new vscode15.TreeItem(node2.label);
+        const item = new vscode16.TreeItem(node2.label);
         item.description = node2.desc;
-        item.iconPath = new vscode15.ThemeIcon(node2.icon);
+        item.iconPath = new vscode16.ThemeIcon(node2.icon);
         item.command = { command: node2.command, title: node2.label, arguments: node2.args };
         item.tooltip = node2.desc;
         item.id = node2.id;
@@ -24483,9 +24503,9 @@ var HistoryProvider = class {
       case "finding": {
         const meta = PRIORITY_META[node2.priority];
         const label = `${meta.emoji} ${node2.priority} ${meta.label}`;
-        const item = new vscode15.TreeItem(`${label}  \xD7${node2.count}`);
+        const item = new vscode16.TreeItem(`${label}  \xD7${node2.count}`);
         item.description = `${node2.count} finding${node2.count !== 1 ? "s" : ""}`;
-        item.iconPath = new vscode15.ThemeIcon(
+        item.iconPath = new vscode16.ThemeIcon(
           node2.priority === "P3" ? "error" : node2.priority === "P2" ? "warning" : node2.priority === "P1" ? "info" : "pass"
         );
         item.command = {
@@ -24497,9 +24517,9 @@ var HistoryProvider = class {
         return item;
       }
       case "status": {
-        const item = new vscode15.TreeItem(node2.label);
+        const item = new vscode16.TreeItem(node2.label);
         item.description = node2.value;
-        item.iconPath = new vscode15.ThemeIcon(node2.icon);
+        item.iconPath = new vscode16.ThemeIcon(node2.icon);
         item.tooltip = node2.tooltip ?? `${node2.label}: ${node2.value}`;
         if (node2.command) {
           item.command = { command: node2.command, title: node2.label };
@@ -24509,9 +24529,9 @@ var HistoryProvider = class {
       }
       case "entry": {
         const e = node2.entry;
-        const item = new vscode15.TreeItem(e.label, vscode15.TreeItemCollapsibleState.None);
+        const item = new vscode16.TreeItem(e.label, vscode16.TreeItemCollapsibleState.None);
         item.description = `${scopeTag(e.scope)} \xB7 ${formatTime(e.timestamp)}`;
-        item.iconPath = new vscode15.ThemeIcon(scopeIcon(e.scope));
+        item.iconPath = new vscode16.ThemeIcon(scopeIcon(e.scope));
         item.tooltip = `${e.timestamp.toLocaleString()}
 [${scopeTag(e.scope)}] ${e.report.review.summary.slice(0, 200)}`;
         item.contextValue = "historyEntry";
@@ -24524,8 +24544,8 @@ var HistoryProvider = class {
         return item;
       }
       default: {
-        const item = new vscode15.TreeItem(node2.label);
-        item.iconPath = new vscode15.ThemeIcon(node2.icon ?? "info");
+        const item = new vscode16.TreeItem(node2.label);
+        item.iconPath = new vscode16.ThemeIcon(node2.icon ?? "info");
         item.id = node2.id;
         return item;
       }
@@ -24725,14 +24745,14 @@ function formatTime(d) {
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
 var path36 = __toESM(require("path"));
-var vscode17 = __toESM(require("vscode"));
+var vscode18 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
-var vscode16 = __toESM(require("vscode"));
+var vscode17 = __toESM(require("vscode"));
 var _channel;
 function getOutputChannel() {
   if (!_channel) {
-    _channel = vscode16.window.createOutputChannel("Commit Defender", "ansi");
+    _channel = vscode17.window.createOutputChannel("Commit Defender", "ansi");
   }
   return _channel;
 }
@@ -24796,7 +24816,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
-    vscode17.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
+    vscode18.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
     return;
   }
   let existing = "";
@@ -24805,7 +24825,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   if (existing && !existing.includes(HOOK_SIGNATURE)) {
-    const action = await vscode17.window.showWarningMessage(
+    const action = await vscode18.window.showWarningMessage(
       "Commit Defender: A pre-commit hook already exists. Replacing it would discard the current contents.",
       { modal: true },
       "Replace",
@@ -24826,7 +24846,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   try {
     await writeHookConfig2(repoRoot, cfg);
   } catch {
-    void vscode17.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
+    void vscode18.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
     return;
   }
   fs9.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 493 });
@@ -24835,7 +24855,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   channel.appendLine(`[Commit Defender] Pre-commit hook installed at ${hookPath}`);
-  vscode17.window.showInformationMessage(
+  vscode18.window.showInformationMessage(
     "Commit Defender: Pre-commit hook installed. Commits in this repo will be reviewed automatically \u2014 even outside VS Code."
   );
 }
@@ -24846,11 +24866,11 @@ async function uninstallHook(repoRoot) {
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
   } catch {
-    vscode17.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
+    vscode18.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
     return;
   }
   if (!existing.includes(HOOK_SIGNATURE)) {
-    vscode17.window.showInformationMessage(
+    vscode18.window.showInformationMessage(
       "Commit Defender: Pre-commit hook was not installed by Commit Defender \u2014 skipping removal."
     );
     return;
@@ -24859,10 +24879,10 @@ async function uninstallHook(repoRoot) {
     fs9.unlinkSync(hookPath);
     channel.appendLine(`[Commit Defender] Removed pre-commit hook at ${hookPath}`);
   } catch (e) {
-    vscode17.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
+    vscode18.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
     return;
   }
-  vscode17.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
+  vscode18.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
 }
 function hookIsInstalled(repoRoot) {
   try {
@@ -24874,7 +24894,7 @@ function hookIsInstalled(repoRoot) {
 
 // src/panelProvider.ts
 var path37 = __toESM(require("path"));
-var vscode18 = __toESM(require("vscode"));
+var vscode19 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
   P2: "warning",
@@ -24898,12 +24918,12 @@ var PanelProvider = class {
   _blocks = [];
   _repoRoot = "";
   _isRunning = false;
-  _emitter = new vscode18.EventEmitter();
+  _emitter = new vscode19.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   // Map decoration URIs → priority + optional badge so a single
   // FileDecorationProvider can paint every row.
   _decorations = /* @__PURE__ */ new Map();
-  _decoEmitter = new vscode18.EventEmitter();
+  _decoEmitter = new vscode19.EventEmitter();
   decorationProvider = {
     onDidChangeFileDecorations: this._decoEmitter.event,
     provideFileDecoration: (uri) => {
@@ -24914,7 +24934,7 @@ var PanelProvider = class {
       if (!entry) {
         return void 0;
       }
-      return new vscode18.FileDecoration(entry.badge, entry.tooltip);
+      return new vscode19.FileDecoration(entry.badge, entry.tooltip);
     }
   };
   _report;
@@ -24931,7 +24951,7 @@ var PanelProvider = class {
   }
   clear() {
     this._report = void 0;
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode18.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
     this._blocks = [];
     this._repoRoot = "";
     this._decorations.clear();
@@ -24943,9 +24963,9 @@ var PanelProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "file": {
-        const item = new vscode18.TreeItem(
+        const item = new vscode19.TreeItem(
           path37.basename(node2.file),
-          vscode18.TreeItemCollapsibleState.Expanded
+          vscode19.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
         const dir = path37.dirname(node2.file);
@@ -24953,7 +24973,7 @@ var PanelProvider = class {
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
         item.tooltip = `${node2.file} \u2014 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}` + (worst ? ` (worst: ${worst})` : "") + summarizeCounts(counts);
-        item.iconPath = worst ? new vscode18.ThemeIcon(PRIORITY_ICON[worst], new vscode18.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode18.ThemeIcon("file");
+        item.iconPath = worst ? new vscode19.ThemeIcon(PRIORITY_ICON[worst], new vscode19.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode19.ThemeIcon("file");
         item.id = node2.id;
         return item;
       }
@@ -24965,27 +24985,27 @@ var PanelProvider = class {
         const body2 = b.comment.split("\n")[0].trim();
         const ruleTag = b.source === "lint" && b.rule ? `${b.rule} \u2014 ` : "";
         const label = `${emoji} @${author}: ${ruleTag}${body2}`;
-        const item = new vscode18.TreeItem(label);
+        const item = new vscode19.TreeItem(label);
         item.resourceUri = node2.uri;
-        item.iconPath = new vscode18.ThemeIcon(
+        item.iconPath = new vscode19.ThemeIcon(
           PRIORITY_ICON[b.priority],
-          new vscode18.ThemeColor(PRIORITY_COLOR_ID[b.priority])
+          new vscode19.ThemeColor(PRIORITY_COLOR_ID[b.priority])
         );
         const lineRef = b.line > 0 ? `Ln ${b.line}${b.col ? `, Col ${b.col}` : ""}` : "file-level";
         item.description = lineRef;
         const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** \xB7 _@${author}_
 
 ${b.comment}`;
-        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode18.MarkdownString(safeMarkdown(tooltip, () => void 0));
+        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode19.MarkdownString(safeMarkdown(tooltip, () => void 0));
         item.command = this._report ? reviewNavigation.sourceCommand(this._repoRoot, this._report, b.file, b.line) : void 0;
         item.id = node2.id;
         return item;
       }
       default: {
-        const item = new vscode18.TreeItem(node2.label);
-        item.iconPath = new vscode18.ThemeIcon(
+        const item = new vscode19.TreeItem(node2.label);
+        item.iconPath = new vscode19.ThemeIcon(
           this._isRunning ? "loading~spin" : "shield",
-          new vscode18.ThemeColor("charts.blue")
+          new vscode19.ThemeColor("charts.blue")
         );
         item.id = node2.id;
         return item;
@@ -25053,13 +25073,13 @@ ${b.comment}`;
   }
   // ── Decoration plumbing ───────────────────────────────────────────────────
   _fileUri(id4, blocks) {
-    return vscode18.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
+    return vscode19.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
   }
   _blockUri(id4) {
-    return vscode18.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
+    return vscode19.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
   }
   _rebuildDecorations() {
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode18.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
     this._decorations.clear();
     const byFile = /* @__PURE__ */ new Map();
     for (const b of this._blocks) {
@@ -25109,7 +25129,7 @@ ${b.comment}`;
         });
       });
     });
-    const newUris = Array.from(this._decorations.keys()).map((s) => vscode18.Uri.parse(s));
+    const newUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
     const fired = [...oldUris, ...newUris];
     if (fired.length) {
       this._decoEmitter.fire(fired);
@@ -25145,11 +25165,11 @@ ${parts2.join(" ")}` : "";
 }
 
 // src/statusBar.ts
-var vscode19 = __toESM(require("vscode"));
+var vscode20 = __toESM(require("vscode"));
 var StatusBarManager = class {
   item;
   constructor() {
-    this.item = vscode19.window.createStatusBarItem(vscode19.StatusBarAlignment.Left, 100);
+    this.item = vscode20.window.createStatusBarItem(vscode20.StatusBarAlignment.Left, 100);
     this.item.command = "commitDefender.analyze";
     this.setIdle();
     this.item.show();
@@ -25192,13 +25212,13 @@ var StatusBarManager = class {
     this.item.tooltip = `${reviewCoverage(report)}. ${report.gcr ? "Standalone review is advisory" : `Legacy hook: ${resolveExitCode(report) ? "would block" : "allows commit"}`}. Click to re-analyze.`;
     this.item.command = "commitDefender.analyze";
     this.item.backgroundColor = void 0;
-    this.item.color = new vscode19.ThemeColor(meta.color);
+    this.item.color = new vscode20.ThemeColor(meta.color);
   }
   setError(message2) {
     this.item.text = "$(warning) CD: Error";
     this.item.tooltip = `Commit Defender error: ${message2}`;
     this.item.command = "commitDefender.analyze";
-    this.item.backgroundColor = new vscode19.ThemeColor("statusBarItem.warningBackground");
+    this.item.backgroundColor = new vscode20.ThemeColor("statusBarItem.warningBackground");
     this.item.color = void 0;
   }
   dispose() {
@@ -25207,7 +25227,7 @@ var StatusBarManager = class {
 };
 
 // src/reviewChat.ts
-var vscode20 = __toESM(require("vscode"));
+var vscode21 = __toESM(require("vscode"));
 var import_node_crypto22 = require("node:crypto");
 
 // src/reviewChatView.ts
@@ -25394,7 +25414,7 @@ async function settleReviewChats() {
 }
 async function openReviewChat(report, repoRoot, context) {
   if (!report.gcr) {
-    void vscode20.window.showInformationMessage(
+    void vscode21.window.showInformationMessage(
       "Run a fixed-source review before starting a review conversation."
     );
     return;
@@ -25417,7 +25437,7 @@ async function openReviewChat(report, repoRoot, context) {
   );
   const initial = settings(), fingerprint = contentHash(initial);
   if (initial.profileId !== core.identity.client.profileId || !initial.workspaceTrusted || scope.kind !== "repository" || scope.repositoryKey !== core.identity.client.repositoryKey || scope.worktreeKey !== core.identity.client.worktreeKey) {
-    void vscode20.window.showErrorMessage(
+    void vscode21.window.showErrorMessage(
       "Reopen this review from the current trusted workspace and profile."
     );
     return;
@@ -25427,10 +25447,10 @@ async function openReviewChat(report, repoRoot, context) {
     panels.get(key3).reveal();
     return;
   }
-  const panel = vscode20.window.createWebviewPanel(
+  const panel = vscode21.window.createWebviewPanel(
     "commitDefenderReviewChat",
     "Commit Defender \u2014 Review conversation",
-    vscode20.ViewColumn.Beside,
+    vscode21.ViewColumn.Beside,
     {
       enableScripts: true,
       retainContextWhenHidden: true,
@@ -25441,7 +25461,7 @@ async function openReviewChat(report, repoRoot, context) {
   let closed = false, running, cancelRequested = false;
   const current = () => {
     try {
-      return !closed && vscode20.workspace.isTrusted && contentHash(settings()) === fingerprint;
+      return !closed && vscode21.workspace.isTrusted && contentHash(settings()) === fingerprint;
     } catch {
       return false;
     }
@@ -25571,13 +25591,17 @@ async function openReviewChat(report, repoRoot, context) {
 var ALL_FILES = { scheme: "file" };
 var settleExecutions;
 async function activate(context) {
+  context.subscriptions.push(vscode22.commands.registerCommand(
+    "commitDefender.openConnectionGuide",
+    () => openConnectionGuide(context)
+  ));
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
   reviewNavigation.register(context);
   let lastConfiguredProvider = getConfig().aiProvider;
   let providerUpdateFromWizard;
   async function resolveRepoRoot() {
-    const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) {
       return void 0;
     }
@@ -25630,7 +25654,7 @@ async function activate(context) {
       detail: "Use any model name accepted by the selected local CLI and account.",
       custom: true
     });
-    const picked = await vscode21.window.showQuickPick(choices, {
+    const picked = await vscode22.window.showQuickPick(choices, {
       title: `Commit Defender: Select ${accountProviderName(provider)} model`,
       placeHolder: includeDefault ? "Choose the CLI default, an alias, or enter an exact model ID" : "Choose an alias or enter an exact model ID",
       ignoreFocusOut: true
@@ -25641,7 +25665,7 @@ async function activate(context) {
     if (!picked.custom) {
       return picked.model ?? "";
     }
-    return vscode21.window.showInputBox({
+    return vscode22.window.showInputBox({
       title: `Commit Defender: ${accountProviderName(provider)} model ID`,
       prompt: "Enter an exact model ID supported by the local CLI and authenticated account.",
       value: current.aiProvider === provider ? current.model : "",
@@ -25650,8 +25674,8 @@ async function activate(context) {
     }).then((value) => value?.trim());
   }
   async function applyAccountProvider(provider, model) {
-    const settings = vscode21.workspace.getConfiguration("commitDefender");
-    const target = vscode21.ConfigurationTarget.Global;
+    const settings = vscode22.workspace.getConfiguration("commitDefender");
+    const target = vscode22.ConfigurationTarget.Global;
     providerUpdateFromWizard = provider;
     await settings.update("model", model, target);
     await settings.update("aiProvider", provider, target);
@@ -25661,7 +25685,7 @@ async function activate(context) {
       }
     }, 1e3);
     const modelLabel = model || "CLI default";
-    vscode21.window.showInformationMessage(
+    vscode22.window.showInformationMessage(
       `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`
     );
   }
@@ -25673,7 +25697,7 @@ async function activate(context) {
       return true;
     }
     const name = accountProviderName(provider);
-    const action = await vscode21.window.showInformationMessage(
+    const action = await vscode22.window.showInformationMessage(
       `Commit Defender: Use the ${name} CLI default model in user settings? Fixed-source standalone review is not yet supported by this provider.`,
       "Use CLI Default",
       "Choose Model\u2026"
@@ -25697,7 +25721,7 @@ async function activate(context) {
       return;
     }
     const name = accountProviderName(provider);
-    const action = await vscode21.window.showInformationMessage(
+    const action = await vscode22.window.showInformationMessage(
       `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} in user settings and change its model?`,
       "Use CLI Default",
       "Choose Model\u2026",
@@ -25719,7 +25743,7 @@ async function activate(context) {
       { label: "Gemini CLI", description: "Account login and commit messages; standalone review unavailable", provider: "geminicli" },
       { label: "Antigravity", description: "Account login and commit messages; standalone review unavailable", provider: "antigravity" }
     ];
-    const picked = await vscode21.window.showQuickPick(choices, {
+    const picked = await vscode22.window.showQuickPick(choices, {
       title: "Commit Defender: Select account provider",
       placeHolder: "Choose the authenticated CLI backbone",
       ignoreFocusOut: true
@@ -25736,9 +25760,9 @@ async function activate(context) {
     const isGeminiCli = provider === "geminicli";
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
-    const cwd = await resolveRepoRoot() ?? vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    const cwd = await resolveRepoRoot() ?? vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
     if (path38.isAbsolute(executable) && !fs10.existsSync(executable)) {
-      vscode21.window.showErrorMessage(
+      vscode22.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
       return false;
@@ -25754,7 +25778,7 @@ async function activate(context) {
       env3.GOOGLE_GENAI_USE_VERTEXAI = null;
       env3.GOOGLE_GENAI_USE_GCA = "true";
     }
-    const terminal = vscode21.window.createTerminal({
+    const terminal = vscode22.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
@@ -25767,35 +25791,35 @@ async function activate(context) {
     return true;
   }
   context.subscriptions.push(
-    vscode21.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
-    vscode21.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
-    vscode21.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
-    vscode21.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
-    vscode21.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
+    vscode22.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
+    vscode22.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
+    vscode22.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
+    vscode22.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
+    vscode22.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
   );
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.installPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode21.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode22.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await installHook(repoRoot, context.extensionPath, getConfig());
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.uninstallPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode21.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode22.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await uninstallHook(repoRoot);
     }
   ));
-  context.subscriptions.push(vscode21.workspace.onDidChangeConfiguration(async (e) => {
+  context.subscriptions.push(vscode22.workspace.onDidChangeConfiguration(async (e) => {
     if (e.affectsConfiguration("commitDefender")) {
       const nextConfig = getConfig();
       const previousProvider = lastConfiguredProvider;
@@ -25821,9 +25845,9 @@ async function activate(context) {
     if (e.affectsConfiguration("commitDefender.preCommitHook")) {
       const hook = getConfig().preCommitHook;
       if (hook === "enable") {
-        vscode21.commands.executeCommand("commitDefender.installPreCommitHook");
+        vscode22.commands.executeCommand("commitDefender.installPreCommitHook");
       } else {
-        vscode21.commands.executeCommand("commitDefender.uninstallPreCommitHook");
+        vscode22.commands.executeCommand("commitDefender.uninstallPreCommitHook");
       }
     }
     if (e.affectsConfiguration("commitDefender.colorPalette")) {
@@ -25840,8 +25864,8 @@ async function activate(context) {
       }
     });
   }
-  const diagnostics = vscode21.languages.createDiagnosticCollection("commit-defender");
-  const commentCtrl = vscode21.comments.createCommentController("commit-defender", "Commit Defender");
+  const diagnostics = vscode22.languages.createDiagnosticCollection("commit-defender");
+  const commentCtrl = vscode22.comments.createCommentController("commit-defender", "Commit Defender");
   const commentManager = new CommentManager();
   const statusBar = new StatusBarManager();
   const execution = new ReviewExecutionOwner();
@@ -25863,7 +25887,7 @@ async function activate(context) {
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider = new HistoryProvider(cfg);
   const panelProvider = new PanelProvider();
-  const localProfile = () => vscode21.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
+  const localProfile = () => vscode22.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
   const centralSynchronization = new CentralSynchronization({
     onState: (_key, state) => {
       if (state.phase === "ready") void refreshVisibleContext();
@@ -25876,14 +25900,14 @@ async function activate(context) {
   async function refreshCentralSynchronization() {
     const generation = ++syncDiscovery;
     if (syncManagement > 0) return;
-    if (!vscode21.workspace.isTrusted) {
+    if (!vscode22.workspace.isTrusted) {
       centralSynchronization.stop();
       return;
     }
     const profileId = localProfile();
     try {
-      const roots = await Promise.all((vscode21.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
-      if (generation !== syncDiscovery || !vscode21.workspace.isTrusted || localProfile() !== profileId) return;
+      const roots = await Promise.all((vscode22.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
+      if (generation !== syncDiscovery || !vscode22.workspace.isTrusted || localProfile() !== profileId) return;
       centralSynchronization.reconcile([...new Set(roots.filter((root2) => !!root2))].map((repoRoot) => {
         const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
         return { scope, repositoryRoot: repoRoot, selection: readSelection(context.globalState, scope) };
@@ -25905,27 +25929,27 @@ async function activate(context) {
   const localReviewActivity = new LocalReviewActivity(async () => {
     const profileId = localProfile();
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode21.workspace.isTrusted) throw new Error("Trusted worktree required");
+    if (!repoRoot || !vscode22.workspace.isTrusted) throw new Error("Trusted worktree required");
     const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
     const selection = readSelection(context.globalState, scope);
     if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === "centralized" && selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const selected = JSON.stringify(selection);
     const history = await readSelectedHistory({ profileId, repoRoot, scope: "repository" }, selection);
-    if (!vscode21.workspace.isTrusted || localProfile() !== profileId || await resolveRepoRoot() !== repoRoot || JSON.stringify(readSelection(context.globalState, scope)) !== selected)
+    if (!vscode22.workspace.isTrusted || localProfile() !== profileId || await resolveRepoRoot() !== repoRoot || JSON.stringify(readSelection(context.globalState, scope)) !== selected)
       throw new Error("Local history selection changed");
     return { scope, repository: repoRoot, reports: history.reports, incompleteHistory: history.incompleteHistory };
   });
   context.subscriptions.push(
     localReviewActivity,
-    vscode21.commands.registerCommand("commitDefender.localReviewActivity", (days) => localReviewActivity.show(days))
+    vscode22.commands.registerCommand("commitDefender.localReviewActivity", (days) => localReviewActivity.show(days))
   );
   let historyLoad = 0;
   async function refreshLocalHistory() {
     const generation = ++historyLoad;
     const profileId = localProfile();
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode21.workspace.isTrusted) return;
+    if (!repoRoot || !vscode22.workspace.isTrusted) return;
     try {
       const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
       if (scope.kind !== "repository") return;
@@ -25950,11 +25974,11 @@ async function activate(context) {
     renderSummary(view.report, view.repoRoot);
   }
   context.subscriptions.push(
-    vscode21.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
+    vscode22.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
       const repoRoot = await resolveRepoRoot();
       const profileId = localProfile();
-      if (!repoRoot || !vscode21.workspace.isTrusted) {
-        void vscode21.window.showWarningMessage("Open and trust a Git worktree before managing central review.");
+      if (!repoRoot || !vscode22.workspace.isTrusted) {
+        void vscode22.window.showWarningMessage("Open and trust a Git worktree before managing central review.");
         return;
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
@@ -25967,7 +25991,7 @@ async function activate(context) {
         await manageCentralConnection(context, scope, {
           repositoryRoot: repoRoot,
           assertCurrent() {
-            if (!vscode21.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
+            if (!vscode22.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
               throw Error("Connection selection changed.");
           },
           async invalidate() {
@@ -25977,7 +26001,7 @@ async function activate(context) {
             reviewIntent++;
             execution.invalidate();
             await execution.settled();
-            await vscode21.commands.executeCommand("commitDefender.clearFindings");
+            await vscode22.commands.executeCommand("commitDefender.clearFindings");
           },
           refresh: refreshLocalHistory
         });
@@ -25987,39 +26011,39 @@ async function activate(context) {
         await automaticReviews.refresh();
       }
     }),
-    vscode21.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
-    vscode21.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
-    vscode21.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
+    vscode22.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
+    vscode22.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
+    vscode22.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
       const repoRoot = await resolveRepoRoot();
       const choices = [
-        ...repoRoot && vscode21.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
+        ...repoRoot && vscode22.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
         { label: "Current profile", description: "Shared across repositories in this local profile", scope: "profile" }
       ];
-      const selected = await vscode21.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
+      const selected = await vscode22.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
       if (!selected) return;
       try {
         const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
         await showLocalKnowledge(context, scope, refreshVisibleContext);
       } catch {
-        void vscode21.window.showErrorMessage("Local knowledge could not be opened. Check the profile and OS credential store.");
+        void vscode22.window.showErrorMessage("Local knowledge could not be opened. Check the profile and OS credential store.");
       }
     }),
-    vscode21.window.onDidChangeWindowState((event) => {
+    vscode22.window.onDidChangeWindowState((event) => {
       if (event.focused) {
         void refreshVisibleContext();
         void refreshCentralSynchronization().then(() => centralSynchronization.wake());
       }
     }),
-    vscode21.workspace.onDidChangeWorkspaceFolders(() => {
+    vscode22.workspace.onDidChangeWorkspaceFolders(() => {
       localReviewActivity.dispose();
       syncDiscovery++;
       centralSynchronization.stop();
       void refreshCentralSynchronization();
     }),
-    vscode21.workspace.onDidGrantWorkspaceTrust(() => {
+    vscode22.workspace.onDidGrantWorkspaceTrust(() => {
       void refreshCentralSynchronization();
     }),
-    vscode21.workspace.onDidChangeConfiguration((event) => {
+    vscode22.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("commitDefender.localProfile") || event.affectsConfiguration("commitDefender.reviewMode")) {
         localReviewActivity.dispose();
         syncDiscovery++;
@@ -26028,17 +26052,17 @@ async function activate(context) {
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
-        void vscode21.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
+        void vscode22.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
       }
     })
   );
   void refreshLocalHistory();
   void refreshCentralSynchronization();
-  const historyView = vscode21.window.createTreeView("commitDefender.history", {
+  const historyView = vscode22.window.createTreeView("commitDefender.history", {
     treeDataProvider: historyProvider,
     showCollapseAll: false
   });
-  const panelView = vscode21.window.createTreeView("commitDefender.panelView", {
+  const panelView = vscode22.window.createTreeView("commitDefender.panelView", {
     treeDataProvider: panelProvider,
     showCollapseAll: true
   });
@@ -26048,8 +26072,8 @@ async function activate(context) {
     statusBar.item,
     historyView,
     panelView,
-    vscode21.window.registerFileDecorationProvider(panelProvider.decorationProvider),
-    vscode21.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
+    vscode22.window.registerFileDecorationProvider(panelProvider.decorationProvider),
+    vscode22.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
   );
   const invalidateChangedSource = (document3) => {
     if (document3.uri.scheme !== "file") return;
@@ -26063,8 +26087,8 @@ async function activate(context) {
     findingsStore.invalidateFile(document3.uri);
   };
   context.subscriptions.push(
-    vscode21.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
-    vscode21.workspace.onDidOpenTextDocument(invalidateChangedSource)
+    vscode22.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
+    vscode22.workspace.onDidOpenTextDocument(invalidateChangedSource)
   );
   async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback) {
     if (!automatic) lastManualStartedAt = Date.now();
@@ -26075,7 +26099,7 @@ async function activate(context) {
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope2));
     } catch (error2) {
       if (automatic) throw error2;
-      void vscode21.window.showErrorMessage(standaloneError(error2).message);
+      void vscode22.window.showErrorMessage(standaloneError(error2).message);
       return;
     }
     if (feedback) {
@@ -26126,15 +26150,15 @@ async function activate(context) {
         const message2 = error2 instanceof Error ? error2.message : "Local review preparation failed.";
         statusBar.setError(message2);
         getOutputChannel().appendLine(`[Commit Defender] ${message2}`);
-        void vscode21.window.showErrorMessage(
+        void vscode22.window.showErrorMessage(
           error2 instanceof Error ? error2.message : "Local review preparation failed.",
           "Central Review Connection\u2026",
           "Choose Account and Model\u2026",
           "Open User Settings"
         ).then((action) => {
-          if (action === "Central Review Connection\u2026") return vscode21.commands.executeCommand("commitDefender.manageCentralConnection");
+          if (action === "Central Review Connection\u2026") return vscode22.commands.executeCommand("commitDefender.manageCentralConnection");
           if (action === "Choose Account and Model\u2026") return selectAccountProviderAndModel();
-          if (action === "Open User Settings") return vscode21.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
+          if (action === "Open User Settings") return vscode22.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
         });
       },
       finished: () => {
@@ -26156,8 +26180,8 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode21.Uri.file(path38.join(repoRoot, file)).toString();
-          return vscode21.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
+          const uri = vscode22.Uri.file(path38.join(repoRoot, file)).toString();
+          return vscode22.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
         historyProvider.push(result.report, repoRoot, scope, scopeTarget);
@@ -26174,15 +26198,15 @@ async function activate(context) {
           const provider = accountProvider(cfg2.aiProvider);
           const signIn2 = provider ? signInLabel(provider) : void 0;
           const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
-          void vscode21.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
-            if (action === signIn2 && provider) await vscode21.commands.executeCommand(signInCommand(provider));
+          void vscode22.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
+            if (action === signIn2 && provider) await vscode22.commands.executeCommand(signInCommand(provider));
             else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
             else if (action === "Show Output") getOutputChannel().show();
           });
         }
         if (automatic) return;
         showSummaryPanel(result.report, repoRoot, context);
-        await vscode21.commands.executeCommand("commitDefender.panelView.focus");
+        await vscode22.commands.executeCommand("commitDefender.panelView.focus");
         if (!isCurrent()) return;
         const srcFile = result.report.staged_files[0];
         const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
@@ -26196,7 +26220,7 @@ async function activate(context) {
     }
     if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.analyzeCurrentFile",
     async (uri) => {
       const intent = ++reviewIntent;
@@ -26204,14 +26228,14 @@ async function activate(context) {
       if (uri?.scheme === "file") {
         filePath = uri.fsPath;
       } else {
-        const editor = vscode21.window.activeTextEditor;
+        const editor = vscode22.window.activeTextEditor;
         if (!editor || editor.document.uri.scheme !== "file") {
-          vscode21.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
+          vscode22.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
           return;
         }
         filePath = editor.document.uri.fsPath;
       }
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26233,7 +26257,7 @@ async function activate(context) {
         channel.appendLine(`  rawRoot : ${rawRoot}`);
         channel.appendLine(`  relPath : ${relPath || "(empty)"}`);
         if (!relPath || relPath.startsWith("..")) {
-          vscode21.window.showWarningMessage("Commit Defender: File is outside the repository.");
+          vscode22.window.showWarningMessage("Commit Defender: File is outside the repository.");
           setPreflightIdle(void 0, intent);
           return;
         }
@@ -26244,11 +26268,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.analyzeDirectory",
     async (uri) => {
       const intent = ++reviewIntent;
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26271,7 +26295,7 @@ async function activate(context) {
         if (relPaths.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No supported files found", intent);
-          vscode21.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+          vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
           return;
         }
         const channel = getOutputChannel();
@@ -26285,13 +26309,13 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.analyze",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode21.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode22.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       try {
@@ -26303,11 +26327,11 @@ async function activate(context) {
         if (staged.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No staged files", intent);
-          vscode21.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
+          vscode22.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
         }
         if (cfg2.stagedFilesWarnThreshold > 0 && staged.length > cfg2.stagedFilesWarnThreshold) {
-          const answer = await vscode21.window.showWarningMessage(
+          const answer = await vscode22.window.showWarningMessage(
             `Commit Defender: ${staged.length} files are staged. Analyzing this many files may take a while.`,
             { modal: true },
             "Proceed to Analyze",
@@ -26316,12 +26340,12 @@ async function activate(context) {
           );
           if (answer === "Skip") {
             setPreflightIdle("Analysis skipped", intent);
-            vscode21.window.showInformationMessage("Commit Defender: Analysis skipped.");
+            vscode22.window.showInformationMessage("Commit Defender: Analysis skipped.");
             return;
           }
           if (answer === "Abort" || answer === void 0) {
             setPreflightIdle("Commit aborted", intent);
-            vscode21.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
+            vscode22.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
             return;
           }
         }
@@ -26335,11 +26359,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.analyzeRepository",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26352,11 +26376,11 @@ async function activate(context) {
         if (allFiles.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No files found", intent);
-          vscode21.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+          vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
           return;
         }
         if (cfg2.repoAnalysisWarnThreshold > 0 && allFiles.length > cfg2.repoAnalysisWarnThreshold) {
-          const answer = await vscode21.window.showWarningMessage(
+          const answer = await vscode22.window.showWarningMessage(
             `Commit Defender: Found ${allFiles.length} files. The captured selection may exceed the review budget. Any unfinished file coverage will be reported as incomplete. Continue?`,
             { modal: true },
             "Analyze"
@@ -26376,11 +26400,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand("commitDefender.cancel", () => {
+  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.cancel", () => {
     reviewIntent++;
     execution.cancel();
   }));
-  context.subscriptions.push(vscode21.commands.registerCommand("commitDefender.clearFindings", () => {
+  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.clearFindings", () => {
     localReviewActivity.dispose();
     reviewIntent++;
     execution.invalidate();
@@ -26395,10 +26419,10 @@ async function activate(context) {
     panelProvider.clear();
     setPreflightIdle();
   }));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.showLineSuggestion",
     async (uri, line0) => {
-      if (!(uri instanceof vscode21.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
+      if (!(uri instanceof vscode22.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
       const file = path38.relative(last.repoRoot, uri.fsPath).split(path38.sep).join("/");
@@ -26406,46 +26430,46 @@ async function activate(context) {
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.showSummary",
     () => {
       const last = findingsStore.lastReport();
       if (!last) {
-        vscode21.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
+        vscode22.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
         return;
       }
       showSummaryPanel(last.report, last.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
+  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
     const entry = arg?.kind === "entry" ? arg.entry : arg;
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) {
-      void vscode21.window.showInformationMessage("Select a saved review in history or run a review first.");
+      void vscode22.window.showInformationMessage("Select a saved review in history or run a review first.");
       return;
     }
     try {
       await openReviewChat(selected.report, selected.repoRoot, context);
     } catch {
-      void vscode21.window.showErrorMessage("The review conversation could not be opened. Check the current workspace and review connection.");
+      void vscode22.window.showErrorMessage("The review conversation could not be opened. Check the current workspace and review connection.");
     }
   }));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.showHistoryEntry",
     (entry) => {
       showSummaryPanel(entry.report, entry.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.reanalyzeHistoryEntry",
     async (arg) => {
       const intent = ++reviewIntent;
       const histEntry = arg?.kind === "entry" ? arg.entry : arg?.report ? arg : void 0;
       if (!histEntry) {
-        vscode21.window.showWarningMessage("Commit Defender: Could not read history entry.");
+        vscode22.window.showWarningMessage("Commit Defender: Could not read history entry.");
         return;
       }
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26461,7 +26485,7 @@ async function activate(context) {
             if (staged.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No staged files", intent);
-              vscode21.window.showInformationMessage("Commit Defender: No staged files to analyze.");
+              vscode22.window.showInformationMessage("Commit Defender: No staged files to analyze.");
               return;
             }
             channel.appendLine(`
@@ -26474,7 +26498,7 @@ async function activate(context) {
           case "file": {
             const files = histEntry.report.staged_files;
             if (!files.length) {
-              vscode21.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
+              vscode22.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
@@ -26487,7 +26511,7 @@ async function activate(context) {
           case "directory": {
             const dirPath = histEntry.scopeTarget;
             if (!dirPath) {
-              vscode21.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
+              vscode22.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
@@ -26496,7 +26520,7 @@ async function activate(context) {
             if (relPaths.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No supported files found", intent);
-              vscode21.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+              vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
               return;
             }
             channel.appendLine(`
@@ -26511,7 +26535,7 @@ async function activate(context) {
             if (allFiles.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No files found", intent);
-              vscode21.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+              vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
               return;
             }
             channel.appendLine(`
@@ -26526,20 +26550,20 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode21.commands.registerCommand(
+  context.subscriptions.push(vscode22.commands.registerCommand(
     "commitDefender.generateCommitMessage",
     async () => {
       const intent = ++messageIntent;
-      const ws = vscode21.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode21.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode22.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       let repoRoot;
       try {
         repoRoot = await getRepoRoot(ws);
       } catch {
-        vscode21.window.showWarningMessage("Commit Defender: No git repository found.");
+        vscode22.window.showWarningMessage("Commit Defender: No git repository found.");
         return;
       }
       if (intent !== messageIntent) return;
@@ -26551,8 +26575,8 @@ async function activate(context) {
         const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot);
         return {
           ...prepared,
-          run: async (runSignal) => vscode21.window.withProgress(
-            { location: vscode21.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
+          run: async (runSignal) => vscode22.window.withProgress(
+            { location: vscode22.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
             () => prepared.run(runSignal)
           )
         };
@@ -26562,7 +26586,7 @@ async function activate(context) {
             handleError(error2, statusBar, !execution.isRunning);
             return;
           }
-          void vscode21.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Manage Model API Credential").then((action) => {
+          void vscode22.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Manage Model API Credential").then((action) => {
             if (action && intent === messageIntent) return manageModelCredential(repoRoot);
           });
         },
@@ -26570,32 +26594,32 @@ async function activate(context) {
           if (result.is_error || !result.commit_message) {
             const provider = accountProvider(cfg2.aiProvider);
             const signIn2 = provider ? signInLabel(provider) : void 0;
-            const action = await vscode21.window.showErrorMessage(
+            const action = await vscode22.window.showErrorMessage(
               `Commit Defender: ${result.error || "Failed to generate commit message"}`,
               ...signIn2 ? [signIn2] : []
             );
             if (action === signIn2 && provider) {
-              await vscode21.commands.executeCommand(signInCommand(provider));
+              await vscode22.commands.executeCommand(signInCommand(provider));
             }
             return;
           }
-          const gitExt = vscode21.extensions.getExtension("vscode.git");
+          const gitExt = vscode22.extensions.getExtension("vscode.git");
           const gitApi = gitExt?.exports?.getAPI?.(1);
-          const repo = gitApi?.getRepository?.(vscode21.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
+          const repo = gitApi?.getRepository?.(vscode22.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
           if (repo?.inputBox) {
             repo.inputBox.value = result.commit_message;
-            vscode21.window.showInformationMessage(
+            vscode22.window.showInformationMessage(
               "Commit Defender: Commit message inserted into the Source Control input box."
             );
           } else {
-            await vscode21.env.clipboard.writeText(result.commit_message);
+            await vscode22.env.clipboard.writeText(result.commit_message);
             if (!isCurrent()) return;
-            vscode21.window.showInformationMessage(
+            vscode22.window.showInformationMessage(
               "Commit Defender: Commit message copied to clipboard.",
               "Preview"
             ).then((action) => {
               if (action === "Preview") {
-                vscode21.window.showInputBox({
+                vscode22.window.showInputBox({
                   value: result.commit_message,
                   prompt: "Generated commit message (read-only preview)",
                   ignoreFocusOut: true
@@ -26608,9 +26632,9 @@ async function activate(context) {
     }
   ));
   const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);
-  context.subscriptions.push(vscode21.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
+  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
     const originalRoot = fs10.realpathSync(job.root);
-    if (!vscode21.workspace.isTrusted || !vscode21.workspace.workspaceFolders?.some((folder) => {
+    if (!vscode22.workspace.isTrusted || !vscode22.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
       return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path38.sep);
@@ -26625,7 +26649,7 @@ async function activate(context) {
       const initial = getStandaloneReviewSettings(2, root2);
       const scope = knowledgeScope({ repoRoot: root2, profileId: initial.profileId, scope: "repository" });
       const settings = selectedReviewSettings(initial, readSelection(context.globalState, scope));
-      const cfg2 = vscode21.workspace.getConfiguration("commitDefender");
+      const cfg2 = vscode22.workspace.getConfiguration("commitDefender");
       try {
         await backgroundHooks.configure(root2, automatic, settings, cfg2.inspect("serviceNodePath")?.globalValue ?? "node", (cfg2.inspect("hookReviewWaitSeconds")?.globalValue ?? 0) * 1e3);
       } catch (error2) {
@@ -26647,9 +26671,9 @@ async function activate(context) {
   let backgroundPolling = false;
   const observedBackgroundResults = /* @__PURE__ */ new Set();
   const displayBackgroundResult = async (job) => {
-    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode21.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
+    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode22.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
     const canonicalRoot = fs10.realpathSync(job.root);
-    const folder = vscode21.workspace.workspaceFolders?.find((folder2) => {
+    const folder = vscode22.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
       return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path38.sep) || canonicalRoot.startsWith(root2 + path38.sep);
@@ -26663,8 +26687,8 @@ async function activate(context) {
     const entry = mergeLocalHistory([], history.reports, job.root, scope, history.audience, history.fallbackConnectionId).find((entry2) => entry2.id === job.result.runId);
     const core = entry?.report.gcr?.report;
     if (!entry || !core || !core.finishedAt || Date.parse(core.finishedAt) < backgroundOpenedAt || Date.parse(core.startedAt ?? core.requestedAt) < lastManualStartedAt) return;
-    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode21.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
-    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode21.workspace.textDocuments.find((document3) => {
+    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode22.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
+    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode22.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
         return fs10.realpathSync(document3.uri.fsPath) === path38.join(canonicalRoot, file);
@@ -26757,7 +26781,7 @@ async function pickDirectory(root2) {
     for (const name of subdirs) {
       items.push({ label: `$(folder) ${name}`, description: path38.join(rel, name) });
     }
-    const picked = await vscode21.window.showQuickPick(items, {
+    const picked = await vscode22.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
       placeHolder: 'Navigate or choose "Analyze this directory"'
     });
@@ -26778,7 +26802,7 @@ function handleError(err2, statusBar, updateStatus = true) {
   const message2 = err2 instanceof Error ? err2.message : String(err2);
   if (updateStatus) statusBar.setError(message2);
   const firstLine = message2.split("\n")[0];
-  vscode21.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
+  vscode22.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
     if (action === "Show Output") {
       getOutputChannel().show();
     }
@@ -26796,12 +26820,12 @@ function renderSummary(report, repoRoot) {
 }
 function showSummaryPanel(report, repoRoot, context) {
   if (_summaryPanel) {
-    _summaryPanel.reveal(vscode21.ViewColumn.Beside, true);
+    _summaryPanel.reveal(vscode22.ViewColumn.Beside, true);
   } else {
-    _summaryPanel = vscode21.window.createWebviewPanel(
+    _summaryPanel = vscode22.window.createWebviewPanel(
       "commitDefenderSummary",
       "Commit Defender \u2014 Summary",
-      { viewColumn: vscode21.ViewColumn.Beside, preserveFocus: true },
+      { viewColumn: vscode22.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] }
     );
     _summaryPanel.onDidDispose(() => {
@@ -26816,10 +26840,10 @@ function showSummaryPanel(report, repoRoot, context) {
         if (message2.command === "open") {
           await reviewNavigation.open(message2.id);
         } else if (message2.command === "discuss") {
-          await vscode21.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
+          await vscode22.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
         } else {
-          const doc = await vscode21.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
-          await vscode21.window.showTextDocument(doc, { preview: true, preserveFocus: false });
+          const doc = await vscode22.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
+          await vscode22.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
       },
       void 0,
