@@ -20,6 +20,9 @@ exports.run = async () => {
     label: t.label, input: t.input?.constructor?.name ?? 'native',
   }));
   await vscode.commands.executeCommand('commitDefender.openConnectionGuide', process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en');
+  if (process.env.CD_GUIDE_INSPECT_VIEW === 'settings') {
+    await vscode.commands.executeCommand('commitDefender.openSettings');
+  }
   if (process.env.CD_GUIDE_INSPECT === '1') {
     fs.writeFileSync(process.env.CD_GUIDE_READY, 'ready');
     const deadline = Date.now() + 15 * 60_000;

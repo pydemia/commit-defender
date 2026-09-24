@@ -31,6 +31,7 @@ try {
     extensionTestsEnv: {
       VSCODE_DEV: '', CD_GUIDE_INSPECT: process.env.CD_GUIDE_INSPECT || '0',
       CD_GUIDE_INSPECT_LANGUAGE: process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en',
+      CD_GUIDE_INSPECT_VIEW: process.env.CD_GUIDE_INSPECT_VIEW || 'guide',
       CD_GUIDE_READY: path.join(proof, 'ready'), CD_GUIDE_CONTINUE: path.join(proof, 'continue'),
       CD_GUIDE_PROOF: path.join(proof, 'host.json'),
       CD_GUIDE_DELIVERY: process.env.CD_TEST_EXTENSION_PATH ? 'packaged-extension' : 'source-checkout',
