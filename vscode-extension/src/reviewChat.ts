@@ -65,7 +65,7 @@ export async function openReviewChat(
     scope.worktreeKey !== core.identity.client.worktreeKey
   ) {
     void vscode.window.showErrorMessage(
-      "Reopen this review from the current trusted workspace and profile.",
+      "Commit Defender: Review discussion — reopen this review from the current trusted workspace and profile.",
     );
     return;
   }

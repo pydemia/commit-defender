@@ -211,7 +211,7 @@ export async function manageModelCredential(repoRoot?: string): Promise<void> {
   } catch {
     void vscode.window
       .showErrorMessage(
-        "Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
+        "Commit Defender: Model credential could not be migrated or verified. Check the selected API provider, endpoint/model, current profile and OS credential store. Refresh before retrying; other saved credentials are not overwritten.",
         "Open User Settings",
       )
       .then((action) => {

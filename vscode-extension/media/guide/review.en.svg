@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 390" role="img" aria-labelledby="title">
+<title id="title">Original review + source → Current change + fixed context → Review result + evidence</title>
+
+<text x="32" y="50" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Original review + source</text>
+<text x="32" y="81" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Comment · replies · body versions · published guidance</text>
+<path d="M46 103v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="174" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Current change + fixed context</text>
+<text x="32" y="205" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Check applicability, counter-evidence and claimed fixes</text>
+<path d="M46 227v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="298" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Review result + evidence</text>
+<text x="32" y="329" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Completed / partial / failed · source + version</text>
+</svg>

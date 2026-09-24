@@ -500,7 +500,7 @@ export async function manageCentralConnection(
     });
     context.subscriptions.push(panel);
   } catch (error) {
-    void vscode.window.showErrorMessage(standaloneError(error).message);
+    void vscode.window.showErrorMessage(`Commit Defender: Central review connection — ${standaloneError(error).message}`);
   } finally {
     activeViews.delete(key);
   }

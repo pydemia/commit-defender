@@ -1,14 +1,32 @@
 import * as vscode from 'vscode';
 
-/** Bundled documentation is available before an account or central connection exists. */
-export async function openConnectionGuide(context: Pick<vscode.ExtensionContext, 'extensionUri'>): Promise<void> {
-  const filename = /^ko(?:-|$)/i.test(vscode.env.language)
-    ? 'central-setup.ko.md' : 'central-setup.md';
-  const uri = vscode.Uri.joinPath(context.extensionUri, 'docs', filename);
+/** Native walkthrough descriptions and static SVGs need no Markdown preview worker. */
+export async function openConnectionGuide(
+  context: Pick<vscode.ExtensionContext, 'extension'>,
+  requestedLanguage?: unknown,
+): Promise<void> {
+  const language = requestedLanguage === 'en' || requestedLanguage === 'ko'
+    ? requestedLanguage : /^ko(?:-|$)/i.test(vscode.env.language) ? 'ko' : 'en';
   try {
-    await vscode.commands.executeCommand('markdown.showPreview', uri);
+    await vscode.commands.executeCommand(
+      'workbench.action.openWalkthrough',
+      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
+      false,
+    );
   } catch {
-    // The built-in Markdown extension can be disabled; keep the guide readable.
-    await vscode.window.showTextDocument(uri, { preview: true });
+    await vscode.window.showErrorMessage(
+      'Commit Defender: GCR connection guide could not be opened. Check the extension installation and try again.',
+    );
+  }
+}
+
+/** Keep settings in the native UI; opening it does not change their values. */
+export async function openCommitDefenderSettings(): Promise<void> {
+  try {
+    await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:pydemia.commit-defender');
+  } catch {
+    await vscode.window.showErrorMessage(
+      'Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender.',
+    );
   }
 }

@@ -242,6 +242,7 @@ test("downloaded prompt text stays inert and an open view closes when local acce
     "disconnected content must not open again",
   );
   assert.equal(ui.errors.length, 1);
+  assert.match(ui.errors[0]!, /^Commit Defender: Central review connection/);
 });
 
 test("cancelling server confirmation never stores a key or contacts the server", async (t) => {
@@ -338,6 +339,7 @@ test("connection UI binds this Git worktree and blocks downloaded content after 
   await manageCentralConnection(context, scope, actions, ports);
   assert.equal(server.credentialValues.size, 0);
   assert.equal(ui.errors.length, 1);
+  assert.match(ui.errors[0]!, /^Commit Defender: Central review connection/);
   assert(ui.errors[0]!.includes("Git remotes"));
   assert(!ui.errors[0]!.includes("PRIVATE_REMOTE"));
   ui.errors = [];

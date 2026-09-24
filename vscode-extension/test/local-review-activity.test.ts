@@ -121,6 +121,7 @@ test("failed authorized history reads clear a previous view and never expose err
   await view.show(30);
   assert(ui.panels[0]!.disposed);
   assert.equal(ui.errors.length, 1);
+  assert.match(ui.errors[0]!, /^Commit Defender: Local review activity/);
   assert(!ui.errors[0]!.includes("secret-canary"));
   view.dispose();
 });

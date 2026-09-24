@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 390" role="img" aria-labelledby="title">
+<title id="title">GCR → Commit Defender → 선택한 모델 provider</title>
+
+<text x="32" y="50" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">GCR</text>
+<text x="32" y="81" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">리뷰 이력 · Skill · 프롬프트 · 발행 지침</text>
+<path d="M46 103v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="174" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Commit Defender</text>
+<text x="32" y="205" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">관련 문맥 선택 · 실행 중 자료 버전 고정</text>
+<path d="M46 227v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="298" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">선택한 모델 provider</text>
+<text x="32" y="329" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">리뷰 소스와 문맥 → 지적 사항</text>
+</svg>

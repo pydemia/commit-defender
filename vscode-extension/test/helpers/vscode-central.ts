@@ -92,3 +92,7 @@ export const window = {
     ui.errors.push(message);
   },
 };
+
+// Native guide commands do not create a webview or read account state.
+export const env = { language: 'en' };
+export const commands = { async executeCommand() {} };

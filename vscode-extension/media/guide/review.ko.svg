@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 390" role="img" aria-labelledby="title">
+<title id="title">과거 리뷰와 출처 → 현재 변경과 고정 문맥 → 리뷰 결과와 근거</title>
+
+<text x="32" y="50" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">과거 리뷰와 출처</text>
+<text x="32" y="81" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">원문 · 답글 · 본문 버전 · 발행 지침</text>
+<path d="M46 103v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="174" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">현재 변경과 고정 문맥</text>
+<text x="32" y="205" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">적용 조건 · 반증 · 수정 여부 확인</text>
+<path d="M46 227v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="298" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">리뷰 결과와 근거</text>
+<text x="32" y="329" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">완료 / 부분 완료 / 실패 · 출처와 버전</text>
+</svg>

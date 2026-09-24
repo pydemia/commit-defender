@@ -19,7 +19,7 @@ import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
-import { openConnectionGuide } from './connectionGuide.js';
+import { openConnectionGuide, openCommitDefenderSettings } from './connectionGuide.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
@@ -48,7 +48,10 @@ let settleExecutions: (() => Promise<void>) | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   context.subscriptions.push(vscode.commands.registerCommand(
-    'commitDefender.openConnectionGuide', () => openConnectionGuide(context),
+    'commitDefender.openConnectionGuide', language => openConnectionGuide(context, language),
+  ));
+  context.subscriptions.push(vscode.commands.registerCommand(
+    'commitDefender.openSettings', openCommitDefenderSettings,
   ));
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
@@ -442,7 +445,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       const repoRoot = await resolveRepoRoot();
       const profileId = localProfile();
       if (!repoRoot || !vscode.workspace.isTrusted) {
-        void vscode.window.showWarningMessage('Open and trust a Git worktree before managing central review.'); return;
+        void vscode.window.showWarningMessage('Commit Defender: Open and trust a Git worktree before managing central review.'); return;
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: 'repository' });
       if (scope.kind !== 'repository') return;
@@ -475,7 +478,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
         await showLocalKnowledge(context, scope, refreshVisibleContext);
-      } catch { void vscode.window.showErrorMessage('Local knowledge could not be opened. Check the profile and OS credential store.'); }
+      } catch { void vscode.window.showErrorMessage('Commit Defender: Local Memory and Skills could not be opened. Check the profile and OS credential store.'); }
     }),
     vscode.window.onDidChangeWindowState(event => { if (event.focused) { void refreshVisibleContext(); void refreshCentralSynchronization().then(() => centralSynchronization.wake()); } }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => { localReviewActivity.dispose(); syncDiscovery++; centralSynchronization.stop(); void refreshCentralSynchronization(); }),
@@ -549,7 +552,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope));
     } catch (error) {
       if (automatic) throw error;
-      void vscode.window.showErrorMessage(standaloneError(error).message); return;
+      void vscode.window.showErrorMessage(`Commit Defender: Review setup — ${standaloneError(error).message}`); return;
     }
     if (feedback) {
       if (!feedback.current() || localSettings.mode !== 'centralized' ||
@@ -592,7 +595,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         statusBar.setError(message);
         getOutputChannel().appendLine(`[Commit Defender] ${message}`);
         void vscode.window.showErrorMessage(
-          error instanceof Error ? error.message : 'Local review preparation failed.',
+          `Commit Defender: Review preparation — ${error instanceof Error ? error.message : 'Local review preparation failed.'}`,
           'Central Review Connection…', 'Choose Account and Model…', 'Open User Settings',
         ).then(action => {
           if (action === 'Central Review Connection…') return vscode.commands.executeCommand('commitDefender.manageCentralConnection');
@@ -920,7 +923,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) { void vscode.window.showInformationMessage('Select a saved review in history or run a review first.'); return; }
     try { await openReviewChat(selected.report, selected.repoRoot, context); }
-    catch { void vscode.window.showErrorMessage('The review conversation could not be opened. Check the current workspace and review connection.'); }
+    catch { void vscode.window.showErrorMessage('Commit Defender: The review conversation could not be opened. Check the current workspace and review connection.'); }
   }));
 
   context.subscriptions.push(vscode.commands.registerCommand(

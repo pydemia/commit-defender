@@ -63,7 +63,7 @@ export async function showLocalKnowledge(
           : code === "commit-unknown"
             ? "Storage could not confirm this change. Refresh and verify the current revision before retrying."
             : "The operation could not be completed. Check the fields and local storage, then refresh before retrying.";
-    void vscode.window.showErrorMessage(message);
+    void vscode.window.showErrorMessage(`Commit Defender: Local Memory and Skills — ${message}`);
   };
   panel.webview.onDidReceiveMessage(async (message: unknown) => {
     if (closed || busy || !message || typeof message !== "object") return;

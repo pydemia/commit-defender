@@ -55,7 +55,7 @@ export async function recoverBackgroundReview(
     return job;
   } catch (error) {
     await vscode.window.showErrorMessage(
-      `Review recovery did not complete: ${error instanceof Error ? error.message : "unavailable"}`,
+      `Commit Defender: Review recovery did not complete — ${error instanceof Error ? error.message : "unavailable"}`,
     );
   }
 }

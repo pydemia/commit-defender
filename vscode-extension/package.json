@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.12.7",
+    "version": "2.12.8",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -173,6 +173,11 @@
                 "command": "commitDefender.openConnectionGuide",
                 "title": "Commit Defender: GCR Connection Guide",
                 "icon": "$(question)"
+            },
+            {
+                "command": "commitDefender.openSettings",
+                "title": "Commit Defender: Open Settings",
+                "icon": "$(settings-gear)"
             }
         ],
         "configuration": {
@@ -650,6 +655,11 @@
                     "command": "commitDefender.openConnectionGuide",
                     "when": "view == commitDefender.history",
                     "group": "navigation"
+                },
+                {
+                    "command": "commitDefender.openSettings",
+                    "when": "view == commitDefender.history",
+                    "group": "navigation"
                 }
             ]
         },
@@ -684,7 +694,199 @@
                     "icon": "$(shield)"
                 }
             ]
-        }
+        },
+        "walkthroughs": [
+            {
+                "id": "gcrConnectionEN",
+                "title": "Commit Defender: GCR Connection Guide",
+                "description": "Read the guide, then open account, connection and Settings controls.",
+                "steps": [
+                    {
+                        "id": "overview",
+                        "title": "How GCR and CD work together",
+                        "description": "GCR supplies review history, Skills, prompts, and published guidance. CD runs reviews with the account, provider, model, and reasoning you select. Connecting to GCR preserves those choices.\nLocal code and review results are not uploaded to GCR. Review source and context go to your selected model provider; account providers can use cloud inference.\nThis guide works offline. Step checks track pages read, not connection or review success.\n[한국어](command:commitDefender.openConnectionGuide?%5B%22ko%22%5D)",
+                        "media": {
+                            "svg": "media/guide/flow.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "reader",
+                        "title": "Prepare a GCR reader key",
+                        "description": "On your GCR website, open Profile → API keys. Choose the Commit Defender client and the repository you will review. Issue a knowledge:read key with a suitable expiry.\nDownload the connection JSON for that repository. It contains the server URL, repository identity, public signing keys, and any required CA certificate. Keep the reader key separate.\nThe reader key is not your GCR password, GitHub token, or model API key. A gcr-cli key cannot authorize CD. Remote CD connections require HTTPS, even when the website allows HTTP.",
+                        "media": {
+                            "svg": "media/guide/connection.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "workspace",
+                        "title": "Open the matching Git repository",
+                        "description": "Open the local Git repository or worktree in VS Code and trust the workspace. Its Git remote must match the repository selected in GCR; forks are separate repositories.\nThe connection belongs to the current local profile and worktree. After changing Git remotes, reconnect using the correct repository configuration.",
+                        "media": {
+                            "svg": "media/guide/connection.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "model",
+                        "title": "Choose your account and model",
+                        "description": "For account-based reviews, select Codex and your model in the account picker. CD uses your existing CLI login; choose Enter a model ID… if needed. A model account registered in GCR does not configure CD.\nOpen Settings for provider, model, endpoint, and review reasoning. For API providers, store secrets with Manage Model API Credential. Keep account and model choices in User Settings.\n[Select account and model](command:commitDefender.selectAccountProviderAndModel)\n[Open Settings](command:commitDefender.openSettings)\n[Manage model API credential](command:commitDefender.manageModelCredential)",
+                        "media": {
+                            "svg": "media/guide/flow.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "connect",
+                        "title": "Connect with the reader key",
+                        "description": "Open Central Review Connection → Connect with API key…. Select the downloaded JSON, confirm the server, tenant, repository and public signing key, then enter the reader key in the password field.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/connection.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "knowledge",
+                        "title": "Verify and browse central material",
+                        "description": "In Central Review Connection, use Connection status to check the repository, user, key expiry, last sync and snapshot. Synchronize knowledge downloads and verifies published material without calling a model.\nView downloaded review knowledge shows Skills, prompts and guidance. Browse PR review history shows originals, replies, body versions and sources. Online knowledge refreshes within five minutes; revoked, expired or invalidly signed material cannot be reused.\n[Open connection and history](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/review.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "review",
+                        "title": "Run a review and inspect its sources",
+                        "description": "Save and stage a small change, then run Analyze Staged Files from the Command Palette. For an unstaged saved file, choose Analyze Current File. A review calls your selected model provider.\nCheck the completed, partial or failed state before reading findings. Show Summary Panel displays source references, snapshots and guidance versions. Each run pins its material versions. Past comments are observations: current code, applicability conditions and counter-evidence determine whether they apply.\nCentralized · online uses online-verified material; centralized · cached uses a valid signed cache. Standalone · fallback shows the reason for reviewing without central material.\n[Open review summary](command:commitDefender.showSummary)",
+                        "media": {
+                            "svg": "media/guide/review.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "troubleshooting",
+                        "title": "Resolve connection or model errors",
+                        "description": "401/403: check the reader client, repository permission, expiry and revocation. Repository mismatch: check Git remotes and reconnect. Certificate errors: check the HTTPS URL and administrator-provided CA; do not disable verification.\nMissing central material and server outages differ from model failures. For model errors, check CD login, provider, model, reasoning, CLI support and usage limits. In Central Review Connection, Offline and fallback behavior… controls outages; Use standalone review retains the connection.\nCD error notifications identify Commit Defender and the operation. Error loading webview is a VS Code viewer error, not a reader-key rejection. This native guide does not depend on the Markdown preview Service Worker.\n[Open Settings](command:commitDefender.openSettings)\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/review.en.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "gcrConnectionKO",
+                "title": "Commit Defender: GCR 연결 가이드",
+                "description": "가이드를 읽고 계정·연결·기본 설정 화면을 엽니다.",
+                "steps": [
+                    {
+                        "id": "overview",
+                        "title": "GCR과 CD의 역할",
+                        "description": "GCR에서 리뷰 이력·Skill·프롬프트·발행된 지침을 내려받고, CD에서 선택한 계정·provider·모델·reasoning으로 리뷰합니다. GCR에 연결해도 모델 선택은 유지됩니다.\n로컬 코드와 리뷰 결과는 GCR에 업로드하지 않습니다. 리뷰에 필요한 소스와 문맥은 선택한 모델 provider로 전달됩니다. 계정 provider는 클라우드에서 추론할 수 있습니다.\n이 가이드는 오프라인에서도 열립니다. 단계 체크는 읽은 페이지를 표시하며 연결·리뷰 성공 여부를 나타내지 않습니다.\n[English](command:commitDefender.openConnectionGuide?%5B%22en%22%5D)",
+                        "media": {
+                            "svg": "media/guide/flow.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "reader",
+                        "title": "GCR reader key 준비",
+                        "description": "GCR 웹사이트의 프로필에서 클라이언트를 Commit Defender로, 저장소를 로컬 리뷰 대상으로 선택합니다. 이름과 유효기간을 지정해 knowledge:read API key를 발급합니다.\n선택한 저장소의 연결 설정 다운로드로 JSON을 받습니다. 서버 주소·저장소 식별자·서명 공개키·필요한 CA 인증서가 들어 있습니다. reader key는 별도로 입력합니다.\nGCR 로그인 비밀번호·GitHub 토큰·모델 API key와 구분하십시오. gcr-cli용 키는 CD에서 사용할 수 없습니다. 웹사이트가 HTTP를 허용하더라도 CD의 원격 연결은 HTTPS를 사용합니다.",
+                        "media": {
+                            "svg": "media/guide/connection.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "workspace",
+                        "title": "일치하는 Git 저장소 열기",
+                        "description": "VS Code에서 로컬 Git 저장소 또는 worktree를 열고 워크스페이스를 신뢰합니다. Git remote가 GCR에서 선택한 저장소와 일치해야 하며 fork는 별도 저장소로 취급합니다.\n연결은 현재 로컬 profile과 worktree에 적용됩니다. Git remote를 바꾸었다면 올바른 저장소의 연결 설정으로 다시 연결하십시오.",
+                        "media": {
+                            "svg": "media/guide/connection.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "model",
+                        "title": "계정·모델과 설정 선택",
+                        "description": "계정 기반 리뷰는 계정 선택 화면에서 Codex와 모델을 선택합니다. 기존 CLI 로그인 계정을 사용합니다. 원하는 모델이 없으면 Enter a model ID…를 선택합니다. GCR의 분석용 계정은 CD에 자동 적용되지 않습니다.\n기본 설정 화면에서 provider·모델·endpoint·review reasoning을 지정할 수 있습니다. API provider의 키는 Manage Model API Credential로 보관합니다. 계정과 모델은 사용자 설정(User)에 지정하십시오.\n[계정과 모델 선택](command:commitDefender.selectAccountProviderAndModel)\n[설정 열기](command:commitDefender.openSettings)\n[모델 API 자격 증명 관리](command:commitDefender.manageModelCredential)",
+                        "media": {
+                            "svg": "media/guide/flow.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "connect",
+                        "title": "reader key로 연결",
+                        "description": "Central Review Connection → Connect with API key…를 선택합니다. 받은 JSON을 열어 서버·tenant·저장소·서명 공개키를 확인한 뒤 reader key를 비밀번호 입력란에 입력합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/connection.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "knowledge",
+                        "title": "중앙 자료와 원문 확인",
+                        "description": "Central Review Connection의 Connection status에서 저장소·사용자·키 유효기간·최근 동기화·snapshot을 확인합니다. Synchronize knowledge는 모델 호출 없이 발행 자료를 내려받고 검증합니다.\nView downloaded review knowledge에서 Skill·프롬프트·지침을, Browse PR review history에서 원문·답글·본문 버전·출처를 확인합니다. 온라인 자료는 최대 5분 안에 갱신하며 철회·만료·서명 오류 자료는 재사용하지 않습니다.\n[연결과 이력 열기](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/review.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "review",
+                        "title": "리뷰 실행과 출처 확인",
+                        "description": "작은 변경을 저장하고 stage한 뒤 명령 팔레트에서 Analyze Staged Files를 실행합니다. stage하지 않은 저장 파일은 Analyze Current File을 사용합니다. 리뷰는 선택한 모델 provider를 호출합니다.\n완료·부분 완료·실패 상태를 먼저 확인합니다. Show Summary Panel에서 지적 사항·출처·snapshot·지침 버전을 확인합니다. 실행 중에는 자료 버전이 고정됩니다. 과거 코멘트는 당시 관측이며 현재 코드·적용 조건·반증으로 적용 여부를 판단합니다.\nCentralized · online은 온라인 검증 자료, centralized · cached는 유효한 서명 캐시를 사용합니다. Standalone · fallback은 중앙 자료 없이 리뷰한 이유를 표시합니다.\n[리뷰 요약 열기](command:commitDefender.showSummary)",
+                        "media": {
+                            "svg": "media/guide/review.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    },
+                    {
+                        "id": "troubleshooting",
+                        "title": "연결·모델 오류 확인",
+                        "description": "401/403이면 reader client·저장소 권한·만료·철회를 확인합니다. 저장소 불일치이면 Git remote를 확인하고 재연결합니다. 인증서 오류이면 HTTPS 주소와 관리자 제공 CA를 확인하며 검증을 끄지 마십시오.\n중앙 자료 없음·서버 장애와 모델 실패는 별도입니다. 모델 오류이면 CD 로그인·provider·모델·reasoning·지원 CLI·사용량을 확인합니다. 연결 메뉴의 Offline and fallback behavior…로 장애 시 동작을 정합니다. Use standalone review는 연결 정보를 보존합니다.\nCD 오류 알림은 Commit Defender와 작업명을 표시합니다. Error loading webview는 reader key 거부가 아닌 VS Code 뷰어 오류입니다. 이 내장 가이드는 Markdown 미리보기의 Service Worker에 의존하지 않습니다.\n[설정 열기](command:commitDefender.openSettings)\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
+                        "media": {
+                            "svg": "media/guide/review.ko.svg"
+                        },
+                        "completionEvents": [
+                            "onStepSelected"
+                        ]
+                    }
+                ]
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
@@ -736,7 +938,8 @@
         "test:central-history": "esbuild test/central-history.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-history.test.cjs && node --test out-test/central-history.test.cjs",
         "prepare-native": "node scripts/prepare-native.mjs",
         "bundle:w01-native-host": "esbuild test/w01-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/w01-diagnostic-worker.cjs && esbuild test/w01-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w01-native-host.cjs && npm run prepare-native",
-        "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native"
+        "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native",
+        "test:connection-guide:host": "node test/run-connection-guide.mjs"
     },
     "dependencies": {
         "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.48/gcr-client-contract-0.1.0-alpha.48.tgz",

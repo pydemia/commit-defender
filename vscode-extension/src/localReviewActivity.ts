@@ -115,7 +115,7 @@ export class LocalReviewActivity implements vscode.Disposable {
       this.panel?.dispose();
       this.panel = undefined;
       void vscode.window.showErrorMessage(
-        "Local review activity could not be loaded. Check the selected profile, connection and OS credential store.",
+        "Commit Defender: Local review activity could not be loaded. Check the selected profile, connection and OS credential store.",
       );
     }
   }

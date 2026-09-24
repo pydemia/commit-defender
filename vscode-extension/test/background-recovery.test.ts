@@ -165,6 +165,7 @@ test("current central revocation remains a recovery error", async () => {
   const f = fixture();
   f.state.revoked = true;
   await f.run();
+  assert.match(ui.errors[0], /^Commit Defender: Review recovery did not complete/);
   assert.match(ui.errors[0], /service-denied/);
   assert.equal(f.state.refreshed, 0);
   assert.equal(f.job.state, "interrupted");

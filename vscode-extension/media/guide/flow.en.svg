@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 390" role="img" aria-labelledby="title">
+<title id="title">GCR → Commit Defender → Your selected model provider</title>
+
+<text x="32" y="50" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">GCR</text>
+<text x="32" y="81" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Review history · Skills · prompts · guidance</text>
+<path d="M46 103v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="174" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Commit Defender</text>
+<text x="32" y="205" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Choose relevant context and pin its version</text>
+<path d="M46 227v38m-5-5 5 5 5-5" stroke="var(--vscode-textLink-foreground)" fill="none" stroke-width="2"/>
+<text x="32" y="298" font-family="sans-serif" font-size="30" font-weight="600" fill="var(--vscode-foreground)">Your selected model provider</text>
+<text x="32" y="329" font-family="sans-serif" font-size="19" fill="var(--vscode-descriptionForeground)">Review source + context → findings</text>
+</svg>
