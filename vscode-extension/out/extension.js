@@ -19045,12 +19045,12 @@ async function callClaudeCodeCli(req) {
   if (req.model.trim()) {
     args.push("--model", req.model.trim());
   }
-  const env3 = { ...process.env };
-  delete env3.ANTHROPIC_API_KEY;
-  delete env3.ANTHROPIC_AUTH_TOKEN;
-  env3.CLAUDE_AGENT_SDK_CLIENT_APP = env3.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  const env4 = { ...process.env };
+  delete env4.ANTHROPIC_API_KEY;
+  delete env4.ANTHROPIC_AUTH_TOKEN;
+  env4.CLAUDE_AGENT_SDK_CLIENT_APP = env4.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env3);
+    const result = await runCli(command, args, req.userMessage, req, env4);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
     }
@@ -19090,13 +19090,13 @@ async function callGeminiCli(req) {
   if (req.model.trim()) {
     args.unshift("--model", req.model.trim());
   }
-  const env3 = { ...process.env };
-  delete env3.GEMINI_API_KEY;
-  delete env3.GOOGLE_API_KEY;
-  delete env3.GOOGLE_GENAI_USE_VERTEXAI;
-  env3.GOOGLE_GENAI_USE_GCA = "true";
+  const env4 = { ...process.env };
+  delete env4.GEMINI_API_KEY;
+  delete env4.GOOGLE_API_KEY;
+  delete env4.GOOGLE_GENAI_USE_VERTEXAI;
+  env4.GOOGLE_GENAI_USE_GCA = "true";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env3);
+    const result = await runCli(command, args, req.userMessage, req, env4);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
     }
@@ -19217,7 +19217,7 @@ async function withSchemaFile(schema, fn) {
     await (0, import_promises6.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
-function runCli(command, args, stdin, req, env3) {
+function runCli(command, args, stdin, req, env4) {
   return new Promise((resolve4, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
@@ -19225,7 +19225,7 @@ function runCli(command, args, stdin, req, env3) {
     }
     const child = (0, import_child_process3.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
-      env: env3,
+      env: env4,
       shell: false,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"]
@@ -21740,12 +21740,12 @@ var quote = (value) => {
   return `'${shellPath.replace(/'/g, "'\\''")}'`;
 };
 function git2(root2, args, missing = false) {
-  const env3 = { ...process.env };
-  for (const key3 of Object.keys(env3))
-    if (key3.startsWith("GIT_")) delete env3[key3];
+  const env4 = { ...process.env };
+  for (const key3 of Object.keys(env4))
+    if (key3.startsWith("GIT_")) delete env4[key3];
   try {
     return (0, import_node_child_process6.execFileSync)("git", ["-C", root2, ...args], {
-      env: env3,
+      env: env4,
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15e3,
@@ -22365,8 +22365,8 @@ var BackgroundHooks = class {
           "Background reviews require trusted user-selected Codex model/reasoning settings and an online central connection when selected."
         );
       }
-      const env3 = { ...process.env };
-      for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
+      const env4 = { ...process.env };
+      for (const k of Object.keys(env4)) if (k.startsWith("GIT_")) delete env4[k];
       const node2 = JSON.parse(
         (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
           process.platform === "win32" ? await windowsExecutable(nodePath) : nodePath,
@@ -22374,7 +22374,7 @@ var BackgroundHooks = class {
             "-p",
             'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})'
           ],
-          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4, windowsHide: true }
+          { cwd: import_node_os3.default.homedir(), env: env4, timeout: 1e4, windowsHide: true }
         )).stdout
       );
       if (node2.major < 22 || !import_node_path18.default.isAbsolute(node2.path))
@@ -22404,7 +22404,7 @@ var BackgroundHooks = class {
           "--data-dir",
           dataDirectory
         ],
-        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3, windowsHide: true }
+        { cwd: import_node_os3.default.homedir(), env: env4, timeout: 65e3, windowsHide: true }
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -22424,7 +22424,7 @@ var BackgroundHooks = class {
       const executorPath = process.platform === "win32" ? await windowsExecutable(settings.executablePath) : import_node_path18.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process7.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
-        { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
+        { env: env4, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
       )).stdout.trim();
       const options = {
         mode: settings.mode,
@@ -22916,7 +22916,8 @@ async function browseCentralHistory(context, read, validate) {
 // src/connectionGuide.ts
 var vscode8 = __toESM(require("vscode"));
 async function openConnectionGuide(context) {
-  const uri = vscode8.Uri.joinPath(context.extensionUri, "docs", "central-setup.ko.md");
+  const filename = /^ko(?:-|$)/i.test(vscode8.env.language) ? "central-setup.ko.md" : "central-setup.md";
+  const uri = vscode8.Uri.joinPath(context.extensionUri, "docs", filename);
   try {
     await vscode8.commands.executeCommand("markdown.showPreview", uri);
   } catch {
@@ -23030,9 +23031,9 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     const choice2 = await vscode9.window.showQuickPick(
       [
         {
-          label: "GCR connection guide (\uC5F0\uACB0 \uAC00\uC774\uB4DC)",
+          label: "GCR connection guide",
           action: "guide",
-          description: "\uACC4\uC815\xB7\uBAA8\uB378 \uC120\uD0DD, reader key \uBC1C\uAE09, \uC5F0\uACB0\uACFC \uCCAB \uB9AC\uBDF0"
+          description: "Reader key, account/model, connection and first review"
         },
         {
           label: "Connect with API key\u2026",
@@ -25768,22 +25769,22 @@ async function activate(context) {
       return false;
     }
     const shellArgs = isCodex ? ["login"] : isClaude ? ["auth", "login", "--claudeai"] : [];
-    const env3 = {};
+    const env4 = {};
     if (isClaude) {
-      env3.ANTHROPIC_API_KEY = null;
-      env3.ANTHROPIC_AUTH_TOKEN = null;
+      env4.ANTHROPIC_API_KEY = null;
+      env4.ANTHROPIC_AUTH_TOKEN = null;
     } else if (provider === "geminicli") {
-      env3.GEMINI_API_KEY = null;
-      env3.GOOGLE_API_KEY = null;
-      env3.GOOGLE_GENAI_USE_VERTEXAI = null;
-      env3.GOOGLE_GENAI_USE_GCA = "true";
+      env4.GEMINI_API_KEY = null;
+      env4.GOOGLE_API_KEY = null;
+      env4.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env4.GOOGLE_GENAI_USE_GCA = "true";
     }
     const terminal = vscode22.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
       cwd,
-      env: env3
+      env: env4
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
