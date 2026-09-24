@@ -1,7 +1,9 @@
 # Central review in Commit Defender
 
-For step-by-step setup in Korean, open **Commit Defender: GCR Connection Guide**
-in the Command Palette or read the bundled [연결 가이드](central-setup.ko.md).
+For step-by-step setup, open **Commit Defender: GCR Connection Guide** in the
+Command Palette. It follows the VS Code display language, with English as
+the fallback. You can also read the bundled [English](central-setup.md) or
+[한국어](central-setup.ko.md) guide.
 
 Central integration is one-way. The extension downloads central reviews, review knowledge and prompts and applies them with the configured local model. Local source, results, feedback, conversations and personal Memory stay on this computer. No central executor, result submission or feedback upload is offered. Historical encrypted outboxes are retained locally and cannot be sent by this client.
 

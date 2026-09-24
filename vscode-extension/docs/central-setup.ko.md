@@ -1,8 +1,10 @@
 # GCR 연결과 첫 리뷰
 
+한국어 · [English](central-setup.md)
+
 Commit Defender(CD)는 Git Code Reviewer(GCR)에 저장된 리뷰 이력·Skill·프롬프트·발행된 지침을 내려받아 사용합니다. 리뷰는 CD에서 선택한 계정과 모델로 실행하며, GCR 연결은 provider·모델·reasoning 설정을 바꾸지 않습니다.
 
-이 문서는 확장에 포함되어 있어 인터넷이나 GCR 연결 없이도 읽을 수 있습니다. 명령 팔레트의 **Commit Defender: GCR Connection Guide**, CD 사이드바 상단의 도움말 아이콘, 또는 **Central Review Connection → GCR connection guide (연결 가이드)**에서 다시 여실 수 있습니다.
+이 문서는 확장에 포함되어 있어 인터넷이나 GCR 연결 없이도 읽을 수 있습니다. 명령 팔레트의 **Commit Defender: GCR Connection Guide**, CD 사이드바 상단의 도움말 아이콘, 또는 **Central Review Connection → GCR connection guide**에서 다시 여실 수 있습니다. VS Code 표시 언어가 한국어이면 이 문서를, 그 외에는 영문 가이드를 엽니다. 상단 링크로 언어를 바꿀 수도 있습니다.
 
 ## 1. GCR에서 reader key와 연결 파일 준비
 

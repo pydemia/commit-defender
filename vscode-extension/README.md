@@ -20,8 +20,10 @@ Reviews do not edit files, run tests, or create commits.
 
 For the GCR setup guide inside VS Code, run **Commit Defender: GCR Connection
 Guide** or use the help icon in the Commit Defender sidebar. The bundled
-[한국어 연결 가이드](docs/central-setup.ko.md) covers reader keys, local model
-selection, synchronization, and the first review; it can be read offline.
+[English guide](docs/central-setup.md) and [한국어 연결 가이드](docs/central-setup.ko.md)
+cover reader keys, local model selection, synchronization, and the first
+review. The command follows the VS Code display language (Korean or English
+fallback), and both guides can be read offline.
 
 1. Install **Commit Defender** (`pydemia.commit-defender`) from Marketplace, or
    use **Extensions → Install from VSIX…** with a supplied package. Open a
