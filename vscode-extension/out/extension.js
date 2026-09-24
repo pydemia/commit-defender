@@ -22934,7 +22934,9 @@ async function openConnectionGuide(context, requestedLanguage) {
 }
 async function openCommitDefenderSettings() {
   try {
-    await vscode8.commands.executeCommand("workbench.action.openSettings2", "@ext:pydemia.commit-defender");
+    await vscode8.commands.executeCommand("workbench.action.openSettings2", {
+      query: "@ext:pydemia.commit-defender"
+    });
   } catch {
     await vscode8.window.showErrorMessage(
       "Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender."
