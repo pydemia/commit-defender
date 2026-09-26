@@ -2,6 +2,7 @@ export const ui = {
   choices: [] as Array<string | number>,
   file: "",
   secret: "",
+  inputValues: [] as string[],
   cancelConnect: false,
   html: [] as string[],
   errors: [] as string[],
@@ -14,6 +15,7 @@ export const ui = {
     this.choices = [];
     this.file = "";
     this.secret = "";
+    this.inputValues = [];
     this.cancelConnect = false;
     this.html = [];
     this.errors = [];
@@ -43,7 +45,7 @@ export const window = {
   },
   async showInputBox(options: Record<string, unknown>) {
     ui.inputs.push(options);
-    return ui.secret || undefined;
+    return ui.inputValues.length ? ui.inputValues.shift() : ui.secret || undefined;
   },
   async withProgress(
     _options: unknown,

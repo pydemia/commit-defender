@@ -705,8 +705,8 @@
                     },
                     {
                         "id": "reader",
-                        "title": "Prepare a GCR reader key",
-                        "description": "On your GCR website, open Profile → API keys. Choose the Commit Defender client and the repository you will review. Issue a knowledge:read key with a suitable expiry.\nDownload the connection JSON for that repository. It contains the server URL, repository identity, public signing keys, and any required CA certificate. Keep the reader key separate.\nThe reader key is not your GCR password, GitHub token, or model API key. A gcr-cli key cannot authorize CD. Remote CD connections require HTTPS, even when the website allows HTTP.",
+                        "title": "Prepare a GCR API key",
+                        "description": "On your GCR website, open Profile → Clients. Choose Commit Defender and one or more repositories, or all repositories currently accessible in the selected tenant. Issue a knowledge:read API key with a suitable expiry. New repositories need a new key.\nCopy the HTTPS server URL shown on that page. No connection JSON is required. For a private CA, download the public CA certificate. The API key is separate from your GCR password, GitHub token, or model API key.",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -738,8 +738,8 @@
                     },
                     {
                         "id": "connect",
-                        "title": "Connect with the reader key",
-                        "description": "Open Central Review Connection → Connect with API key…. Select the downloaded JSON, confirm the server, tenant, repository and public signing key, then enter the reader key in the password field.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "title": "Connect with the API key",
+                        "description": "Open Central Review Connection → Connect with API key…. Enter the HTTPS server URL and the API key in the password field. Choose the repository for this local worktree and confirm the connection.\nIf a private CA is required, choose its public certificate file when prompted. TLS verification stays enabled. Import connection JSON… remains available for older servers.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -800,8 +800,8 @@
                     },
                     {
                         "id": "reader",
-                        "title": "GCR reader key 준비",
-                        "description": "GCR 웹사이트의 프로필에서 클라이언트를 Commit Defender로, 저장소를 로컬 리뷰 대상으로 선택합니다. 이름과 유효기간을 지정해 knowledge:read API key를 발급합니다.\n선택한 저장소의 연결 설정 다운로드로 JSON을 받습니다. 서버 주소·저장소 식별자·서명 공개키·필요한 CA 인증서가 들어 있습니다. reader key는 별도로 입력합니다.\nGCR 로그인 비밀번호·GitHub 토큰·모델 API key와 구분하십시오. gcr-cli용 키는 CD에서 사용할 수 없습니다. 웹사이트가 HTTP를 허용하더라도 CD의 원격 연결은 HTTPS를 사용합니다.",
+                        "title": "GCR API key 준비",
+                        "description": "GCR 웹사이트의 내 프로필 → 클라이언트 설정에서 Commit Defender와 여러 저장소 또는 선택한 tenant에서 현재 접근 가능한 모든 저장소를 선택해 API key를 발급합니다. 발급 이후 추가되는 저장소는 새 key가 필요합니다.\n화면의 HTTPS 서버 주소를 복사합니다. JSON은 필요하지 않습니다. 사설 CA를 사용하는 경우 공개 CA 인증서를 내려받습니다. API key는 GCR 비밀번호·GitHub 토큰·모델 API key와 별개입니다.",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -833,8 +833,8 @@
                     },
                     {
                         "id": "connect",
-                        "title": "reader key로 연결",
-                        "description": "Central Review Connection → Connect with API key…를 선택합니다. 받은 JSON을 열어 서버·tenant·저장소·서명 공개키를 확인한 뒤 reader key를 비밀번호 입력란에 입력합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
+                        "title": "API key로 연결",
+                        "description": "Central Review Connection → Connect with API key…에서 HTTPS 서버 주소와 API key를 비밀번호 입력란에 입력합니다. 현재 로컬 작업 폴더에 연결할 저장소를 선택하고 연결을 확인합니다.\n사설 CA가 필요하면 안내에 따라 공개 인증서 파일을 선택합니다. TLS 검증은 유지합니다. 이전 서버용 Import connection JSON…도 지원합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },

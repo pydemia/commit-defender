@@ -68,7 +68,7 @@ test("connection UI scopes selection, masks the API key, shows signed status and
   ui.file = path.join(f.root, "connection.json");
   fs.writeFileSync(ui.file, JSON.stringify(server.config));
   ui.secret = server.secret;
-  await run("connect");
+  await run("import-json");
   const selected = readSelection(context.globalState, scope);
   assert.equal(selected?.mode, "centralized");
   assert(
@@ -270,7 +270,7 @@ test("cancelling server confirmation never stores a key or contacts the server",
   } as unknown as ExtensionContext;
   ui.file = path.join(f.root, "connection.json");
   fs.writeFileSync(ui.file, JSON.stringify(server.config));
-  ui.choices = ["connect"];
+  ui.choices = ["import-json"];
   ui.cancelConnect = true;
   await manageCentralConnection(
     context,
@@ -335,7 +335,7 @@ test("connection UI binds this Git worktree and blocks downloaded content after 
     "origin",
     "https://user:PRIVATE_REMOTE@github.example/fork/reviewer.git",
   );
-  ui.choices = ["connect"];
+  ui.choices = ["import-json"];
   await manageCentralConnection(context, scope, actions, ports);
   assert.equal(server.credentialValues.size, 0);
   assert.equal(ui.errors.length, 1);
@@ -344,7 +344,7 @@ test("connection UI binds this Git worktree and blocks downloaded content after 
   assert(!ui.errors[0]!.includes("PRIVATE_REMOTE"));
   ui.errors = [];
   f.git("remote", "set-url", "origin", "git@github.example:team/reviewer.git");
-  ui.choices = ["connect"];
+  ui.choices = ["import-json"];
   await manageCentralConnection(context, scope, actions, ports);
   assert.deepEqual(ui.errors, []);
   ui.choices = ["status"];
@@ -406,7 +406,7 @@ test("confirmed first-publication failure retains local fallback selection witho
   ui.file = path.join(f.root, "config.json");
   fs.writeFileSync(ui.file, JSON.stringify(server.config));
   ui.secret = server.secret;
-  ui.choices = ["connect"];
+  ui.choices = ["import-json"];
   server.failFirstManifest();
   await manageCentralConnection(
     context,
@@ -428,4 +428,64 @@ test("confirmed first-publication failure retains local fallback selection witho
   assert(
     ui.messages.some((m) => m.includes("confirmed local fallback policy")),
   );
+});
+
+test("URL and API key connect without JSON; a private CA is explicitly chosen and no local data is uploaded", async (t) => {
+  ui.reset();
+  const f = fixture(); t.after(() => fs.rmSync(f.root, {recursive: true, force: true}));
+  const server = await centralFixture(f.root); t.after(() => server.close());
+  const scope = knowledgeScope({profileId: "direct-key", repoRoot: f.repo, scope: "repository"});
+  assert.equal(scope.kind, "repository");
+  if (scope.kind !== "repository") throw Error("Expected repository scope");
+  const state = new Map<string, unknown>();
+  const context = {globalState: {get: (key: string) => state.get(key), update: async (key: string, value: unknown) => {state.set(key, value);}}} as never;
+  const actions = {assertCurrent() {}, async invalidate() {}, async refresh() {}};
+  ui.file = path.join(f.root, "public-ca.pem"); fs.writeFileSync(ui.file, server.config.ca);
+  ui.inputValues = [server.config.serverUrl, server.secret];
+  ui.choices = ["connect", 0];
+  await manageCentralConnection(context, scope, actions, {dataDirectory: path.join(f.root, "data"), keys: server.keys, credentials: server.credentials});
+  assert.deepEqual(ui.errors, []);
+  assert.equal(readSelection(context.globalState, scope)?.mode, "centralized");
+  assert.equal(ui.inputs[0]?.password, undefined);
+  assert.equal(ui.inputs[1]?.password, true);
+  assert(ui.messages.some(m => m.includes("CA certificate")));
+  assert(!JSON.stringify([...state]).includes(server.secret));
+  assert.equal(server.credentialValues.size, 1);
+  assert.equal(server.submissionCalls, 0);
+  assert(server.requestMetadata.some(r => r.route.endsWith("/client-auth/connection-options")));
+  assert(server.requestMetadata.every(r => r.method === "GET" && r.bodyBytes === 0));
+});
+
+
+test("API-key discovery preserves TLS, audience, revocation, no-redirect and cancellation boundaries", async t => {
+  const f = fixture(); t.after(() => fs.rmSync(f.root, {recursive: true, force: true}));
+  const {discoverCentralConnections, CentralDiscoveryTlsError, validateCentralCa} = await import('@gcr/client-core');
+  const server = await centralFixture(f.root); t.after(() => server.close());
+  const discover = (signal?: AbortSignal) => discoverCentralConnections(server.config.serverUrl, server.secret, 'commit-defender', {ca: server.config.ca, signal});
+  await assert.rejects(discoverCentralConnections(server.config.serverUrl, server.secret, 'commit-defender'), CentralDiscoveryTlsError);
+  assert.equal(server.calls, 0, 'no HTTP request or key reaches an untrusted TLS server');
+  const options = await discover(); assert.equal(options.repositories.length, 1);
+  server.setConnectionOptions({serverUrl: 'https://another.invalid/'});
+  await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setConnectionOptions({serverId: 'another-server'});
+  await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setConnectionOptions({repositories: [...options.repositories, ...options.repositories]});
+  await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setConnectionOptions({repositories: [{...options.repositories[0], tenantId: 'another-tenant'}]});
+  await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setConnectionOptions({trustedKeys: [{id: 'private', pem: '-----BEGIN PRIVATE KEY-----'}]});
+  await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setConnectionOptions({});
+  server.setClientId('gcr-cli'); await assert.rejects(discover(), {code: 'invalid-binding'});
+  server.setClientId('commit-defender');
+  server.setStatus(403); await assert.rejects(discover(), {code: 'revoked'});
+  server.setStatus(401); await assert.rejects(discover(), {code: 'authentication-required'});
+  server.setStatus(307); const before = server.calls; await assert.rejects(discover(), {code: 'unavailable'});
+  assert.equal(server.calls - before, 2, 'bootstrap plus one request; redirect is never followed');
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(discover(controller.signal), {code: 'cancelled'});
+  assert.throws(() => validateCentralCa(server.config.ca + '\n-----BEGIN PRIVATE KEY-----'), {code: 'invalid-binding'});
+  await assert.rejects(discoverCentralConnections('http://untrusted.invalid', server.secret, 'commit-defender'), {code: 'invalid-binding'});
+  assert(server.requestMetadata.every(r => r.method === 'GET' && r.bodyBytes === 0));
+  assert.equal(server.submissionCalls, 0);
 });

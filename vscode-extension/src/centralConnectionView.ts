@@ -11,6 +11,9 @@ import {
 } from "@gcr/client-contract";
 import {
   normalizeCentralServerUrl,
+  discoverCentralConnections,
+  CentralDiscoveryTlsError,
+  validateCentralCa,
   validateCentralApiKey,
   type CentralConnections,
 } from "@gcr/client-core";
@@ -90,24 +93,28 @@ export function centralStatusHtml(value: unknown): string {
     .join("");
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>This connection reads PR history, Skills, prompts and published guidance from GCR. Your selected local provider, model and reasoning stay unchanged. Local code and results are not uploaded to GCR; approved source and context go to the model provider you select.</p><p>Online reviews require fresh signed knowledge; the current server uses a five-minute manifest lifetime. An already running review keeps its pinned version and can stop at expiry. Offline reviews require a valid signed lease and active authority. Model failures are checked separately from connection and cache failures.</p><table>${rows.map(([label, item]) => `<tr><th>${esc(label)}</th><td>${esc(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. To inspect originals, replies and versions, choose Browse PR review history. Use View downloaded review knowledge for Skills and guidance. Local Memory and Skills remain separately editable and are not uploaded.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
-async function readConfig(file: string) {
-  const handle = await open(
-    file,
-    constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW,
-  );
-  try {
-    if (!(await handle.stat()).isFile())
-      throw new StandaloneReviewError("invalid-binding");
-    const buffer = Buffer.alloc(100_001);
-    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-    if (bytesRead > 100_000) throw new StandaloneReviewError("invalid-binding");
-    return centralConnectionInput(
-      JSON.parse(buffer.subarray(0, bytesRead).toString("utf8")),
-    );
-  } finally {
-    await handle.close();
-  }
+async function askApiKey(serverUrl: string) {
+  return vscode.window.showInputBox({ title: "GCR API key", prompt: `API key for ${serverUrl}. Stored in the OS credential store.`,
+    password: true, ignoreFocusOut: true, validateInput(value) {
+      try { validateCentralApiKey(value.trim()); return undefined; }
+      catch { return "Enter a valid GCR API key (not JSON)."; }
+    },
+  });
 }
+async function readPublicFile(file: string, limit: number) {
+  const handle = await open(file, constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW);
+  try {
+    if (!(await handle.stat()).isFile()) throw new StandaloneReviewError("invalid-binding");
+    const buffer = Buffer.alloc(limit + 1);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    if (bytesRead > limit) throw new StandaloneReviewError("invalid-binding");
+    return buffer.subarray(0, bytesRead).toString("utf8");
+  } finally { await handle.close(); }
+}
+async function readConfig(file: string) {
+  return centralConnectionInput(JSON.parse(await readPublicFile(file, 100000)));
+}
+
 const activeViews = new Set<string>();
 let knowledgePanel: vscode.WebviewPanel | undefined;
 export async function manageCentralConnection(
@@ -172,13 +179,14 @@ export async function manageCentralConnection(
         {
           label: "GCR connection guide",
           action: "guide",
-          description: "Reader key, account/model, connection and first review",
+          description: "API key, account/model, connection and first review",
         },
         {
           label: "Connect with API key…",
           action: "connect",
-          description: "Choose trusted server configuration and enter a key",
+          description: "Enter the server URL and API key; select a repository",
         },
+        { label: "Import connection JSON…", action: "import-json", description: "Compatibility with older GCR servers; API key entered separately" },
         {
           label: "Select connected repository…",
           action: "select",
@@ -241,25 +249,66 @@ export async function manageCentralConnection(
       await select({ version: 1, mode: "standalone" });
       return;
     }
-    if (choice.action === "connect") {
-      const files = await vscode.window.showOpenDialog({
-        title: "Choose trusted central connection configuration",
-        canSelectMany: false,
-        filters: { JSON: ["json"] },
-      });
-      if (!files?.[0] || files[0].scheme !== "file") return;
-      actions.assertCurrent();
-      const config = await readConfig(files[0].fsPath);
-      config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
+    if (choice.action === "connect" || choice.action === "import-json") {
+      let config: ReturnType<typeof centralConnectionInput>;
+      let secret: string | undefined;
+      const behavior: OfflineBehavior = selection?.mode === "centralized"
+        ? (selection.offlineBehavior ?? "pause") : "cache-then-standalone";
+      try {
+        if (choice.action === "import-json") {
+          const files = await vscode.window.showOpenDialog({
+            title: "Choose trusted central connection configuration", canSelectMany: false, filters: { JSON: ["json"] },
+          });
+          if (!files?.[0] || files[0].scheme !== "file") return;
+          actions.assertCurrent();
+          config = await readConfig(files[0].fsPath);
+          config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
+        } else {
+          const url = await vscode.window.showInputBox({
+            title: "GCR server URL", prompt: "Use the HTTPS server URL shown in GCR Profile → Clients. No JSON is required.",
+            ignoreFocusOut: true, validateInput(value) {
+              try { normalizeCentralServerUrl(value.trim()); return undefined; }
+              catch { return "Enter an HTTPS server URL without credentials, query or fragment."; }
+            },
+          });
+          if (!url) return;
+          const serverUrl = normalizeCentralServerUrl(url.trim());
+          secret = await askApiKey(serverUrl);
+          if (!secret) return;
+          const discover = (ca?: string) => progress("Reading GCR repositories", (signal) =>
+            discoverCentralConnections(serverUrl, secret!.trim(), "commit-defender", {signal, ...(ca ? {ca} : {})}));
+          let metadata;
+          try { metadata = await discover(); }
+          catch (cause) {
+            if (!(cause instanceof CentralDiscoveryTlsError)) throw cause;
+            const selected = await vscode.window.showInformationMessage(
+              "Commit Defender: GCR uses a CA certificate that is not trusted on this machine.",
+              { modal: true, detail: "Download the public CA certificate from GCR Profile → Clients, or obtain it from your administrator. TLS verification stays enabled." }, "Choose CA certificate…");
+            if (!selected) return;
+            const files = await vscode.window.showOpenDialog({title: "Choose public GCR CA certificate", canSelectMany: false, filters: {Certificates: ["pem", "crt"]}});
+            if (!files?.[0] || files[0].scheme !== "file") return;
+            const ca = validateCentralCa(await readPublicFile(files[0].fsPath, 65536));
+            actions.assertCurrent();
+            metadata = await discover(ca);
+          }
+          actions.assertCurrent();
+          if (!metadata.repositories.length) {
+            void vscode.window.showInformationMessage("Commit Defender: This API key has no currently accessible repositories. Check GCR permissions and key scope.");
+            return;
+          }
+          const repo = await vscode.window.showQuickPick(metadata.repositories.map((identity) => ({
+            label: `${identity.owner}/${identity.name}`, description: identity.webBaseUrl, identity,
+          })), { title: "Choose the GCR repository for this local worktree", matchOnDescription: true });
+          if (!repo) return;
+          config = centralConnectionInput({serverUrl: metadata.serverUrl, serverId: metadata.serverId,
+            tenantId: metadata.tenantId, repositoryId: repo.identity.repositoryId,
+            trustedKeys: metadata.trustedKeys, ca: metadata.ca});
+        }
       const pins = config.trustedKeys
         .map(
           (k) => `${k.id}: ${createHash("sha256").update(k.pem).digest("hex")}`,
         )
         .join(" · ");
-      const behavior: OfflineBehavior =
-        selection?.mode === "centralized"
-          ? (selection.offlineBehavior ?? "pause")
-          : "cache-then-standalone";
       const confirmed = await vscode.window.showInformationMessage(
         `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
         {
@@ -269,22 +318,8 @@ export async function manageCentralConnection(
         "Connect",
       );
       if (confirmed !== "Connect") return;
-      let secret = await vscode.window.showInputBox({
-        title: "Central API key",
-        prompt: `Key for ${config.serverUrl}. Stored in the OS credential store.`,
-        password: true,
-        ignoreFocusOut: true,
-        validateInput(value) {
-          try {
-            validateCentralApiKey(value.trim());
-            return undefined;
-          } catch {
-            return "Enter a valid GCR API key.";
-          }
-        },
-      });
+      if (!secret) secret = await askApiKey(config.serverUrl);
       if (!secret) return;
-      try {
         const connected = await progress(
           "Connecting and waiting for central review knowledge",
           (signal) =>

@@ -7,7 +7,11 @@ import {
   discoverLocalIdentity,
   LocalRecordStore,
   LocalHistoryStore,
+  discoverCentralConnections,
+  CentralConnections,
 } from "@gcr/client-core";
+import { centralFixture } from "./helpers/central-fixture.js";
+import { knowledgeScope } from "../src/localKnowledge.js";
 import { clientReviewReport } from "@gcr/client-contract";
 
 /** Executed by the real VS Code Extension Host, not by a vscode module mock. */
@@ -153,6 +157,33 @@ export async function run(): Promise<void> {
   }
   assert(!existsSync(path.join(workspace, ".git", "hooks", "pre-commit")));
 
+  // Exercise the URL/key discovery and existing signed connection in a real host.
+  const central = await centralFixture(workspace);
+  const centralScope = knowledgeScope({profileId: process.env.CD_TEST_PROFILE!, repoRoot: workspace, scope: "repository"});
+  assert.equal(centralScope.kind, "repository");
+  const manager = await CentralConnections.open({scope: centralScope, dataDirectory: path.join(workspace, '.central-test'),
+    keys: central.keys, credentials: central.credentials});
+  let connectionId: string | undefined;
+  let directConnectionEvidence;
+  try {
+    const options = await discoverCentralConnections(central.config.serverUrl, central.secret, 'commit-defender', {ca: central.config.ca});
+    assert.equal(options.repositories.length, 1);
+    const connected = await manager.connect({...central.config, repositoryId: options.repositories[0].repositoryId,
+      trustedKeys: options.trustedKeys, ca: options.ca}, central.secret, 'commit-defender', new AbortController().signal);
+    connectionId = connected.id;
+    const status = await manager.status(connected.id);
+    assert.equal(status.status, 'connected');
+    assert.equal(status.cache.status, 'ready');
+    assert(central.requestMetadata.every(r => r.method === 'GET' && r.bodyBytes === 0));
+    directConnectionEvidence = {discovery: 'URL and masked-key flow metadata', signedConnection: status.status,
+      cache: status.cache.status, requests: central.requestMetadata, localUploadBytes: 0, modelCalls: 0,
+      source: 'owned HTTPS publisher, no production credentials'};
+  } finally {
+    if (connectionId) await manager.disconnect(connectionId);
+    manager.close();
+    assert.equal(central.credentialValues.size, 0);
+    await central.close();
+  }
   const evidence = {
     status: "passed",
     vscode: vscode.version,
@@ -167,6 +198,7 @@ export async function run(): Promise<void> {
     encryptedActivityFixture: process.env.CD_TEST_ACTIVITY_FIXTURE === "1",
     hookDefault: "disable",
     modelCalled: false,
+    directConnection: directConnectionEvidence,
     checks: [
       "activation",
       "command registration",

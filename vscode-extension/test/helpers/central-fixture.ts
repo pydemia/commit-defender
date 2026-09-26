@@ -185,6 +185,7 @@ export async function centralFixture(
   let reviewStatusCalls = 0,
     reviewStatusCode = 200;
   const decisions = new Map<string, ReviewSubmissionStatus["decision"]>();
+  let optionsOverride: Record<string, unknown> = {};
   const server = createServer(
     { key: tlsKey, cert: tlsCert },
     (req, res) => {
@@ -196,6 +197,9 @@ export async function centralFixture(
       requestMetadata.push(metadata);
       req.on("data", (chunk: Buffer) => { metadata.bodyBytes += chunk.length; });
       res.setHeader("content-type", "application/json");
+      if (req.url === "/base/api/v1/client-auth/config" && !req.headers.authorization) {
+        res.end(JSON.stringify({schemaVersion: 1, serverId: audience.serverId, methods: ['api-key'], clientIds: ['commit-defender', 'gcr-cli'], scopes: ['knowledge:read']})); return;
+      }
       if (
         req.headers.authorization !== `Bearer ${secret}` ||
         req.headers["x-gcr-server-id"] !== audience.serverId ||
@@ -211,6 +215,16 @@ export async function centralFixture(
           JSON.stringify(errorCode ? { error: { code: errorCode } } : {}),
         );
         return;
+      }
+      if (req.url === "/base/api/v1/client-auth/connection-options") {
+        const address = server.address();
+        if (!address || typeof address === "string") throw Error("Fixture address missing");
+        res.end(JSON.stringify({schemaVersion: 1, serverUrl: `https://127.0.0.1:${address.port}/base/`,
+          serverId: audience.serverId, tenantId: audience.tenantId, clientId,
+          trustedKeys: [{id: "key", pem: signing.publicKey.export({type: "spki", format: "pem"}).toString()}], ca: tlsCert,
+          repositories: [{schemaVersion: 1, serverId: audience.serverId, tenantId: audience.tenantId,
+            repositoryId: audience.repositoryId, instanceId: "github", webBaseUrl: "https://github.example",
+            owner: "team", name: "reviewer"}], ...optionsOverride})); return;
       }
       if (history && req.method === 'GET' && req.url?.startsWith(`/base/api/v1/repositories/${audience.repositoryId}/review-history`)) {
         res.end(JSON.stringify(history.respond(req.url))); return;
@@ -445,6 +459,7 @@ export async function centralFixture(
     get calls() {
       return calls;
     },
+    setConnectionOptions(value: Record<string, unknown>) { optionsOverride = value; },
     setStatus(value: number, code?: string) {
       status = value;
       errorCode = code;
