@@ -533,7 +533,7 @@ async function callAzureOpenAI(req: ProviderRequest): Promise<ProviderResponse> 
 // ── OpenAI ──────────────────────────────────────────────────────────────────
 
 async function callOpenAI(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing OpenAI API key. Use Commit Defender: Manage Model API Credential.'); }
+  if (!req.apiKey) { return err(req, 'Missing OpenAI API key. Use Commit Defender: Use API Credential.'); }
   const base = (req.endpoint || DEFAULT_OPENAI).replace(/\/+$/, '');
   const url = `${base}/chat/completions`;
   const model = req.model || 'gpt-4o';
@@ -618,7 +618,7 @@ function openaiHttpError(req: ProviderRequest, resp: Response, body: string): Pr
 // ── Anthropic ───────────────────────────────────────────────────────────────
 
 async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing Anthropic API key. Use Commit Defender: Manage Model API Credential.'); }
+  if (!req.apiKey) { return err(req, 'Missing Anthropic API key. Use Commit Defender: Use API Credential.'); }
   const base = (req.endpoint || DEFAULT_ANTHROPIC).replace(/\/+$/, '');
   const url = `${base}/messages`;
   const model = req.model || 'claude-sonnet-4-6';
@@ -677,7 +677,7 @@ async function callAnthropic(req: ProviderRequest): Promise<ProviderResponse> {
 // ── Google Gemini ───────────────────────────────────────────────────────────
 
 async function callGemini(req: ProviderRequest): Promise<ProviderResponse> {
-  if (!req.apiKey) { return err(req, 'Missing Gemini API key. Use Commit Defender: Manage Model API Credential.'); }
+  if (!req.apiKey) { return err(req, 'Missing Gemini API key. Use Commit Defender: Use API Credential.'); }
   const base = (req.endpoint || DEFAULT_GEMINI).replace(/\/+$/, '');
   const model = req.model || 'gemini-2.5-flash';
   const url = `${base}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(req.apiKey)}`;

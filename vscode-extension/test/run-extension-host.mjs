@@ -74,6 +74,7 @@ try {
       CD_TEST_EVIDENCE_FILE: evidenceFile,
       CD_TEST_PROFILE: profileId,
       CD_TEST_ACTIVITY_FIXTURE: process.env.CD_TEST_ACTIVITY_FIXTURE ?? "0",
+      CD_TEST_MODEL_SETUP: process.env.CD_TEST_MODEL_SETUP ?? "0",
       CD_TEST_DELIVERY: process.env.CD_TEST_EXTENSION_PATH
         ? "packaged-extension"
         : "source-checkout",

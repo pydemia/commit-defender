@@ -14,6 +14,7 @@ import { centralFixture } from "./helpers/central-fixture.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { clientReviewReport } from "@gcr/client-contract";
 import { centralSourcesKnowledgeHtml } from "../src/centralKnowledgeView.js";
+import { checkModelSetup } from './model-setup-host.js';
 
 /** Executed by the real VS Code Extension Host, not by a vscode module mock. */
 export async function run(): Promise<void> {
@@ -39,6 +40,10 @@ export async function run(): Promise<void> {
   );
   for (const command of declared)
     assert(commands.has(command), `Missing command: ${command}`);
+  assert.equal(extension.packageJSON.contributes.commands.find((item: any) => item.command === 'commitDefender.selectAccountProviderAndModel').title, 'Commit Defender: Use Account');
+  assert.equal(extension.packageJSON.contributes.commands.find((item: any) => item.command === 'commitDefender.manageModelCredential').title, 'Commit Defender: Use API Credential');
+  assert(existsSync(path.join(extension.extensionPath, 'out', 'account-catalog-worker.js')));
+  const modelSetup = process.env.CD_TEST_MODEL_SETUP === '1' ? await checkModelSetup() : undefined;
   for (const removed of [
     "commitDefender.analyzeWithExecutor",
     "commitDefender.centralModelRequests",
@@ -287,6 +292,7 @@ export async function run(): Promise<void> {
   }
   const evidence = {
     status: "passed",
+    modelSetup,
     vscode: vscode.version,
     node: process.versions.node,
     electron: process.versions.electron,

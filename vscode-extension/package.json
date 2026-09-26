@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.13.5",
+    "version": "2.13.6",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -134,7 +134,7 @@
             },
             {
                 "command": "commitDefender.selectAccountProviderAndModel",
-                "title": "Commit Defender: Select Account Provider and Model"
+                "title": "Commit Defender: Use Account"
             },
             {
                 "command": "commitDefender.manageLocalKnowledge",
@@ -146,7 +146,7 @@
             },
             {
                 "command": "commitDefender.manageModelCredential",
-                "title": "Commit Defender: Manage Model API Credential"
+                "title": "Commit Defender: Use API Credential"
             },
             {
                 "command": "commitDefender.manageCentralConnection",
@@ -234,8 +234,8 @@
                     "type": "string",
                     "scope": "window",
                     "default": "",
-                    "description": "Legacy plaintext API key. Preserved until you explicitly migrate it with Manage Model API Credential. Runtime API requests use a verified OS-backed credential reference.",
-                    "markdownDeprecationMessage": "Run **Commit Defender: Manage Model API Credential** to move this value to encrypted OS-backed storage after verification."
+                    "description": "Legacy plaintext API key. Preserved until you explicitly migrate it with Use API Credential. Runtime API requests use a verified OS-backed credential reference.",
+                    "markdownDeprecationMessage": "Run **Commit Defender: Use API Credential** to move this value to encrypted OS-backed storage after verification."
                 },
                 "commitDefender.codexPath": {
                     "type": "string",
@@ -446,16 +446,17 @@
                         "low",
                         "medium",
                         "high",
-                        "xhigh"
+                        "xhigh",
+                        "max"
                     ],
                     "default": "xhigh",
-                    "description": "Reasoning for review requests. Codex verifies model support. OpenAI and Azure receive reasoning_effort when nonempty. Leave empty for providers without a reasoning parameter. Existing saved choices are preserved."
+                    "description": "Use Account offers the authenticated model’s supported effort levels. API effort is offered only for known model capabilities supported by this adapter. Empty sends no effort override. Codex fixed-source reviews support up to xhigh; Claude Code may offer max. Antigravity selects exact catalog variants."
                 },
                 "commitDefender.modelCredentialRef": {
                     "type": "object",
                     "scope": "application",
                     "default": {},
-                    "description": "Reference created by Manage Model API Credential. Contains no secret. Bound to the local profile, provider, endpoint and model.",
+                    "description": "Reference created by Use API Credential. Contains no secret. Bound to the local profile, provider, endpoint and model.",
                     "properties": {
                         "version": {
                             "type": "number",
@@ -727,8 +728,8 @@
                     },
                     {
                         "id": "model",
-                        "title": "Choose your account and model",
-                        "description": "For account-based reviews, select Codex and your model in the account picker. CD uses your existing CLI login; choose Enter a model ID… if needed. A model account registered in GCR does not configure CD.\nOpen Settings for provider, model, endpoint, and review reasoning. For API providers, store secrets with Manage Model API Credential. Keep account and model choices in User Settings.\n[Select account and model](command:commitDefender.selectAccountProviderAndModel)\n[Open Settings](command:commitDefender.openSettings)\n[Manage model API credential](command:commitDefender.manageModelCredential)",
+                        "title": "Use an account or API credential",
+                        "description": "Use Account verifies the existing Codex, Claude Code or Antigravity CLI login and connection, then lists real account models and supported effort levels. The CLI owns auth files or OS credentials; no manual model ID is required.\nUse API Credential configures provider, endpoint, deployment/model, supported effort and API key. Keys stay in encrypted OS-backed storage. Azure optionally asks for the underlying model; unknown capability uses the server default. API access is checked when the review runs; setup makes no generation request.\nA GCR reader key only reads central reference material. It is separate from model authentication. Selection is saved after all steps complete.\n[Use Account](command:commitDefender.selectAccountProviderAndModel)\n[Use API Credential](command:commitDefender.manageModelCredential)\n[Open Settings](command:commitDefender.openSettings)",
                         "media": {
                             "svg": "media/guide/flow.en.svg"
                         },
@@ -822,8 +823,8 @@
                     },
                     {
                         "id": "model",
-                        "title": "계정·모델과 설정 선택",
-                        "description": "계정 기반 리뷰는 계정 선택 화면에서 Codex와 모델을 선택합니다. 기존 CLI 로그인 계정을 사용합니다. 원하는 모델이 없으면 Enter a model ID…를 선택합니다. GCR의 분석용 계정은 CD에 자동 적용되지 않습니다.\n기본 설정 화면에서 provider·모델·endpoint·review reasoning을 지정할 수 있습니다. API provider의 키는 Manage Model API Credential로 보관합니다. 계정과 모델은 사용자 설정(User)에 지정하십시오.\n[계정과 모델 선택](command:commitDefender.selectAccountProviderAndModel)\n[설정 열기](command:commitDefender.openSettings)\n[모델 API 자격 증명 관리](command:commitDefender.manageModelCredential)",
+                        "title": "계정 또는 API credential 선택",
+                        "description": "Use Account: Codex·Claude Code·Antigravity의 기존 CLI 인증과 연결을 확인하고 실제 모델 목록 → 지원 effort를 선택합니다. auth.json 또는 OS credential store는 CLI가 관리합니다. 모델 ID를 직접 입력할 필요가 없습니다.\nUse API Credential: provider → endpoint → deployment/model → 지원 effort → API 키를 설정합니다. 키는 OS 기반 암호화 저장소에 보관합니다. Azure는 deployment의 실제 모델명을 선택적으로 입력합니다. 지원을 확인할 수 없으면 effort를 보내지 않습니다.\nGCR reader key는 중앙 자료를 읽는 별도 키이며 모델 계정·API 키와 다릅니다. 설정은 모든 선택을 마친 뒤 저장합니다.\n[Use Account](command:commitDefender.selectAccountProviderAndModel)\n[Use API Credential](command:commitDefender.manageModelCredential)\n[설정 열기](command:commitDefender.openSettings)",
                         "media": {
                             "svg": "media/guide/flow.ko.svg"
                         },
@@ -881,13 +882,13 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
-        "build": "npm run typecheck && npm run bundle-extension && npm run bundle-review-worker && npm run bundle-chat-worker && npm run bundle-hook && npm run bundle-advisory-hook && npm run prepare-service && npm run prepare-native",
+        "build": "npm run typecheck && npm run bundle-extension && npm run bundle-account-catalog-worker && npm run bundle-review-worker && npm run bundle-chat-worker && npm run bundle-hook && npm run bundle-advisory-hook && npm run prepare-service && npm run prepare-native",
         "typecheck": "tsc -p ./ --noEmit",
         "compile": "tsc -p ./",
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history && npm run test:account-review-executor && npm run test:central-sources",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history && npm run test:account-review-executor && npm run test:central-sources && npm run test:model-setup && npm run test:model-setup-view",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "package:platforms": "node scripts/package-platforms.mjs",
@@ -932,7 +933,10 @@
         "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native",
         "test:connection-guide:host": "node test/run-connection-guide.mjs",
         "test:account-review-executor": "esbuild test/account-review-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-review-executor.test.cjs && node --test out-test/account-review-executor.test.cjs",
-        "test:central-sources": "esbuild test/central-sources.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-sources.test.cjs && node --test out-test/central-sources.test.cjs"
+        "test:central-sources": "esbuild test/central-sources.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-sources.test.cjs && node --test out-test/central-sources.test.cjs",
+        "bundle-account-catalog-worker": "esbuild src/accountCatalogWorker.ts --bundle --platform=node --target=node18 --outfile=out/account-catalog-worker.js",
+        "test:model-setup": "esbuild test/model-setup.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/model-setup.test.cjs && node --test out-test/model-setup.test.cjs",
+        "test:model-setup-view": "esbuild test/model-setup-view.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-model-setup.ts --outfile=out-test/model-setup-view.test.cjs && node --test out-test/model-setup-view.test.cjs"
     },
     "dependencies": {
         "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.54/gcr-client-contract-0.1.0-alpha.51.tgz",

@@ -23,11 +23,11 @@ import { openConnectionGuide, openCommitDefenderSettings } from './connectionGui
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
-import { manageModelCredential } from './modelCredentialView.js';
+import { useAccount, useApiCredential } from './modelSetupView.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
-import { ExtensionConfig, getConfig, getStandaloneReviewSettings } from './config.js';
+import { ExtensionConfig, getConfig, getStandaloneReviewSettings, waitForModelConfiguration } from './config.js';
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
@@ -56,8 +56,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
   reviewNavigation.register(context);
-  let lastConfiguredProvider = getConfig().aiProvider;
-  let providerUpdateFromWizard: AccountProvider | undefined;
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   async function resolveRepoRoot(): Promise<string | undefined> {
@@ -66,123 +64,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try { return await getRepoRoot(ws); } catch { return undefined; }
   }
 
-  async function chooseAccountModel(
-    provider: AccountProvider,
-    includeDefault = true,
-  ): Promise<string | undefined> {
-    type ModelChoice = vscode.QuickPickItem & { model?: string; custom?: boolean };
-    const current = getConfig();
-    const choices: ModelChoice[] = [];
-    if (provider === 'codex') {
-      choices.push({ label: '$(sparkle) gpt-6-astra', description: 'Uses your selected reasoning effort',
-        detail: 'Requires the supported local Codex executable. Uses captured source, base and related context.', model: 'gpt-6-astra' });
-    } else if (includeDefault) {
-      choices.push({
-        label: '$(sparkle) CLI default model',
-        description: 'Recommended',
-        detail: 'Let the authenticated CLI select its current default model.',
-        model: '',
-      });
-    }
-    if (provider === 'claudecode') {
-      choices.push(
-        { label: '$(symbol-variable) sonnet', description: 'Claude Code alias', model: 'sonnet' },
-        { label: '$(symbol-variable) opus', description: 'Claude Code alias', model: 'opus' },
-      );
-    }
-    if (current.aiProvider === provider && current.model.trim()
-        && !choices.some(choice => choice.model === current.model.trim())) {
-      choices.splice(includeDefault ? 1 : 0, 0, {
-        label: `$(history) ${current.model.trim()}`,
-        description: 'Current model',
-        model: current.model.trim(),
-      });
-    }
-    choices.push({
-      label: '$(edit) Enter a model ID…',
-      detail: 'Use any model name accepted by the selected local CLI and account.',
-      custom: true,
-    });
-
-    const picked = await vscode.window.showQuickPick(choices, {
-      title: `Commit Defender: Select ${accountProviderName(provider)} model`,
-      placeHolder: includeDefault
-        ? 'Choose the CLI default, an alias, or enter an exact model ID'
-        : 'Choose an alias or enter an exact model ID',
-      ignoreFocusOut: true,
-    });
-    if (!picked) { return undefined; }
-    if (!picked.custom) { return picked.model ?? ''; }
-    return vscode.window.showInputBox({
-      title: `Commit Defender: ${accountProviderName(provider)} model ID`,
-      prompt: 'Enter an exact model ID supported by the local CLI and authenticated account.',
-      value: current.aiProvider === provider ? current.model : '',
-      ignoreFocusOut: true,
-      validateInput: value => value.trim() ? undefined : 'Enter a model ID, or go back and choose CLI default.',
-    }).then(value => value?.trim());
+  async function promptModelAtProviderSetup(provider: AccountProvider): Promise<void> {
+    if (provider === 'geminicli') return;
+    await useAccount(context.extensionPath, value => signIn(value, false), provider);
   }
-
-  async function applyAccountProvider(provider: AccountProvider, model: string): Promise<void> {
-    const settings = vscode.workspace.getConfiguration('commitDefender');
-    const target = vscode.ConfigurationTarget.Global;
-    providerUpdateFromWizard = provider;
-    // Clear an API-provider model before switching provider so no analysis can
-    // observe the new CLI provider with the previous provider's model ID.
-    await settings.update('model', model, target);
-    await settings.update('aiProvider', provider, target);
-    setTimeout(() => {
-      if (providerUpdateFromWizard === provider) { providerUpdateFromWizard = undefined; }
-    }, 1000);
-    const modelLabel = model || 'CLI default';
-    vscode.window.showInformationMessage(
-      `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`,
-    );
-  }
-
-  async function promptModelAtProviderSetup(provider: AccountProvider): Promise<boolean> {
-    const model = await chooseAccountModel(provider, provider !== 'codex');
-    if (model === undefined) return false;
-    if (provider !== 'codex') {
-      const efforts = provider === 'claudecode'
-        ? ['', 'low', 'medium', 'high', 'xhigh'] : ['', 'low', 'medium', 'high'];
-      const current = getStandaloneReviewSettings(1).reasoningEffort;
-      const effort = await vscode.window.showQuickPick(efforts.map(value => ({
-        label: value || 'CLI default reasoning',
-        description: value === current ? 'Current selection' : undefined,
-        effort: value,
-      })), { title: `Commit Defender: Select ${accountProviderName(provider)} reasoning effort`, ignoreFocusOut: true });
-      if (!effort) return false;
-      await vscode.workspace.getConfiguration('commitDefender').update('reviewReasoningEffort', effort.effort, vscode.ConfigurationTarget.Global);
-    }
-    await applyAccountProvider(provider, model);
-    return true;
-  }
-
-  async function promptProviderChangeAfterSignIn(provider: AccountProvider): Promise<void> {
-    const action = await vscode.window.showInformationMessage(
-      `Commit Defender: ${accountProviderName(provider)} sign-in opened in the terminal. Select this provider and its review model?`,
-      'Select Provider and Model…', 'Keep Current Provider',
-    );
-    if (action === 'Select Provider and Model…') await promptModelAtProviderSetup(provider);
-  }
-
   async function selectAccountProviderAndModel(): Promise<void> {
-    type ProviderChoice = vscode.QuickPickItem & { provider: AccountProvider };
-    const choices: ProviderChoice[] = [
-      { label: 'Codex', description: 'Local review with your selected model and reasoning effort', provider: 'codex' },
-      { label: 'Claude Code', description: 'Local review with your subscription model and reasoning effort', detail: 'Requires Claude Code with safe mode. Reviews captured source with tools disabled.', provider: 'claudecode' },
-      { label: 'Antigravity', description: 'Local review with your Google account model and reasoning effort', detail: 'Requires the Antigravity agent CLI (agy), not the IDE launcher. Reviews captured source with tools disabled.', provider: 'antigravity' },
-    ];
-    const picked = await vscode.window.showQuickPick(choices, {
-      title: 'Commit Defender: Select account provider',
-      placeHolder: 'Choose the authenticated CLI backbone',
-      ignoreFocusOut: true,
-    });
-    if (!picked) { return; }
-    await promptModelAtProviderSetup(picked.provider);
+    await useAccount(context.extensionPath, value => signIn(value, false));
   }
 
-  async function signIn(provider: AccountProvider): Promise<boolean> {
+  async function signIn(provider: AccountProvider, configureAfter = true): Promise<boolean> {
     const config = getConfig();
     const isCodex = provider === 'codex';
     const isClaude = provider === 'claudecode';
@@ -226,7 +116,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
-    await promptProviderChangeAfterSignIn(provider);
+    if (configureAfter && provider !== 'geminicli') {
+      const action = await vscode.window.showInformationMessage(
+        `Commit Defender: Finish ${name} sign-in in the terminal, then verify the account and choose a model.`, 'Use Account');
+      if (action === 'Use Account') await promptModelAtProviderSetup(provider);
+    }
     return true;
   }
 
@@ -266,20 +160,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // ── React to setting changes ───────────────────────────────────────────
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async e => {
     if (e.affectsConfiguration('commitDefender')) {
-      const nextConfig = getConfig();
-      const previousProvider = lastConfiguredProvider;
-      lastConfiguredProvider = nextConfig.aiProvider;
-      historyProvider.updateConfig(nextConfig);
-
-      if (e.affectsConfiguration('commitDefender.aiProvider')
-          && nextConfig.aiProvider !== previousProvider) {
-        const account = accountProvider(nextConfig.aiProvider);
-        if (account && providerUpdateFromWizard === account) {
-          providerUpdateFromWizard = undefined;
-        } else if (account) {
-          await promptModelAtProviderSetup(account);
-        }
-      }
+      await waitForModelConfiguration();
+      historyProvider.updateConfig(getConfig());
 
       // Mirror settings into the hook config file so the hook picks them up
       // on the next commit, even when VS Code isn't running.
@@ -437,7 +319,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         refresh: refreshLocalHistory,
       }); } finally { syncManagement--; await refreshCentralSynchronization(); await automaticReviews.refresh(); }
     }),
-    vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => manageModelCredential(await resolveRepoRoot())),
+    vscode.commands.registerCommand('commitDefender.manageModelCredential', async () => useApiCredential(await resolveRepoRoot())),
     vscode.commands.registerCommand('commitDefender.refreshLocalHistory', refreshLocalHistory),
     vscode.commands.registerCommand('commitDefender.manageLocalKnowledge', async () => {
       const repoRoot = await resolveRepoRoot();
@@ -568,10 +450,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         getOutputChannel().appendLine(`[Commit Defender] ${message}`);
         void vscode.window.showErrorMessage(
           `Commit Defender: Review preparation — ${error instanceof Error ? error.message : 'Local review preparation failed.'}`,
-          'Central Review Connection…', 'Choose Account and Model…', 'Open User Settings',
+          'Central Review Connection…', 'Use Account…', 'Open User Settings',
         ).then(action => {
           if (action === 'Central Review Connection…') return vscode.commands.executeCommand('commitDefender.manageCentralConnection');
-          if (action === 'Choose Account and Model…') return selectAccountProviderAndModel();
+          if (action === 'Use Account…') return selectAccountProviderAndModel();
           if (action === 'Open User Settings') return vscode.commands.executeCommand('workbench.action.openSettings', '@ext:pydemia.commit-defender');
         });
       },
@@ -1029,8 +911,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }, {
         error: error => {
           if (!(error instanceof ModelCredentialError)) { handleError(error, statusBar, !execution.isRunning); return; }
-          void vscode.window.showErrorMessage('Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.', 'Manage Model API Credential').then(action => {
-            if (action && intent === messageIntent) return manageModelCredential(repoRoot);
+          void vscode.window.showErrorMessage('Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.', 'Use API Credential').then(action => {
+            if (action && intent === messageIntent) return useApiCredential(repoRoot);
           });
         },
         result: async (result, isCurrent) => {

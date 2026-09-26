@@ -11,6 +11,20 @@ export type Locale          = 'en' | 'ko';
 export type AIProvider      = 'aoai' | 'anthropic' | 'openai' | 'gemini' | 'codex' | 'claudecode' | 'geminicli' | 'antigravity';
 export type PreCommitHook   = 'enable' | 'disable';
 
+let heldModelConfig: ResolvedConfig | undefined;
+let heldUserSettings: Record<string, unknown> | undefined;
+let setupSettled: Promise<void> = Promise.resolve();
+/** Review preparation and hook synchronization see the previous complete selection
+ * while VS Code writes the new selection across individual settings keys. */
+export function holdModelConfiguration(snapshot: Record<string, unknown>): () => void {
+  if (heldModelConfig) throw Error('model-setup-in-progress');
+  heldModelConfig = getConfig(); heldUserSettings = snapshot;
+  let settle!: () => void;
+  setupSettled = new Promise(resolve => { settle = resolve; });
+  return () => { heldModelConfig = undefined; heldUserSettings = undefined; settle(); };
+}
+export async function waitForModelConfiguration(): Promise<void> { await setupSettled; }
+
 /**
  * Snapshot of the user's commitDefender.* settings. The Reviewer and the hook
  * CLI both consume this shape — extension reads it from VS Code, hook reads
@@ -51,7 +65,8 @@ export type ExtensionConfig = ResolvedConfig;
 /** Account selection and source grants are never read from a repository's settings.json. */
 export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string): StandaloneReviewSettings {
   const cfg = vscode.workspace.getConfiguration('commitDefender', repoRoot ? vscode.Uri.file(repoRoot) : undefined);
-  const user = <T>(name: string): T | undefined => cfg.inspect<T>(name)?.globalValue;
+  const user = <T>(name: string): T | undefined => heldUserSettings && name in heldUserSettings
+    ? heldUserSettings[name] as T | undefined : cfg.inspect<T>(name)?.globalValue;
   const provider = user<string>('aiProvider') ?? 'unconfigured';
   const seconds = user<number>(fileCount === 1 ? 'fileTimeoutSeconds' : 'directoryTimeoutSeconds');
   return {
@@ -80,6 +95,7 @@ export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string
 }
 
 export function getConfig(): ResolvedConfig {
+  if (heldModelConfig) return { ...heldModelConfig };
   const cfg = vscode.workspace.getConfiguration('commitDefender');
   return {
     aiProvider:                (cfg.get<string>('aiProvider')    ?? 'aoai') as AIProvider,
@@ -112,7 +128,7 @@ export function getConfig(): ResolvedConfig {
  * guaranteed to be on another extension host's PATH. Reuse that official CLI
  * when the user has left Commit Defender's path at its default value.
  */
-function resolveCodexPath(configured: string): string {
+export function resolveCodexPath(configured: string): string {
   if (configured.trim() !== 'codex') { return configured; }
   const discovered = resolveExternalCliPath(configured, 'codex');
   if (discovered !== configured) { return discovered; }
@@ -131,7 +147,7 @@ function resolveCodexPath(configured: string): string {
 }
 
 /** Resolve optional npm/global CLI installs without bundling them into VSIX. */
-function resolveExternalCliPath(configured: string, name: string): string {
+export function resolveExternalCliPath(configured: string, name: string): string {
   if (configured.trim() !== name) { return configured; }
   const executableNames = process.platform === 'win32'
     ? [`${name}.exe`, `${name}.cmd`, name]

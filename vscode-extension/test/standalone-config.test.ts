@@ -1,7 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getStandaloneReviewSettings, getConfig } from "../src/config.js";
+import { getStandaloneReviewSettings, getConfig, holdModelConfiguration, waitForModelConfiguration } from "../src/config.js";
 import { values, workspace } from "./helpers/vscode-config.js";
+
+test('Review preparation sees the previous complete selection until a setup write batch settles', async () => {
+  values.global = { aiProvider: 'codex', model: 'old-model', reviewReasoningEffort: 'high' };
+  values.repository = {};
+  const release = holdModelConfiguration({ ...values.global });
+  values.global.model = 'new-model';
+  assert.equal(getConfig().model, 'old-model');
+  assert.equal(getStandaloneReviewSettings(1).model, 'old-model');
+  let settled = false;
+  const waiting = waitForModelConfiguration().then(() => { settled = true; });
+  await Promise.resolve(); assert.equal(settled, false);
+  values.global.aiProvider = 'claudecode'; release(); await waiting;
+  assert.equal(getConfig().model, 'new-model');
+  assert.equal(getStandaloneReviewSettings(1).provider, 'claudecode');
+});
 
 test("runtime config never reads legacy plaintext keys and accepts model references only from user settings", () => {
   const ref = { version: 1, profileId: "test", id: "a".repeat(64) };
