@@ -20043,7 +20043,7 @@ function standaloneErrorMessage(code3) {
     case "account-not-configured":
       return "Select an account provider and model in user settings before starting a standalone review. Repository account settings are not used for local execution.";
     case "executor-unavailable":
-      return "The selected local executor is unavailable. Check the Codex executable, model and reasoning effort.";
+      return "The selected local executor is unavailable. Check the selected CLI executable, supported version, model and reasoning effort. Claude Code needs safe mode; Antigravity needs the agent CLI with no-tools agents.";
     case "credential-unavailable":
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
     case "insecure-storage":
@@ -20810,7 +20810,7 @@ function getStandaloneReviewSettings(fileCount, repoRoot) {
       maxTokens: user("maxTokens") ?? 4096,
       modelCredentialRef: user("modelCredentialRef")
     } : {},
-    executablePath: resolveCodexPath(user("codexPath") ?? "codex"),
+    executablePath: provider === "claudecode" ? resolveExternalCliPath(user("claudeCodePath") ?? "claude", "claude") : provider === "antigravity" ? resolveExternalCliPath(user("antigravityPath") ?? "agy", "agy") : resolveCodexPath(user("codexPath") ?? "codex"),
     workspaceTrusted: vscode3.workspace.isTrusted,
     durationMs: seconds && Number.isFinite(seconds) && seconds > 0 ? Math.min(6e5, Math.floor(seconds * 1e3)) : fileCount === 1 ? 12e4 : 36e4,
     // Repository exclusions may only narrow the immutable source selection.
@@ -20873,7 +20873,7 @@ function resolveExternalCliPath(configured2, name) {
   if (configured2.trim() !== name) {
     return configured2;
   }
-  const executableNames = process.platform === "win32" ? [`${name}.cmd`, `${name}.exe`, name] : [name];
+  const executableNames = process.platform === "win32" ? [`${name}.exe`, `${name}.cmd`, name] : [name];
   const candidates = [];
   for (const dir of (process.env.PATH ?? "").split(path22.delimiter).filter(Boolean)) {
     for (const executable of executableNames) {
@@ -20886,6 +20886,9 @@ function resolveExternalCliPath(configured2, name) {
       for (const executable of executableNames) {
         candidates.push(path22.join(userHome, dir, executable));
       }
+    }
+    if (process.platform === "win32" && name === "agy" && process.env.LOCALAPPDATA) {
+      candidates.push(path22.join(process.env.LOCALAPPDATA, "agy", "bin", "agy.exe"));
     }
     const nvmVersions = path22.join(userHome, ".nvm", "versions", "node");
     try {
@@ -25658,13 +25661,6 @@ async function activate(context) {
         { label: "$(symbol-variable) sonnet", description: "Claude Code alias", model: "sonnet" },
         { label: "$(symbol-variable) opus", description: "Claude Code alias", model: "opus" }
       );
-    } else if (provider === "geminicli") {
-      choices.push(
-        { label: "$(symbol-variable) auto", description: "Gemini CLI alias", model: "auto" },
-        { label: "$(symbol-variable) pro", description: "Gemini CLI alias", model: "pro" },
-        { label: "$(symbol-variable) flash", description: "Gemini CLI alias", model: "flash" },
-        { label: "$(symbol-variable) flash-lite", description: "Gemini CLI alias", model: "flash-lite" }
-      );
     }
     if (current.aiProvider === provider && current.model.trim() && !choices.some((choice2) => choice2.model === current.model.trim())) {
       choices.splice(includeDefault ? 1 : 0, 0, {
@@ -25714,58 +25710,35 @@ async function activate(context) {
     );
   }
   async function promptModelAtProviderSetup(provider) {
-    if (provider === "codex") {
-      const model = await chooseAccountModel(provider, false);
-      if (model === void 0) return false;
-      await applyAccountProvider(provider, model);
-      return true;
+    const model = await chooseAccountModel(provider, provider !== "codex");
+    if (model === void 0) return false;
+    if (provider !== "codex") {
+      const efforts = provider === "claudecode" ? ["", "low", "medium", "high", "xhigh"] : ["", "low", "medium", "high"];
+      const current = getStandaloneReviewSettings(1).reasoningEffort;
+      const effort = await vscode22.window.showQuickPick(efforts.map((value) => ({
+        label: value || "CLI default reasoning",
+        description: value === current ? "Current selection" : void 0,
+        effort: value
+      })), { title: `Commit Defender: Select ${accountProviderName(provider)} reasoning effort`, ignoreFocusOut: true });
+      if (!effort) return false;
+      await vscode22.workspace.getConfiguration("commitDefender").update("reviewReasoningEffort", effort.effort, vscode22.ConfigurationTarget.Global);
     }
-    const name = accountProviderName(provider);
-    const action = await vscode22.window.showInformationMessage(
-      `Commit Defender: Use the ${name} CLI default model in user settings? Fixed-source standalone review is not yet supported by this provider.`,
-      "Use CLI Default",
-      "Choose Model\u2026"
-    );
-    if (action === "Use CLI Default") {
-      await applyAccountProvider(provider, "");
-      return true;
-    }
-    if (action === "Choose Model\u2026") {
-      const model = await chooseAccountModel(provider, false);
-      if (model !== void 0) {
-        await applyAccountProvider(provider, model);
-        return true;
-      }
-    }
-    return false;
+    await applyAccountProvider(provider, model);
+    return true;
   }
   async function promptProviderChangeAfterSignIn(provider) {
-    if (provider === "codex") {
-      await promptModelAtProviderSetup(provider);
-      return;
-    }
-    const name = accountProviderName(provider);
     const action = await vscode22.window.showInformationMessage(
-      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} in user settings and change its model?`,
-      "Use CLI Default",
-      "Choose Model\u2026",
+      `Commit Defender: ${accountProviderName(provider)} sign-in opened in the terminal. Select this provider and its review model?`,
+      "Select Provider and Model\u2026",
       "Keep Current Provider"
     );
-    if (action === "Use CLI Default") {
-      await applyAccountProvider(provider, "");
-    } else if (action === "Choose Model\u2026") {
-      const model = await chooseAccountModel(provider, false);
-      if (model !== void 0) {
-        await applyAccountProvider(provider, model);
-      }
-    }
+    if (action === "Select Provider and Model\u2026") await promptModelAtProviderSetup(provider);
   }
   async function selectAccountProviderAndModel() {
     const choices = [
       { label: "Codex", description: "Local review with your selected model and reasoning effort", provider: "codex" },
-      { label: "Claude Code", description: "Account login and commit messages; standalone review unavailable", provider: "claudecode" },
-      { label: "Gemini CLI", description: "Account login and commit messages; standalone review unavailable", provider: "geminicli" },
-      { label: "Antigravity", description: "Account login and commit messages; standalone review unavailable", provider: "antigravity" }
+      { label: "Claude Code", description: "Local review with your subscription model and reasoning effort", detail: "Requires Claude Code with safe mode. Reviews captured source with tools disabled.", provider: "claudecode" },
+      { label: "Antigravity", description: "Local review with your Google account model and reasoning effort", detail: "Requires the Antigravity agent CLI (agy), not the IDE launcher. Reviews captured source with tools disabled.", provider: "antigravity" }
     ];
     const picked = await vscode22.window.showQuickPick(choices, {
       title: "Commit Defender: Select account provider",
