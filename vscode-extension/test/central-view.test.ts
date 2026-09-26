@@ -438,7 +438,7 @@ test("URL and API key connect without JSON; a private CA is explicitly chosen an
   assert.equal(scope.kind, "repository");
   if (scope.kind !== "repository") throw Error("Expected repository scope");
   const state = new Map<string, unknown>();
-  const context = {globalState: {get: (key: string) => state.get(key), update: async (key: string, value: unknown) => {state.set(key, value);}}} as never;
+  const context = {globalState: {get: (key: string) => state.get(key), update: async (key: string, value: unknown) => {state.set(key, value);}}} as unknown as ExtensionContext;
   const actions = {assertCurrent() {}, async invalidate() {}, async refresh() {}};
   ui.file = path.join(f.root, "public-ca.pem"); fs.writeFileSync(ui.file, server.config.ca);
   ui.inputValues = [server.config.serverUrl, server.secret];
