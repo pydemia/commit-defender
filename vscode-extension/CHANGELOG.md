@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.13.5
+
+- Count source provenance before admitting central review knowledge into the
+  existing 64 KiB context budget. Large optional references no longer abort
+  directory review preparation; required repository policy remains mandatory.
+- Distinguish required-instruction budget failures from context validation
+  failures before model execution, without exposing private diagnostics.
+
 ## 2.12.8
 
 - Render the bilingual GCR guide in VS Code's native Walkthrough viewer, with
