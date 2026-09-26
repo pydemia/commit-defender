@@ -64,9 +64,13 @@ export async function run(): Promise<void> {
     vscode.window.tabGroups.all
       .flatMap((group) => group.tabs)
       .filter((tab) => tab.label === "Local Review Activity");
-  const waitForActivity = async (count:number) => {
-    for(let attempt=0;attempt<100 && activityTabs().length!==count;attempt++)
-      await new Promise(resolve=>setTimeout(resolve,50));
+  const waitForActivity = async (count: number) => {
+    for (
+      let attempt = 0;
+      attempt < 100 && activityTabs().length !== count;
+      attempt++
+    )
+      await new Promise((resolve) => setTimeout(resolve, 50));
   };
   await waitForActivity(1);
 
@@ -158,28 +162,87 @@ export async function run(): Promise<void> {
   assert(!existsSync(path.join(workspace, ".git", "hooks", "pre-commit")));
 
   // Exercise the URL/key discovery and existing signed connection in a real host.
-  const central = await centralFixture(workspace);
-  const centralScope = knowledgeScope({profileId: process.env.CD_TEST_PROFILE!, repoRoot: workspace, scope: "repository"});
+  const central = await centralFixture(
+    workspace,
+    "PRIMARY_HOST_SOURCE",
+    false,
+    undefined,
+    [
+      {
+        repositoryId: "host-reference",
+        name: "helm",
+        instructions: "REFERENCE_HOST_SOURCE",
+      },
+    ],
+  );
+  const centralScope = knowledgeScope({
+    profileId: process.env.CD_TEST_PROFILE!,
+    repoRoot: workspace,
+    scope: "repository",
+  });
   assert.equal(centralScope.kind, "repository");
-  const manager = await CentralConnections.open({scope: centralScope, dataDirectory: path.join(workspace, '.central-test'),
-    keys: central.keys, credentials: central.credentials});
-  let connectionId: string | undefined;
+  const manager = await CentralConnections.open({
+    scope: centralScope,
+    dataDirectory: path.join(workspace, ".central-test"),
+    keys: central.keys,
+    credentials: central.credentials,
+  });
+  const connectedIds: string[] = [];
   let directConnectionEvidence;
   try {
-    const options = await discoverCentralConnections(central.config.serverUrl, central.secret, 'commit-defender', {ca: central.config.ca});
-    assert.equal(options.repositories.length, 1);
-    const connected = await manager.connect({...central.config, repositoryId: options.repositories[0].repositoryId,
-      trustedKeys: options.trustedKeys, ca: options.ca}, central.secret, 'commit-defender', new AbortController().signal);
-    connectionId = connected.id;
-    const status = await manager.status(connected.id);
-    assert.equal(status.status, 'connected');
-    assert.equal(status.cache.status, 'ready');
-    assert(central.requestMetadata.every(r => r.method === 'GET' && r.bodyBytes === 0));
-    directConnectionEvidence = {discovery: 'URL and masked-key flow metadata', signedConnection: status.status,
-      cache: status.cache.status, requests: central.requestMetadata, localUploadBytes: 0, modelCalls: 0,
-      source: 'owned HTTPS publisher, no production credentials'};
+    const options = await discoverCentralConnections(
+      central.config.serverUrl,
+      central.secret,
+      "commit-defender",
+      { ca: central.config.ca },
+    );
+    assert.equal(options.repositories.length, 2);
+    const states = [];
+    for (const source of options.repositories) {
+      const connected = await manager.connect(
+        {
+          ...central.config,
+          repositoryId: source.repositoryId,
+          trustedKeys: options.trustedKeys,
+          ca: options.ca,
+        },
+        central.secret,
+        "commit-defender",
+        new AbortController().signal,
+        { referenceOnly: true },
+      );
+      connectedIds.push(connected.id);
+      const status = await manager.status(connected.id);
+      assert.equal(status.status, "connected");
+      assert.equal(status.cache.status, "ready");
+      const access = await manager.review(connected.id, "online");
+      const snapshot = await access.cache.read("online");
+      await access.assertConnection();
+      states.push({
+        repositoryId: source.repositoryId,
+        sourceName: `${source.owner}/${source.name}`,
+        snapshot: snapshot.manifest.payload.snapshotId,
+        manifestHash: snapshot.manifest.manifestHash,
+        referenceOnly: status.referenceOnly,
+      });
+    }
+    assert(
+      central.requestMetadata.every(
+        (r) => r.method === "GET" && r.bodyBytes === 0,
+      ),
+    );
+    directConnectionEvidence = {
+      discovery: "URL and masked-key flow metadata",
+      signedConnection: "connected",
+      cache: "ready",
+      sources: states,
+      requests: central.requestMetadata,
+      localUploadBytes: 0,
+      modelCalls: 0,
+      source: "owned HTTPS publisher, no production credentials",
+    };
   } finally {
-    if (connectionId) await manager.disconnect(connectionId);
+    for (const id of connectedIds) await manager.disconnect(id);
     manager.close();
     assert.equal(central.credentialValues.size, 0);
     await central.close();

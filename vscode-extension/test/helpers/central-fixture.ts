@@ -35,9 +35,16 @@ export async function centralFixture(
     repositoryId: string;
     keyExpiresAt?: string | null;
     respond(url: string): unknown;
-    memories?: Extract<CentralKnowledgeBundle,
-      { component: "collective" }>["memories"];
+    memories?: Extract<
+      CentralKnowledgeBundle,
+      { component: "collective" }
+    >["memories"];
   },
+  additionalSources: Array<{
+    repositoryId: string;
+    name: string;
+    instructions: string;
+  }> = [],
 ) {
   const audience = {
     serverId: "server",
@@ -61,11 +68,50 @@ export async function centralFixture(
       ...common,
       component: "policy",
       ownerUserId: null,
-      criteria: codeCriterion ? [{
-        id: "code-criterion", revision: 1, contentHash: contentHash("code-criterion"), sourceContentHash: contentHash("curated-code-rule"),
-        document: { title: "Code-derived criterion", topicKey: "sum.correctness", requirement: "CD_CODE_CRITERION: verify the current arithmetic contract.", rationale: "A prior central change is evidence to inspect current behavior.", counterEvidence: ["Different endpoint or deliberately different contract"], reviewSteps: ["Read source and base"], appliesTo: {languages: [],filePaths: ["sum.ts"],symbols: [],contracts: [],branches: []}, severity: "P2", enforcement: "advisory", reviewAfter: null },
-        decision: {id: "central-code-decision",outcome: "design-decision",sources:[{kind:"snapshot-change",id:"central-file-id",contentHash:contentHash("central-code-source")}]}, exceptions: []
-      }] : [],
+      criteria: codeCriterion
+        ? [
+            {
+              id: "code-criterion",
+              revision: 1,
+              contentHash: contentHash("code-criterion"),
+              sourceContentHash: contentHash("curated-code-rule"),
+              document: {
+                title: "Code-derived criterion",
+                topicKey: "sum.correctness",
+                requirement:
+                  "CD_CODE_CRITERION: verify the current arithmetic contract.",
+                rationale:
+                  "A prior central change is evidence to inspect current behavior.",
+                counterEvidence: [
+                  "Different endpoint or deliberately different contract",
+                ],
+                reviewSteps: ["Read source and base"],
+                appliesTo: {
+                  languages: [],
+                  filePaths: ["sum.ts"],
+                  symbols: [],
+                  contracts: [],
+                  branches: [],
+                },
+                severity: "P2",
+                enforcement: "advisory",
+                reviewAfter: null,
+              },
+              decision: {
+                id: "central-code-decision",
+                outcome: "design-decision",
+                sources: [
+                  {
+                    kind: "snapshot-change",
+                    id: "central-file-id",
+                    contentHash: contentHash("central-code-source"),
+                  },
+                ],
+              },
+              exceptions: [],
+            },
+          ]
+        : [],
       skills: {
         schemaVersion: 1,
         hash: contentHash("skills"),
@@ -139,6 +185,52 @@ export async function centralFixture(
       signing.privateKey,
     ).toString("base64url"),
   };
+  const publications = new Map([
+    [audience.repositoryId, { payload, manifest, bytes }],
+  ]);
+  for (const source of additionalSources) {
+    const copies = structuredClone(bundles);
+    for (const bundle of Object.values(copies))
+      bundle.repositoryId = source.repositoryId;
+    if (copies.policy.component !== "policy") throw Error("fixture policy");
+    for (const skill of copies.policy.skills.skills) {
+      skill.instructions = source.instructions;
+      skill.contentHash = contentHash({
+        name: skill.name,
+        instructions: source.instructions,
+      });
+    }
+    const sourceBytes = Object.fromEntries(
+      Object.entries(copies).map(([key, bundle]) => [
+        key,
+        Buffer.from(encodeKnowledgeBundle(bundle)),
+      ]),
+    ) as typeof bytes;
+    const sourcePayload = structuredClone(payload);
+    sourcePayload.audience.repositoryId = source.repositoryId;
+    sourcePayload.snapshotId = `snapshot-${source.repositoryId}`;
+    for (const part of ["policy", "collective", "personal"] as const) {
+      sourcePayload.components[part].contentHash = createHash("sha256")
+        .update(sourceBytes[part])
+        .digest("hex");
+      sourcePayload.components[part].sizeBytes = sourceBytes[part].length;
+    }
+    const serialized = canonicalKnowledgeJson(sourcePayload);
+    publications.set(source.repositoryId, {
+      payload: sourcePayload,
+      bytes: sourceBytes,
+      manifest: {
+        payload: sourcePayload,
+        manifestHash: createHash("sha256").update(serialized).digest("hex"),
+        signature: sign(
+          null,
+          Buffer.from(KNOWLEDGE_SIGNATURE_CONTEXT + serialized),
+          signing.privateKey,
+        ).toString("base64url"),
+      },
+    });
+  }
+  const repositoryErrors = new Map<string, number>();
   const configFile = path.join(root, "tls.cnf");
   fs.writeFileSync(
     configFile,
@@ -162,15 +254,27 @@ export async function centralFixture(
       "-out",
       "-",
     ],
-    { stdio: ["ignore", "pipe", "ignore"], timeout: 15000,
-      encoding: "utf8", windowsHide: true },
+    {
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 15000,
+      encoding: "utf8",
+      windowsHide: true,
+    },
   );
-  const tlsKey = tlsOutput.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/)?.[0];
-  const tlsCert = tlsOutput.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/)?.[0];
+  const tlsKey = tlsOutput.match(
+    /-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/,
+  )?.[0];
+  const tlsCert = tlsOutput.match(
+    /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/,
+  )?.[0];
   if (!tlsKey || !tlsCert) throw Error("Local TLS fixture generation failed");
   const requestMethods: string[] = [];
-  const requestMetadata: Array<{ method: string; route: string;
-    queryKeys: string[]; bodyBytes: number }> = [];
+  const requestMetadata: Array<{
+    method: string;
+    route: string;
+    queryKeys: string[];
+    bodyBytes: number;
+  }> = [];
   let firstManifestFailure = false;
   let errorCode: string | undefined;
   let status = 200,
@@ -186,181 +290,257 @@ export async function centralFixture(
     reviewStatusCode = 200;
   const decisions = new Map<string, ReviewSubmissionStatus["decision"]>();
   let optionsOverride: Record<string, unknown> = {};
-  const server = createServer(
-    { key: tlsKey, cert: tlsCert },
-    (req, res) => {
-      calls++;
-      requestMethods.push(req.method ?? "");
-      const observed = new URL(req.url ?? "/", "https://fixture.invalid");
-      const metadata = { method: req.method ?? "", route: observed.pathname,
-        queryKeys: [...observed.searchParams.keys()], bodyBytes: 0 };
-      requestMetadata.push(metadata);
-      req.on("data", (chunk: Buffer) => { metadata.bodyBytes += chunk.length; });
-      res.setHeader("content-type", "application/json");
-      if (req.url === "/base/api/v1/client-auth/config" && !req.headers.authorization) {
-        res.end(JSON.stringify({schemaVersion: 1, serverId: audience.serverId, methods: ['api-key'], clientIds: ['commit-defender', 'gcr-cli'], scopes: ['knowledge:read']})); return;
+  const server = createServer({ key: tlsKey, cert: tlsCert }, (req, res) => {
+    calls++;
+    requestMethods.push(req.method ?? "");
+    const observed = new URL(req.url ?? "/", "https://fixture.invalid");
+    const metadata = {
+      method: req.method ?? "",
+      route: observed.pathname,
+      queryKeys: [...observed.searchParams.keys()],
+      bodyBytes: 0,
+    };
+    requestMetadata.push(metadata);
+    req.on("data", (chunk: Buffer) => {
+      metadata.bodyBytes += chunk.length;
+    });
+    res.setHeader("content-type", "application/json");
+    if (
+      req.url === "/base/api/v1/client-auth/config" &&
+      !req.headers.authorization
+    ) {
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          serverId: audience.serverId,
+          methods: ["api-key"],
+          clientIds: ["commit-defender", "gcr-cli"],
+          scopes: ["knowledge:read"],
+        }),
+      );
+      return;
+    }
+    if (
+      req.headers.authorization !== `Bearer ${secret}` ||
+      req.headers["x-gcr-server-id"] !== audience.serverId ||
+      req.headers.cookie
+    ) {
+      res.writeHead(403);
+      res.end("{}");
+      return;
+    }
+    const requestedRepository =
+      /\/(?:repositories|client-repositories)\/([^/?]+)/.exec(
+        req.url ?? "",
+      )?.[1];
+    const publication = requestedRepository
+      ? publications.get(requestedRepository)
+      : undefined;
+    if (requestedRepository && repositoryErrors.has(requestedRepository)) {
+      res.writeHead(repositoryErrors.get(requestedRepository)!);
+      res.end(JSON.stringify({ error: { code: "CLIENT_CREDENTIAL_REVOKED" } }));
+      return;
+    }
+    if (status !== 200) {
+      res.writeHead(status);
+      res.end(JSON.stringify(errorCode ? { error: { code: errorCode } } : {}));
+      return;
+    }
+    if (req.url === "/base/api/v1/client-auth/connection-options") {
+      const address = server.address();
+      if (!address || typeof address === "string")
+        throw Error("Fixture address missing");
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          serverUrl: `https://127.0.0.1:${address.port}/base/`,
+          serverId: audience.serverId,
+          tenantId: audience.tenantId,
+          clientId,
+          trustedKeys: [
+            {
+              id: "key",
+              pem: signing.publicKey
+                .export({ type: "spki", format: "pem" })
+                .toString(),
+            },
+          ],
+          ca: tlsCert,
+          repositories: [
+            {
+              schemaVersion: 1,
+              serverId: audience.serverId,
+              tenantId: audience.tenantId,
+              repositoryId: audience.repositoryId,
+              instanceId: "github",
+              webBaseUrl: "https://github.example",
+              owner: "team",
+              name: "reviewer",
+            },
+            ...additionalSources.map((source) => ({
+              schemaVersion: 1,
+              serverId: audience.serverId,
+              tenantId: audience.tenantId,
+              repositoryId: source.repositoryId,
+              instanceId: "github",
+              webBaseUrl: "https://github.example",
+              owner: "team",
+              name: source.name,
+            })),
+          ],
+          ...optionsOverride,
+        }),
+      );
+      return;
+    }
+    if (
+      history &&
+      req.method === "GET" &&
+      req.url?.startsWith(
+        `/base/api/v1/repositories/${audience.repositoryId}/review-history`,
+      )
+    ) {
+      res.end(JSON.stringify(history.respond(req.url)));
+      return;
+    }
+    if (req.url === "/base/api/v1/client-auth/me") {
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          serverId: audience.serverId,
+          tenantId: audience.tenantId,
+          userId: audience.userId,
+          displayName: "Fixture",
+          repositoryIds: [...publications.keys()],
+          scopes: ["knowledge:read"],
+          clientId,
+          keyId,
+          expiresAt:
+            history?.keyExpiresAt === null
+              ? null
+              : new Date(now + 7200_000).toISOString(),
+        }),
+      );
+      return;
+    }
+    if (/\/manifest\?clientContractVersion=[23]$/.test(req.url ?? "")) {
+      if (codeCriterion && req.url?.endsWith("=2")) {
+        res.writeHead(426);
+        res.end();
+        return;
       }
-      if (
-        req.headers.authorization !== `Bearer ${secret}` ||
-        req.headers["x-gcr-server-id"] !== audience.serverId ||
-        req.headers.cookie
-      ) {
+      if (firstManifestFailure) {
+        firstManifestFailure = false;
         res.writeHead(403);
         res.end("{}");
         return;
       }
-      if (status !== 200) {
-        res.writeHead(status);
-        res.end(
-          JSON.stringify(errorCode ? { error: { code: errorCode } } : {}),
-        );
+      res.end(JSON.stringify(publication?.manifest ?? manifest));
+      return;
+    }
+    if (
+      req.url === `/base/api/v1/client-repositories/${audience.repositoryId}` &&
+      req.method === "GET"
+    ) {
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          ...audience,
+          userId: undefined,
+          instanceId: "github",
+          webBaseUrl: "https://github.example",
+          owner: "team",
+          name: "reviewer",
+        }),
+      );
+      return;
+    }
+    const statusId = /\/review-submissions\/([^/]+)\/status$/.exec(
+      req.url ?? "",
+    )?.[1];
+    if (req.method === "GET" && statusId) {
+      reviewStatusCalls++;
+      const row = [...submissions.values()].find(
+        (x) => x.receipt.id === statusId,
+      );
+      if (!row || reviewStatusCode !== 200) {
+        res.writeHead(row ? reviewStatusCode : 404);
+        res.end("{}");
         return;
       }
-      if (req.url === "/base/api/v1/client-auth/connection-options") {
-        const address = server.address();
-        if (!address || typeof address === "string") throw Error("Fixture address missing");
-        res.end(JSON.stringify({schemaVersion: 1, serverUrl: `https://127.0.0.1:${address.port}/base/`,
-          serverId: audience.serverId, tenantId: audience.tenantId, clientId,
-          trustedKeys: [{id: "key", pem: signing.publicKey.export({type: "spki", format: "pem"}).toString()}], ca: tlsCert,
-          repositories: [{schemaVersion: 1, serverId: audience.serverId, tenantId: audience.tenantId,
-            repositoryId: audience.repositoryId, instanceId: "github", webBaseUrl: "https://github.example",
-            owner: "team", name: "reviewer"}], ...optionsOverride})); return;
-      }
-      if (history && req.method === 'GET' && req.url?.startsWith(`/base/api/v1/repositories/${audience.repositoryId}/review-history`)) {
-        res.end(JSON.stringify(history.respond(req.url))); return;
-      }
-      if (req.url === "/base/api/v1/client-auth/me") {
-        res.end(
-          JSON.stringify({
-            schemaVersion: 1,
-            serverId: audience.serverId,
-            tenantId: audience.tenantId,
-            userId: audience.userId,
-            displayName: "Fixture",
-            repositoryIds: [audience.repositoryId],
-            scopes: ["knowledge:read"],
-            clientId,
-            keyId,
-            expiresAt: history?.keyExpiresAt === null ? null : new Date(now + 7200_000).toISOString(),
-          }),
-        );
-        return;
-      }
-      if (/\/manifest\?clientContractVersion=[23]$/.test(req.url ?? "")) {
-        if (codeCriterion && req.url?.endsWith("=2")) {res.writeHead(426);res.end();return;}
-        if (firstManifestFailure) {
-          firstManifestFailure = false;
-          res.writeHead(403);
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          receipt: row.receipt,
+          checkedAt: new Date().toISOString(),
+          decision: decisions.get(row.payload.id) ?? null,
+        }),
+      );
+      return;
+    }
+    if (
+      req.method === "POST" &&
+      /\/review-submissions\/(feedback|results)$/.test(req.url ?? "")
+    ) {
+      submissionCalls++;
+      let body = "";
+      req.setEncoding("utf8");
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        if (submissionStatus !== 200) {
+          res.writeHead(submissionStatus);
           res.end("{}");
           return;
         }
-        res.end(JSON.stringify(manifest));
-        return;
-      }
-      if (
-        req.url === `/base/api/v1/client-repositories/${audience.repositoryId}` &&
-        req.method === "GET"
-      ) {
-        res.end(
-          JSON.stringify({
-            schemaVersion: 1,
-            ...audience,
-            userId: undefined,
-            instanceId: "github",
-            webBaseUrl: "https://github.example",
-            owner: "team",
-            name: "reviewer",
-          }),
-        );
-        return;
-      }
-      const statusId = /\/review-submissions\/([^/]+)\/status$/.exec(
-        req.url ?? "",
-      )?.[1];
-      if (req.method === "GET" && statusId) {
-        reviewStatusCalls++;
-        const row = [...submissions.values()].find(
-          (x) => x.receipt.id === statusId,
-        );
-        if (!row || reviewStatusCode !== 200) {
-          res.writeHead(row ? reviewStatusCode : 404);
-          res.end("{}");
-          return;
-        }
-        res.end(
-          JSON.stringify({
-            schemaVersion: 1,
-            receipt: row.receipt,
-            checkedAt: new Date().toISOString(),
-            decision: decisions.get(row.payload.id) ?? null,
-          }),
-        );
-        return;
-      }
-      if (
-        req.method === "POST" &&
-        /\/review-submissions\/(feedback|results)$/.test(req.url ?? "")
-      ) {
-        submissionCalls++;
-        let body = "";
-        req.setEncoding("utf8");
-        req.on("data", (chunk) => {
-          body += chunk;
-        });
-        req.on("end", () => {
-          if (submissionStatus !== 200) {
-            res.writeHead(submissionStatus);
+        try {
+          const value = reviewSubmission(JSON.parse(body));
+          const previous = submissions.get(value.id);
+          if (previous && previous.receipt.payloadHash !== contentHash(value)) {
+            res.writeHead(409);
             res.end("{}");
             return;
           }
-          try {
-            const value = reviewSubmission(JSON.parse(body));
-            const previous = submissions.get(value.id);
-            if (
-              previous &&
-              previous.receipt.payloadHash !== contentHash(value)
-            ) {
-              res.writeHead(409);
-              res.end("{}");
-              return;
-            }
-            const receipt: ReviewSubmissionReceipt = previous?.receipt ?? {
-              schemaVersion: 1,
-              id: randomUUID(),
-              requestId: value.id,
-              payloadHash: contentHash(value),
-              audience: value.audience,
-              clientId: value.clientId,
-              kind: value.kind,
-              status: "submitted",
-              evidence: "client-reported",
-              receivedAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-            };
-            submissions.set(value.id, { payload: value, receipt });
-            res.end(JSON.stringify(receipt));
-          } catch {
-            res.writeHead(400);
-            res.end("{}");
-          }
-        });
-        return;
-      }
-      const target = new URL(req.url ?? "/", "https://fixture.invalid");
-      const component = (["policy", "collective", "personal"] as const).find(
-        (key) =>
-          target.pathname.endsWith(
-            "/bundles/" + payload.components[key].bundleId,
-          ) && target.searchParams.get("snapshotId") === payload.snapshotId,
-      );
-      if (component) {
-        res.end(bytes[component]);
-        return;
-      }
-      res.writeHead(404);
-      res.end("{}");
-    },
-  );
+          const receipt: ReviewSubmissionReceipt = previous?.receipt ?? {
+            schemaVersion: 1,
+            id: randomUUID(),
+            requestId: value.id,
+            payloadHash: contentHash(value),
+            audience: value.audience,
+            clientId: value.clientId,
+            kind: value.kind,
+            status: "submitted",
+            evidence: "client-reported",
+            receivedAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+          };
+          submissions.set(value.id, { payload: value, receipt });
+          res.end(JSON.stringify(receipt));
+        } catch {
+          res.writeHead(400);
+          res.end("{}");
+        }
+      });
+      return;
+    }
+    const target = new URL(req.url ?? "/", "https://fixture.invalid");
+    const component = (["policy", "collective", "personal"] as const).find(
+      (key) =>
+        target.pathname.endsWith(
+          "/bundles/" +
+            (publication?.payload ?? payload).components[key].bundleId,
+        ) &&
+        target.searchParams.get("snapshotId") ===
+          (publication?.payload ?? payload).snapshotId,
+    );
+    if (component) {
+      res.end((publication?.bytes ?? bytes)[component]);
+      return;
+    }
+    res.writeHead(404);
+    res.end("{}");
+  });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw Error("fixture address");
@@ -391,6 +571,9 @@ export async function centralFixture(
   };
   return {
     audience,
+    setRepositoryStatus(repositoryId: string, code: number) {
+      repositoryErrors.set(repositoryId, code);
+    },
     submissions,
     get reviewStatusCalls() {
       return reviewStatusCalls;
@@ -429,8 +612,12 @@ export async function centralFixture(
       ).toString("base64url");
       return payload.snapshotId;
     },
-    get requestMethods() { return [...requestMethods]; },
-    get requestMetadata() { return structuredClone(requestMetadata); },
+    get requestMethods() {
+      return [...requestMethods];
+    },
+    get requestMetadata() {
+      return structuredClone(requestMetadata);
+    },
     get submissionCalls() {
       return submissionCalls;
     },
@@ -459,7 +646,9 @@ export async function centralFixture(
     get calls() {
       return calls;
     },
-    setConnectionOptions(value: Record<string, unknown>) { optionsOverride = value; },
+    setConnectionOptions(value: Record<string, unknown>) {
+      optionsOverride = value;
+    },
     setStatus(value: number, code?: string) {
       status = value;
       errorCode = code;

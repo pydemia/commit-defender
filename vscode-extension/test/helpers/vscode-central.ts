@@ -1,5 +1,6 @@
 export const ui = {
-  choices: [] as Array<string | number>,
+  choices: [] as Array<string | number | number[]>,
+  quickPicks: [] as Array<{ title?: string; multiple?: boolean }>,
   file: "",
   secret: "",
   inputValues: [] as string[],
@@ -13,6 +14,7 @@ export const ui = {
     for (const panel of this.panels) panel.dispose();
     this.panels = [];
     this.choices = [];
+    this.quickPicks = [];
     this.file = "";
     this.secret = "";
     this.inputValues = [];
@@ -26,8 +28,16 @@ export const ui = {
 export const ProgressLocation = { Notification: 15 };
 export const ViewColumn = { Active: -1 };
 export const window = {
-  async showQuickPick(items: Array<{ action?: string }>) {
+  async showQuickPick(
+    items: Array<{ action?: string }>,
+    options?: { title?: string; canPickMany?: boolean },
+  ) {
+    ui.quickPicks.push({
+      title: options?.title,
+      multiple: options?.canPickMany,
+    });
     const choice = ui.choices.shift();
+    if (Array.isArray(choice)) return choice.map((i) => items[i]);
     return typeof choice === "number"
       ? items[choice]
       : items.find((item) => item.action === choice);
@@ -45,7 +55,9 @@ export const window = {
   },
   async showInputBox(options: Record<string, unknown>) {
     ui.inputs.push(options);
-    return ui.inputValues.length ? ui.inputValues.shift() : ui.secret || undefined;
+    return ui.inputValues.length
+      ? ui.inputValues.shift()
+      : ui.secret || undefined;
   },
   async withProgress(
     _options: unknown,
@@ -96,5 +108,5 @@ export const window = {
 };
 
 // Native guide commands do not create a webview or read account state.
-export const env = { language: 'en' };
+export const env = { language: "en" };
 export const commands = { async executeCommand() {} };

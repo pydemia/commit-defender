@@ -717,7 +717,7 @@
                     {
                         "id": "workspace",
                         "title": "Open the matching Git repository",
-                        "description": "Open the local Git repository or worktree in VS Code and trust the workspace. Its Git remote must match the repository selected in GCR; forks are separate repositories.\nThe connection belongs to the current local profile and worktree. After changing Git remotes, reconnect using the correct repository configuration.",
+                        "description": "Open the local Git repository or worktree in VS Code and trust the workspace. The Git remote is used locally to recognize this repository. It does not limit access to other authorized reference sources.\nThe connection belongs to the current local profile and worktree. Repository policy is automatically matched; other sources remain optional reference material.",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -739,7 +739,7 @@
                     {
                         "id": "connect",
                         "title": "Connect with the API key",
-                        "description": "Open Central Review Connection → Connect with API key…. Enter the HTTPS server URL and the API key in the password field. Choose the repository for this local worktree and confirm the connection.\nIf a private CA is required, choose its public certificate file when prompted. TLS verification stays enabled. Import connection JSON… remains available for older servers.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "description": "Open Central Review Connection → Connect with API key…. Enter the HTTPS server URL and the API key in the password field. Confirm the server connection. All sources authorized by the key are included automatically; no repository selection is required. Use View downloaded review knowledge to inspect content and Reference sources… to limit optional sources later.\nIf a private CA is required, choose its public certificate file when prompted. TLS verification stays enabled. Import connection JSON… remains available for older servers.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -812,7 +812,7 @@
                     {
                         "id": "workspace",
                         "title": "일치하는 Git 저장소 열기",
-                        "description": "VS Code에서 로컬 Git 저장소 또는 worktree를 열고 워크스페이스를 신뢰합니다. Git remote가 GCR에서 선택한 저장소와 일치해야 하며 fork는 별도 저장소로 취급합니다.\n연결은 현재 로컬 profile과 worktree에 적용됩니다. Git remote를 바꾸었다면 올바른 저장소의 연결 설정으로 다시 연결하십시오.",
+                        "description": "VS Code에서 로컬 Git 저장소 또는 worktree를 열고 워크스페이스를 신뢰합니다. Git remote는 현재 저장소를 로컬에서 식별하는 데 사용합니다. 다른 저장소의 참고 자료를 조회하는 범위를 제한하지 않습니다.\n연결은 현재 로컬 profile과 worktree에 적용됩니다. 현재 저장소의 정책은 자동으로 대조하고 다른 출처의 자료는 참고 자료로 구분합니다.",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -834,7 +834,7 @@
                     {
                         "id": "connect",
                         "title": "API key로 연결",
-                        "description": "Central Review Connection → Connect with API key…에서 HTTPS 서버 주소와 API key를 비밀번호 입력란에 입력합니다. 현재 로컬 작업 폴더에 연결할 저장소를 선택하고 연결을 확인합니다.\n사설 CA가 필요하면 안내에 따라 공개 인증서 파일을 선택합니다. TLS 검증은 유지합니다. 이전 서버용 Import connection JSON…도 지원합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
+                        "description": "Central Review Connection → Connect with API key…에서 HTTPS 서버 주소와 API key를 비밀번호 입력란에 입력합니다. 서버 연결을 확인하면 key로 허용된 모든 자료 출처를 자동으로 포함합니다. 저장소를 선택할 필요는 없습니다. View downloaded review knowledge에서 내용을 확인하고 Reference sources…에서 선택적으로 참고 범위를 조절할 수 있습니다.\n사설 CA가 필요하면 안내에 따라 공개 인증서 파일을 선택합니다. TLS 검증은 유지합니다. 이전 서버용 Import connection JSON…도 지원합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -887,7 +887,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history && npm run test:account-review-executor",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history && npm run test:account-review-executor && npm run test:central-sources",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "package:platforms": "node scripts/package-platforms.mjs",
@@ -931,7 +931,8 @@
         "bundle:w01-native-host": "esbuild test/w01-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/w01-diagnostic-worker.cjs && esbuild test/w01-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w01-native-host.cjs && npm run prepare-native",
         "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native",
         "test:connection-guide:host": "node test/run-connection-guide.mjs",
-        "test:account-review-executor": "esbuild test/account-review-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-review-executor.test.cjs && node --test out-test/account-review-executor.test.cjs"
+        "test:account-review-executor": "esbuild test/account-review-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-review-executor.test.cjs && node --test out-test/account-review-executor.test.cjs",
+        "test:central-sources": "esbuild test/central-sources.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-sources.test.cjs && node --test out-test/central-sources.test.cjs"
     },
     "dependencies": {
         "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.52/gcr-client-contract-0.1.0-alpha.50.tgz",

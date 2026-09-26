@@ -57,16 +57,48 @@ export function centralKnowledgeHtml(
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px;max-width:1000px}details{border-bottom:1px solid var(--vscode-panel-border);padding:12px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;line-height:1.5}h4{margin-bottom:4px}section{margin-top:32px}</style></head><body><h1>Downloaded review knowledge</h1><p>Read-only content from the central server. Reviews run with your locally configured model. Local code, results and conversations are not uploaded.</p><p>Repository ${esc(payload.audience.repositoryId)} · User ${esc(payload.audience.userId)}<br>Snapshot ${esc(payload.snapshotId)}<br>Signed cache valid until ${esc(payload.offlineValidUntil)}</p><p>This is the complete downloaded snapshot. Each review selects relevant items for its source and records the items it used.</p>${sections}</body></html>`;
 }
 
+/** Existing read-only details layout, grouped by human-readable source rather than UUID. */
+export function centralSourcesKnowledgeHtml(
+  sources: Array<{
+    label: string;
+    referenceOnly: boolean;
+    snapshot: CentralKnowledgeSnapshot;
+  }>,
+): string {
+  const content = sources
+    .map(
+      (source) =>
+        `<article><h2>${esc(source.label)}</h2><p>${source.referenceOnly ? "Optional reference material. Repository-specific policy is not enforced on this worktree." : "Policy and relevant knowledge for the current repository."}</p>${centralKnowledgeHtml(source.snapshot).split("<body>")[1].split("</body>")[0]}</article>`,
+    )
+    .join("");
+  return centralKnowledgeHtml(sources[0].snapshot).replace(
+    /<body>[\s\S]*<\/body>/,
+    `<body><h1>Review knowledge sources</h1><p>All authorized sources are included by default. Reviews select applicable material locally and retain its source and version. Use Reference sources… to inspect or limit optional sources.</p>${content}</body>`,
+  );
+}
+
 /** Recheck local access on focus, lease expiry and while the panel remains open. */
 export function showCentralKnowledge(
   context: vscode.ExtensionContext,
   snapshot: CentralKnowledgeSnapshot,
   validate: () => Promise<void>,
 ): vscode.WebviewPanel {
-  return showAuthorizedCentralText(context, 'Downloaded review knowledge', centralKnowledgeHtml(snapshot), Date.parse(snapshot.manifest.payload.offlineValidUntil), validate);
+  return showAuthorizedCentralText(
+    context,
+    "Downloaded review knowledge",
+    centralKnowledgeHtml(snapshot),
+    Date.parse(snapshot.manifest.payload.offlineValidUntil),
+    validate,
+  );
 }
 
-export function showAuthorizedCentralText(context: vscode.ExtensionContext, title: string, html: string, expires: number, validate: () => Promise<void>): vscode.WebviewPanel {
+export function showAuthorizedCentralText(
+  context: vscode.ExtensionContext,
+  title: string,
+  html: string,
+  expires: number,
+  validate: () => Promise<void>,
+): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
     "commitDefender.centralKnowledge",
     title,

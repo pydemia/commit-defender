@@ -2,6 +2,7 @@ import type { LocalScope } from "@gcr/client-contract";
 import { KnowledgeSyncLoop, type KnowledgeSyncState } from "@gcr/client-core";
 import {
   centralSelection,
+  selectedCentralSources,
   selectionKey,
   withCentralConnection,
   type CentralPorts,
@@ -40,11 +41,12 @@ export class CentralSynchronization {
       const selected = centralSelection(selection);
       if (selected.mode !== "centralized" || selected.freshness !== "online")
         continue;
-      wanted.set(`${selectionKey(scope)}:${selected.connectionId}`, {
-        scope,
-        id: selected.connectionId,
-        ...(repositoryRoot ? { repositoryRoot } : {}),
-      });
+      for (const source of selectedCentralSources(selected))
+        wanted.set(`${selectionKey(scope)}:${source.connectionId}`, {
+          scope,
+          id: source.connectionId,
+          ...(repositoryRoot ? { repositoryRoot } : {}),
+        });
     }
     for (const [key, loop] of this.loops) {
       if (wanted.has(key)) continue;

@@ -1,4 +1,8 @@
 import path from "node:path";
+import {
+  centralSelection,
+  selectedCentralSources,
+} from "./centralConnection.js";
 import { prepareLocalProviderExecutor } from "./localProviderExecutor.js";
 import { createHash } from "node:crypto";
 import {
@@ -107,12 +111,28 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("untrusted-workspace");
     if (settings.provider === "unconfigured")
       throw new StandaloneReviewError("account-not-configured");
-    if (!["codex", "claudecode", "antigravity", "aoai", "openai", "anthropic", "gemini"].includes(settings.provider))
+    if (
+      ![
+        "codex",
+        "claudecode",
+        "antigravity",
+        "aoai",
+        "openai",
+        "anthropic",
+        "gemini",
+      ].includes(settings.provider)
+    )
       throw new StandaloneReviewError("unsupported-provider");
     if (
-      (!(settings.model === "" && ["claudecode", "antigravity"].includes(settings.provider)) &&
-      !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(settings.model)) ||
-      (settings.reasoningEffort !== "" && !["none", "minimal", "low", "medium", "high", "xhigh"].includes(settings.reasoningEffort))
+      (!(
+        settings.model === "" &&
+        ["claudecode", "antigravity"].includes(settings.provider)
+      ) &&
+        !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(settings.model)) ||
+      (settings.reasoningEffort !== "" &&
+        !["none", "minimal", "low", "medium", "high", "xhigh"].includes(
+          settings.reasoningEffort,
+        ))
     )
       throw new StandaloneReviewError("executor-unavailable");
     if (!request.files.length) throw new StandaloneReviewError("no-source");
@@ -223,6 +243,25 @@ export async function prepareStandaloneReview(
       snapshot,
       stores: opened.map((records) => new LocalKnowledgeStore(records)),
     };
+    const selectedSources =
+      settings.mode === "centralized" && settings.centralSources
+        ? selectedCentralSources(
+            centralSelection({
+              version: 1,
+              mode: "centralized",
+              connectionId: settings.connectionId,
+              freshness: settings.freshness,
+              sources: settings.centralSources,
+            }) as Extract<
+              import("./centralConnection.js").CentralSelection,
+              { mode: "centralized" }
+            >,
+          )
+        : [];
+    let references: NonNullable<
+      Parameters<typeof resolveCentralContext>[0]["references"]
+    > = [];
+    let primaryReferenceOnly = false;
     const resolved = await resolveReviewExecution({
       client: localClient,
       configuredMode: settings.mode as "standalone" | "centralized",
@@ -240,6 +279,35 @@ export async function prepareStandaloneReview(
               const status = await connections.status(settings.connectionId!);
               if (status.clientId !== "commit-defender")
                 throw new StandaloneReviewError("authentication-required");
+              primaryReferenceOnly = status.referenceOnly;
+              references = [];
+              for (const source of selectedSources.filter(
+                (s) => s.connectionId !== settings.connectionId,
+              )) {
+                const status = await connections.status(source.connectionId);
+                if (status.clientId !== "commit-defender")
+                  throw new StandaloneReviewError("authentication-required");
+                const access = await connections.review(
+                  source.connectionId,
+                  freshness,
+                  signal,
+                );
+                await access.cache.read(freshness);
+                await access.assertConnection();
+                references.push({
+                  ...access,
+                  repositoryName: source.label,
+                  loadSourceHistory: (selection) =>
+                    loadSelectedSourceHistory(selection, (request) =>
+                      connections!.readHistory(
+                        source.connectionId,
+                        request,
+                        freshness,
+                        signal,
+                      ),
+                    ),
+                });
+              }
               return connections.review(
                 settings.connectionId!,
                 freshness,
@@ -253,8 +321,23 @@ export async function prepareStandaloneReview(
     const central = resolved.central;
     client = resolved.client;
     const context = central
-      ? await resolveCentralContext({ ...query, ...central,
-          loadSourceHistory: selection => loadSelectedSourceHistory(selection, request => connections!.readHistory(settings.connectionId!, request, central.freshness, signal)),
+      ? await resolveCentralContext({
+          ...query,
+          ...central,
+          references,
+          referenceOnly: primaryReferenceOnly,
+          repositoryName: selectedSources.find(
+            (s) => s.connectionId === settings.connectionId,
+          )?.label,
+          loadSourceHistory: (selection) =>
+            loadSelectedSourceHistory(selection, (request) =>
+              connections!.readHistory(
+                settings.connectionId!,
+                request,
+                central.freshness,
+                signal,
+              ),
+            ),
         })
       : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
@@ -268,7 +351,13 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("central-snapshot-changed");
     let executor: LocalReviewExecutor;
     try {
-      executor = ports.prepareExecutor ? await ports.prepareExecutor({ executablePath: settings.executablePath, model: settings.model, reasoningEffort: settings.reasoningEffort }) : await prepareLocalProviderExecutor(settings, ports);
+      executor = ports.prepareExecutor
+        ? await ports.prepareExecutor({
+            executablePath: settings.executablePath,
+            model: settings.model,
+            reasoningEffort: settings.reasoningEffort,
+          })
+        : await prepareLocalProviderExecutor(settings, ports);
     } catch (error) {
       checkAbort(signal);
       if (error instanceof StandaloneReviewError) throw error;

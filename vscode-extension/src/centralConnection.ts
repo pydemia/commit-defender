@@ -32,7 +32,28 @@ export type CentralSelection =
       connectionId: string;
       freshness: "online" | "offline";
       offlineBehavior?: OfflineBehavior;
+      sources?: CentralSource[];
     };
+export type CentralSource = {
+  connectionId: string;
+  repositoryId: string;
+  label: string;
+  referenceOnly: boolean;
+};
+export function selectedCentralSources(
+  selection: Extract<CentralSelection, { mode: "centralized" }>,
+): CentralSource[] {
+  return (
+    selection.sources ?? [
+      {
+        connectionId: selection.connectionId,
+        repositoryId: "",
+        label: "Connected review knowledge",
+        referenceOnly: false,
+      },
+    ]
+  );
+}
 export interface SelectionStore {
   get<T>(key: string): T | undefined;
   update(key: string, value: unknown): PromiseLike<void>;
@@ -49,7 +70,14 @@ export function centralSelection(value: unknown): CentralSelection {
   const fields =
     v.mode === "standalone"
       ? ["version", "mode"]
-      : ["version", "mode", "connectionId", "freshness", "offlineBehavior"];
+      : [
+          "version",
+          "mode",
+          "connectionId",
+          "freshness",
+          "offlineBehavior",
+          "sources",
+        ];
   if (v.version !== 1 || Object.keys(v).some((k) => !fields.includes(k)))
     throw new StandaloneReviewError("central-connection-required");
   if (v.mode === "standalone") return { version: 1, mode: "standalone" };
@@ -58,10 +86,54 @@ export function centralSelection(value: unknown): CentralSelection {
     !["online", "offline"].includes(String(v.freshness))
   )
     throw new StandaloneReviewError("central-connection-required");
+  const connectionId = centralConnectionReference(v.connectionId);
+  let sources: CentralSource[] | undefined;
+  if (v.sources !== undefined) {
+    if (
+      !Array.isArray(v.sources) ||
+      !v.sources.length ||
+      v.sources.length > 100
+    )
+      throw new StandaloneReviewError("central-connection-required");
+    sources = v.sources.map((value) => {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        Object.keys(value).some(
+          (k) =>
+            ![
+              "connectionId",
+              "repositoryId",
+              "label",
+              "referenceOnly",
+            ].includes(k),
+        ) ||
+        typeof value.repositoryId !== "string" ||
+        !/^[a-zA-Z0-9._-]{1,128}$/.test(value.repositoryId) ||
+        typeof value.label !== "string" ||
+        !value.label.length ||
+        value.label.length > 255 ||
+        /[\x00-\x1f]/.test(value.label) ||
+        typeof value.referenceOnly !== "boolean"
+      )
+        throw new StandaloneReviewError("central-connection-required");
+      return {
+        ...value,
+        connectionId: centralConnectionReference(value.connectionId),
+      } as CentralSource;
+    });
+    if (
+      new Set(sources.map((s) => s.connectionId)).size !== sources.length ||
+      !sources.some((s) => s.connectionId === connectionId) ||
+      sources.filter((s) => !s.referenceOnly).length > 1
+    )
+      throw new StandaloneReviewError("central-connection-required");
+  }
   return {
     version: 1,
     mode: "centralized",
-    connectionId: centralConnectionReference(v.connectionId),
+    connectionId,
+    ...(sources ? { sources } : {}),
     freshness: v.freshness as "online" | "offline",
     ...(v.offlineBehavior === undefined
       ? {}
@@ -88,6 +160,7 @@ export function selectedReviewSettings(
         connectionId: undefined,
         freshness: undefined,
         offlineBehavior: undefined,
+        centralSources: undefined,
       }
     : {
         ...settings,
@@ -95,6 +168,7 @@ export function selectedReviewSettings(
         connectionId: checked.connectionId,
         freshness: checked.freshness,
         offlineBehavior: checked.offlineBehavior ?? "pause",
+        ...(checked.sources ? { centralSources: checked.sources } : {}),
       };
 }
 export type CentralPorts = LocalStoragePorts & {
@@ -162,7 +236,8 @@ export async function readSelectedHistory(
   ports: CentralPorts = {},
 ) {
   const local = await readLocalHistory(location, ports);
-  if (selection?.mode !== "centralized") return { reports: local, incompleteHistory: false };
+  if (selection?.mode !== "centralized")
+    return { reports: local, incompleteHistory: false };
   let central: Awaited<ReturnType<typeof readCentralHistory>> | undefined;
   try {
     central = await readCentralHistory(location, selection, ports);

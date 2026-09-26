@@ -1,11 +1,12 @@
 import type { OfflineBehavior } from "@gcr/client-contract";
-import type { ModelCredentialReference } from './modelCredentials.js';
+import type { ModelCredentialReference } from "./modelCredentials.js";
 
 /** Supplied by the extension's user settings and command handler, never a repository file. */
 export interface StandaloneReviewSettings {
   mode: string;
   /** Explicit extension-owned selection, scoped to the local profile and worktree. */
   connectionId?: string;
+  centralSources?: import("./centralConnection.js").CentralSource[];
   freshness?: "online" | "offline";
   offlineBehavior?: OfflineBehavior;
   /** Host-pinned snapshot after explicit feedback synchronization. */
