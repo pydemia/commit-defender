@@ -649,7 +649,8 @@ var contextEntry = union(object({
   id,
   revision: integer(1),
   hash: sha256,
-  component: choice(["policy", "collective", "personal"])
+  component: choice(["policy", "collective", "personal"]),
+  audience: optional(centralAudience)
 }));
 var contextIdentity = refined(object({
   hash: sha256,
@@ -661,6 +662,13 @@ var contextIdentity = refined(object({
     authorizationRevision: id,
     offlineValidUntil: timestamp
   })),
+  centralSources: optional(list(object({
+    id,
+    hash: sha256,
+    audience: centralAudience,
+    authorizationRevision: id,
+    offlineValidUntil: timestamp
+  }), 100, 1)),
   required: list(object({
     kind: choice(["source", "knowledge", "tool", "model", "policy"]),
     reference: text(4096, 1),
@@ -671,6 +679,23 @@ var contextIdentity = refined(object({
   unique(value.entries.map((entry) => `${entry.origin}:${entry.kind}:${entry.id}`), `${at}.entries`);
   if (value.entries.some((entry) => entry.origin === "central") && !value.centralSnapshot)
     fail(at, "central context has no pinned snapshot");
+  if (value.centralSources) {
+    if (!value.centralSnapshot)
+      fail(at, "central sources lack an anchor snapshot");
+    if (!value.centralSources.some((source2) => source2.id === value.centralSnapshot.id && source2.hash === value.centralSnapshot.hash && source2.authorizationRevision === value.centralSnapshot.authorizationRevision && source2.offlineValidUntil === value.centralSnapshot.offlineValidUntil && JSON.stringify(source2.audience) === JSON.stringify(value.centralSnapshot.audience)))
+      fail(at, "central sources lack the anchor audience");
+    unique(value.centralSources.map((s) => JSON.stringify(s.audience)), `${at}.centralSources`);
+    for (const source2 of value.centralSources)
+      for (const key3 of ["serverId", "tenantId", "userId"])
+        if (source2.audience[key3] !== value.centralSnapshot.audience[key3])
+          fail(at, "central reference source crosses an account boundary");
+    for (const entry of value.entries)
+      if (entry.origin === "central" && entry.audience && !value.centralSources.some((s) => JSON.stringify(s.audience) === JSON.stringify(entry.audience)))
+        fail(at, "central entry lacks its source snapshot");
+  } else
+    for (const entry of value.entries)
+      if (entry.origin === "central" && entry.audience && JSON.stringify(entry.audience) !== JSON.stringify(value.centralSnapshot?.audience))
+        fail(at, "central entry crosses the pinned audience");
 });
 var executionIdentity = refined(object({
   client: clientIdentity,
@@ -1434,6 +1459,8 @@ var centralConnectionRecord = object({
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
   offlineBehavior: optional(offlineBehavior),
+  /** Read-only reference source; never grants this worktree repository policy. */
+  referenceOnly: optional(literal(true)),
   repositoryBinding: optional(object({
     identity: centralRepositoryIdentity,
     remotesHash: sha256
@@ -1885,7 +1912,7 @@ function decodeReviewHistory(request2, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.50",
+  version: "0.1.0-alpha.51",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -5049,9 +5076,18 @@ var CentralConnections = class _CentralConnections {
       audience: { ...bootstrap.audience, userId: identity.userId },
       trustedKeys: bootstrap.verificationKeys()
     });
-    const remotes = this.options.repositoryRoot ? localRepositoryRemotes(this.options.repositoryRoot) : [];
+    if (options.referenceOnly && clientId !== "commit-defender")
+      throw denied();
+    const remotes = this.options.repositoryRoot && !options.referenceOnly ? localRepositoryRemotes(this.options.repositoryRoot) : [];
     const mapped = remotes.length ? repositoryBinding(await this.timed(signal, (s) => new KnowledgeHttpTransport(binding, { bindingId: binding.id, readToken: async () => apiKey }, config.ca ?? void 0).repository(s)), remotes) : void 0;
     const previous3 = await this.records.read("settings", binding.id);
+    if (options.reuseExisting && previous3 && !previous3.deleted) {
+      const existing = centralConnectionRecord(previous3.value);
+      if (existing.status === "connected" && existing.keyId === identity.keyId && existing.clientId === clientId && existing.ca === config.ca && contentHash(existing.trustedKeys) === contentHash(config.trustedKeys)) {
+        await this.assert({ revision: previous3.revision, value: existing });
+        return this.status(existing.id);
+      }
+    }
     if (previous3 && (previous3.deleted || centralConnectionRecord(previous3.value).status !== "disconnected"))
       throw new KnowledgeSyncError("busy", "Disconnect the existing connection before registering another key.");
     if (previous3 && !previous3.deleted)
@@ -5068,6 +5104,7 @@ var CentralConnections = class _CentralConnections {
       })),
       ca: config.ca,
       offlineBehavior: behavior,
+      ...options.referenceOnly ? { referenceOnly: true } : {},
       ...mapped ? { repositoryBinding: mapped } : {},
       credentialReference: "gcr-" + (0, import_node_crypto11.randomUUID)(),
       keyId: identity.keyId,
@@ -5121,6 +5158,7 @@ var CentralConnections = class _CentralConnections {
       audience: value.audience,
       offlineBehavior: value.offlineBehavior ?? "pause",
       repositoryBinding: value.repositoryBinding ?? null,
+      referenceOnly: value.referenceOnly ?? false,
       keyId: value.keyId,
       clientId: value.clientId,
       expiresAt: value.expiresAt
@@ -6905,7 +6943,7 @@ async function discoverCentralConnections(serverUrl, apiKey, clientId, options =
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.51",
+  version: "0.1.0-alpha.52",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -20822,6 +20860,16 @@ async function checkLocalContextFreshness(report, ports = {}, now = /* @__PURE__
 
 // src/centralConnection.ts
 var import_node_path13 = __toESM(require("node:path"));
+function selectedCentralSources(selection) {
+  return selection.sources ?? [
+    {
+      connectionId: selection.connectionId,
+      repositoryId: "",
+      label: "Connected review knowledge",
+      referenceOnly: false
+    }
+  ];
+}
 function selectionKey(scope) {
   if (scope.kind !== "repository")
     throw new StandaloneReviewError("central-connection-required");
@@ -20831,16 +20879,47 @@ function centralSelection(value) {
   if (!value || typeof value !== "object")
     throw new StandaloneReviewError("central-connection-required");
   const v = value;
-  const fields = v.mode === "standalone" ? ["version", "mode"] : ["version", "mode", "connectionId", "freshness", "offlineBehavior"];
+  const fields = v.mode === "standalone" ? ["version", "mode"] : [
+    "version",
+    "mode",
+    "connectionId",
+    "freshness",
+    "offlineBehavior",
+    "sources"
+  ];
   if (v.version !== 1 || Object.keys(v).some((k) => !fields.includes(k)))
     throw new StandaloneReviewError("central-connection-required");
   if (v.mode === "standalone") return { version: 1, mode: "standalone" };
   if (v.mode !== "centralized" || !["online", "offline"].includes(String(v.freshness)))
     throw new StandaloneReviewError("central-connection-required");
+  const connectionId = centralConnectionReference(v.connectionId);
+  let sources;
+  if (v.sources !== void 0) {
+    if (!Array.isArray(v.sources) || !v.sources.length || v.sources.length > 100)
+      throw new StandaloneReviewError("central-connection-required");
+    sources = v.sources.map((value2) => {
+      if (!value2 || typeof value2 !== "object" || Object.keys(value2).some(
+        (k) => ![
+          "connectionId",
+          "repositoryId",
+          "label",
+          "referenceOnly"
+        ].includes(k)
+      ) || typeof value2.repositoryId !== "string" || !/^[a-zA-Z0-9._-]{1,128}$/.test(value2.repositoryId) || typeof value2.label !== "string" || !value2.label.length || value2.label.length > 255 || /[\x00-\x1f]/.test(value2.label) || typeof value2.referenceOnly !== "boolean")
+        throw new StandaloneReviewError("central-connection-required");
+      return {
+        ...value2,
+        connectionId: centralConnectionReference(value2.connectionId)
+      };
+    });
+    if (new Set(sources.map((s) => s.connectionId)).size !== sources.length || !sources.some((s) => s.connectionId === connectionId) || sources.filter((s) => !s.referenceOnly).length > 1)
+      throw new StandaloneReviewError("central-connection-required");
+  }
   return {
     version: 1,
     mode: "centralized",
-    connectionId: centralConnectionReference(v.connectionId),
+    connectionId,
+    ...sources ? { sources } : {},
     freshness: v.freshness,
     ...v.offlineBehavior === void 0 ? {} : { offlineBehavior: offlineBehavior(v.offlineBehavior) }
   };
@@ -20857,13 +20936,15 @@ function selectedReviewSettings(settings, selection) {
     mode: "standalone",
     connectionId: void 0,
     freshness: void 0,
-    offlineBehavior: void 0
+    offlineBehavior: void 0,
+    centralSources: void 0
   } : {
     ...settings,
     mode: "centralized",
     connectionId: checked.connectionId,
     freshness: checked.freshness,
-    offlineBehavior: checked.offlineBehavior ?? "pause"
+    offlineBehavior: checked.offlineBehavior ?? "pause",
+    ...checked.sources ? { centralSources: checked.sources } : {}
   };
 }
 async function withCentralConnection(scope, work, ports = {}) {
@@ -20913,7 +20994,8 @@ async function readCentralHistory(location2, selection, ports = {}) {
 }
 async function readSelectedHistory(location2, selection, ports = {}) {
   const local = await readLocalHistory(location2, ports);
-  if (selection?.mode !== "centralized") return { reports: local, incompleteHistory: false };
+  if (selection?.mode !== "centralized")
+    return { reports: local, incompleteHistory: false };
   let central;
   try {
     central = await readCentralHistory(location2, selection, ports);
@@ -22784,11 +22866,12 @@ var CentralSynchronization = class {
       const selected = centralSelection(selection);
       if (selected.mode !== "centralized" || selected.freshness !== "online")
         continue;
-      wanted.set(`${selectionKey(scope)}:${selected.connectionId}`, {
-        scope,
-        id: selected.connectionId,
-        ...repositoryRoot ? { repositoryRoot } : {}
-      });
+      for (const source2 of selectedCentralSources(selected))
+        wanted.set(`${selectionKey(scope)}:${source2.connectionId}`, {
+          scope,
+          id: source2.connectionId,
+          ...repositoryRoot ? { repositoryRoot } : {}
+        });
     }
     for (const [key3, loop] of this.loops) {
       if (wanted.has(key3)) continue;
@@ -22879,8 +22962,23 @@ function centralKnowledgeHtml(snapshot) {
   }).join("");
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px;max-width:1000px}details{border-bottom:1px solid var(--vscode-panel-border);padding:12px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;line-height:1.5}h4{margin-bottom:4px}section{margin-top:32px}</style></head><body><h1>Downloaded review knowledge</h1><p>Read-only content from the central server. Reviews run with your locally configured model. Local code, results and conversations are not uploaded.</p><p>Repository ${esc2(payload.audience.repositoryId)} \xB7 User ${esc2(payload.audience.userId)}<br>Snapshot ${esc2(payload.snapshotId)}<br>Signed cache valid until ${esc2(payload.offlineValidUntil)}</p><p>This is the complete downloaded snapshot. Each review selects relevant items for its source and records the items it used.</p>${sections}</body></html>`;
 }
+function centralSourcesKnowledgeHtml(sources) {
+  const content3 = sources.map(
+    (source2) => `<article><h2>${esc2(source2.label)}</h2><p>${source2.referenceOnly ? "Optional reference material. Repository-specific policy is not enforced on this worktree." : "Policy and relevant knowledge for the current repository."}</p>${centralKnowledgeHtml(source2.snapshot).split("<body>")[1].split("</body>")[0]}</article>`
+  ).join("");
+  return centralKnowledgeHtml(sources[0].snapshot).replace(
+    /<body>[\s\S]*<\/body>/,
+    `<body><h1>Review knowledge sources</h1><p>All authorized sources are included by default. Reviews select applicable material locally and retain its source and version. Use Reference sources\u2026 to inspect or limit optional sources.</p>${content3}</body>`
+  );
+}
 function showCentralKnowledge(context, snapshot, validate) {
-  return showAuthorizedCentralText(context, "Downloaded review knowledge", centralKnowledgeHtml(snapshot), Date.parse(snapshot.manifest.payload.offlineValidUntil), validate);
+  return showAuthorizedCentralText(
+    context,
+    "Downloaded review knowledge",
+    centralKnowledgeHtml(snapshot),
+    Date.parse(snapshot.manifest.payload.offlineValidUntil),
+    validate
+  );
 }
 function showAuthorizedCentralText(context, title, html2, expires, validate) {
   const panel = vscode6.window.createWebviewPanel(
@@ -23155,9 +23253,13 @@ async function askApiKey(serverUrl) {
   });
 }
 async function readPublicFile(file, limit) {
-  const handle2 = await (0, import_promises12.open)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NONBLOCK | import_node_fs5.constants.O_NOFOLLOW);
+  const handle2 = await (0, import_promises12.open)(
+    file,
+    import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NONBLOCK | import_node_fs5.constants.O_NOFOLLOW
+  );
   try {
-    if (!(await handle2.stat()).isFile()) throw new StandaloneReviewError("invalid-binding");
+    if (!(await handle2.stat()).isFile())
+      throw new StandaloneReviewError("invalid-binding");
     const buffer = Buffer.alloc(limit + 1);
     const { bytesRead } = await handle2.read(buffer, 0, buffer.length, 0);
     if (bytesRead > limit) throw new StandaloneReviewError("invalid-binding");
@@ -23221,13 +23323,17 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         {
           label: "Connect with API key\u2026",
           action: "connect",
-          description: "Enter the server URL and API key; select a repository"
+          description: "Enter the server URL and API key; read all authorized review sources"
         },
-        { label: "Import connection JSON\u2026", action: "import-json", description: "Compatibility with older GCR servers; API key entered separately" },
         {
-          label: "Select connected repository\u2026",
+          label: "Import connection JSON\u2026",
+          action: "import-json",
+          description: "Compatibility with older GCR servers; API key entered separately"
+        },
+        {
+          label: "Select saved connection\u2026",
           action: "select",
-          description: "Use an existing connection in this profile and worktree"
+          description: "Use a saved server connection in this profile and worktree"
         },
         {
           label: "Connection status",
@@ -23244,7 +23350,16 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           action: "knowledge",
           description: "Read central prompts, Skills and guidance; keep your selected local provider"
         },
-        { label: "Browse PR review history", action: "history", description: "Read originals, replies and versions without memory approval; no model call" },
+        {
+          label: "Reference sources\u2026",
+          action: "sources",
+          description: "Optional: inspect available material and limit reference sources"
+        },
+        {
+          label: "Browse PR review history",
+          action: "history",
+          description: "Read originals, replies and versions without memory approval; no model call"
+        },
         {
           label: "Use signed offline knowledge",
           action: "offline",
@@ -23279,12 +23394,16 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     knowledgePanel?.dispose();
     knowledgePanel = void 0;
     if (choice2.action === "standalone") {
+      if (selection?.mode === "centralized" && selection.sources)
+        await context.globalState.update(`${key3}:saved`, selection);
       await select({ version: 1, mode: "standalone" });
       return;
     }
     if (choice2.action === "connect" || choice2.action === "import-json") {
       let config;
       let secret;
+      let discovered;
+      let matchingRepositoryId;
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       try {
         if (choice2.action === "import-json") {
@@ -23315,7 +23434,15 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           const serverUrl = normalizeCentralServerUrl(url.trim());
           secret = await askApiKey(serverUrl);
           if (!secret) return;
-          const discover = (ca) => progress("Reading GCR repositories", (signal) => discoverCentralConnections(serverUrl, secret.trim(), "commit-defender", { signal, ...ca ? { ca } : {} }));
+          const discover = (ca) => progress(
+            "Reading GCR repositories",
+            (signal) => discoverCentralConnections(
+              serverUrl,
+              secret.trim(),
+              "commit-defender",
+              { signal, ...ca ? { ca } : {} }
+            )
+          );
           let metadata;
           try {
             metadata = await discover();
@@ -23323,32 +23450,48 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
             if (!(cause instanceof CentralDiscoveryTlsError)) throw cause;
             const selected = await vscode9.window.showInformationMessage(
               "Commit Defender: GCR uses a CA certificate that is not trusted on this machine.",
-              { modal: true, detail: "Download the public CA certificate from GCR Profile \u2192 Clients, or obtain it from your administrator. TLS verification stays enabled." },
+              {
+                modal: true,
+                detail: "Download the public CA certificate from GCR Profile \u2192 Clients, or obtain it from your administrator. TLS verification stays enabled."
+              },
               "Choose CA certificate\u2026"
             );
             if (!selected) return;
-            const files = await vscode9.window.showOpenDialog({ title: "Choose public GCR CA certificate", canSelectMany: false, filters: { Certificates: ["pem", "crt"] } });
+            const files = await vscode9.window.showOpenDialog({
+              title: "Choose public GCR CA certificate",
+              canSelectMany: false,
+              filters: { Certificates: ["pem", "crt"] }
+            });
             if (!files?.[0] || files[0].scheme !== "file") return;
-            const ca = validateCentralCa(await readPublicFile(files[0].fsPath, 65536));
+            const ca = validateCentralCa(
+              await readPublicFile(files[0].fsPath, 65536)
+            );
             actions.assertCurrent();
             metadata = await discover(ca);
           }
           actions.assertCurrent();
           if (!metadata.repositories.length) {
-            void vscode9.window.showInformationMessage("Commit Defender: This API key has no currently accessible repositories. Check GCR permissions and key scope.");
+            void vscode9.window.showInformationMessage(
+              "Commit Defender: This API key has no currently accessible repositories. Check GCR permissions and key scope."
+            );
             return;
           }
-          const repo = await vscode9.window.showQuickPick(metadata.repositories.map((identity) => ({
-            label: `${identity.owner}/${identity.name}`,
-            description: identity.webBaseUrl,
-            identity
-          })), { title: "Choose the GCR repository for this local worktree", matchOnDescription: true });
-          if (!repo) return;
+          discovered = metadata;
+          const remotes = actions.repositoryRoot ? localRepositoryRemotes(actions.repositoryRoot) : [];
+          const matches = metadata.repositories.filter(
+            (repo) => remotes.some(
+              (remote) => remote.canonical === canonicalRepositoryRemote(
+                `${repo.webBaseUrl.replace(/\/$/, "")}/${repo.owner}/${repo.name}`
+              )
+            )
+          );
+          matchingRepositoryId = matches.length === 1 ? matches[0].repositoryId : void 0;
+          const anchor = matches.length === 1 ? matches[0] : metadata.repositories[0];
           config = centralConnectionInput({
             serverUrl: metadata.serverUrl,
             serverId: metadata.serverId,
             tenantId: metadata.tenantId,
-            repositoryId: repo.identity.repositoryId,
+            repositoryId: anchor.repositoryId,
             trustedKeys: metadata.trustedKeys,
             ca: metadata.ca
           });
@@ -23357,35 +23500,90 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           (k) => `${k.id}: ${(0, import_node_crypto19.createHash)("sha256").update(k.pem).digest("hex")}`
         ).join(" \xB7 ");
         const confirmed = await vscode9.window.showInformationMessage(
-          `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
+          `Connect to ${config.serverUrl} and read authorized review knowledge?`,
           {
             modal: true,
-            detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`
+            detail: `${discovered ? `${discovered.repositories.length} authorized review sources. No repository selection is required. Other repositories provide reference material; only a source matching this worktree can supply its policy. ` : "Legacy single-source connection. "}Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`
           },
           "Connect"
         );
         if (confirmed !== "Connect") return;
         if (!secret) secret = await askApiKey(config.serverUrl);
         if (!secret) return;
-        const connected = await progress(
-          "Connecting and waiting for central review knowledge",
-          (signal) => withManager(
-            (manager) => manager.connect(
-              config,
-              secret.trim(),
-              "commit-defender",
-              signal,
-              { offlineBehavior: behavior }
+        if (discovered) {
+          const metadata = discovered;
+          const sources2 = [];
+          await progress(
+            "Connecting central review sources",
+            (signal) => withManager(async (manager) => {
+              const existing = new Set(
+                (await manager.list()).filter((c) => c.status === "connected").map((c) => c.id)
+              );
+              const created = [];
+              try {
+                for (const repo of metadata.repositories) {
+                  actions.assertCurrent();
+                  const connected = await manager.connect(
+                    { ...config, repositoryId: repo.repositoryId },
+                    secret.trim(),
+                    "commit-defender",
+                    signal,
+                    {
+                      offlineBehavior: behavior,
+                      referenceOnly: repo.repositoryId !== matchingRepositoryId,
+                      reuseExisting: true
+                    }
+                  );
+                  if (!existing.has(connected.id)) created.push(connected.id);
+                  sources2.push({
+                    connectionId: connected.id,
+                    repositoryId: repo.repositoryId,
+                    label: `${repo.owner}/${repo.name}`,
+                    referenceOnly: connected.referenceOnly
+                  });
+                }
+              } catch (error2) {
+                for (const id5 of created) await manager.disconnect(id5);
+                throw error2;
+              }
+            })
+          );
+          const anchor = sources2.find((s) => !s.referenceOnly) ?? sources2[0];
+          const group = {
+            version: 1,
+            mode: "centralized",
+            connectionId: anchor.connectionId,
+            sources: sources2,
+            freshness: "online",
+            offlineBehavior: behavior
+          };
+          actions.assertCurrent();
+          await context.globalState.update(`${key3}:catalog`, group);
+          await select(group);
+          void vscode9.window.showInformationMessage(
+            `Commit Defender: Connected. ${sources2.length} review sources are available. Relevant material is selected locally; your model settings stay unchanged.`
+          );
+        } else {
+          const connected = await progress(
+            "Connecting and waiting for central review knowledge",
+            (signal) => withManager(
+              (manager) => manager.connect(
+                config,
+                secret.trim(),
+                "commit-defender",
+                signal,
+                { offlineBehavior: behavior }
+              )
             )
-          )
-        );
-        await select({
-          version: 1,
-          mode: "centralized",
-          connectionId: connected.id,
-          freshness: "online",
-          offlineBehavior: behavior
-        });
+          );
+          await select({
+            version: 1,
+            mode: "centralized",
+            connectionId: connected.id,
+            freshness: "online",
+            offlineBehavior: behavior
+          });
+        }
       } catch (cause) {
         if (cause instanceof CentralConnectionSetupError && (behavior === "cache-then-standalone" || behavior === "standalone")) {
           await select({
@@ -23405,6 +23603,21 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       return;
     }
     if (choice2.action === "select") {
+      const saved = context.globalState.get(`${key3}:saved`) ?? context.globalState.get(`${key3}:catalog`);
+      if (saved) {
+        const group = centralSelection(saved);
+        if (group.mode !== "centralized")
+          throw new StandaloneReviewError("central-connection-required");
+        await withManager(async (manager) => {
+          for (const source2 of selectedCentralSources(group)) {
+            const status2 = await manager.status(source2.connectionId);
+            if (status2.status !== "connected")
+              throw new StandaloneReviewError("authentication-required");
+          }
+        });
+        await select({ ...group, freshness: "online" });
+        return;
+      }
       const connections = await withManager((manager) => manager.list());
       const entries = connections.filter(
         (c) => c.status === "connected" && c.clientId === "commit-defender"
@@ -23434,29 +23647,174 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     }
     if (selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
-    const id4 = selection.connectionId;
+    let id4 = selection.connectionId;
+    const sources = selectedCentralSources(selection);
+    if (choice2.action === "sources") {
+      const catalog = centralSelection(
+        context.globalState.get(`${key3}:catalog`) ?? selection
+      );
+      if (catalog.mode !== "centralized")
+        throw new StandaloneReviewError("central-connection-required");
+      const available = selectedCentralSources(catalog);
+      const entries = await withManager(async (manager) => {
+        const result = [];
+        for (const source2 of available) {
+          const status2 = await manager.status(source2.connectionId);
+          const access = await manager.review(
+            source2.connectionId,
+            selection.mode === "centralized" ? selection.freshness : "online"
+          );
+          const snapshot = await access.cache.read(access.freshness);
+          await access.assertConnection();
+          result.push({
+            label: source2.label,
+            source: source2,
+            picked: sources.some((s) => s.connectionId === source2.connectionId),
+            description: source2.referenceOnly ? "Optional reference material" : "Current repository policy (always included)",
+            detail: `${snapshot.bundles.policy.component === "policy" ? snapshot.bundles.policy.skills.skills.length : 0} Skills \xB7 ${["collective", "personal"].reduce((n, part) => n + ("memories" in snapshot.bundles[part] ? snapshot.bundles[part].memories.length : 0), 0)} published guidance items \xB7 ${status2.cache.status}`
+          });
+        }
+        return result;
+      });
+      const picked = await vscode9.window.showQuickPick(entries, {
+        title: "Reference sources \xB7 all authorized sources are included by default",
+        canPickMany: true,
+        matchOnDescription: true,
+        matchOnDetail: true
+      });
+      if (!picked) return;
+      const kept = [
+        ...new Map(
+          [
+            ...picked.map((entry) => entry.source),
+            ...available.filter((s) => !s.referenceOnly)
+          ].map((s) => [s.connectionId, s])
+        ).values()
+      ];
+      if (!kept.length) {
+        void vscode9.window.showInformationMessage(
+          "Commit Defender: No reference sources selected. Use standalone review to review without central material."
+        );
+        return;
+      }
+      const anchor = kept.find((s) => !s.referenceOnly) ?? kept[0];
+      await select({
+        ...selection,
+        connectionId: anchor.connectionId,
+        sources: kept
+      });
+      return;
+    }
+    if (choice2.action === "sync") {
+      await progress(
+        "Synchronizing authorized review sources",
+        (signal) => withManager(async (manager) => {
+          for (const source2 of sources)
+            await manager.synchronize(source2.connectionId, signal);
+        })
+      );
+      await actions.refresh();
+      return;
+    }
+    if (choice2.action === "history" && sources.length > 1) {
+      const picked = await vscode9.window.showQuickPick(
+        sources.map((source2) => ({
+          label: source2.label,
+          source: source2,
+          description: "Browse saved PR comments, replies and versions"
+        })),
+        {
+          title: "Browse history by source \xB7 this does not change the connection"
+        }
+      );
+      if (!picked) return;
+      id4 = picked.source.connectionId;
+    }
     if (choice2.action === "history") {
       const selected = JSON.stringify(selection), freshness = selection.freshness;
       const validate = async () => {
         actions.assertCurrent();
-        if (JSON.stringify(readSelection(context.globalState, scope)) !== selected) throw new StandaloneReviewError("central-connection-required");
+        if (JSON.stringify(readSelection(context.globalState, scope)) !== selected)
+          throw new StandaloneReviewError("central-connection-required");
         await withManager(async (manager) => {
           const status2 = await manager.status(id4);
-          if (status2.clientId !== "commit-defender") throw new StandaloneReviewError("central-connection-required");
+          if (status2.clientId !== "commit-defender")
+            throw new StandaloneReviewError("central-connection-required");
           const access = await manager.review(id4, freshness);
           await access.cache.read(freshness);
           await access.assertConnection();
         });
       };
-      await browseCentralHistory(context, async (request2) => {
-        await validate();
-        const result = await withManager((manager) => manager.readHistory(id4, request2, freshness));
-        await validate();
-        return result;
-      }, validate);
+      await browseCentralHistory(
+        context,
+        async (request2) => {
+          await validate();
+          const result = await withManager(
+            (manager) => manager.readHistory(id4, request2, freshness)
+          );
+          await validate();
+          return result;
+        },
+        validate
+      );
       return;
     }
     if (choice2.action === "knowledge") {
+      if (sources.length > 1) {
+        const selected2 = JSON.stringify(selection), freshness2 = selection.freshness;
+        const snapshots = await progress(
+          "Reading downloaded review sources",
+          (signal) => withManager(async (manager) => {
+            const result = [];
+            for (const source2 of sources) {
+              const access = await manager.review(
+                source2.connectionId,
+                freshness2,
+                signal
+              );
+              const snapshot2 = await access.cache.read(freshness2);
+              await access.assertConnection();
+              result.push({
+                label: source2.label,
+                referenceOnly: source2.referenceOnly,
+                snapshot: snapshot2,
+                connectionId: source2.connectionId
+              });
+            }
+            return result;
+          })
+        );
+        const validate = async () => {
+          actions.assertCurrent();
+          if (JSON.stringify(readSelection(context.globalState, scope)) !== selected2)
+            throw new StandaloneReviewError("central-connection-required");
+          await withManager(async (manager) => {
+            for (const entry of snapshots) {
+              const access = await manager.review(
+                entry.connectionId,
+                "offline"
+              );
+              const current = await access.cache.read("offline");
+              await access.assertConnection();
+              if (current.manifest.manifestHash !== entry.snapshot.manifest.manifestHash)
+                throw new StandaloneReviewError("central-snapshot-changed");
+            }
+          });
+        };
+        await validate();
+        knowledgePanel = showAuthorizedCentralText(
+          context,
+          "Downloaded review knowledge",
+          centralSourcesKnowledgeHtml(snapshots),
+          Math.min(
+            ...snapshots.map(
+              (s) => Date.parse(s.snapshot.manifest.payload.offlineValidUntil)
+            )
+          ),
+          validate
+        );
+        return;
+      }
       const selected = JSON.stringify(selection);
       const assertSelection = () => {
         actions.assertCurrent();
@@ -23526,8 +23884,11 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     }
     if (choice2.action === "offline") {
       await withManager(async (manager) => {
-        const ready = await manager.review(id4, "offline");
-        await ready.cache.read("offline");
+        for (const source2 of sources) {
+          const ready = await manager.review(source2.connectionId, "offline");
+          await ready.cache.read("offline");
+          await ready.assertConnection();
+        }
       });
       await select({ ...selection, freshness: "offline" });
       return;
@@ -23535,7 +23896,18 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     if (choice2.action === "disconnect") {
       await actions.invalidate();
       actions.assertCurrent();
-      const result = await withManager((manager) => manager.disconnect(id4));
+      const results = await withManager(async (manager) => {
+        const result2 = [];
+        for (const source2 of sources)
+          result2.push(await manager.disconnect(source2.connectionId));
+        return result2;
+      });
+      const result = {
+        credentialCleanupPending: results.some(
+          (r) => r.credentialCleanupPending
+        ),
+        cacheCleanupPending: results.some((r) => r.cacheCleanupPending)
+      };
       await actions.refresh();
       void vscode9.window.showInformationMessage(
         result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`
@@ -23562,10 +23934,15 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       profileId: scope.profileId,
       ...status,
       offlineBehavior: selection.offlineBehavior ?? "pause"
-    });
+    }).replace(
+      "</body>",
+      `<h2>Review sources (${sources.length})</h2><ul>${sources.map((source2) => `<li>${esc4(source2.label)} \xB7 ${source2.referenceOnly ? "Reference material" : "Current repository policy"}</li>`).join("")}</ul><p>Repository names identify material sources. They do not change which local code is reviewed.</p></body>`
+    );
     context.subscriptions.push(panel);
   } catch (error2) {
-    void vscode9.window.showErrorMessage(`Commit Defender: Central review connection \u2014 ${standaloneError(error2).message}`);
+    void vscode9.window.showErrorMessage(
+      `Commit Defender: Central review connection \u2014 ${standaloneError(error2).message}`
+    );
   } finally {
     activeViews.delete(key3);
   }

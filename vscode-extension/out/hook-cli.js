@@ -648,7 +648,8 @@ var contextEntry = union(object({
   id,
   revision: integer(1),
   hash: sha256,
-  component: choice(["policy", "collective", "personal"])
+  component: choice(["policy", "collective", "personal"]),
+  audience: optional(centralAudience)
 }));
 var contextIdentity = refined(object({
   hash: sha256,
@@ -660,6 +661,13 @@ var contextIdentity = refined(object({
     authorizationRevision: id,
     offlineValidUntil: timestamp
   })),
+  centralSources: optional(list(object({
+    id,
+    hash: sha256,
+    audience: centralAudience,
+    authorizationRevision: id,
+    offlineValidUntil: timestamp
+  }), 100, 1)),
   required: list(object({
     kind: choice(["source", "knowledge", "tool", "model", "policy"]),
     reference: text(4096, 1),
@@ -670,6 +678,23 @@ var contextIdentity = refined(object({
   unique(value.entries.map((entry) => `${entry.origin}:${entry.kind}:${entry.id}`), `${at}.entries`);
   if (value.entries.some((entry) => entry.origin === "central") && !value.centralSnapshot)
     fail(at, "central context has no pinned snapshot");
+  if (value.centralSources) {
+    if (!value.centralSnapshot)
+      fail(at, "central sources lack an anchor snapshot");
+    if (!value.centralSources.some((source2) => source2.id === value.centralSnapshot.id && source2.hash === value.centralSnapshot.hash && source2.authorizationRevision === value.centralSnapshot.authorizationRevision && source2.offlineValidUntil === value.centralSnapshot.offlineValidUntil && JSON.stringify(source2.audience) === JSON.stringify(value.centralSnapshot.audience)))
+      fail(at, "central sources lack the anchor audience");
+    unique(value.centralSources.map((s) => JSON.stringify(s.audience)), `${at}.centralSources`);
+    for (const source2 of value.centralSources)
+      for (const key of ["serverId", "tenantId", "userId"])
+        if (source2.audience[key] !== value.centralSnapshot.audience[key])
+          fail(at, "central reference source crosses an account boundary");
+    for (const entry of value.entries)
+      if (entry.origin === "central" && entry.audience && !value.centralSources.some((s) => JSON.stringify(s.audience) === JSON.stringify(entry.audience)))
+        fail(at, "central entry lacks its source snapshot");
+  } else
+    for (const entry of value.entries)
+      if (entry.origin === "central" && entry.audience && JSON.stringify(entry.audience) !== JSON.stringify(value.centralSnapshot?.audience))
+        fail(at, "central entry crosses the pinned audience");
 });
 var executionIdentity = refined(object({
   client: clientIdentity,
@@ -1305,6 +1330,8 @@ var centralConnectionRecord = object({
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null)),
   offlineBehavior: optional(offlineBehavior),
+  /** Read-only reference source; never grants this worktree repository policy. */
+  referenceOnly: optional(literal(true)),
   repositoryBinding: optional(object({
     identity: centralRepositoryIdentity,
     remotesHash: sha256
@@ -1744,7 +1771,7 @@ var reviewHistoryGuidancePage = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.50",
+  version: "0.1.0-alpha.51",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2757,7 +2784,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.51",
+  version: "0.1.0-alpha.52",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
