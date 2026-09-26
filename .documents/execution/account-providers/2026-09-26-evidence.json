@@ -1,0 +1,273 @@
+{
+  "actualCliInvocations": 3,
+  "completedInvocations": 2,
+  "failedInvocations": 1,
+  "preflightFailuresWithoutModelCalls": 1,
+  "maximumPerInvocationMs": 120000,
+  "realGcrRequests": 0,
+  "syntheticSourceOnly": true,
+  "cases": [
+    {
+      "provider": "claudecode",
+      "model": "sonnet",
+      "effort": "medium",
+      "version": "2.1.278 (Claude Code)/captured-source-v1",
+      "durationMs": 10113,
+      "actualReviewCompleted": true,
+      "witnessMatched": true,
+      "defectRecognized": true,
+      "summary": "The function `sum` is contractually required to perform addition of its two parameters, but the implementation uses the subtraction operator (`left - right`) instead of addition (`left + right`). This is a clear defect: for example, sum(2, 3) would return -1 instead of the expected 5. The fix is to change the operator from `-` to `+`.",
+      "status": "passed",
+      "usage": {
+        "input_tokens": 2,
+        "cache_creation_input_tokens": 1243,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 227,
+        "output_tokens_details": {
+          "thinking_tokens": 0
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 1243,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 227,
+            "cache_read_input_tokens": 0,
+            "cache_creation_input_tokens": 1243,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1243
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      },
+      "numTurns": 2,
+      "stepTypes": [],
+      "exitCode": 0
+    },
+    {
+      "provider": "antigravity",
+      "model": "gemini-3.8-flash-medium",
+      "effort": "medium",
+      "version": "1.2.11/captured-source-v1",
+      "durationMs": 12911,
+      "actualReviewCompleted": true,
+      "witnessMatched": true,
+      "defectRecognized": true,
+      "summary": "The sum function performs subtraction (left - right) instead of addition, violating its contract.",
+      "status": "passed",
+      "usage": {
+        "input_tokens": 8838,
+        "output_tokens": 601,
+        "thinking_tokens": 508,
+        "cache_read_tokens": 0,
+        "total_tokens": 9439
+      },
+      "numTurns": 1,
+      "stepTypes": [
+        "agent_response",
+        "finish",
+        "user_input"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "host": {
+    "realExtensionHost": true,
+    "modelResponses": "fixture",
+    "actualModelCalls": 0,
+    "version": "2.12.8",
+    "vscodeVersion": "1.138.0",
+    "results": [
+      {
+        "provider": "claudecode",
+        "status": "completed",
+        "identity": {
+          "client": {
+            "mode": "standalone",
+            "profileId": "cd-account-host-e9f8b93a-5981-4eb4-85a8-8d5a899d5901",
+            "repositoryKey": "57dbd58bbae10b496df61ea202d8501c0981040109bd09dfaba87c6a42d82117",
+            "worktreeKey": "afff99465ddf56a513bb37852100b3352d87bbef6deb55d1383520c478b19ad9",
+            "execution": {
+              "configuredMode": "standalone",
+              "effectiveMode": "standalone",
+              "knowledgeSource": "local",
+              "fallbackReason": null
+            }
+          },
+          "source": {
+            "kind": "index",
+            "hash": "f581dfc9a1336d92e9a3bfe906d5258c24943d9e52ec85d13da440b39db8f72d",
+            "objectFormat": "sha1",
+            "baseCommit": "54911732f56b8a4256a7f96b8d6fb13ddd5574c6",
+            "baseTree": "a6554858031920bd40c6bf067cad5e4c8191cd2d",
+            "sourceTree": "b70e9356e0c4e6ec4c8979a5ca1fd78ac0663ec7"
+          },
+          "context": {
+            "hash": "2c5ccc439e7eb126bc940a0207dc167bd97f4cedc22c1f48c8a3f6a975d509b8",
+            "entries": [
+              {
+                "origin": "builtin",
+                "kind": "skill",
+                "id": "gcr-standalone-review",
+                "revision": 1,
+                "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+              }
+            ],
+            "required": [
+              {
+                "kind": "knowledge",
+                "reference": "builtin:gcr-standalone-review",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:3cc2ae5b5767ead7782bdb6678e55a599c79c1c989d2242b98003c95384768e1",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:64b3d5880e0bbf90ebc82ce34112ea0f0cb6f571fcaa7da3ef6a0ee60f82fbd7",
+                "available": true,
+                "reason": ""
+              }
+            ]
+          },
+          "reviewProfile": {
+            "id": "gcr-standalone-review",
+            "revision": 1,
+            "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+          },
+          "executor": {
+            "id": "claudecode-account",
+            "version": "fixture-1/captured-source-v1",
+            "model": "cli-default",
+            "configHash": "3b7cc77a011e5b015219c4da6753de0fee1b8946d338b2d9fbf46239f047898e"
+          },
+          "toolsHash": "e02f7d03f4046a6d2bd3c43fed57653d1e9eea8fc8b53106cae2ad1108853076"
+        }
+      },
+      {
+        "provider": "antigravity",
+        "status": "completed",
+        "identity": {
+          "client": {
+            "mode": "standalone",
+            "profileId": "cd-account-host-e9f8b93a-5981-4eb4-85a8-8d5a899d5901",
+            "repositoryKey": "57dbd58bbae10b496df61ea202d8501c0981040109bd09dfaba87c6a42d82117",
+            "worktreeKey": "afff99465ddf56a513bb37852100b3352d87bbef6deb55d1383520c478b19ad9",
+            "execution": {
+              "configuredMode": "standalone",
+              "effectiveMode": "standalone",
+              "knowledgeSource": "local",
+              "fallbackReason": null
+            }
+          },
+          "source": {
+            "kind": "index",
+            "hash": "f581dfc9a1336d92e9a3bfe906d5258c24943d9e52ec85d13da440b39db8f72d",
+            "objectFormat": "sha1",
+            "baseCommit": "54911732f56b8a4256a7f96b8d6fb13ddd5574c6",
+            "baseTree": "a6554858031920bd40c6bf067cad5e4c8191cd2d",
+            "sourceTree": "b70e9356e0c4e6ec4c8979a5ca1fd78ac0663ec7"
+          },
+          "context": {
+            "hash": "2c5ccc439e7eb126bc940a0207dc167bd97f4cedc22c1f48c8a3f6a975d509b8",
+            "entries": [
+              {
+                "origin": "builtin",
+                "kind": "skill",
+                "id": "gcr-standalone-review",
+                "revision": 1,
+                "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+              }
+            ],
+            "required": [
+              {
+                "kind": "knowledge",
+                "reference": "builtin:gcr-standalone-review",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:3cc2ae5b5767ead7782bdb6678e55a599c79c1c989d2242b98003c95384768e1",
+                "available": true,
+                "reason": ""
+              },
+              {
+                "kind": "source",
+                "reference": "source:64b3d5880e0bbf90ebc82ce34112ea0f0cb6f571fcaa7da3ef6a0ee60f82fbd7",
+                "available": true,
+                "reason": ""
+              }
+            ]
+          },
+          "reviewProfile": {
+            "id": "gcr-standalone-review",
+            "revision": 1,
+            "hash": "8ff77f482a027cd0d848a2cc5d913ce654772b6245b69e6385b6a3db4f1efe77"
+          },
+          "executor": {
+            "id": "antigravity-account",
+            "version": "fixture-1/captured-source-v1",
+            "model": "cli-default",
+            "configHash": "3b7cc77a011e5b015219c4da6753de0fee1b8946d338b2d9fbf46239f047898e"
+          },
+          "toolsHash": "e02f7d03f4046a6d2bd3c43fed57653d1e9eea8fc8b53106cae2ad1108853076"
+        }
+      }
+    ],
+    "selection": {
+      "provider": "antigravity",
+      "model": "CLI default",
+      "reasoning": "medium",
+      "nativeQuickPick": false,
+      "screenVerified": false
+    },
+    "status": "passed",
+    "uiLimit": "Mac locked; account chooser was opened in an earlier owned Host but keyboard/screen inspection was not completed."
+  },
+  "tests": {
+    "providers": 9,
+    "standaloneReview": 16,
+    "sourcePolicy": 10,
+    "reviewSecurity": 10,
+    "standaloneConfig": 6,
+    "localProviderExecutor": 10,
+    "accountReviewExecutor": 13,
+    "total": 74,
+    "typecheck": "passed",
+    "testTypecheck": "passed"
+  },
+  "commonArtifacts": [
+    {
+      "package": "@gcr/client-contract",
+      "version": "0.1.0-alpha.48",
+      "sha256": "1b1245f4540cecf8d00279a0491ec1124fa669b8c5ad5993f3d284c4d109d3b8"
+    },
+    {
+      "package": "@gcr/client-core",
+      "version": "0.1.0-alpha.49",
+      "sha256": "0471d3f34a10a4c1badb7e6e8586bf6bb16f33308b15a117a71ad647b7a25be4"
+    },
+    {
+      "package": "@gcr/client-executors",
+      "version": "0.1.0-alpha.50",
+      "sha256": "e370049b7b1ea0fb37b71513ed2c914076aa266080d6e91c684d4d9d67e2c4d0"
+    }
+  ],
+  "codeSourceSha": "15df2d30f1b8014fef684fe41e35e00db553aea6"
+}
