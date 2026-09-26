@@ -215,18 +215,26 @@ provider-based path. Use **Local Memory and Skills** for shared-core reviews.
 
 ### Connect central history and guidance
 
-1. Obtain the public connection JSON and a repository-scoped `knowledge:read`
-   key issued for **commit-defender** from your GCR administrator.
-2. Open **Central Review Connection → Connect with API key…**. Check the
-   server/repository and signing-key information, then enter the reader key
-   in the password box. It is separate from the model credential.
+1. Obtain the HTTPS server URL and a `knowledge:read` API key issued for
+   **commit-defender** from GCR Profile → Clients. The key can allow multiple
+   repositories. It is separate from your model credential.
+2. Open **Central Review Connection → Connect with API key…** and enter the
+   server URL and API key in the password box. Confirm the server; all allowed
+   review sources connect automatically. No repository selection or JSON is
+   required. Choose the public CA certificate if the server uses a private CA.
 3. **Browse PR review history** shows originals, replies, body versions, and
    linked guidance. **View downloaded review knowledge** shows the available
-   signed prompts, Skills, criteria, and memories.
+   signed prompts, Skills, criteria, and memories, grouped by readable source
+   name. **Reference sources…** optionally limits which sources to consult.
 4. Run an Analyze command. Relevant active guidance and bounded historical
    sources are selected locally and pinned for that review.
 5. Inspect source URLs, IDs, hashes, and the model's applicability explanation.
    Inclusion in context and use in a reasoned assessment are separate evidence.
+
+An unregistered local repository can use authorized sources as references.
+Only a source matching the local Git remote supplies that repository's policy;
+other repositories do not impose mandatory policy on the current worktree.
+**Import connection JSON…** remains available for older server configurations.
 
 A repaired change should be assessed against the requirement without repeating
 an old defect. Unrelated guidance should be excluded with an applicability
