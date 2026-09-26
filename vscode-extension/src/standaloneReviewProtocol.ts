@@ -102,6 +102,10 @@ export function standaloneErrorMessage(code: string): string {
       return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "context-budget-exceeded":
+      return "Required review instructions exceed the context budget. Select fewer files or ask the administrator to shorten required instructions. No model request was made.";
+    case "context-validation-failed":
+      return "Review context could not be verified or loaded. Check central synchronization and local storage. No model request was made.";
     case "central-snapshot-changed":
       return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
@@ -151,6 +155,8 @@ const safeCodes = new Set([
   "corrupt-storage",
   "commit-unknown",
   "needs-context",
+  "context-budget-exceeded",
+  "context-validation-failed",
   "central-snapshot-changed",
   "policy-unavailable",
   "no-source",

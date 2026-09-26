@@ -595,6 +595,22 @@ test("unsupported mode/provider/model and an untrusted workspace stop before sou
   }
 });
 
+test("context preparation diagnostics distinguish budget and validation failures without private details", () => {
+  for (const [code, text] of [
+    ["context-budget-exceeded", "exceed the context budget"],
+    ["context-validation-failed", "could not be verified or loaded"],
+  ]) {
+    const failure = standaloneError({
+      code,
+      message: "private credential and source",
+    });
+    assert.equal(failure.code, code);
+    assert(failure.message.includes(text));
+    assert(failure.message.includes("No model request was made"));
+    assert(!failure.message.includes("private credential"));
+  }
+});
+
 test("a cancelled preparation releases its stores and never invokes the executor", async (t) => {
   const f = setup(t);
   const controller = new AbortController();

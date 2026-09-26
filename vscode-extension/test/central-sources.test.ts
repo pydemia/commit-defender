@@ -45,7 +45,7 @@ const defaults = {
 };
 const signal = () => new AbortController().signal;
 
-async function setup(t: TestContext, matchWorktree = true) {
+async function setup(t: TestContext, matchWorktree = true, instructions = "PRIMARY_SOURCE_SKILL") {
   ui.reset();
   const f = fixture();
   f.write("sum.ts", "export const sum = (a:number,b:number)=>a+b;\n");
@@ -63,7 +63,7 @@ async function setup(t: TestContext, matchWorktree = true) {
   );
   const server = await centralFixture(
     f.root,
-    "PRIMARY_SOURCE_SKILL",
+    instructions,
     true,
     undefined,
     [
@@ -262,6 +262,46 @@ test("two sources reach the local executor, keep separate pinned versions, and d
     prepared.dispose();
   }
   assert.equal(f.server.submissionCalls, 0);
+  assert(
+    f.server.requestMetadata.every(
+      (r) => r.method === "GET" && r.bodyBytes === 0,
+    ),
+  );
+});
+
+test("a directory with large reference Skills prepares within the fixed context budget", async (t) => {
+  const f = await setup(t, false, "PRIMARY_SOURCE_SKILL " + "x".repeat(13_500));
+  const files = ["sum.ts"];
+  for (let i = 1; i < 14; i++) {
+    const name = `file-${i}.ts`;
+    f.write(name, `export const value${i} = ${i};\n`);
+    files.push(name);
+  }
+  let executorPrepared = false;
+  const prepared = await prepareStandaloneReview(
+    { repoRoot: f.repo, files, scope: "directory" },
+    selectedReviewSettings(defaults, f.selection),
+    signal(),
+    {
+      ...f.ports,
+      prepareExecutor: async () => {
+        executorPrepared = true;
+        return {
+          descriptor,
+          async review() {
+            throw Error(
+              "preparation regression must not start a model request",
+            );
+          },
+        };
+      },
+    },
+  );
+  prepared.dispose();
+  assert(
+    executorPrepared,
+    "bounded reference context must reach executor preparation",
+  );
   assert(
     f.server.requestMetadata.every(
       (r) => r.method === "GET" && r.bodyBytes === 0,

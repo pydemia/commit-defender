@@ -341,8 +341,16 @@ export async function prepareStandaloneReview(
         })
       : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
+    if (context.status === "unavailable")
+      throw new StandaloneReviewError("context-validation-failed");
     if (context.status !== "ready")
-      throw new StandaloneReviewError("needs-context");
+      throw new StandaloneReviewError(
+        context.context.identity.required.some(
+          (item) => !item.available && item.reason.includes("context budget"),
+        )
+          ? "context-budget-exceeded"
+          : "needs-context",
+      );
     if (
       settings.requiredCentralSnapshot &&
       context.context.identity.centralSnapshot?.id !==
