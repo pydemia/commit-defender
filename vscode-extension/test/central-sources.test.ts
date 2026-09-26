@@ -45,7 +45,7 @@ const defaults = {
 };
 const signal = () => new AbortController().signal;
 
-async function setup(t: TestContext) {
+async function setup(t: TestContext, matchWorktree = true) {
   ui.reset();
   const f = fixture();
   f.write("sum.ts", "export const sum = (a:number,b:number)=>a+b;\n");
@@ -53,7 +53,14 @@ async function setup(t: TestContext) {
   f.git("commit", "-m", "base");
   f.write("sum.ts", "export const sum = (a:number,b:number)=>a-b;\n");
   f.git("add", "sum.ts");
-  f.git("remote", "add", "origin", "https://github.example/team/reviewer.git");
+  f.git(
+    "remote",
+    "add",
+    "origin",
+    matchWorktree
+      ? "https://github.example/team/reviewer.git"
+      : "https://github.example/local/unregistered.git",
+  );
   const server = await centralFixture(
     f.root,
     "PRIMARY_SOURCE_SKILL",
@@ -297,6 +304,53 @@ test("revocation of an additional source prevents a prepared local review from s
   } finally {
     prepared.dispose();
   }
+});
+
+test("an unregistered local repository can use all sources as references without central policy enforcement", async (t) => {
+  const f = await setup(t, false);
+  assert(f.selection.sources!.every((s) => s.referenceOnly));
+  let inspected = false;
+  const prepared = await prepareStandaloneReview(
+    { repoRoot: f.repo, files: ["sum.ts"], scope: "staged" },
+    selectedReviewSettings(defaults, f.selection),
+    signal(),
+    {
+      ...f.ports,
+      prepareExecutor: async () => ({
+        descriptor,
+        async review(input) {
+          const data = JSON.parse(
+            input.prompt.slice(input.prompt.lastIndexOf("\n\n") + 2),
+          );
+          assert(data.centralKnowledge.length >= 2);
+          assert(
+            data.centralKnowledge.every(
+              (item: any) =>
+                !item.required &&
+                item.role === "supplement" &&
+                item.kind !== "policy",
+            ),
+          );
+          assert(
+            input.prompt.includes("PRIMARY_SOURCE_SKILL") &&
+              input.prompt.includes("REFERENCE_SOURCE_SKILL"),
+          );
+          inspected = true;
+          throw Error(
+            "synthetic failure: context observed, no completed review claimed",
+          );
+        },
+      }),
+    },
+  );
+  try {
+    const result = await prepared.run(signal());
+    assert(inspected);
+    assert.equal(result.report.gcr!.report.status, "failed");
+  } finally {
+    prepared.dispose();
+  }
+  assert.equal(f.server.submissionCalls, 0);
 });
 
 test("source selections reject duplicate, unknown or inconsistent connections", () => {

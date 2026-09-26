@@ -13,6 +13,7 @@ import {
 import { centralFixture } from "./helpers/central-fixture.js";
 import { knowledgeScope } from "../src/localKnowledge.js";
 import { clientReviewReport } from "@gcr/client-contract";
+import { centralSourcesKnowledgeHtml } from "../src/centralKnowledgeView.js";
 
 /** Executed by the real VS Code Extension Host, not by a vscode module mock. */
 export async function run(): Promise<void> {
@@ -198,6 +199,7 @@ export async function run(): Promise<void> {
     );
     assert.equal(options.repositories.length, 2);
     const states = [];
+    const previews: Parameters<typeof centralSourcesKnowledgeHtml>[0] = [];
     for (const source of options.repositories) {
       const connected = await manager.connect(
         {
@@ -218,6 +220,11 @@ export async function run(): Promise<void> {
       const access = await manager.review(connected.id, "online");
       const snapshot = await access.cache.read("online");
       await access.assertConnection();
+      previews.push({
+        snapshot,
+        label: `${source.owner}/${source.name}`,
+        referenceOnly: true,
+      });
       states.push({
         repositoryId: source.repositoryId,
         sourceName: `${source.owner}/${source.name}`,
@@ -225,6 +232,35 @@ export async function run(): Promise<void> {
         manifestHash: snapshot.manifest.manifestHash,
         referenceOnly: status.referenceOnly,
       });
+    }
+    const preview = vscode.window.createWebviewPanel(
+      "commitDefender.testSources",
+      "Downloaded review knowledge",
+      vscode.ViewColumn.Active,
+      { enableScripts: false, localResourceRoots: [] },
+    );
+    try {
+      preview.webview.html = centralSourcesKnowledgeHtml(previews);
+      assert(
+        preview.webview.html.includes("team/reviewer") &&
+          preview.webview.html.includes("team/helm"),
+      );
+      for (
+        let attempt = 0;
+        attempt < 40 &&
+        !vscode.window.tabGroups.all
+          .flatMap((g) => g.tabs)
+          .some((t) => t.label === "Downloaded review knowledge");
+        attempt++
+      )
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      assert(
+        vscode.window.tabGroups.all
+          .flatMap((g) => g.tabs)
+          .some((t) => t.label === "Downloaded review knowledge"),
+      );
+    } finally {
+      preview.dispose();
     }
     assert(
       central.requestMetadata.every(
@@ -239,6 +275,8 @@ export async function run(): Promise<void> {
       requests: central.requestMetadata,
       localUploadBytes: 0,
       modelCalls: 0,
+      multiSourcePreview:
+        "read-only real Extension Host webview created and closed; DOM content assertion only",
       source: "owned HTTPS publisher, no production credentials",
     };
   } finally {
