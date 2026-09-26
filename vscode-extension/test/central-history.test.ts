@@ -22,6 +22,7 @@ test("history uses bounded GET pages and encrypted scoped cache; revocation prev
   };
   const central = await centralFixture(f.root, undefined, false, {
     repositoryId,
+    keyExpiresAt: null,
     respond(url) {
       requests.push(url);
       return response;
@@ -47,10 +48,12 @@ test("history uses bounded GET pages and encrypted scoped cache; revocation prev
   const connected = await withManager((c) =>
     c.connect(central.config, central.secret, "commit-defender"),
   );
+  assert.equal(connected.expiresAt, null);
   const online = await withManager((c) =>
     c.readHistory(connected.id, { kind: "pulls", pullNumber: 917 }),
   );
   assert.equal(online.cached, false);
+  assert(Number.isFinite(Date.parse(online.expiresAt)), "History cache retains a finite authorization lease");
   assert.deepEqual(online.data, response);
   const calls = central.calls;
   const cached = await withManager((c) =>

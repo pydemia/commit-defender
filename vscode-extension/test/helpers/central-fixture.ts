@@ -33,6 +33,7 @@ export async function centralFixture(
   codeCriterion = false,
   history?: {
     repositoryId: string;
+    keyExpiresAt?: string | null;
     respond(url: string): unknown;
     memories?: Extract<CentralKnowledgeBundle,
       { component: "collective" }>["memories"];
@@ -226,7 +227,7 @@ export async function centralFixture(
             scopes: ["knowledge:read"],
             clientId,
             keyId,
-            expiresAt: new Date(now + 7200_000).toISOString(),
+            expiresAt: history?.keyExpiresAt === null ? null : new Date(now + 7200_000).toISOString(),
           }),
         );
         return;

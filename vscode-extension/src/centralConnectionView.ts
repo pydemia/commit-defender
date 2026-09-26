@@ -69,7 +69,7 @@ export function centralStatusHtml(value: unknown): string {
           ? "Verified against central repository identity"
           : "Manual connection; remote mapping not recorded",
     ],
-    ["API key expires", v.expiresAt],
+    ["API key expires", v.expiresAt === null ? "No expiration" : v.expiresAt],
     ["Verified cache", cache.status],
     ["Cache problem", cache.reason ?? "None"],
     [
@@ -337,7 +337,7 @@ export async function manageCentralConnection(
         entries.map((c) => ({
           label: c.serverUrl,
           description: `Repository ${c.audience.repositoryId} · User ${c.audience.userId}`,
-          detail: `Tenant ${c.audience.tenantId} · API key expires ${c.expiresAt}`,
+          detail: `Tenant ${c.audience.tenantId} · API key expires ${c.expiresAt === null ? "No expiration" : c.expiresAt}`,
           id: c.id,
         })),
         { title: "Select this worktree's central repository" },
