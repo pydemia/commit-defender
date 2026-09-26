@@ -4,7 +4,13 @@ Manual reviews use the shared GCR core over captured local source. Standalone mo
 
 ## Select an account
 
-Run **Commit Defender: Select Account Provider and Model** and choose the provider and model in User Settings. Set `commitDefender.reviewReasoningEffort` separately; changing the account does not overwrite it. Set `commitDefender.codexPath` in User Settings if the supported executable is not found on PATH. Use **Commit Defender: Sign in with Codex** to open the existing CLI login flow.
+Run **Commit Defender: Select Account Provider and Model** and choose Codex, Claude Code or Antigravity in the native VS Code picker. Claude Code and Antigravity also offer a reasoning selection before applying the provider. Cancelling keeps your current account choice. Use a CLI model alias/ID accepted by your account or select CLI default. Set `codexPath`, `claudeCodePath` or `antigravityPath` in User Settings if the corresponding executable is not found. Workspace settings cannot select another executable or model.
+
+Claude Code requires a native CLI supporting `--safe-mode`. Captured source is supplied through stdin; tools, hooks, MCP, skills and session persistence are disabled. Antigravity requires the **agent CLI** (`agy`), rather than an IDE launcher. It runs a private temporary main agent with no tools, skills, plugins or MCP servers. Both retain their CLI-owned authentication; the extension does not copy tokens. Reviews retain exact captured read IDs and use the same report validation as Codex and API reviews. Non-success, missing final output, invalid source evidence, timeout and cancellation cannot be reported as completed.
+
+Gemini CLI has been removed from account/model selection and login menus. Legacy settings are retained. Select Antigravity explicitly; any authentication migration is performed by the first-party CLI, not by this extension. Google Gemini API-key review remains available.
+
+Account support here concerns explicit captured-source review, including review with pulled central context. The independent automatic service and review conversation still have their existing Codex restrictions. No new provider is silently substituted for those paths. New adapters reuse the existing Windows Job Object / POSIX process-group handling. Native account execution on this release is verified on macOS; a permitted native executable alone does not establish Windows/Linux CLI verification.
 
 The fixed-source executor has macOS, Windows, and Linux paths and accepts Codex
 CLI `0.153.4` or `0.154.0` after executable and capability checks. Windows

@@ -84,7 +84,10 @@ Finish active work and reload when convenient.
 | Azure OpenAI | Select `aoai`, resource endpoint, deployment name, and API version | The model field is the deployment name |
 | Anthropic | Select `anthropic` and a model, then store its API key | Set review reasoning effort to an empty string |
 | Google Gemini API | Select `gemini` and a model, then store its API key | Set review reasoning effort to an empty string |
-| Claude Code / Gemini CLI / Antigravity accounts | Existing sign-in and commit-message integrations | These are not fixed-source review executors |
+| Claude Code account | Select `claudecode`, a CLI model alias or ID, and reasoning effort | Requires a native Claude CLI with `--safe-mode`; captured text only, no tools, hooks, MCP or saved sessions |
+| Antigravity account | Select `antigravity`, an `agy models` slug or CLI default, and reasoning effort | Requires the Antigravity agent CLI; private no-tools agent, structured final status required; IDE launcher is unsupported |
+
+Gemini CLI is no longer offered in account selection. Existing `geminicli` settings are preserved; choose Antigravity explicitly when migrating. Commit Defender does not migrate tokens or modify either CLI profile. The Gemini API provider remains available.
 
 No provider or model is silently substituted. A GCR connection does not select
 a server model or change your local account choice.
@@ -303,7 +306,7 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 | Cancel Analysis / Clear Findings | Stop a review or clear displayed findings |
 | Show Summary Panel / Show History Entry / Re-analyze | Inspect saved reports or start another review |
 | Select Account Provider and Model | Choose the local execution identity |
-| Sign in with Codex / Claude Code / Gemini / Antigravity | Open the corresponding CLI login flow |
+| Sign in with Codex / Claude Code / Antigravity | Open the corresponding CLI login flow |
 | Manage Model API Credential | Store, reconnect, replace, or migrate a key |
 | Local Memory and Skills | Author and activate local guidance |
 | Central Review Connection | Connect, synchronize, browse history, or select offline/standalone mode |
