@@ -1,14 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, rm } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { windowsNativeArtifact } from './windows-native-artifact.mjs';
 
-const directory = path.dirname(fileURLToPath(import.meta.resolve('@gcr/client-core')));
-const manifestBytes = await readFile(path.join(directory, 'windows-native.json'));
-const manifest = JSON.parse(manifestBytes);
-const executable = await readFile(path.join(directory, 'windows-native.exe'));
-const source = await readFile(path.join(directory, '../native/windows/Native.cs'));
+const { executable, manifestBytes, manifest, source } = await windowsNativeArtifact();
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 async function put(file, bytes) {
   try { if ((await readFile(file)).equals(bytes)) return; }

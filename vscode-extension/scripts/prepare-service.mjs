@@ -3,15 +3,16 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
-const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.39");
+import { windowsNativeArtifact } from "./windows-native-artifact.mjs";
+const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.40");
 const manifest = JSON.parse(
   await readFile(path.join(directory, "manifest.json"), "utf8"),
 );
 const entry = manifest.packages.find((p) => p.name === "@gcr/cli");
-assert.equal(entry.version, "0.1.0-alpha.39");
+assert.equal(entry.version, "0.1.0-alpha.40");
 assert.equal(
   entry.sha256,
-  "560421894593080e854ff981c5342ec789c71ba95c57301c80308e31b9bb1c87",
+  "294932a98612ab0a41f4b01e63edf106234b4923d5356c365e4361abe3cf52a0",
 );
 const file = path.join(directory, entry.file);
 assert.equal(
@@ -26,17 +27,11 @@ const bytes = execFileSync("tar", ["-xOzf", file, "package/dist/main.js"], {
 const output = path.resolve("out/gcr-service");
 await mkdir(output, { recursive: true });
 await writeFile(path.join(output, "main.mjs"), bytes);
-const extract = (name) => execFileSync(
-  "tar", ["-xOzf", file, "package/dist/" + name],
-  { maxBuffer: 4 * 1024 * 1024 },
-);
-const nativeBytes = extract("windows-native.exe");
-const nativeManifestBytes = extract("windows-native.json");
-const native = JSON.parse(nativeManifestBytes);
+const { executable: nativeBytes, manifestBytes: nativeManifestBytes, manifest: native, source } = await windowsNativeArtifact();
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 assert.equal(native.version, "1.0.3");
 assert.equal(native.sha256, hash(nativeBytes));
-assert.equal(native.sourceSha256, hash(extract("windows-native.cs")));
+assert.equal(native.sourceSha256, hash(source));
 await writeFile(path.join(output, "windows-native.exe"), nativeBytes);
 await writeFile(path.join(output, "windows-native.json"), nativeManifestBytes);
 await writeFile(
