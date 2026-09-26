@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceSha": "fcb100d6ea4c4a560fcf2a8cde25d7b344824cd1",
+  "cliVersion": "0.1.0-alpha.43",
+  "clientVersion": "0.1.0-alpha.54",
+  "packages": [
+    {
+      "name": "@gcr/client-contract",
+      "version": "0.1.0-alpha.51",
+      "file": "gcr-client-contract-0.1.0-alpha.51.tgz",
+      "sha256": "2f89f2166ac723e11844898b7c3977f0604fa7d2d49eccfb509e32a04182274c"
+    },
+    {
+      "name": "@gcr/client-core",
+      "version": "0.1.0-alpha.53",
+      "file": "gcr-client-core-0.1.0-alpha.53.tgz",
+      "sha256": "ca236538e44eac1ebefd8fdf6b32b2fd0cbb978402c1a50ebf18b10e7885c5e4"
+    },
+    {
+      "name": "@gcr/client-executors",
+      "version": "0.1.0-alpha.54",
+      "file": "gcr-client-executors-0.1.0-alpha.54.tgz",
+      "sha256": "eeeb0ad1ed7967a04c9ad9d87201fcefa0afe9b420653449bc39a65d1e8f2a0b"
+    },
+    {
+      "name": "@gcr/cli",
+      "version": "0.1.0-alpha.43",
+      "file": "gcr-cli-0.1.0-alpha.43.tgz",
+      "sha256": "fb11914a5c4614024c6f08b7e33a349626c7532b64199c0b805cf2a777577106"
+    }
+  ]
+}

@@ -4184,7 +4184,8 @@ function selectKnowledge(input) {
   }
   candidates.sort((a, b) => Number(b.required) - Number(a.required) || compare(a.component, b.component) || compare(a.kind, b.kind) || compare(a.id, b.id));
   const selectedIds = /* @__PURE__ */ new Set();
-  for (const item of candidates) {
+  for (const candidate of candidates) {
+    const item = input.source ? { ...candidate, source: { ...input.source, originalId: candidate.id } } : candidate;
     const size = Buffer.byteLength(canonicalKnowledgeJson(item));
     if (result.bytes + size > input.byteLimit) {
       result.omissions.push({
@@ -4600,21 +4601,17 @@ async function resolveCentralContext(input) {
       branch: input.snapshot.branchName,
       now: (input.now ?? /* @__PURE__ */ new Date()).toISOString(),
       byteLimit: Math.max(0, limit - builtinBytes - requiredLocalBytes),
-      referenceOnly: input.referenceOnly
+      referenceOnly: input.referenceOnly,
+      ...input.references?.length || input.repositoryName ? {
+        source: {
+          audience: client.audience,
+          ...input.repositoryName ? { repositoryName: input.repositoryName } : {},
+          snapshotId: pinned.manifest.payload.snapshotId,
+          manifestHash: pinned.manifest.manifestHash
+        }
+      } : {}
     });
-    const originalCentralBytes = central.bytes;
-    for (const item of input.references?.length || input.repositoryName ? central.items : [])
-      item.source = {
-        audience: client.audience,
-        ...input.repositoryName ? { repositoryName: input.repositoryName } : {},
-        snapshotId: pinned.manifest.payload.snapshotId,
-        manifestHash: pinned.manifest.manifestHash,
-        originalId: item.id
-      };
-    central.bytes = central.items.reduce((total, item) => total + Buffer.byteLength(canonicalJson(item)), 0);
     let bytes = builtinBytes + central.bytes;
-    if (bytes + requiredLocalBytes > limit && central.bytes > originalCentralBytes)
-      throw Error("central-context-budget");
     const sourceHistory = [];
     for (const item of await input.loadSourceHistory?.(central) ?? []) {
       if (item.repositoryId !== client.audience.repositoryId)
@@ -4642,7 +4639,13 @@ async function resolveCentralContext(input) {
         branch: input.snapshot.branchName,
         now: (input.now ?? /* @__PURE__ */ new Date()).toISOString(),
         byteLimit: Math.max(0, limit - bytes - requiredLocalBytes),
-        referenceOnly: true
+        referenceOnly: true,
+        source: {
+          audience: identity2.audience,
+          ...reference2.repositoryName ? { repositoryName: reference2.repositoryName } : {},
+          snapshotId: source2.manifest.payload.snapshotId,
+          manifestHash: source2.manifest.manifestHash
+        }
       });
       const scopedId = (id3) => `ref-${contentHash({ audience: identity2.audience, id: id3 })}`;
       for (const item of selectedReference.items) {
@@ -6607,7 +6610,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.52",
+  version: "0.1.0-alpha.53",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7632,7 +7635,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.53",
+  version: "0.1.0-alpha.54",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

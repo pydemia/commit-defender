@@ -2784,7 +2784,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.52",
+  version: "0.1.0-alpha.53",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

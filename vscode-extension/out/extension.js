@@ -6943,7 +6943,7 @@ async function discoverCentralConnections(serverUrl, apiKey, clientId, options =
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.52",
+  version: "0.1.0-alpha.53",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -20244,6 +20244,10 @@ function standaloneErrorMessage(code3) {
       return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "context-budget-exceeded":
+      return "Required review instructions exceed the context budget. Select fewer files or ask the administrator to shorten required instructions. No model request was made.";
+    case "context-validation-failed":
+      return "Review context could not be verified or loaded. Check central synchronization and local storage. No model request was made.";
     case "central-snapshot-changed":
       return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
@@ -20292,6 +20296,8 @@ var safeCodes = /* @__PURE__ */ new Set([
   "corrupt-storage",
   "commit-unknown",
   "needs-context",
+  "context-budget-exceeded",
+  "context-validation-failed",
   "central-snapshot-changed",
   "policy-unavailable",
   "no-source",

@@ -4,15 +4,15 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { windowsNativeArtifact } from "./windows-native-artifact.mjs";
-const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.42");
+const directory = path.resolve("vendor/gcr-cli/0.1.0-alpha.43");
 const manifest = JSON.parse(
   await readFile(path.join(directory, "manifest.json"), "utf8"),
 );
 const entry = manifest.packages.find((p) => p.name === "@gcr/cli");
-assert.equal(entry.version, "0.1.0-alpha.42");
+assert.equal(entry.version, "0.1.0-alpha.43");
 assert.equal(
   entry.sha256,
-  "6d535b497bded267da5cd135bf45ea7fdecb25e61e5f9c4072695bde94124f95",
+  "fb11914a5c4614024c6f08b7e33a349626c7532b64199c0b805cf2a777577106",
 );
 const file = path.join(directory, entry.file);
 assert.equal(

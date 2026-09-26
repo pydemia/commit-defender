@@ -4986,7 +4986,8 @@ function selectKnowledge(input2) {
   }
   candidates.sort((a, b) => Number(b.required) - Number(a.required) || compare(a.component, b.component) || compare(a.kind, b.kind) || compare(a.id, b.id));
   const selectedIds = /* @__PURE__ */ new Set();
-  for (const item of candidates) {
+  for (const candidate of candidates) {
+    const item = input2.source ? { ...candidate, source: { ...input2.source, originalId: candidate.id } } : candidate;
     const size = Buffer.byteLength(canonicalKnowledgeJson(item));
     if (result.bytes + size > input2.byteLimit) {
       result.omissions.push({
@@ -5402,21 +5403,17 @@ async function resolveCentralContext(input2) {
       branch: input2.snapshot.branchName,
       now: (input2.now ?? /* @__PURE__ */ new Date()).toISOString(),
       byteLimit: Math.max(0, limit2 - builtinBytes - requiredLocalBytes),
-      referenceOnly: input2.referenceOnly
+      referenceOnly: input2.referenceOnly,
+      ...input2.references?.length || input2.repositoryName ? {
+        source: {
+          audience: client.audience,
+          ...input2.repositoryName ? { repositoryName: input2.repositoryName } : {},
+          snapshotId: pinned.manifest.payload.snapshotId,
+          manifestHash: pinned.manifest.manifestHash
+        }
+      } : {}
     });
-    const originalCentralBytes = central.bytes;
-    for (const item of input2.references?.length || input2.repositoryName ? central.items : [])
-      item.source = {
-        audience: client.audience,
-        ...input2.repositoryName ? { repositoryName: input2.repositoryName } : {},
-        snapshotId: pinned.manifest.payload.snapshotId,
-        manifestHash: pinned.manifest.manifestHash,
-        originalId: item.id
-      };
-    central.bytes = central.items.reduce((total, item) => total + Buffer.byteLength(canonicalJson(item)), 0);
     let bytes = builtinBytes + central.bytes;
-    if (bytes + requiredLocalBytes > limit2 && central.bytes > originalCentralBytes)
-      throw Error("central-context-budget");
     const sourceHistory = [];
     for (const item of await input2.loadSourceHistory?.(central) ?? []) {
       if (item.repositoryId !== client.audience.repositoryId)
@@ -5444,7 +5441,13 @@ async function resolveCentralContext(input2) {
         branch: input2.snapshot.branchName,
         now: (input2.now ?? /* @__PURE__ */ new Date()).toISOString(),
         byteLimit: Math.max(0, limit2 - bytes - requiredLocalBytes),
-        referenceOnly: true
+        referenceOnly: true,
+        source: {
+          audience: identity2.audience,
+          ...reference2.repositoryName ? { repositoryName: reference2.repositoryName } : {},
+          snapshotId: source2.manifest.payload.snapshotId,
+          manifestHash: source2.manifest.manifestHash
+        }
       });
       const scopedId = (id3) => `ref-${contentHash({ audience: identity2.audience, id: id3 })}`;
       for (const item of selectedReference.items) {
@@ -8363,7 +8366,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.52",
+  version: "0.1.0-alpha.53",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -8442,6 +8445,10 @@ function standaloneErrorMessage(code) {
       return "Local publication could not be confirmed. Reopen saved history before retrying.";
     case "needs-context":
       return "Required review context is unavailable. No model request was made.";
+    case "context-budget-exceeded":
+      return "Required review instructions exceed the context budget. Select fewer files or ask the administrator to shorten required instructions. No model request was made.";
+    case "context-validation-failed":
+      return "Review context could not be verified or loaded. Check central synchronization and local storage. No model request was made.";
     case "central-snapshot-changed":
       return "Central policy changed after synchronization. Refresh the feedback status and synchronize again before reviewing.";
     case "policy-unavailable":
@@ -8490,6 +8497,8 @@ var safeCodes = /* @__PURE__ */ new Set([
   "corrupt-storage",
   "commit-unknown",
   "needs-context",
+  "context-budget-exceeded",
+  "context-validation-failed",
   "central-snapshot-changed",
   "policy-unavailable",
   "no-source",
@@ -9586,7 +9595,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.53",
+  version: "0.1.0-alpha.54",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -11094,8 +11103,14 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       )
     }) : await resolveLocalContext({ ...query, client });
     checkAbort(signal);
+    if (context.status === "unavailable")
+      throw new StandaloneReviewError("context-validation-failed");
     if (context.status !== "ready")
-      throw new StandaloneReviewError("needs-context");
+      throw new StandaloneReviewError(
+        context.context.identity.required.some(
+          (item) => !item.available && item.reason.includes("context budget")
+        ) ? "context-budget-exceeded" : "needs-context"
+      );
     if (settings.requiredCentralSnapshot && context.context.identity.centralSnapshot?.id !== settings.requiredCentralSnapshot)
       throw new StandaloneReviewError("central-snapshot-changed");
     let executor;

@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.13.4",
+    "version": "2.13.5",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -935,9 +935,9 @@
         "test:central-sources": "esbuild test/central-sources.test.ts --bundle --platform=node --target=node18 --format=cjs --alias:vscode=./test/helpers/vscode-central.ts --outfile=out-test/central-sources.test.cjs && node --test out-test/central-sources.test.cjs"
     },
     "dependencies": {
-        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.53/gcr-client-contract-0.1.0-alpha.51.tgz",
-        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.53/gcr-client-core-0.1.0-alpha.52.tgz",
-        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.53/gcr-client-executors-0.1.0-alpha.53.tgz",
+        "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.54/gcr-client-contract-0.1.0-alpha.51.tgz",
+        "@gcr/client-core": "file:vendor/gcr/0.1.0-alpha.54/gcr-client-core-0.1.0-alpha.53.tgz",
+        "@gcr/client-executors": "file:vendor/gcr/0.1.0-alpha.54/gcr-client-executors-0.1.0-alpha.54.tgz",
         "ignore": "^5.3.1",
         "mdast-util-from-markdown": "2.0.3",
         "mdast-util-gfm-autolink-literal": "2.0.1",
