@@ -1,0 +1,89 @@
+{
+  "version": "2.13.1",
+  "vsixSha256": "6d9a953087c5d647028a2c1fdcb9ebb30edfb18828ff9053fcf8a799a3c8eb65",
+  "bytes": 730461,
+  "files": {
+    "out/extension.js": "6982dba5ffd87ba7227134944fcebf4b45eae0cbfbc3161c4b67b017ca5dbc1c",
+    "out/standalone-review-worker.js": "21df91b29a3a6c3ea432719735d753bc74016deb28308de71b49316924336488",
+    "out/gcr-service/main.mjs": "2cb11d13a41c914ad28452b1b55c3b970e71bfadd8784787c5791ce0306f154e",
+    "out/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+    "out/gcr-service/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89"
+  },
+  "installedDirectory": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.13.1",
+  "settingsPreserved": true,
+  "settingsSha256": "bb7228ac7f2b74d1fecb289608df1659d3201facd407a1bf7c32d0472c8aa024",
+  "userExtensionHostReloaded": false,
+  "userExtensionHostAdoption": "not verified",
+  "sourceSha": "c6fc899d03ead0491a051e1c879e8a98cd2f7490",
+  "nativeHelper": {
+    "version": "1.0.3",
+    "reusedFrozenBytes": true,
+    "sourceSha256": "51a74074de427637046c943879b70e9f950f2b61962ef73a273067ee17ce589e"
+  },
+  "marketplacePublished": false,
+  "compiledBundleCommit": "976a0bea019822eb2361c6e2bc8118b70062cbb3",
+  "testsPassed": 24,
+  "testTypesPassed": true,
+  "opensslForFixture": "process-local OpenSSL 3 PATH; system LibreSSL did not support pipe key output",
+  "gcrSourceSha": "21c2aca0f28d3f750a3d2668a675636c0b9d42e0",
+  "clientArtifacts": {
+    "schemaVersion": 1,
+    "version": "0.1.0-alpha.51",
+    "sourceSha": "21c2aca0f28d3f750a3d2668a675636c0b9d42e0",
+    "buildPlatform": "darwin",
+    "buildArchitecture": "arm64",
+    "packages": [
+      {
+        "name": "@gcr/client-contract",
+        "version": "0.1.0-alpha.49",
+        "file": "gcr-client-contract-0.1.0-alpha.49.tgz",
+        "sha256": "59dacfd17be0330246a51d880c207596e06757d93878e386b194609e4b3d6810"
+      },
+      {
+        "name": "@gcr/client-core",
+        "version": "0.1.0-alpha.50",
+        "file": "gcr-client-core-0.1.0-alpha.50.tgz",
+        "sha256": "24906fc5b4b73e20742c15d271545cb6f51567d209a872af0d8ed16d065e5121"
+      },
+      {
+        "name": "@gcr/client-executors",
+        "version": "0.1.0-alpha.51",
+        "file": "gcr-client-executors-0.1.0-alpha.51.tgz",
+        "sha256": "648b090d841e029ab18dc7e50182fbf758201ec5484108c17eea8a0469699999"
+      }
+    ]
+  },
+  "cliArtifact": {
+    "schemaVersion": 1,
+    "sourceSha": "21c2aca0f28d3f750a3d2668a675636c0b9d42e0",
+    "cliVersion": "0.1.0-alpha.40",
+    "clientVersion": "0.1.0-alpha.51",
+    "packages": [
+      {
+        "name": "@gcr/client-contract",
+        "version": "0.1.0-alpha.49",
+        "file": "gcr-client-contract-0.1.0-alpha.49.tgz",
+        "sha256": "59dacfd17be0330246a51d880c207596e06757d93878e386b194609e4b3d6810"
+      },
+      {
+        "name": "@gcr/client-core",
+        "version": "0.1.0-alpha.50",
+        "file": "gcr-client-core-0.1.0-alpha.50.tgz",
+        "sha256": "24906fc5b4b73e20742c15d271545cb6f51567d209a872af0d8ed16d065e5121"
+      },
+      {
+        "name": "@gcr/client-executors",
+        "version": "0.1.0-alpha.51",
+        "file": "gcr-client-executors-0.1.0-alpha.51.tgz",
+        "sha256": "648b090d841e029ab18dc7e50182fbf758201ec5484108c17eea8a0469699999"
+      },
+      {
+        "name": "@gcr/cli",
+        "version": "0.1.0-alpha.40",
+        "file": "gcr-cli-0.1.0-alpha.40.tgz",
+        "sha256": "294932a98612ab0a41f4b01e63edf106234b4923d5356c365e4361abe3cf52a0"
+      }
+    ]
+  },
+  "modelCalls": 0
+}
