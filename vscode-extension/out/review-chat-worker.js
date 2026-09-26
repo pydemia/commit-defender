@@ -904,7 +904,7 @@ var centralCredentialIdentity = object({
   scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
-  expiresAt: timestamp
+  expiresAt: union(timestamp, literal(null))
 });
 var centralConnectionRecord = object({
   formatVersion: literal(1),
@@ -922,7 +922,7 @@ var centralConnectionRecord = object({
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
-  expiresAt: timestamp
+  expiresAt: union(timestamp, literal(null))
 });
 var centralConnectionReference = sha256;
 
@@ -1388,7 +1388,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.48",
+  version: "0.1.0-alpha.49",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -5480,7 +5480,7 @@ var CentralConnections = class _CentralConnections {
   async assert(state, pending = false) {
     if (state.value.repositoryBinding)
       assertRepositoryBinding(state.value.repositoryBinding, this.options.repositoryRoot);
-    if (this.invalid.has(state.value.credentialReference) || Date.parse(state.value.expiresAt) <= Date.now())
+    if (this.invalid.has(state.value.credentialReference) || state.value.expiresAt !== null && Date.parse(state.value.expiresAt) <= Date.now())
       throw denied();
     const current = await this.state(state.value.id);
     if (current.revision !== state.revision || current.value.status !== (pending ? "pending" : "connected"))
@@ -5542,7 +5542,7 @@ var CentralConnections = class _CentralConnections {
       trustedKeys: new Map(config.trustedKeys.map((k) => [k.id, k.pem]))
     });
     const identity = await this.timed(signal, (s) => new KnowledgeHttpTransport(bootstrap, { bindingId: bootstrap.id, readToken: async () => apiKey }, config.ca ?? void 0).identity(s));
-    if (identity.serverId !== config.serverId || identity.tenantId !== config.tenantId || !identity.repositoryIds.includes(config.repositoryId) || identity.clientId !== clientId || Date.parse(identity.expiresAt) <= Date.now())
+    if (identity.serverId !== config.serverId || identity.tenantId !== config.tenantId || !identity.repositoryIds.includes(config.repositoryId) || identity.clientId !== clientId || identity.expiresAt !== null && Date.parse(identity.expiresAt) <= Date.now())
       throw denied();
     const binding = new TrustedCentralBinding({
       serverUrl: config.serverUrl,
@@ -6435,7 +6435,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.49",
+  version: "0.1.0-alpha.50",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7460,7 +7460,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.50",
+  version: "0.1.0-alpha.51",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

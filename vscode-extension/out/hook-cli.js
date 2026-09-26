@@ -1277,7 +1277,7 @@ var centralCredentialIdentity = object({
   scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3, 1),
   clientId: choice(["gcr-cli", "commit-defender"]),
   keyId: id,
-  expiresAt: timestamp
+  expiresAt: union(timestamp, literal(null))
 });
 var centralConnectionRecord = object({
   formatVersion: literal(1),
@@ -1295,7 +1295,7 @@ var centralConnectionRecord = object({
   credentialReference: id,
   keyId: id,
   clientId: choice(["gcr-cli", "commit-defender"]),
-  expiresAt: timestamp
+  expiresAt: union(timestamp, literal(null))
 });
 
 // node_modules/@gcr/client-contract/dist/review-request.js
@@ -1727,7 +1727,7 @@ var reviewHistoryGuidancePage = object({
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.48",
+  version: "0.1.0-alpha.49",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -2740,7 +2740,7 @@ var maximumFrame = 9 * 1024 * 1024;
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.49",
+  version: "0.1.0-alpha.50",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
