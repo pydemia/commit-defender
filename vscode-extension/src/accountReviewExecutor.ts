@@ -21,7 +21,11 @@ export async function prepareAccountReviewExecutor(settings: StandaloneReviewSet
   const claude = settings.provider === 'claudecode';
   const efforts = claude ? ['', 'low', 'medium', 'high', 'xhigh', 'max'] : ['', 'low', 'medium', 'high'];
   if (!efforts.includes(settings.reasoningEffort)) throw new StandaloneReviewError('unsupported-reasoning');
+  // A missing PATH command must never resolve to a same-named repository file.
+  if (!path.isAbsolute(settings.executablePath)) throw new StandaloneReviewError('executor-unavailable');
   const command = await realpath(settings.executablePath);
+  if (process.platform === 'win32' && !command.toLowerCase().endsWith('.exe'))
+    throw new StandaloneReviewError('executor-unavailable');
   const binaryHash = await fingerprint(command);
   const env: NodeJS.ProcessEnv = { ...process.env, AGY_CLI_DISABLE_AUTO_UPDATE: 'true', DISABLE_AUTOUPDATER: '1' };
   for (const key of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL',

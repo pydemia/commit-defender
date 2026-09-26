@@ -72,3 +72,9 @@ process.stdin.on('end', () => {
     });
   }
 }
+
+test('a missing account command cannot fall through to a relative workspace executable', async () => {
+  await assert.rejects(prepareAccountReviewExecutor({mode:'standalone',profileId:'test',provider:'claudecode',model:'sonnet',
+    reasoningEffort:'',executablePath:'claude',workspaceTrusted:true,durationMs:10000,excludePatterns:[]}),
+    (error: any) => error.code === 'executor-unavailable');
+});
