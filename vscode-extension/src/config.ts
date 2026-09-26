@@ -66,7 +66,11 @@ export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string
       maxTokens: user<number>('maxTokens') ?? 4096,
       modelCredentialRef: user<ModelCredentialReference>('modelCredentialRef'),
     } : {}),
-    executablePath: resolveCodexPath(user<string>('codexPath') ?? 'codex'),
+    executablePath: provider === 'claudecode'
+      ? resolveExternalCliPath(user<string>('claudeCodePath') ?? 'claude', 'claude')
+      : provider === 'antigravity'
+        ? resolveExternalCliPath(user<string>('antigravityPath') ?? 'agy', 'agy')
+        : resolveCodexPath(user<string>('codexPath') ?? 'codex'),
     workspaceTrusted: vscode.workspace.isTrusted,
     durationMs: seconds && Number.isFinite(seconds) && seconds > 0
       ? Math.min(600_000, Math.floor(seconds * 1000)) : (fileCount === 1 ? 120_000 : 360_000),
@@ -130,7 +134,7 @@ function resolveCodexPath(configured: string): string {
 function resolveExternalCliPath(configured: string, name: string): string {
   if (configured.trim() !== name) { return configured; }
   const executableNames = process.platform === 'win32'
-    ? [`${name}.cmd`, `${name}.exe`, name]
+    ? [`${name}.exe`, `${name}.cmd`, name]
     : [name];
   const candidates: string[] = [];
 
@@ -142,6 +146,9 @@ function resolveExternalCliPath(configured: string, name: string): string {
   if (userHome) {
     for (const dir of ['.local/bin', 'bin', '.npm-global/bin']) {
       for (const executable of executableNames) { candidates.push(path.join(userHome, dir, executable)); }
+    }
+    if (process.platform === 'win32' && name === 'agy' && process.env.LOCALAPPDATA) {
+      candidates.push(path.join(process.env.LOCALAPPDATA, 'agy', 'bin', 'agy.exe'));
     }
     const nvmVersions = path.join(userHome, '.nvm', 'versions', 'node');
     try {

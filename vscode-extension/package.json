@@ -129,10 +129,6 @@
                 "title": "Commit Defender: Sign in with Claude Code"
             },
             {
-                "command": "commitDefender.signInGeminiCli",
-                "title": "Commit Defender: Sign in with Gemini"
-            },
-            {
                 "command": "commitDefender.signInAntigravity",
                 "title": "Commit Defender: Sign in with Antigravity"
             },
@@ -193,7 +189,6 @@
                         "gemini",
                         "codex",
                         "claudecode",
-                        "geminicli",
                         "antigravity"
                     ],
                     "enumItemLabels": [
@@ -203,7 +198,6 @@
                         "Google Gemini (API key)",
                         "Codex CLI (account)",
                         "Claude Code CLI (account)",
-                        "Gemini CLI (Google account)",
                         "Antigravity CLI (account)"
                     ],
                     "enumDescriptions": [
@@ -213,11 +207,10 @@
                         "gemini: Google Gemini models (gemini-2.5-pro, gemini-2.5-flash, etc.).",
                         "codex: Use the locally installed Codex CLI and its saved ChatGPT/Codex login. No API key required.",
                         "claudecode: Use the locally installed Claude Code CLI and its saved subscription login. No API key required.",
-                        "geminicli: Use the locally installed Gemini CLI and its saved Google-account login. No API key required.",
                         "antigravity: Use the locally installed Antigravity agy CLI and its saved account login. No API key required."
                     ],
                     "default": "aoai",
-                    "description": "User-selected model provider, independent of central knowledge. Fixed-source reviews support Codex account and Azure OpenAI, OpenAI, Anthropic and Gemini APIs. See platform coverage for Linux development support. Other CLI adapters retain login and commit-message support. Reviews are advisory."
+                    "description": "User-selected model provider, independent of central knowledge. Fixed-source reviews support Codex, Claude Code and Antigravity accounts and Azure OpenAI, OpenAI, Anthropic and Gemini APIs. Account CLIs must be installed and signed in locally. Reviews are advisory."
                 },
                 "commitDefender.model": {
                     "type": "string",
@@ -260,13 +253,14 @@
                     "type": "string",
                     "scope": "window",
                     "default": "gemini",
-                    "description": "Gemini CLI executable name or absolute path. Used only by the geminicli account provider. Set an absolute path when git hooks or GUI git clients have a different PATH."
+                    "description": "Gemini CLI executable name or absolute path. Used only by the geminicli account provider. Set an absolute path when git hooks or GUI git clients have a different PATH.",
+                    "deprecationMessage": "Legacy Gemini CLI integration. Select Antigravity in the account provider picker for fixed-source reviews. Existing settings are preserved."
                 },
                 "commitDefender.antigravityPath": {
                     "type": "string",
                     "scope": "window",
                     "default": "agy",
-                    "description": "Antigravity agy CLI executable name or absolute path. Used only by the antigravity account provider."
+                    "description": "Antigravity agent CLI (agy) executable name or absolute path. The Antigravity IDE launcher cannot run reviews. Requires headless structured output and no-tools agents."
                 },
                 "commitDefender.maxTokens": {
                     "type": "number",
@@ -598,9 +592,6 @@
                     "command": "commitDefender.signInClaudeCode"
                 },
                 {
-                    "command": "commitDefender.signInGeminiCli"
-                },
-                {
                     "command": "commitDefender.signInAntigravity"
                 },
                 {
@@ -896,7 +887,7 @@
         "bundle-extension": "esbuild src/extension.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/extension.js",
         "bundle-hook": "esbuild src/hook/cli.ts --bundle --platform=node --target=node18 --external:vscode --outfile=out/hook-cli.js",
         "watch": "tsc -watch -p ./",
-        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history",
+        "test": "npm run test:providers && npm run test:source-policy && npm run test:git-snapshot && npm run test:review-outcome && npm run test:review-security && npm run test:review-backend && npm run test:client-contract && npm run test:standalone-review && npm run test:standalone-config && npm run test:model-credentials && npm run test:central-review && npm run test:central-view && npm run test:central-sync && npm run test:automatic-review && npm run test:managed-hooks && npm run test:review-chat && npm run test:background-recovery && npm run test:local-activity && npm run test:local-provider-executor && npm run test:central-history && npm run test:account-review-executor",
         "test:providers": "esbuild test/providers.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/providers.test.cjs && node --test out-test/providers.test.cjs",
         "package": "vsce package",
         "package:platforms": "node scripts/package-platforms.mjs",
@@ -939,7 +930,8 @@
         "prepare-native": "node scripts/prepare-native.mjs",
         "bundle:w01-native-host": "esbuild test/w01-diagnostic-worker.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/w01-diagnostic-worker.cjs && esbuild test/w01-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w01-native-host.cjs && npm run prepare-native",
         "bundle:w02-native-host": "esbuild test/w02-native-host.ts --bundle --platform=node --target=node18 --format=cjs --external:vscode --outfile=out-test/w02-native-host.cjs && npm run prepare-native",
-        "test:connection-guide:host": "node test/run-connection-guide.mjs"
+        "test:connection-guide:host": "node test/run-connection-guide.mjs",
+        "test:account-review-executor": "esbuild test/account-review-executor.test.ts --bundle --platform=node --target=node18 --format=cjs --outfile=out-test/account-review-executor.test.cjs && node --test out-test/account-review-executor.test.cjs"
     },
     "dependencies": {
         "@gcr/client-contract": "file:vendor/gcr/0.1.0-alpha.48/gcr-client-contract-0.1.0-alpha.48.tgz",

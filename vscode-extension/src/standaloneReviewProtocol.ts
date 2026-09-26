@@ -86,7 +86,7 @@ export function standaloneErrorMessage(code: string): string {
     case "account-not-configured":
       return "Select an account provider and model in user settings before starting a standalone review. Repository account settings are not used for local execution.";
     case "executor-unavailable":
-      return "The selected local executor is unavailable. Check the Codex executable, model and reasoning effort.";
+      return "The selected local executor is unavailable. Check the selected CLI executable, supported version, model and reasoning effort. Claude Code needs safe mode; Antigravity needs the agent CLI with no-tools agents.";
     case "credential-unavailable":
       return "The OS credential store is unavailable. Encrypted local history and knowledge could not be opened.";
     case "insecure-storage":

@@ -87,3 +87,15 @@ test("new installations do not enable stage review; explicit user opt-in and wor
   workspace.isTrusted = true;
   assert.equal(getConfig().runOnStage, false);
 });
+
+for (const [provider, setting, binary] of [['claudecode', 'claudeCodePath', 'claude'], ['antigravity', 'antigravityPath', 'agy']]) {
+  test(`${provider} uses its user-selected CLI and ignores repository executable/model overrides`, () => {
+    values.global = { aiProvider: provider, model: 'user-model', reviewReasoningEffort: 'high', [setting]: `/user/${binary}` };
+    values.repository = { aiProvider: 'codex', model: 'repo-model', [setting]: '/repo/execute-me', codexPath: '/wrong/codex' };
+    const result = getStandaloneReviewSettings(1);
+    assert.equal(result.provider, provider);
+    assert.equal(result.executablePath, `/user/${binary}`);
+    assert.equal(result.model, 'user-model');
+    assert.equal(result.reasoningEffort, 'high');
+  });
+}

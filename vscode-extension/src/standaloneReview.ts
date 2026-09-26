@@ -107,10 +107,11 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("untrusted-workspace");
     if (settings.provider === "unconfigured")
       throw new StandaloneReviewError("account-not-configured");
-    if (!["codex", "aoai", "openai", "anthropic", "gemini"].includes(settings.provider))
+    if (!["codex", "claudecode", "antigravity", "aoai", "openai", "anthropic", "gemini"].includes(settings.provider))
       throw new StandaloneReviewError("unsupported-provider");
     if (
-      !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(settings.model) ||
+      (!(settings.model === "" && ["claudecode", "antigravity"].includes(settings.provider)) &&
+      !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(settings.model)) ||
       (settings.reasoningEffort !== "" && !["none", "minimal", "low", "medium", "high", "xhigh"].includes(settings.reasoningEffort))
     )
       throw new StandaloneReviewError("executor-unavailable");

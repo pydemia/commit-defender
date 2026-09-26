@@ -89,13 +89,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         { label: '$(symbol-variable) sonnet', description: 'Claude Code alias', model: 'sonnet' },
         { label: '$(symbol-variable) opus', description: 'Claude Code alias', model: 'opus' },
       );
-    } else if (provider === 'geminicli') {
-      choices.push(
-        { label: '$(symbol-variable) auto', description: 'Gemini CLI alias', model: 'auto' },
-        { label: '$(symbol-variable) pro', description: 'Gemini CLI alias', model: 'pro' },
-        { label: '$(symbol-variable) flash', description: 'Gemini CLI alias', model: 'flash' },
-        { label: '$(symbol-variable) flash-lite', description: 'Gemini CLI alias', model: 'flash-lite' },
-      );
     }
     if (current.aiProvider === provider && current.model.trim()
         && !choices.some(choice => choice.model === current.model.trim())) {
@@ -147,59 +140,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   async function promptModelAtProviderSetup(provider: AccountProvider): Promise<boolean> {
-    if (provider === 'codex') {
-      const model = await chooseAccountModel(provider, false);
-      if (model === undefined) return false;
-      await applyAccountProvider(provider, model);
-      return true;
+    const model = await chooseAccountModel(provider, provider !== 'codex');
+    if (model === undefined) return false;
+    if (provider !== 'codex') {
+      const efforts = provider === 'claudecode'
+        ? ['', 'low', 'medium', 'high', 'xhigh'] : ['', 'low', 'medium', 'high'];
+      const current = getStandaloneReviewSettings(1).reasoningEffort;
+      const effort = await vscode.window.showQuickPick(efforts.map(value => ({
+        label: value || 'CLI default reasoning',
+        description: value === current ? 'Current selection' : undefined,
+        effort: value,
+      })), { title: `Commit Defender: Select ${accountProviderName(provider)} reasoning effort`, ignoreFocusOut: true });
+      if (!effort) return false;
+      await vscode.workspace.getConfiguration('commitDefender').update('reviewReasoningEffort', effort.effort, vscode.ConfigurationTarget.Global);
     }
-    const name = accountProviderName(provider);
-    const action = await vscode.window.showInformationMessage(
-      `Commit Defender: Use the ${name} CLI default model in user settings? Fixed-source standalone review is not yet supported by this provider.`,
-      'Use CLI Default',
-      'Choose Model…',
-    );
-    if (action === 'Use CLI Default') {
-      await applyAccountProvider(provider, '');
-      return true;
-    }
-    if (action === 'Choose Model…') {
-      const model = await chooseAccountModel(provider, false);
-      if (model !== undefined) {
-        await applyAccountProvider(provider, model);
-        return true;
-      }
-    }
-    return false;
+    await applyAccountProvider(provider, model);
+    return true;
   }
 
   async function promptProviderChangeAfterSignIn(provider: AccountProvider): Promise<void> {
-    if (provider === 'codex') {
-      await promptModelAtProviderSetup(provider);
-      return;
-    }
-    const name = accountProviderName(provider);
     const action = await vscode.window.showInformationMessage(
-      `Commit Defender: ${name} sign-in opened in the terminal. Use ${name} in user settings and change its model?`,
-      'Use CLI Default',
-      'Choose Model…',
-      'Keep Current Provider',
+      `Commit Defender: ${accountProviderName(provider)} sign-in opened in the terminal. Select this provider and its review model?`,
+      'Select Provider and Model…', 'Keep Current Provider',
     );
-    if (action === 'Use CLI Default') {
-      await applyAccountProvider(provider, '');
-    } else if (action === 'Choose Model…') {
-      const model = await chooseAccountModel(provider, false);
-      if (model !== undefined) { await applyAccountProvider(provider, model); }
-    }
+    if (action === 'Select Provider and Model…') await promptModelAtProviderSetup(provider);
   }
 
   async function selectAccountProviderAndModel(): Promise<void> {
     type ProviderChoice = vscode.QuickPickItem & { provider: AccountProvider };
     const choices: ProviderChoice[] = [
       { label: 'Codex', description: 'Local review with your selected model and reasoning effort', provider: 'codex' },
-      { label: 'Claude Code', description: 'Account login and commit messages; standalone review unavailable', provider: 'claudecode' },
-      { label: 'Gemini CLI', description: 'Account login and commit messages; standalone review unavailable', provider: 'geminicli' },
-      { label: 'Antigravity', description: 'Account login and commit messages; standalone review unavailable', provider: 'antigravity' },
+      { label: 'Claude Code', description: 'Local review with your subscription model and reasoning effort', detail: 'Requires Claude Code with safe mode. Reviews captured source with tools disabled.', provider: 'claudecode' },
+      { label: 'Antigravity', description: 'Local review with your Google account model and reasoning effort', detail: 'Requires the Antigravity agent CLI (agy), not the IDE launcher. Reviews captured source with tools disabled.', provider: 'antigravity' },
     ];
     const picked = await vscode.window.showQuickPick(choices, {
       title: 'Commit Defender: Select account provider',

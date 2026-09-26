@@ -1,5 +1,6 @@
 import { contentHash, type LocalReviewExecutor } from "@gcr/client-core";
 import { prepareCodexAccountExecutor } from "@gcr/client-executors";
+import { prepareAccountReviewExecutor } from "./accountReviewExecutor.js";
 import { callProvider, type ProviderRequest } from "./ai/providers.js";
 import {
   modelCredentialBinding,
@@ -24,6 +25,8 @@ export async function prepareLocalProviderExecutor(
       model: settings.model,
       reasoningEffort: settings.reasoningEffort,
     });
+  if (["claudecode", "antigravity"].includes(settings.provider))
+    return prepareAccountReviewExecutor(settings);
   if (!usesModelApiKey(settings.provider))
     throw new StandaloneReviewError("unsupported-provider");
   if (
