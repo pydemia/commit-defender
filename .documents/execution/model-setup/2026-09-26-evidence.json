@@ -1,0 +1,661 @@
+{
+  "sourceSha": "51cfc8365cd3eb6b5dd0c8508a46b702485727b8",
+  "packagingSha": "09c6179501978384b48c93acdaf949fde61243ad",
+  "gcrSourceShaUnchanged": "072e5636872a5434a96e927255a8752fcf7b0d19",
+  "regression": {
+    "suites": 24,
+    "passed": 251,
+    "failed": 0,
+    "skipped": 0
+  },
+  "accountCatalog": {
+    "checks": [
+      {
+        "provider": "codex",
+        "status": "passed",
+        "durationMs": 4965,
+        "models": [
+          {
+            "id": "gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          },
+          {
+            "id": "gpt-5.6-sol",
+            "label": "GPT-5.6-Sol",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          },
+          {
+            "id": "gpt-5.6-terra",
+            "label": "GPT-5.6-Terra",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          },
+          {
+            "id": "gpt-5.6-luna",
+            "label": "GPT-5.6-Luna",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          },
+          {
+            "id": "gpt-5.5",
+            "label": "GPT-5.5",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh"
+            ]
+          }
+        ]
+      },
+      {
+        "provider": "claudecode",
+        "status": "passed",
+        "durationMs": 10069,
+        "models": [
+          {
+            "id": "default",
+            "label": "Default (recommended)",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          {
+            "id": "sonnet",
+            "label": "Sonnet",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          {
+            "id": "claude-fable-5-1[1m]",
+            "label": "Fable",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          {
+            "id": "opus[1m]",
+            "label": "Opus (1M context)",
+            "efforts": [
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          {
+            "id": "haiku",
+            "label": "Haiku",
+            "efforts": []
+          }
+        ]
+      },
+      {
+        "provider": "antigravity",
+        "status": "passed",
+        "durationMs": 4957,
+        "models": [
+          {
+            "id": "gemini-3.8-flash-high",
+            "label": "Gemini 3.8 Flash",
+            "efforts": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "variants": {
+              "high": "gemini-3.8-flash-high",
+              "medium": "gemini-3.8-flash-medium",
+              "low": "gemini-3.8-flash-low"
+            }
+          },
+          {
+            "id": "gemini-3.7-flash-high",
+            "label": "Gemini 3.7 Flash",
+            "efforts": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "variants": {
+              "high": "gemini-3.7-flash-high",
+              "medium": "gemini-3.7-flash-medium",
+              "low": "gemini-3.7-flash-low"
+            }
+          },
+          {
+            "id": "gemini-3.6-flash-high",
+            "label": "Gemini 3.6 Flash",
+            "efforts": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "variants": {
+              "high": "gemini-3.6-flash-high",
+              "medium": "gemini-3.6-flash-medium",
+              "low": "gemini-3.6-flash-low"
+            }
+          },
+          {
+            "id": "gemini-3.1-pro-high",
+            "label": "Gemini 3.1 Pro",
+            "efforts": [
+              "high",
+              "low"
+            ],
+            "variants": {
+              "high": "gemini-3.1-pro-high",
+              "low": "gemini-3.1-pro-low"
+            }
+          },
+          {
+            "id": "claude-sonnet-4-6",
+            "label": "Claude Sonnet 4.6 (Thinking)",
+            "efforts": [],
+            "variants": {}
+          },
+          {
+            "id": "claude-opus-4-6-thinking",
+            "label": "Claude Opus 4.6 (Thinking)",
+            "efforts": [],
+            "variants": {}
+          },
+          {
+            "id": "gpt-oss-120b-medium",
+            "label": "GPT-OSS 120B",
+            "efforts": [
+              "medium"
+            ],
+            "variants": {
+              "medium": "gpt-oss-120b-medium"
+            }
+          }
+        ]
+      }
+    ],
+    "realModelGenerationCalls": 0,
+    "credentialsPrinted": false
+  },
+  "sourceHost": {
+    "status": "passed",
+    "modelSetup": {
+      "accountProvider": "codex",
+      "accountModel": "gpt-5.6-luna",
+      "effort": "high",
+      "liveAccountCatalog": true,
+      "setupFlow": "source harness with installed catalog worker",
+      "nativePickerAnswers": "scripted",
+      "renderedPickerAssertion": false,
+      "steps": [
+        {
+          "title": "Commit Defender: Use Account (1/3)",
+          "labels": [
+            "Codex",
+            "Claude Code",
+            "Antigravity"
+          ]
+        },
+        {
+          "title": "Commit Defender: Use Account · Codex · Model (2/3)",
+          "labels": [
+            "GPT-6-Astra",
+            "GPT-5.6-Sol",
+            "GPT-5.6-Terra",
+            "GPT-5.6-Luna",
+            "GPT-5.5",
+            "Refresh model list…"
+          ]
+        },
+        {
+          "title": "Commit Defender: Use Account · Codex · Effort (3/3)",
+          "labels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        }
+      ],
+      "accountModelIdInput": false,
+      "apiCancellationPreservedSettings": true,
+      "realModelGenerationCalls": 0
+    },
+    "vscode": "1.138.0",
+    "node": "24.18.1",
+    "electron": "42.10.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "extensionVersion": "2.13.6",
+    "delivery": "source-checkout",
+    "commandCount": 27,
+    "activation": true,
+    "encryptedActivityFixture": false,
+    "hookDefault": "disable",
+    "modelCalled": false,
+    "directConnection": {
+      "discovery": "URL and masked-key flow metadata",
+      "signedConnection": "connected",
+      "cache": "ready",
+      "sources": [
+        {
+          "repositoryId": "repository",
+          "sourceName": "team/reviewer",
+          "snapshot": "snapshot",
+          "manifestHash": "ef9cdefd692e07c957927c447577aea1644e76d81f58fa0e6f90029981093c5d",
+          "referenceOnly": true
+        },
+        {
+          "repositoryId": "host-reference",
+          "sourceName": "team/helm",
+          "snapshot": "snapshot-host-reference",
+          "manifestHash": "963337284c8d0c873e4f6882c0537c266592ef834248ade57c89262d5352c078",
+          "referenceOnly": true
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/config",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/connection-options",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/me",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/manifest",
+          "queryKeys": [
+            "clientContractVersion"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/policy",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/collective",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/personal",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/me",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/manifest",
+          "queryKeys": [
+            "clientContractVersion"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/policy",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/collective",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/personal",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        }
+      ],
+      "localUploadBytes": 0,
+      "modelCalls": 0,
+      "multiSourcePreview": "read-only real Extension Host webview created and closed; DOM content assertion only",
+      "source": "owned HTTPS publisher, no production credentials"
+    },
+    "checks": [
+      "activation",
+      "command registration",
+      "central executor and upstream submission commands absent",
+      "clear findings",
+      "cancel without run",
+      "no hook installed",
+      "standalone defaults and user profile",
+      "empty history refresh creates no local store or OS key",
+      "local activity webview opens, refreshes and closes on invalidation without creating storage"
+    ]
+  },
+  "packagedHost": {
+    "status": "passed",
+    "modelSetup": {
+      "accountProvider": "codex",
+      "accountModel": "gpt-5.6-luna",
+      "effort": "high",
+      "liveAccountCatalog": true,
+      "setupFlow": "source harness with installed catalog worker",
+      "nativePickerAnswers": "scripted",
+      "renderedPickerAssertion": false,
+      "steps": [
+        {
+          "title": "Commit Defender: Use Account (1/3)",
+          "labels": [
+            "Codex",
+            "Claude Code",
+            "Antigravity"
+          ]
+        },
+        {
+          "title": "Commit Defender: Use Account · Codex · Model (2/3)",
+          "labels": [
+            "GPT-6-Astra",
+            "GPT-5.6-Sol",
+            "GPT-5.6-Terra",
+            "GPT-5.6-Luna",
+            "GPT-5.5",
+            "Refresh model list…"
+          ]
+        },
+        {
+          "title": "Commit Defender: Use Account · Codex · Effort (3/3)",
+          "labels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        }
+      ],
+      "accountModelIdInput": false,
+      "apiCancellationPreservedSettings": true,
+      "realModelGenerationCalls": 0
+    },
+    "vscode": "1.138.0",
+    "node": "24.18.1",
+    "electron": "42.10.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "extensionVersion": "2.13.6",
+    "delivery": "packaged-extension",
+    "commandCount": 27,
+    "activation": true,
+    "encryptedActivityFixture": false,
+    "hookDefault": "disable",
+    "modelCalled": false,
+    "directConnection": {
+      "discovery": "URL and masked-key flow metadata",
+      "signedConnection": "connected",
+      "cache": "ready",
+      "sources": [
+        {
+          "repositoryId": "repository",
+          "sourceName": "team/reviewer",
+          "snapshot": "snapshot",
+          "manifestHash": "02297ee3e186ac4d9771b156d71d49a95c8e245eda1ffaee8e14edcf94c3d987",
+          "referenceOnly": true
+        },
+        {
+          "repositoryId": "host-reference",
+          "sourceName": "team/helm",
+          "snapshot": "snapshot-host-reference",
+          "manifestHash": "93b101448a2a3d7125f8c5f12a80a5de091b2fbc6b20aef870d70d56b685c8a5",
+          "referenceOnly": true
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/config",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/connection-options",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/me",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/manifest",
+          "queryKeys": [
+            "clientContractVersion"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/policy",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/collective",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/repository/review-knowledge/bundles/personal",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/client-auth/me",
+          "queryKeys": [],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/manifest",
+          "queryKeys": [
+            "clientContractVersion"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/policy",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/collective",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        },
+        {
+          "method": "GET",
+          "route": "/base/api/v1/repositories/host-reference/review-knowledge/bundles/personal",
+          "queryKeys": [
+            "snapshotId"
+          ],
+          "bodyBytes": 0
+        }
+      ],
+      "localUploadBytes": 0,
+      "modelCalls": 0,
+      "multiSourcePreview": "read-only real Extension Host webview created and closed; DOM content assertion only",
+      "source": "owned HTTPS publisher, no production credentials"
+    },
+    "checks": [
+      "activation",
+      "command registration",
+      "central executor and upstream submission commands absent",
+      "clear findings",
+      "cancel without run",
+      "no hook installed",
+      "standalone defaults and user profile",
+      "empty history refresh creates no local store or OS key",
+      "local activity webview opens, refreshes and closes on invalidation without creating storage"
+    ]
+  },
+  "package": {
+    "version": "2.13.6",
+    "target": "darwin-arm64",
+    "vsixSha256": "c3510841073f52e12285030d8274148761ca51d77755962e0181314ec4de1897",
+    "vsixBytes": 752980,
+    "runtimeFiles": {
+      "extension/out/account-catalog-worker.js": "1cf948b699483ac3c820ef3fdb81e8306e32e9d3c11cff3deca486f36ff8d0b0",
+      "extension/out/advisory-hook.cjs": "e8270bb445528abab7493172a0b08c343451822d4efa310b928cee11e0919217",
+      "extension/out/extension.js": "f61c0fbcc8a26082a82084a2317a4916dd970ffc2d82ca1eb2857238768807f2",
+      "extension/out/hook-cli.js": "65bee39a75801dae1f0d668c200c55be77dda13a5c0c32d4fa75ca534aa3b90e",
+      "extension/out/review-chat-worker.js": "4b17e79a5e9a8656044569213b3b9a3d70f12b87cfff361bb7751f05a3a33d91",
+      "extension/out/standalone-review-worker.js": "bf7de4b8da4d9a11f173a063b6ce5ce57db3982a3c15d75bd16b526e4f37602f",
+      "extension/out/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+      "extension/out/windows-native.json": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575",
+      "extension/out/gcr-service/main.mjs": "72296be9c3d75bc09ee8f4d3a6c027707db31fb416f15aec4d95671ac1680e0e",
+      "extension/out/gcr-service/manifest.json": "cc9fa65c3a68d52bc4dbc5e151257faf781a196c9a426bf2ea191abd50cc1f16",
+      "extension/out/gcr-service/windows-native.exe": "c289d819f52c2f610c7c69d0d27393b4aaaebeb6103a0e6f442f024559018e89",
+      "extension/out/gcr-service/windows-native.json": "282d96234498d6d3d0e735cc46f304d80a3acb03f56296906ebe33fb3fccf575"
+    },
+    "catalogWorkerIncluded": true
+  },
+  "installation": {
+    "installedPath": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.13.6",
+    "version": "2.13.6",
+    "runtimeFilesMatchVsix": true,
+    "userSettingsPreserved": true,
+    "codexConfigurationPreserved": true,
+    "userHostReloadForced": false
+  },
+  "preservationHashes": {
+    "/Users/a09255/Library/Application Support/Code/User/settings.json": {
+      "exists": true,
+      "sha256": "72d33b550772a1e6d6dc6a42a33e349fa05fad22639b13ec31957c5275c8b592"
+    },
+    "/Users/a09255/.codex/config.toml": {
+      "exists": true,
+      "sha256": "665d10539a7ce14ddeedc8bc01aafff22ecc507291e2e57507cc2157756aaa10"
+    }
+  },
+  "cleanup": {
+    "uiTemporaryDirectoryRemoved": true,
+    "ownedUiProcessesStopped": [],
+    "hostRunnerTemporaryWorkspacesRemoved": true,
+    "temporaryProductionKeysCreated": 0
+  },
+  "generationCalls": 0,
+  "marketplacePublished": false,
+  "gcrRuntimeChanged": false,
+  "limits": {
+    "renderedPickerFlowVerified": false,
+    "setupPickerAnswers": "scripted in source harness using packaged worker",
+    "realApiProviderModelAccessTested": false,
+    "windowsAndLinuxOsRunThisTurn": false,
+    "alreadyOpenUserHostAdoption": "not forced or verified"
+  },
+  "sharedArtifactUnchanged": {
+    "schemaVersion": 1,
+    "version": "0.1.0-alpha.54",
+    "sourceSha": "fcb100d6ea4c4a560fcf2a8cde25d7b344824cd1",
+    "buildPlatform": "darwin",
+    "buildArchitecture": "arm64",
+    "packages": [
+      {
+        "name": "@gcr/client-contract",
+        "version": "0.1.0-alpha.51",
+        "file": "gcr-client-contract-0.1.0-alpha.51.tgz",
+        "sha256": "2f89f2166ac723e11844898b7c3977f0604fa7d2d49eccfb509e32a04182274c"
+      },
+      {
+        "name": "@gcr/client-core",
+        "version": "0.1.0-alpha.53",
+        "file": "gcr-client-core-0.1.0-alpha.53.tgz",
+        "sha256": "ca236538e44eac1ebefd8fdf6b32b2fd0cbb978402c1a50ebf18b10e7885c5e4"
+      },
+      {
+        "name": "@gcr/client-executors",
+        "version": "0.1.0-alpha.54",
+        "file": "gcr-client-executors-0.1.0-alpha.54.tgz",
+        "sha256": "eeeb0ad1ed7967a04c9ad9d87201fcefa0afe9b420653449bc39a65d1e8f2a0b"
+      }
+    ]
+  }
+}

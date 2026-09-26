@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.13.6
+
+- Replace manual account model IDs with **Use Account**: verify the existing
+  Codex, Claude Code or Antigravity login and connection, fetch account models,
+  then select supported effort. Antigravity uses exact returned model variants.
+- Add **Use API Credential** for provider, endpoint, deployment/model, supported
+  effort and encrypted key storage. Unknown capabilities keep the server default;
+  Azure deployment names are not interpreted as model identities.
+- Save a complete selection after all steps finish. Cancellation, failed queries
+  and concurrent settings edits preserve the previous selection and other keys.
+
 ## 2.13.5
 
 - Count source provenance before admitting central review knowledge into the

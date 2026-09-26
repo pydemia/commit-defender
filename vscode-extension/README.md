@@ -32,14 +32,22 @@ Guide rendering does not depend on the Markdown preview Service Worker.
 1. Install **Commit Defender** (`pydemia.commit-defender`) from Marketplace, or
    use **Extensions → Install from VSIX…** with a supplied package. Open a
    trusted Git workspace.
-2. Run **Commit Defender: Select Account Provider and Model** from the Command
-   Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`). Save choices in **User Settings**.
-   Workspace settings cannot authorize another account, executable, model, or
-   local profile.
-3. For Codex, use an existing authenticated, supported CLI or run **Commit
-   Defender: Sign in with Codex**. For an API provider, select its destination
-   and model, then run **Commit Defender: Manage Model API Credential** and
-   enter the key in the password box.
+2. Choose one model authentication method from the Command Palette
+   (`Ctrl+Shift+P` / `Cmd+Shift+P`): **Commit Defender: Use Account** or
+   **Commit Defender: Use API Credential**. Both save only to User Settings;
+   cancelling a step leaves the current selection unchanged.
+3. **Use Account** checks the existing Codex, Claude Code or Antigravity CLI
+   login and server connection, lists the account's models, then offers supported
+   effort. Auth files and OS credentials remain owned by the CLI. A missing login
+   offers sign-in and retry; model IDs are not entered manually. Codex's frozen
+   fixed-source executor supports effort up to `xhigh`; Claude may offer `max`.
+   Antigravity uses only exact effort variants returned by its catalog.
+   **Use API Credential** asks for provider, endpoint, deployment/model, supported
+   effort and a password-protected API key (or an existing destination-bound key).
+   Azure optionally asks for the deployment's actual model to identify documented
+   effort support. Unknown models/custom endpoints and adapters without an effort
+   parameter keep the server default. API setup verifies local credential storage;
+   API/model access is checked when review runs, without a billable setup probe.
 4. Save and stage a small change. Run **Commit Defender: Analyze Staged Files**.
    Use **Analyze Current File** for a saved, unstaged file.
 5. Open **Show Summary Panel** and check the report status, findings, and source
@@ -124,7 +132,7 @@ OpenAI, Anthropic, and Gemini can omit the endpoint to use their adapter's
 default destination. Select an available model rather than treating an example
 name as guaranteed account access.
 
-**Manage Model API Credential** stores a key in encrypted local storage bound
+**Use API Credential** stores a key in encrypted local storage bound
 to the profile, provider, endpoint, model/deployment, and API version. Changing
 the destination cannot silently reuse an unrelated credential. Legacy
 `commitDefender.apiKey` or hook values require explicit migration with this
@@ -313,9 +321,9 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 | Analyze Staged Files / Current File / Directory… / Repository | Start a manual review |
 | Cancel Analysis / Clear Findings | Stop a review or clear displayed findings |
 | Show Summary Panel / Show History Entry / Re-analyze | Inspect saved reports or start another review |
-| Select Account Provider and Model | Choose the local execution identity |
+| Use Account | Choose the local execution identity |
 | Sign in with Codex / Claude Code / Antigravity | Open the corresponding CLI login flow |
-| Manage Model API Credential | Store, reconnect, replace, or migrate a key |
+| Use API Credential | Store, reconnect, replace, or migrate a key |
 | Local Memory and Skills | Author and activate local guidance |
 | Central Review Connection | Connect, synchronize, browse history, or select offline/standalone mode |
 | Automatic Reviews / Recover Background Review | Manage opt-in triggers and interrupted work |
@@ -378,7 +386,7 @@ boundaries from encrypted local history.
 | Symptom | What to check |
 | --- | --- |
 | Provider or executor unavailable | User Settings, CLI path/version, login, model/effort availability, and platform coverage |
-| API credential unavailable | Manage Model API Credential, profile/destination, unlocked OS store, and explicit legacy migration |
+| API credential unavailable | Use API Credential, profile/destination, unlocked OS store, and explicit legacy migration |
 | Nothing runs after Save or Stage | Trigger opt-in, pause, Save origin, debounce, and admission budget |
 | Service cannot start | Node.js 22+, `serviceNodePath`, selected Codex executor, and running service version |
 | No findings but partial/failed status | Inspect the problem and coverage; zero findings is not success |
