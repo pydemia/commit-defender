@@ -269,5 +269,36 @@
       "sha256": "e370049b7b1ea0fb37b71513ed2c914076aa266080d6e91c684d4d9d67e2c4d0"
     }
   ],
-  "codeSourceSha": "15df2d30f1b8014fef684fe41e35e00db553aea6"
+  "codeSourceSha": "15df2d30f1b8014fef684fe41e35e00db553aea6",
+  "release": {
+    "version": "2.13.0",
+    "sourceSha": "ac919fe58e5cc362c3dc9cca972191a348e18820",
+    "vsixPath": "/Users/a09255/git/commit-defender-windows-macos/vscode-extension/test-results/account-providers/commit-defender-2.13.0-darwin-arm64-frozen.vsix",
+    "vsixSha256": "ed1bfd142e9f080f2a1c6991593f362454cb438be6dd63fa7707c8e60c4d1969",
+    "vsixBytes": 730440,
+    "localInstallation": "confirmed",
+    "installedPath": "/Users/a09255/.vscode/extensions/pydemia.commit-defender-2.13.0",
+    "marketplacePublished": false,
+    "userHostReloaded": false,
+    "userHostApplication": "unverified: already open Host not forced to reload",
+    "gcrRuntimeChanges": false,
+    "gcrDeploymentPerformed": false,
+    "installedBytesMatchBuild": {
+      "out/extension.js": "2004d0adf8930f51a506d5e3130de3d1157321849487659187cdde848a0efc14",
+      "out/standalone-review-worker.js": "c78e50019d9136d7b2fd8741368fac922ef191c199a21863d28eed438b7b2add"
+    }
+  },
+  "userSettings": {
+    "beforeSha256": "bb7228ac7f2b74d1fecb289608df1659d3201facd407a1bf7c32d0472c8aa024",
+    "afterSha256": "bb7228ac7f2b74d1fecb289608df1659d3201facd407a1bf7c32d0472c8aa024",
+    "unchanged": true
+  },
+  "gcrSourceHead": "0332d601f7ccbfdcea4d9b77d9531b63da412ed1",
+  "commonArtifactProvenance": {
+    "schemaVersion": 1,
+    "sourceRepository": "git-code-reviewer",
+    "sourceCommit": "2958d916abbca7f598818e6821db64349c20d3d1",
+    "packageVersion": "0.1.0-alpha.50",
+    "manifestSha256": "4c5ca9f8f1dcf8b606f552cf89c6f2856b20b6a1f0975920f4f6726cac412e73"
+  }
 }
