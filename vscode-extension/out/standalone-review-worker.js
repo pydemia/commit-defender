@@ -1027,6 +1027,13 @@ var centralCacheIndex = object({
 
 // node_modules/@gcr/client-contract/dist/central-connection.js
 var keys = list(object({ id, pem: text(4096, 1) }), 16, 1);
+var centralClientAuthConfig = object({
+  schemaVersion: literal(1),
+  serverId: union(id, literal(null)),
+  methods: list(literal("api-key"), 1),
+  clientIds: list(choice(["gcr-cli", "commit-defender"]), 2),
+  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3)
+});
 var centralRepositoryIdentity = object({
   schemaVersion: literal(1),
   serverId: id,
@@ -1044,6 +1051,16 @@ var centralConnectionInput = object({
   repositoryId: id,
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null))
+});
+var centralConnectionOptions = object({
+  schemaVersion: literal(1),
+  serverUrl: text(4096, 1),
+  serverId: id,
+  tenantId: id,
+  clientId: choice(["gcr-cli", "commit-defender"]),
+  trustedKeys: keys,
+  ca: union(text(65536, 1), literal(null)),
+  repositories: list(centralRepositoryIdentity, 100)
 });
 var centralCredentialIdentity = object({
   schemaVersion: literal(1),
@@ -1517,7 +1534,7 @@ function decodeReviewHistory(request, value) {
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.49",
+  version: "0.1.0-alpha.50",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -8166,7 +8183,7 @@ var ReviewConversationStore = class {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.50",
+  version: "0.1.0-alpha.51",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -9191,7 +9208,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.51",
+  version: "0.1.0-alpha.52",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

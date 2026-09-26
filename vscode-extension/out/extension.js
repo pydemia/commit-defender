@@ -1378,6 +1378,13 @@ var centralCacheIndex = object({
 
 // node_modules/@gcr/client-contract/dist/central-connection.js
 var keys = list(object({ id, pem: text(4096, 1) }), 16, 1);
+var centralClientAuthConfig = object({
+  schemaVersion: literal(1),
+  serverId: union(id, literal(null)),
+  methods: list(literal("api-key"), 1),
+  clientIds: list(choice(["gcr-cli", "commit-defender"]), 2),
+  scopes: list(choice(["knowledge:read", "reviews:submit", "feedback:submit"]), 3)
+});
 var centralRepositoryIdentity = object({
   schemaVersion: literal(1),
   serverId: id,
@@ -1395,6 +1402,16 @@ var centralConnectionInput = object({
   repositoryId: id,
   trustedKeys: keys,
   ca: union(text(65536, 1), literal(null))
+});
+var centralConnectionOptions = object({
+  schemaVersion: literal(1),
+  serverUrl: text(4096, 1),
+  serverId: id,
+  tenantId: id,
+  clientId: choice(["gcr-cli", "commit-defender"]),
+  trustedKeys: keys,
+  ca: union(text(65536, 1), literal(null)),
+  repositories: list(centralRepositoryIdentity, 100)
 });
 var centralCredentialIdentity = object({
   schemaVersion: literal(1),
@@ -1852,7 +1869,7 @@ var reviewHistoryGuidancePage = object({
   nextCursor: cursor,
   items: list(reviewHistoryGuidance, 50)
 });
-function decodeReviewHistory(request, value) {
+function decodeReviewHistory(request2, value) {
   return {
     pulls: reviewHistoryPullPage,
     messages: reviewHistoryMessagePage,
@@ -1861,14 +1878,14 @@ function decodeReviewHistory(request, value) {
     observations: reviewHistoryObservationPage,
     guidance: reviewHistoryGuidancePage,
     "guidance-detail": reviewHistoryGuidance
-  }[request.kind](value);
+  }[request2.kind](value);
 }
 
 // node_modules/@gcr/client-contract/dist/index.js
 var CLIENT_CONTRACT_VERSION = 1;
 var clientContractPackage = Object.freeze({
   name: "@gcr/client-contract",
-  version: "0.1.0-alpha.49",
+  version: "0.1.0-alpha.50",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -1944,8 +1961,8 @@ function checkWindowsStorage(result) {
   }
   return result;
 }
-function windowsNativeSync(request) {
-  const input = JSON.stringify(request) + "\n";
+function windowsNativeSync(request2) {
+  const input = JSON.stringify(request2) + "\n";
   if (Buffer.byteLength(input) > maximum)
     throw new LocalStoreError("record-too-large", "Windows request exceeds its limit.");
   let stdout;
@@ -1994,8 +2011,8 @@ var WindowsStorageSession = class {
         });
         this.active = void 0;
       }
-      for (const request of this.queue.splice(0))
-        this.finish(request, { error: error2 });
+      for (const request2 of this.queue.splice(0))
+        this.finish(request2, { error: error2 });
     });
     this.child.stdin.on("error", () => this.stop("storage-unavailable"));
     this.child.stderr.on("data", () => this.stop("storage-unavailable"));
@@ -2023,9 +2040,9 @@ var WindowsStorageSession = class {
       }
       this.output.fill(0);
       this.output = Buffer.alloc(0);
-      const request = this.active;
+      const request2 = this.active;
       this.active = void 0;
-      this.finish(request, result);
+      this.finish(request2, result);
       this.next();
     });
   }
@@ -2036,17 +2053,17 @@ var WindowsStorageSession = class {
     clearTimeout(this.idle);
     return new Promise((resolve4) => {
       const abort = () => {
-        if (this.active === request)
+        if (this.active === request2)
           this.stop("cancelled");
         else {
-          const index2 = this.queue.indexOf(request);
+          const index2 = this.queue.indexOf(request2);
           if (index2 >= 0) {
             this.queue.splice(index2, 1);
-            this.finish(request, { error: "cancelled" });
+            this.finish(request2, { error: "cancelled" });
           }
         }
       };
-      const request = {
+      const request2 = {
         input,
         bytes,
         publishing,
@@ -2054,31 +2071,31 @@ var WindowsStorageSession = class {
         signal: options.signal,
         abort,
         timer: setTimeout(() => {
-          if (this.active === request)
+          if (this.active === request2)
             this.stop("timeout");
           else {
-            const index2 = this.queue.indexOf(request);
+            const index2 = this.queue.indexOf(request2);
             if (index2 >= 0) {
               this.queue.splice(index2, 1);
-              this.finish(request, { error: "timeout" });
+              this.finish(request2, { error: "timeout" });
             }
           }
         }, options.timeoutMs ?? 15e3)
       };
       this.bytes += bytes;
-      this.queue.push(request);
+      this.queue.push(request2);
       options.signal?.addEventListener("abort", abort, { once: true });
       if (options.signal?.aborted)
         abort();
       this.next();
     });
   }
-  finish(request, result) {
-    clearTimeout(request.timer);
-    request.signal?.removeEventListener("abort", request.abort);
-    this.bytes -= request.bytes;
-    request.input = "";
-    request.resolve(result);
+  finish(request2, result) {
+    clearTimeout(request2.timer);
+    request2.signal?.removeEventListener("abort", request2.abort);
+    this.bytes -= request2.bytes;
+    request2.input = "";
+    request2.resolve(result);
   }
   next() {
     if (this.closed || this.active)
@@ -2105,8 +2122,8 @@ var WindowsStorageSession = class {
     this.output = Buffer.alloc(0);
     if (this.active)
       clearTimeout(this.active.timer);
-    for (const request of this.queue)
-      clearTimeout(request.timer);
+    for (const request2 of this.queue)
+      clearTimeout(request2.timer);
   }
 };
 var storageSession;
@@ -2119,18 +2136,18 @@ var storageOperations = /* @__PURE__ */ new Set([
   "replace-private",
   "remove-private"
 ]);
-function windowsNative(request, options = {}) {
-  const input = JSON.stringify(request) + "\n";
+function windowsNative(request2, options = {}) {
+  const input = JSON.stringify(request2) + "\n";
   if (Buffer.byteLength(input) > maximum)
     return Promise.reject(new LocalStoreError("record-too-large", "Windows request too large."));
   if (options.signal?.aborted)
     return Promise.resolve({ error: "cancelled" });
   const executable = windowsNativeExecutable();
-  if (storageOperations.has(String(request.operation))) {
+  if (storageOperations.has(String(request2.operation))) {
     storageSession ??= new WindowsStorageSession(executable, () => {
       storageSession = void 0;
     });
-    return storageSession.request(input, ["publish", "replace-private", "remove-private"].includes(String(request.operation)), options);
+    return storageSession.request(input, ["publish", "replace-private", "remove-private"].includes(String(request2.operation)), options);
   }
   return new Promise((resolve4, reject) => {
     const child = (0, import_node_child_process.spawn)(executable, [], {
@@ -2181,7 +2198,7 @@ function windowsNative(request, options = {}) {
         reject(error2);
       }
     });
-    if (request.operation === "process")
+    if (request2.operation === "process")
       child.stdin.write(input);
     else
       child.stdin.end(input);
@@ -4481,7 +4498,7 @@ var import_node_crypto10 = require("node:crypto");
 
 // node_modules/@gcr/client-core/dist/review-history.js
 function historyReadRoute(repositoryId, value) {
-  const request = reviewHistoryRequest(value);
+  const request2 = reviewHistoryRequest(value);
   const common3 = ["kind"];
   const allowed = {
     pulls: ["pullNumber", "cursor", "revision"],
@@ -4492,39 +4509,39 @@ function historyReadRoute(repositoryId, value) {
     guidance: ["sourceId", "cursor"],
     "guidance-detail": ["guidanceId"]
   };
-  if (Object.keys(request).some((key3) => ![...common3, ...allowed[request.kind]].includes(key3)))
+  if (Object.keys(request2).some((key3) => ![...common3, ...allowed[request2.kind]].includes(key3)))
     throw Error("invalid-history-request");
   const base2 = `api/v1/repositories/${encodeURIComponent(repositoryId)}/review-history`;
   let route = base2;
-  if (["messages", "message", "versions", "observations"].includes(request.kind)) {
-    if (!request.pullNumber)
+  if (["messages", "message", "versions", "observations"].includes(request2.kind)) {
+    if (!request2.pullNumber)
       throw Error("invalid-history-request");
-    route += `/pulls/${request.pullNumber}/messages`;
-    if (request.kind !== "messages") {
-      if (!request.sourceId)
+    route += `/pulls/${request2.pullNumber}/messages`;
+    if (request2.kind !== "messages") {
+      if (!request2.sourceId)
         throw Error("invalid-history-request");
-      route += "/" + request.sourceId;
-      if (request.kind === "versions")
+      route += "/" + request2.sourceId;
+      if (request2.kind === "versions")
         route += "/versions";
-      if (request.kind === "observations")
+      if (request2.kind === "observations")
         route += "/history";
     }
-  } else if (request.kind === "guidance")
+  } else if (request2.kind === "guidance")
     route += "/guidance";
-  else if (request.kind === "guidance-detail") {
-    if (!request.guidanceId)
+  else if (request2.kind === "guidance-detail") {
+    if (!request2.guidanceId)
       throw Error("invalid-history-request");
-    route += "/guidance/" + request.guidanceId;
+    route += "/guidance/" + request2.guidanceId;
   }
   const query = new URLSearchParams();
   for (const name of ["cursor", "revision", "parentId"])
-    if (request[name])
-      query.set(name, request[name]);
-  if (request.kind === "pulls" && request.pullNumber)
-    query.set("pullNumber", String(request.pullNumber));
-  if (request.kind === "guidance" && request.sourceId)
-    query.set("sourceId", request.sourceId);
-  return { request, route: route + (query.size ? "?" + query.toString() : "") };
+    if (request2[name])
+      query.set(name, request2[name]);
+  if (request2.kind === "pulls" && request2.pullNumber)
+    query.set("pullNumber", String(request2.pullNumber));
+  if (request2.kind === "guidance" && request2.sourceId)
+    query.set("sourceId", request2.sourceId);
+  return { request: request2, route: route + (query.size ? "?" + query.toString() : "") };
 }
 
 // node_modules/@gcr/client-core/dist/knowledge-http.js
@@ -4562,8 +4579,8 @@ var KnowledgeHttpTransport = class {
     if (target.origin !== base2.origin || !target.pathname.startsWith(base2.pathname))
       throw unavailable2();
     return new Promise((resolve4, reject) => {
-      const request = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
-      const req = request(target, {
+      const request2 = target.protocol === "https:" ? import_node_https.request : import_node_http.request;
+      const req = request2(target, {
         method: "GET",
         signal,
         ...target.protocol === "https:" ? { rejectUnauthorized: true, ...this.ca ? { ca: this.ca } : {} } : {},
@@ -4611,12 +4628,12 @@ var KnowledgeHttpTransport = class {
    * The cache supplies the overall abort deadline and keeps its claim throughout. */
   initialPublication() {
     return {
-      manifest: (request) => this.readManifest(request, 15),
-      bundle: (request) => this.bundle(request)
+      manifest: (request2) => this.readManifest(request2, 15),
+      bundle: (request2) => this.bundle(request2)
     };
   }
-  manifest(request) {
-    return this.readManifest(request, 0);
+  manifest(request2) {
+    return this.readManifest(request2, 0);
   }
   async readManifest({ etag, signal }, retries) {
     const base2 = `api/v1/repositories/${encodeURIComponent(this.binding.audience.repositoryId)}/review-knowledge/manifest?clientContractVersion=`;
@@ -4662,7 +4679,7 @@ var KnowledgeHttpTransport = class {
   }
   /** Read a bounded page of repository history using the existing reader credential. */
   async history(value, signal) {
-    const { request, route } = historyReadRoute(this.binding.audience.repositoryId, value);
+    const { request: request2, route } = historyReadRoute(this.binding.audience.repositoryId, value);
     const response = await this.get(route, signal);
     if (response.statusCode !== 200) {
       const { status } = await this.failure(response);
@@ -4678,18 +4695,18 @@ var KnowledgeHttpTransport = class {
           throw Error("history-limit");
         chunks.push(bytes);
       }
-      const data = decodeReviewHistory(request, JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks))));
+      const data = decodeReviewHistory(request2, JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks))));
       if (data.repositoryId !== this.binding.audience.repositoryId)
         throw Error("history-audience");
-      if ("sourceId" in data && data.sourceId !== request.sourceId)
+      if ("sourceId" in data && data.sourceId !== request2.sourceId)
         throw Error("history-source");
-      if ("pullNumber" in data && data.pullNumber !== request.pullNumber)
+      if ("pullNumber" in data && data.pullNumber !== request2.pullNumber)
         throw Error("history-pull");
-      if ("pull" in data && data.pull.number !== request.pullNumber)
+      if ("pull" in data && data.pull.number !== request2.pullNumber)
         throw Error("history-pull");
-      if (request.kind === "guidance-detail" && "id" in data && data.id !== request.guidanceId)
+      if (request2.kind === "guidance-detail" && "id" in data && data.id !== request2.guidanceId)
         throw Error("history-guidance");
-      if ("item" in data && data.item.id !== request.sourceId)
+      if ("item" in data && data.item.id !== request2.sourceId)
         throw Error("history-source");
       const bodies = "item" in data ? [data.item] : "items" in data ? data.items : [];
       for (const entry of bodies) {
@@ -5164,7 +5181,7 @@ var CentralConnections = class _CentralConnections {
   async readHistory(id4, value, freshness = "online", signal) {
     const state = await this.state(id4);
     await this.assert(state);
-    const { request } = historyReadRoute(state.value.audience.repositoryId, value);
+    const { request: request2 } = historyReadRoute(state.value.audience.repositoryId, value);
     const access = await this.review(id4, freshness, signal);
     const cache = access.cache;
     const pinned = await cache.read(freshness);
@@ -5173,14 +5190,14 @@ var CentralConnections = class _CentralConnections {
       ...this.options,
       dataDirectory: import_node_path7.default.join(this.options.dataDirectory ?? defaultLocalDataDirectory(), "central-pr-history", id4)
     });
-    const key3 = contentHash(request);
+    const key3 = contentHash(request2);
     try {
       const old = await records.read("settings", key3);
       if (freshness === "offline") {
         const stored = old && !old.deleted ? old.value : void 0;
         if (old?.deleted || !stored || stored.generation !== generation || typeof stored.expiresAt !== "string" || Date.parse(stored.expiresAt) <= Date.now())
           throw new KnowledgeSyncError("cache-unavailable", "This history page is not available in the authorized cache.");
-        const data2 = decodeReviewHistory(request, stored.data);
+        const data2 = decodeReviewHistory(request2, stored.data);
         if (data2.repositoryId !== state.value.audience.repositoryId)
           throw denied();
         await this.assert(state);
@@ -5189,7 +5206,7 @@ var CentralConnections = class _CentralConnections {
       }
       let data;
       try {
-        data = await this.timed(signal, (s) => this.transport(state).history(request, s));
+        data = await this.timed(signal, (s) => this.transport(state).history(request2, s));
       } catch (error2) {
         if (error2 instanceof KnowledgeSyncError && ["authentication-required", "revoked", "identity-unavailable"].includes(error2.code)) {
           await cache.rejectAuthority(generation, error2.code);
@@ -5631,7 +5648,7 @@ var ReviewRequests = class _ReviewRequests {
       if (state.value.owner && state.value.owner.deadline > now)
         return { kind: "waiting", request: state.value };
       if (state.value.state === "running") {
-        const request2 = await this.put(state, {
+        const request3 = await this.put(state, {
           ...state.value,
           state: "interrupted",
           // Interruption fences the owner token; it does not start another attempt.
@@ -5639,14 +5656,14 @@ var ReviewRequests = class _ReviewRequests {
           owner: null,
           updatedAt: now
         });
-        return { kind: "interrupted", request: request2 };
+        return { kind: "interrupted", request: request3 };
       }
       if (state.value.state === "interrupted")
         return { kind: "interrupted", request: state.value };
       if (state.value.state === "finished" && options.retryFinishedGeneration !== state.value.generation)
         return { kind: "finished", request: state.value };
       const token2 = (0, import_node_crypto12.randomUUID)(), generation = state.value.generation + 1;
-      const request = await this.put(state, {
+      const request2 = await this.put(state, {
         ...state.value,
         state: "claimed",
         generation,
@@ -5654,7 +5671,7 @@ var ReviewRequests = class _ReviewRequests {
         owner: { token: token2, deadline: now + leaseMs },
         resultId: null
       });
-      return { kind: "acquired", request, lease: { key: key3, token: token2, generation } };
+      return { kind: "acquired", request: request2, lease: { key: key3, token: token2, generation } };
     });
   }
   async owned(lease) {
@@ -5802,14 +5819,14 @@ var ReviewRequests = class _ReviewRequests {
           throw new ReviewRequestError("request-lost");
         return { request: state.value, report: parsed };
       }
-      const request = await this.put(state, {
+      const request2 = await this.put(state, {
         ...state.value,
         state: "finished",
         owner: null,
         resultId: parsed.runId,
         updatedAt: this.time(state.value.updatedAt)
       });
-      return { request, report: parsed };
+      return { request: request2, report: parsed };
     });
   }
   async release(lease) {
@@ -6487,13 +6504,13 @@ var ServiceJobs = class _ServiceJobs {
   }
   async bindRequest(id4, token2, input) {
     await this.assertOwner(token2);
-    const job = await this.job(id4), request = reviewRequestRecord(input);
+    const job = await this.job(id4), request2 = reviewRequestRecord(input);
     if (!job || job.state !== "running" || job.owner !== token2)
       throw new LocalServiceError("service-interrupted");
-    const registration = await this.registration(job.repository), client = request.identity.client;
-    if (!registration || registration.revision !== job.registrationRevision || !registration.triggers.includes(job.trigger) || client.profileId !== this.profileId || client.repositoryKey !== registration.repositoryKey || client.worktreeKey !== registration.worktreeKey || request.identity.source.hash !== job.sourceHash || reviewRequestKey(request.identity) !== request.key || !request.reasons.includes(job.trigger) || (registration.options.mode === "centralized" ? client.execution?.configuredMode !== "centralized" || client.execution.connectionId !== registration.options.connectionId : client.mode !== "standalone" || client.execution?.configuredMode === "centralized") || request.generation < 1 || !["claimed", "running", "finished"].includes(request.state))
+    const registration = await this.registration(job.repository), client = request2.identity.client;
+    if (!registration || registration.revision !== job.registrationRevision || !registration.triggers.includes(job.trigger) || client.profileId !== this.profileId || client.repositoryKey !== registration.repositoryKey || client.worktreeKey !== registration.worktreeKey || request2.identity.source.hash !== job.sourceHash || reviewRequestKey(request2.identity) !== request2.key || !request2.reasons.includes(job.trigger) || (registration.options.mode === "centralized" ? client.execution?.configuredMode !== "centralized" || client.execution.connectionId !== registration.options.connectionId : client.mode !== "standalone" || client.execution?.configuredMode === "centralized") || request2.generation < 1 || !["claimed", "running", "finished"].includes(request2.state))
       throw new LocalServiceError("service-denied");
-    const execution = { key: request.key, generation: request.generation };
+    const execution = { key: request2.key, generation: request2.generation };
     if (job.execution && contentHash(job.execution) !== contentHash(execution))
       throw invalid3();
     return this.update({ ...job, execution }, job);
@@ -6668,9 +6685,9 @@ async function localServiceAddress(options) {
     throw new LocalServiceError("service-unavailable");
   return socket;
 }
-async function callLocalService(options, request, timeoutMs = 3e4) {
+async function callLocalService(options, request2, timeoutMs = 3e4) {
   const address = await localServiceAddress(options);
-  const body2 = Buffer.from(JSON.stringify(request) + "\n");
+  const body2 = Buffer.from(JSON.stringify(request2) + "\n");
   if (body2.length > maximumFrame)
     throw new LocalServiceError("service-capacity");
   if (process.platform === "win32") {
@@ -6754,10 +6771,141 @@ async function callLocalService(options, request, timeoutMs = 3e4) {
   });
 }
 
+// node_modules/@gcr/client-core/dist/central-discovery.js
+var import_node_https2 = require("node:https");
+var import_node_crypto15 = require("node:crypto");
+var CentralDiscoveryTlsError = class extends KnowledgeSyncError {
+  constructor() {
+    super("unavailable", "The server certificate needs a trusted CA certificate.");
+  }
+};
+function validateCentralCa(pem) {
+  try {
+    const certificates = pem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g);
+    if (Buffer.byteLength(pem) > 65536 || !certificates?.length || pem.replace(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g, "").trim() || certificates.some((value) => !new import_node_crypto15.X509Certificate(value).ca))
+      throw Error();
+    return pem;
+  } catch {
+    throw new KnowledgeSyncError("invalid-binding", "Choose a file containing only public CA certificates.");
+  }
+}
+async function discoverCentralConnections(serverUrl, apiKey, clientId, options = {}) {
+  const base2 = normalizeCentralServerUrl(serverUrl);
+  validateCentralApiKey(apiKey);
+  const ca = options.ca === void 0 ? void 0 : validateCentralCa(options.ca);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  options.signal?.addEventListener("abort", abort, { once: true });
+  if (options.signal?.aborted)
+    controller.abort();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 15e3);
+  const unavailable4 = () => new KnowledgeSyncError("unavailable", "Could not read central connection options.");
+  try {
+    const get = (relative4, serverId) => new Promise((resolve4, reject) => {
+      const req = (0, import_node_https2.request)(new URL(relative4, base2), {
+        method: "GET",
+        signal: controller.signal,
+        rejectUnauthorized: true,
+        ...ca ? { ca } : {},
+        headers: {
+          ...serverId ? { authorization: `Bearer ${apiKey}`, "x-gcr-server-id": serverId } : {},
+          accept: "application/json"
+        }
+      }, async (res) => {
+        try {
+          if (res.statusCode !== 200) {
+            if (res.statusCode === 401)
+              throw new KnowledgeSyncError("authentication-required", "A valid GCR API key is required.");
+            if (res.statusCode === 403)
+              throw new KnowledgeSyncError("revoked", "The key has no current access.");
+            if (res.statusCode === 404)
+              throw new KnowledgeSyncError("incompatible", "This server requires the legacy JSON connection flow.");
+            throw unavailable4();
+          }
+          const chunks = [];
+          let size = 0;
+          for await (const chunk of res) {
+            const bytes = Buffer.from(chunk);
+            size += bytes.length;
+            if (size > 1048576)
+              throw unavailable4();
+            chunks.push(bytes);
+          }
+          resolve4(Buffer.concat(chunks));
+        } catch (cause) {
+          reject(cause);
+        } finally {
+          res.destroy();
+        }
+      });
+      req.on("error", (error2) => {
+        if ([
+          "DEPTH_ZERO_SELF_SIGNED_CERT",
+          "SELF_SIGNED_CERT_IN_CHAIN",
+          "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+          "UNABLE_TO_GET_ISSUER_CERT_LOCALLY"
+        ].includes(error2.code ?? ""))
+          reject(new CentralDiscoveryTlsError());
+        else
+          reject(unavailable4());
+      });
+      req.end();
+    });
+    let bootstrap;
+    try {
+      bootstrap = centralClientAuthConfig(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await get("api/v1/client-auth/config"))));
+    } catch (cause) {
+      if (cause instanceof KnowledgeSyncError)
+        throw cause;
+      throw unavailable4();
+    }
+    if (!bootstrap.serverId || !bootstrap.methods.includes("api-key") || !bootstrap.clientIds.includes(clientId))
+      throw new KnowledgeSyncError("incompatible", "The server does not support this API-key client.");
+    const body2 = await get("api/v1/client-auth/connection-options", bootstrap.serverId);
+    if (controller.signal.aborted)
+      throw unavailable4();
+    try {
+      const result = centralConnectionOptions(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body2)));
+      if (result.serverId !== bootstrap.serverId || normalizeCentralServerUrl(result.serverUrl) !== base2 || result.clientId !== clientId || new Set(result.repositories.map((r) => r.repositoryId)).size !== result.repositories.length || new Set(result.trustedKeys.map((k) => k.id)).size !== result.trustedKeys.length || result.trustedKeys.some((k) => /PRIVATE KEY/.test(k.pem)))
+        throw Error();
+      if (result.ca !== null)
+        validateCentralCa(result.ca);
+      for (const repo of result.repositories) {
+        if (repo.serverId !== result.serverId || repo.tenantId !== result.tenantId)
+          throw Error();
+        new TrustedCentralBinding({
+          serverUrl: base2,
+          audience: {
+            serverId: repo.serverId,
+            tenantId: repo.tenantId,
+            repositoryId: repo.repositoryId,
+            userId: "pending-user"
+          },
+          trustedKeys: new Map(result.trustedKeys.map((k) => [k.id, k.pem]))
+        });
+      }
+      return { ...result, serverUrl: base2, ca: ca ?? result.ca };
+    } catch {
+      throw new KnowledgeSyncError("invalid-binding", "Central connection metadata does not match the selected server or client.");
+    }
+  } catch (cause) {
+    if (controller.signal.aborted)
+      throw new KnowledgeSyncError(timedOut ? "timeout" : "cancelled", "Central discovery stopped.");
+    throw cause;
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", abort);
+  }
+}
+
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.50",
+  version: "0.1.0-alpha.51",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -20121,12 +20269,12 @@ function standaloneError(error2) {
 }
 
 // src/standaloneWorkerClient.ts
-function prepareStandaloneWorker(workerFile, request, settings, preparationSignal) {
+function prepareStandaloneWorker(workerFile, request2, settings, preparationSignal) {
   if (preparationSignal.aborted)
     return Promise.reject(new StandaloneReviewError("cancelled"));
   return new Promise((resolve4, reject) => {
     const worker = new import_node_worker_threads.Worker(workerFile, {
-      workerData: { request, settings }
+      workerData: { request: request2, settings }
     });
     let prepared = false;
     let started = false;
@@ -20221,7 +20369,7 @@ function createReviewBackend(config, local) {
   const settings = structuredClone(local.settings);
   const commitMessages = createLegacyReviewBackend(config);
   return {
-    prepareReview: (request, signal) => prepareStandaloneWorker(local.workerFile, request, settings, signal),
+    prepareReview: (request2, signal) => prepareStandaloneWorker(local.workerFile, request2, settings, signal),
     prepareCommitMessage: (repoRoot) => commitMessages.prepareCommitMessage(repoRoot)
   };
 }
@@ -20244,7 +20392,7 @@ var LegacyReviewBackend = class {
     ).digest("hex");
   }
   prepareReview(input) {
-    const request = {
+    const request2 = {
       ...input,
       files: [...input.files],
       sourceExclusions: input.sourceExclusions?.map((entry) => ({ ...entry }))
@@ -20255,13 +20403,13 @@ var LegacyReviewBackend = class {
       truncated: false
     };
     try {
-      captured = request.scope === "staged" ? captureStagedSnapshot(request.repoRoot, this.config.excludePatterns) : captureWorkingFiles(
-        request.repoRoot,
-        request.files,
+      captured = request2.scope === "staged" ? captureStagedSnapshot(request2.repoRoot, this.config.excludePatterns) : captureWorkingFiles(
+        request2.repoRoot,
+        request2.files,
         this.config.excludePatterns
       );
       material = loadSkillMaterial(
-        request.repoRoot,
+        request2.repoRoot,
         this.config.excludePatterns
       );
     } catch (error2) {
@@ -20288,15 +20436,15 @@ var LegacyReviewBackend = class {
     const reviewer = new Reviewer(this.config, material);
     return {
       backendId: "legacy",
-      key: this.key("review", { request, identity, material }),
-      run: (signal, progress) => request.scope === "staged" ? reviewer.reviewDiff(
-        request.repoRoot,
-        request.files,
+      key: this.key("review", { request: request2, identity, material }),
+      run: (signal, progress) => request2.scope === "staged" ? reviewer.reviewDiff(
+        request2.repoRoot,
+        request2.files,
         signal,
         captured
       ) : reviewer.reviewFilesSeparately(
-        request.repoRoot,
-        request.files,
+        request2.repoRoot,
+        request2.files,
         signal,
         progress,
         captured
@@ -20473,7 +20621,7 @@ var ReviewExecutionOwner = class {
 };
 
 // src/localKnowledge.ts
-var import_node_crypto15 = require("node:crypto");
+var import_node_crypto16 = require("node:crypto");
 var import_promises7 = require("node:fs/promises");
 var import_node_path12 = __toESM(require("node:path"));
 
@@ -20604,7 +20752,7 @@ async function saveKnowledgeFromEditor(scope, kind, value, expected, ports = {})
     title: update.title,
     body: update.body,
     appliesTo: update.appliesTo,
-    sources: [{ kind: "user-note", id: (0, import_node_crypto15.randomUUID)() }],
+    sources: [{ kind: "user-note", id: (0, import_node_crypto16.randomUUID)() }],
     ...update.expiresAt ? { expiresAt: update.expiresAt } : {}
   };
   const draft = kind === "memory" ? {
@@ -21691,14 +21839,14 @@ var AutomaticReviews = class {
 var import_promises11 = __toESM(require("node:fs/promises"));
 var import_node_path18 = __toESM(require("node:path"));
 var import_node_os3 = __toESM(require("node:os"));
-var import_node_crypto17 = require("node:crypto");
+var import_node_crypto18 = require("node:crypto");
 var import_node_child_process7 = require("node:child_process");
 var import_node_util = require("node:util");
 
 // src/hook/managedHooks.ts
 var import_promises10 = __toESM(require("node:fs/promises"));
 var import_node_path17 = __toESM(require("node:path"));
-var import_node_crypto16 = require("node:crypto");
+var import_node_crypto17 = require("node:crypto");
 var import_node_child_process6 = require("node:child_process");
 
 // src/windowsPrivateFiles.ts
@@ -21737,7 +21885,7 @@ function windowsRemovePrivateFile(file) {
 }
 
 // src/hook/managedHooks.ts
-var digest2 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
+var digest2 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
 var quote = (value) => {
   const shellPath = process.platform === "win32" ? value.replace(/\\/g, "/") : value;
   return `'${shellPath.replace(/'/g, "'\\''")}'`;
@@ -21779,7 +21927,7 @@ async function writeJson(file, value) {
     );
     return;
   }
-  const tmp = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
+  const tmp = `${file}.${(0, import_node_crypto17.randomUUID)()}`;
   try {
     await import_promises10.default.writeFile(tmp, JSON.stringify(value, null, 2) + "\n", {
       flag: "wx",
@@ -22032,7 +22180,7 @@ exit 0
       } else if (!state.files[name]) {
         await import_promises10.default.writeFile(file, text8, { flag: "wx", mode: 448 });
       } else {
-        const temporary = `${file}.${(0, import_node_crypto16.randomUUID)()}`;
+        const temporary = `${file}.${(0, import_node_crypto17.randomUUID)()}`;
         try {
           await import_promises10.default.writeFile(temporary, text8, { flag: "wx", mode: 448 });
           await import_promises10.default.rename(temporary, file);
@@ -22071,7 +22219,7 @@ exit 0
 
 // src/backgroundHooks.ts
 var key2 = "background-hooks.v1";
-var hash3 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
+var hash3 = (value) => (0, import_node_crypto18.createHash)("sha256").update(value).digest("hex");
 async function privateCopy(source2, directory2, name) {
   if (process.platform === "win32") {
     const files = await Promise.all([
@@ -22135,7 +22283,7 @@ var BackgroundHooks = class {
     this.store = store;
     this.call = call;
   }
-  sessionId = (0, import_node_crypto17.randomUUID)();
+  sessionId = (0, import_node_crypto18.randomUUID)();
   epoch = 0;
   generations = /* @__PURE__ */ new Map();
   pending = Promise.resolve();
@@ -22699,7 +22847,7 @@ var CentralSynchronization = class {
 var vscode9 = __toESM(require("vscode"));
 var import_node_fs5 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
-var import_node_crypto18 = require("node:crypto");
+var import_node_crypto19 = require("node:crypto");
 
 // src/centralKnowledgeView.ts
 var vscode6 = __toESM(require("vscode"));
@@ -22885,7 +23033,7 @@ async function browseCentralHistory(context, read, validate) {
         );
         if (!action) break;
         const kind = action.action === "next" ? lastKind : action.action;
-        const request = kind === "replies" ? {
+        const request2 = kind === "replies" ? {
           kind: "messages",
           pullNumber,
           parentId: detail.item.parentId ?? sourceId
@@ -22896,8 +23044,8 @@ async function browseCentralHistory(context, read, validate) {
           ...action.action === "next" && historyCursor ? { cursor: historyCursor } : {}
         };
         if (action.action === "next" && historyCursor)
-          request.cursor = historyCursor;
-        const result = await read(request);
+          request2.cursor = historyCursor;
+        const result = await read(request2);
         await validate();
         historyCursor = "nextCursor" in result.data ? result.data.nextCursor ?? void 0 : void 0;
         lastKind = kind === "versions" || kind === "observations" || kind === "replies" || kind === "guidance" ? kind : void 0;
@@ -22990,23 +23138,36 @@ function centralStatusHtml(value) {
   }).join("");
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>This connection reads PR history, Skills, prompts and published guidance from GCR. Your selected local provider, model and reasoning stay unchanged. Local code and results are not uploaded to GCR; approved source and context go to the model provider you select.</p><p>Online reviews require fresh signed knowledge; the current server uses a five-minute manifest lifetime. An already running review keeps its pinned version and can stop at expiry. Offline reviews require a valid signed lease and active authority. Model failures are checked separately from connection and cache failures.</p><table>${rows2.map(([label, item]) => `<tr><th>${esc4(label)}</th><td>${esc4(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. To inspect originals, replies and versions, choose Browse PR review history. Use View downloaded review knowledge for Skills and guidance. Local Memory and Skills remain separately editable and are not uploaded.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
-async function readConfig(file) {
-  const handle2 = await (0, import_promises12.open)(
-    file,
-    import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NONBLOCK | import_node_fs5.constants.O_NOFOLLOW
-  );
+async function askApiKey(serverUrl) {
+  return vscode9.window.showInputBox({
+    title: "GCR API key",
+    prompt: `API key for ${serverUrl}. Stored in the OS credential store.`,
+    password: true,
+    ignoreFocusOut: true,
+    validateInput(value) {
+      try {
+        validateCentralApiKey(value.trim());
+        return void 0;
+      } catch {
+        return "Enter a valid GCR API key (not JSON).";
+      }
+    }
+  });
+}
+async function readPublicFile(file, limit) {
+  const handle2 = await (0, import_promises12.open)(file, import_node_fs5.constants.O_RDONLY | import_node_fs5.constants.O_NONBLOCK | import_node_fs5.constants.O_NOFOLLOW);
   try {
-    if (!(await handle2.stat()).isFile())
-      throw new StandaloneReviewError("invalid-binding");
-    const buffer = Buffer.alloc(100001);
+    if (!(await handle2.stat()).isFile()) throw new StandaloneReviewError("invalid-binding");
+    const buffer = Buffer.alloc(limit + 1);
     const { bytesRead } = await handle2.read(buffer, 0, buffer.length, 0);
-    if (bytesRead > 1e5) throw new StandaloneReviewError("invalid-binding");
-    return centralConnectionInput(
-      JSON.parse(buffer.subarray(0, bytesRead).toString("utf8"))
-    );
+    if (bytesRead > limit) throw new StandaloneReviewError("invalid-binding");
+    return buffer.subarray(0, bytesRead).toString("utf8");
   } finally {
     await handle2.close();
   }
+}
+async function readConfig(file) {
+  return centralConnectionInput(JSON.parse(await readPublicFile(file, 1e5)));
 }
 var activeViews = /* @__PURE__ */ new Set();
 var knowledgePanel;
@@ -23055,13 +23216,14 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         {
           label: "GCR connection guide",
           action: "guide",
-          description: "Reader key, account/model, connection and first review"
+          description: "API key, account/model, connection and first review"
         },
         {
           label: "Connect with API key\u2026",
           action: "connect",
-          description: "Choose trusted server configuration and enter a key"
+          description: "Enter the server URL and API key; select a repository"
         },
+        { label: "Import connection JSON\u2026", action: "import-json", description: "Compatibility with older GCR servers; API key entered separately" },
         {
           label: "Select connected repository\u2026",
           action: "select",
@@ -23120,45 +23282,91 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       await select({ version: 1, mode: "standalone" });
       return;
     }
-    if (choice2.action === "connect") {
-      const files = await vscode9.window.showOpenDialog({
-        title: "Choose trusted central connection configuration",
-        canSelectMany: false,
-        filters: { JSON: ["json"] }
-      });
-      if (!files?.[0] || files[0].scheme !== "file") return;
-      actions.assertCurrent();
-      const config = await readConfig(files[0].fsPath);
-      config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
-      const pins = config.trustedKeys.map(
-        (k) => `${k.id}: ${(0, import_node_crypto18.createHash)("sha256").update(k.pem).digest("hex")}`
-      ).join(" \xB7 ");
+    if (choice2.action === "connect" || choice2.action === "import-json") {
+      let config;
+      let secret;
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
-      const confirmed = await vscode9.window.showInformationMessage(
-        `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
-        {
-          modal: true,
-          detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`
-        },
-        "Connect"
-      );
-      if (confirmed !== "Connect") return;
-      let secret = await vscode9.window.showInputBox({
-        title: "Central API key",
-        prompt: `Key for ${config.serverUrl}. Stored in the OS credential store.`,
-        password: true,
-        ignoreFocusOut: true,
-        validateInput(value) {
-          try {
-            validateCentralApiKey(value.trim());
-            return void 0;
-          } catch {
-            return "Enter a valid GCR API key.";
-          }
-        }
-      });
-      if (!secret) return;
       try {
+        if (choice2.action === "import-json") {
+          const files = await vscode9.window.showOpenDialog({
+            title: "Choose trusted central connection configuration",
+            canSelectMany: false,
+            filters: { JSON: ["json"] }
+          });
+          if (!files?.[0] || files[0].scheme !== "file") return;
+          actions.assertCurrent();
+          config = await readConfig(files[0].fsPath);
+          config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
+        } else {
+          const url = await vscode9.window.showInputBox({
+            title: "GCR server URL",
+            prompt: "Use the HTTPS server URL shown in GCR Profile \u2192 Clients. No JSON is required.",
+            ignoreFocusOut: true,
+            validateInput(value) {
+              try {
+                normalizeCentralServerUrl(value.trim());
+                return void 0;
+              } catch {
+                return "Enter an HTTPS server URL without credentials, query or fragment.";
+              }
+            }
+          });
+          if (!url) return;
+          const serverUrl = normalizeCentralServerUrl(url.trim());
+          secret = await askApiKey(serverUrl);
+          if (!secret) return;
+          const discover = (ca) => progress("Reading GCR repositories", (signal) => discoverCentralConnections(serverUrl, secret.trim(), "commit-defender", { signal, ...ca ? { ca } : {} }));
+          let metadata;
+          try {
+            metadata = await discover();
+          } catch (cause) {
+            if (!(cause instanceof CentralDiscoveryTlsError)) throw cause;
+            const selected = await vscode9.window.showInformationMessage(
+              "Commit Defender: GCR uses a CA certificate that is not trusted on this machine.",
+              { modal: true, detail: "Download the public CA certificate from GCR Profile \u2192 Clients, or obtain it from your administrator. TLS verification stays enabled." },
+              "Choose CA certificate\u2026"
+            );
+            if (!selected) return;
+            const files = await vscode9.window.showOpenDialog({ title: "Choose public GCR CA certificate", canSelectMany: false, filters: { Certificates: ["pem", "crt"] } });
+            if (!files?.[0] || files[0].scheme !== "file") return;
+            const ca = validateCentralCa(await readPublicFile(files[0].fsPath, 65536));
+            actions.assertCurrent();
+            metadata = await discover(ca);
+          }
+          actions.assertCurrent();
+          if (!metadata.repositories.length) {
+            void vscode9.window.showInformationMessage("Commit Defender: This API key has no currently accessible repositories. Check GCR permissions and key scope.");
+            return;
+          }
+          const repo = await vscode9.window.showQuickPick(metadata.repositories.map((identity) => ({
+            label: `${identity.owner}/${identity.name}`,
+            description: identity.webBaseUrl,
+            identity
+          })), { title: "Choose the GCR repository for this local worktree", matchOnDescription: true });
+          if (!repo) return;
+          config = centralConnectionInput({
+            serverUrl: metadata.serverUrl,
+            serverId: metadata.serverId,
+            tenantId: metadata.tenantId,
+            repositoryId: repo.identity.repositoryId,
+            trustedKeys: metadata.trustedKeys,
+            ca: metadata.ca
+          });
+        }
+        const pins = config.trustedKeys.map(
+          (k) => `${k.id}: ${(0, import_node_crypto19.createHash)("sha256").update(k.pem).digest("hex")}`
+        ).join(" \xB7 ");
+        const confirmed = await vscode9.window.showInformationMessage(
+          `Connect this worktree to ${config.serverUrl} (server ${config.serverId}, tenant ${config.tenantId}, repository ${config.repositoryId})?`,
+          {
+            modal: true,
+            detail: `Verify these public signing-key fingerprints against your administrator's configuration. ${pins} On central failure: ${behavior}. If this policy allows local fallback, reviews use only local/built-in knowledge and the same approved model account. You can change this in Offline and fallback behavior.`
+          },
+          "Connect"
+        );
+        if (confirmed !== "Connect") return;
+        if (!secret) secret = await askApiKey(config.serverUrl);
+        if (!secret) return;
         const connected = await progress(
           "Connecting and waiting for central review knowledge",
           (signal) => withManager(
@@ -23240,9 +23448,9 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           await access.assertConnection();
         });
       };
-      await browseCentralHistory(context, async (request) => {
+      await browseCentralHistory(context, async (request2) => {
         await validate();
-        const result = await withManager((manager) => manager.readHistory(id4, request, freshness));
+        const result = await withManager((manager) => manager.readHistory(id4, request2, freshness));
         await validate();
         return result;
       }, validate);
@@ -23364,7 +23572,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
 }
 
 // src/localKnowledgeView.ts
-var import_node_crypto19 = require("node:crypto");
+var import_node_crypto20 = require("node:crypto");
 var vscode10 = __toESM(require("vscode"));
 async function showLocalKnowledge(context, scope, changed) {
   const panel = vscode10.window.createWebviewPanel(
@@ -23391,7 +23599,7 @@ async function showLocalKnowledge(context, scope, changed) {
   });
   const render = (notice = "") => {
     if (closed) return;
-    nonce = (0, import_node_crypto19.randomBytes)(16).toString("hex");
+    nonce = (0, import_node_crypto20.randomBytes)(16).toString("hex");
     panel.webview.html = localKnowledgeHtml(
       nonce,
       `${scope.profileId} \xB7 ${scope.kind === "profile" ? "All repositories in this profile" : "This repository and worktree"}`,
@@ -23750,7 +23958,7 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 // src/hook/config.ts
 var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path21 = __toESM(require("node:path"));
-var import_node_crypto20 = require("node:crypto");
+var import_node_crypto21 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
     super(
@@ -23899,11 +24107,11 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
 }
 function acquireLock(dir) {
   const lock2 = import_node_path21.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path21.default.join(dir, `.hook-lock-${(0, import_node_crypto20.randomUUID)()}`);
+  const prepared = import_node_path21.default.join(dir, `.hook-lock-${(0, import_node_crypto21.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
-    nonce: (0, import_node_crypto20.randomUUID)()
+    nonce: (0, import_node_crypto21.randomUUID)()
   });
   import_node_fs6.default.mkdirSync(prepared, { mode: 448 });
   import_node_fs6.default.writeFileSync(import_node_path21.default.join(prepared, "owner.json"), owner, {
@@ -23961,7 +24169,7 @@ function acquireLock(dir) {
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path21.default.join(dir, `.hook-config-${(0, import_node_crypto20.randomUUID)()}`);
+  const temporary = import_node_path21.default.join(dir, `.hook-config-${(0, import_node_crypto21.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
@@ -25251,17 +25459,17 @@ var StatusBarManager = class {
 
 // src/reviewChat.ts
 var vscode21 = __toESM(require("vscode"));
-var import_node_crypto22 = require("node:crypto");
+var import_node_crypto23 = require("node:crypto");
 
 // src/reviewChatView.ts
-var import_node_crypto21 = require("node:crypto");
+var import_node_crypto22 = require("node:crypto");
 var esc5 = (text8) => text8.replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
 var markdown = (text8) => safeMarkdownHtml(text8, () => void 0);
 var ReviewChatView = class {
-  id = (0, import_node_crypto21.randomBytes)(16).toString("hex");
+  id = (0, import_node_crypto22.randomBytes)(16).toString("hex");
   revision = 0;
   sources = /* @__PURE__ */ new Map();
   findings = /* @__PURE__ */ new Map();
@@ -25306,7 +25514,7 @@ var ReviewChatView = class {
     const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
-      const id4 = (0, import_node_crypto21.randomBytes)(12).toString("hex");
+      const id4 = (0, import_node_crypto22.randomBytes)(12).toString("hex");
       this.findings.set(id4, `Explain finding ${f.id}: ${f.title}`);
       return `<li><button class="link" data-finding="${id4}">${esc5(f.title)}</button></li>`;
     }).join("")}</ul></details>`;
@@ -25315,7 +25523,7 @@ var ReviewChatView = class {
         (q) => `<section class="question"><h3>Confirmation needed</h3><p>${esc5(q.question)}</p>${q.answer !== null ? `<div class="user">${esc5(q.answer)}</div>` : `<div>${q.options.map((option) => `<button class="option" data-option="${esc5(option)}">${esc5(option)}</button>`).join("")}</div><small>Expires ${esc5(q.expiresAt)}</small>`}</section>`
       ).join("");
       const citations = (t.response?.citations ?? []).map((c, index2) => {
-        const id4 = (0, import_node_crypto21.randomBytes)(12).toString("hex");
+        const id4 = (0, import_node_crypto22.randomBytes)(12).toString("hex");
         this.sources.set(id4, { turnId: t.id, citation: index2 });
         return `<li><button class="link" data-source="${id4}">${esc5(c.location.side)} \xB7 ${esc5(c.location.path)}:${c.location.startLine}\u2013${c.location.endLine}</button></li>`;
       }).join("");
@@ -25599,7 +25807,7 @@ async function openReviewChat(report, repoRoot, context) {
         else if (view.state && (!turn || !["queued", "running"].includes(turn.status)))
           await execute({
             type: "send",
-            turnId: (0, import_node_crypto22.randomUUID)(),
+            turnId: (0, import_node_crypto23.randomUUID)(),
             content: message2.content
           });
       }
@@ -26655,7 +26863,7 @@ async function activate(context) {
       }
     },
     busy: () => execution.isRunning,
-    run: (request, task) => analyze(request.files, request.repoRoot, request.scope, request.scopeTarget, request.sourceExclusions ?? [], task),
+    run: (request2, task) => analyze(request2.files, request2.repoRoot, request2.scope, request2.scopeTarget, request2.sourceExclusions ?? [], task),
     state: (state) => {
       if (state.phase === "waiting" && !execution.isRunning) statusBar.setIdle(`Automatic review waiting: ${state.reason ?? "scheduled"}${state.retryAt ? ` until ${new Date(state.retryAt).toLocaleTimeString()}` : ""}. Click for manual staged review.`);
       if (state.phase === "failed") {
