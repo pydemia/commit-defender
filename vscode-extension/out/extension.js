@@ -260,17 +260,17 @@ var require_ignore = __commonJS({
     var throwError = (message2, Ctor) => {
       throw new Ctor(message2);
     };
-    var checkPath = (path39, originalPath, doThrow) => {
-      if (!isString(path39)) {
+    var checkPath = (path41, originalPath, doThrow) => {
+      if (!isString(path41)) {
         return doThrow(
           `path must be a string, but got \`${originalPath}\``,
           TypeError
         );
       }
-      if (!path39) {
+      if (!path41) {
         return doThrow(`path must not be empty`, TypeError);
       }
-      if (checkPath.isNotRelative(path39)) {
+      if (checkPath.isNotRelative(path41)) {
         const r = "`path.relative()`d";
         return doThrow(
           `path should be a ${r} string, but got "${originalPath}"`,
@@ -279,7 +279,7 @@ var require_ignore = __commonJS({
       }
       return true;
     };
-    var isNotRelative = (path39) => REGEX_TEST_INVALID_PATH.test(path39);
+    var isNotRelative = (path41) => REGEX_TEST_INVALID_PATH.test(path41);
     checkPath.isNotRelative = isNotRelative;
     checkPath.convert = (p) => p;
     var Ignore2 = class {
@@ -338,7 +338,7 @@ var require_ignore = __commonJS({
       //   setting `checkUnignored` to `false` could reduce additional
       //   path matching.
       // @returns {TestResult} true if a file is ignored
-      _testOne(path39, checkUnignored) {
+      _testOne(path41, checkUnignored) {
         let ignored = false;
         let unignored = false;
         this._rules.forEach((rule) => {
@@ -346,7 +346,7 @@ var require_ignore = __commonJS({
           if (unignored === negative && ignored !== unignored || negative && !ignored && !unignored && !checkUnignored) {
             return;
           }
-          const matched = rule.regex.test(path39);
+          const matched = rule.regex.test(path41);
           if (matched) {
             ignored = !negative;
             unignored = negative;
@@ -359,24 +359,24 @@ var require_ignore = __commonJS({
       }
       // @returns {TestResult}
       _test(originalPath, cache, checkUnignored, slices) {
-        const path39 = originalPath && checkPath.convert(originalPath);
+        const path41 = originalPath && checkPath.convert(originalPath);
         checkPath(
-          path39,
+          path41,
           originalPath,
           this._allowRelativePaths ? RETURN_FALSE : throwError
         );
-        return this._t(path39, cache, checkUnignored, slices);
+        return this._t(path41, cache, checkUnignored, slices);
       }
-      _t(path39, cache, checkUnignored, slices) {
-        if (path39 in cache) {
-          return cache[path39];
+      _t(path41, cache, checkUnignored, slices) {
+        if (path41 in cache) {
+          return cache[path41];
         }
         if (!slices) {
-          slices = path39.split(SLASH);
+          slices = path41.split(SLASH);
         }
         slices.pop();
         if (!slices.length) {
-          return cache[path39] = this._testOne(path39, checkUnignored);
+          return cache[path41] = this._testOne(path41, checkUnignored);
         }
         const parent = this._t(
           slices.join(SLASH) + SLASH,
@@ -384,24 +384,24 @@ var require_ignore = __commonJS({
           checkUnignored,
           slices
         );
-        return cache[path39] = parent.ignored ? parent : this._testOne(path39, checkUnignored);
+        return cache[path41] = parent.ignored ? parent : this._testOne(path41, checkUnignored);
       }
-      ignores(path39) {
-        return this._test(path39, this._ignoreCache, false).ignored;
+      ignores(path41) {
+        return this._test(path41, this._ignoreCache, false).ignored;
       }
       createFilter() {
-        return (path39) => !this.ignores(path39);
+        return (path41) => !this.ignores(path41);
       }
       filter(paths2) {
         return makeArray(paths2).filter(this.createFilter());
       }
       // @returns {TestResult}
-      test(path39) {
-        return this._test(path39, this._testCache, true);
+      test(path41) {
+        return this._test(path41, this._testCache, true);
       }
     };
     var factory = (options) => new Ignore2(options);
-    var isPathValid = (path39) => checkPath(path39 && checkPath.convert(path39), path39, RETURN_FALSE);
+    var isPathValid = (path41) => checkPath(path41 && checkPath.convert(path41), path41, RETURN_FALSE);
     factory.isPathValid = isPathValid;
     factory.default = factory;
     module2.exports = factory;
@@ -412,7 +412,7 @@ var require_ignore = __commonJS({
       const makePosix = (str) => /^\\\\\?\\/.test(str) || /["<>|\u0000-\u001F]+/u.test(str) ? str : str.replace(/\\/g, "/");
       checkPath.convert = makePosix;
       const REGIX_IS_WINDOWS_PATH_ABSOLUTE = /^[a-z]:\//i;
-      checkPath.isNotRelative = (path39) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path39) || isNotRelative(path39);
+      checkPath.isNotRelative = (path41) => REGIX_IS_WINDOWS_PATH_ABSOLUTE.test(path41) || isNotRelative(path41);
     }
   }
 });
@@ -1035,12 +1035,12 @@ function projectCommitDefender(value) {
       });
       return [];
     }
-    const text8 = [finding.problem, finding.impact, finding.recommendation].filter(Boolean).join("\n\n");
+    const text9 = [finding.problem, finding.impact, finding.recommendation].filter(Boolean).join("\n\n");
     return [
       {
         file: finding.anchor.path,
         line: finding.anchor.startLine,
-        comment: text8,
+        comment: text9,
         category: categories.has(finding.category) ? finding.category : "",
         priority: finding.severity
       }
@@ -2236,11 +2236,11 @@ function windowsNative(request2, options = {}) {
 function canonicalJson(value, maxBytes = 16 * 1024 * 1024) {
   const active2 = /* @__PURE__ */ new Set();
   let bytes = 0;
-  const add = (text8) => {
-    bytes += Buffer.byteLength(text8, "utf8");
+  const add = (text9) => {
+    bytes += Buffer.byteLength(text9, "utf8");
     if (bytes > maxBytes)
       throw new LocalStoreError("record-too-large", "Local record exceeds its size limit.");
-    return text8;
+    return text9;
   };
   const visit2 = (entry, depth) => {
     if (depth > 64)
@@ -2531,11 +2531,11 @@ var PlatformLocalKeyStore = class {
       return void 0;
     if (result.code !== 0)
       throw unavailable();
-    const text8 = result.stdout.trim();
-    if (!/^[A-Za-z0-9+/]{43}=$/.test(text8))
+    const text9 = result.stdout.trim();
+    if (!/^[A-Za-z0-9+/]{43}=$/.test(text9))
       throw unavailable();
-    const key3 = Buffer.from(text8, "base64");
-    if (key3.length !== 32 || key3.toString("base64") !== text8)
+    const key3 = Buffer.from(text9, "base64");
+    if (key3.length !== 32 || key3.toString("base64") !== text9)
       throw unavailable();
     return key3;
   }
@@ -2936,8 +2936,8 @@ var LocalRecordStore = class _LocalRecordStore {
     const entries = await (0, import_promises2.readdir)(directory2);
     if (entries.some((name2) => name2 !== "blobs" && !name2.startsWith(".pending-") && !/^\d{12}\.json$/.test(name2)))
       throw corrupt();
-    const names = entries.filter((name2) => /^\d{12}\.json$/.test(name2)).sort();
-    const name = names.at(-1);
+    const names2 = entries.filter((name2) => /^\d{12}\.json$/.test(name2)).sort();
+    const name = names2.at(-1);
     if (!name)
       return void 0;
     const marker = parse(await readPrivateFile(import_node_path4.default.join(directory2, name), 1024));
@@ -3618,15 +3618,15 @@ function compilePathPatterns(patterns = []) {
     });
     const anchored = raw.startsWith("/") || parts2.length > 1;
     return (file) => {
-      const names = file.split("/");
-      let positions = new Set(anchored ? [0] : names.map((_, index2) => index2));
+      const names2 = file.split("/");
+      let positions = new Set(anchored ? [0] : names2.map((_, index2) => index2));
       for (const part of parts2) {
         const next = /* @__PURE__ */ new Set();
         for (const start of positions) {
           if (part === "**")
-            for (let index2 = start; index2 <= names.length; index2++)
+            for (let index2 = start; index2 <= names2.length; index2++)
               next.add(index2);
-          else if (start < names.length && part(names[start]))
+          else if (start < names2.length && part(names2[start]))
             next.add(start + 1);
         }
         positions = next;
@@ -3779,15 +3779,15 @@ var LocalSourceSnapshot = class {
       throw new SourceCaptureError("invalid-source-request");
     const end = Math.min(endLine, startLine + 199, lines2.length);
     const full = lines2.slice(startLine - 1, end).join("\n");
-    const text8 = full.slice(0, 24e3);
+    const text9 = full.slice(0, 24e3);
     return {
       status: "available",
       source: result.source,
       startLine,
-      endLine: startLine + text8.split("\n").length - 1,
-      text: text8,
-      excerptHash: hash(text8),
-      truncated: text8.length !== full.length || end < Math.min(endLine, lines2.length)
+      endLine: startLine + text9.split("\n").length - 1,
+      text: text9,
+      excerptHash: hash(text9),
+      truncated: text9.length !== full.length || end < Math.min(endLine, lines2.length)
     };
   }
   /** Literal text candidates, not a semantic call graph or proof that a defect exists. */
@@ -4319,12 +4319,12 @@ var CentralKnowledgeCache = class _CentralKnowledgeCache {
         } finally {
           void iterator.return?.().catch(() => void 0);
         }
-        const bytes = Buffer.concat(chunks), text8 = bytes.toString("utf8");
-        if (size !== manifest.payload.components[part].sizeBytes || hash2(bytes) !== manifest.payload.components[part].contentHash || !Buffer.from(text8).equals(bytes))
+        const bytes = Buffer.concat(chunks), text9 = bytes.toString("utf8");
+        if (size !== manifest.payload.components[part].sizeBytes || hash2(bytes) !== manifest.payload.components[part].contentHash || !Buffer.from(text9).equals(bytes))
           throw error("invalid-bundle");
         let parsed;
         try {
-          parsed = JSON.parse(text8);
+          parsed = JSON.parse(text9);
         } catch {
           throw error("invalid-bundle");
         }
@@ -4694,10 +4694,10 @@ var KnowledgeHttpTransport = class {
         chunks.push(bytes2);
       }
       const bytes = Buffer.concat(chunks);
-      const text8 = bytes.toString("utf8");
-      if (!Buffer.from(text8).equals(bytes))
+      const text9 = bytes.toString("utf8");
+      if (!Buffer.from(text9).equals(bytes))
         throw unavailable2();
-      return { status: 200, manifest: JSON.parse(text8) };
+      return { status: 200, manifest: JSON.parse(text9) };
     } catch {
       throw unavailable2();
     } finally {
@@ -4899,12 +4899,12 @@ function canonicalRepositoryRemote(raw) {
     const url = new URL(value);
     if (!["https:", "http:", "ssh:"].includes(url.protocol) || segments.length < 2)
       return null;
-    const port = url.protocol === "ssh:" && url.port === "22" ? "" : url.port;
+    const port2 = url.protocol === "ssh:" && url.port === "22" ? "" : url.port;
     const last = segments.at(-1).replace(/\.git$/i, "");
     if (!last)
       return null;
     segments[segments.length - 1] = last;
-    return `${url.hostname.toLowerCase()}${port ? ":" + port : ""}/${segments.join("/").toLowerCase()}`;
+    return `${url.hostname.toLowerCase()}${port2 ? ":" + port2 : ""}/${segments.join("/").toLowerCase()}`;
   } catch {
     return null;
   }
@@ -4923,10 +4923,10 @@ function localRepositoryRemotes(root2) {
       throw mismatch();
     }
   };
-  const names = git3(["remote"]).trim().split("\n").filter(Boolean);
-  if (names.length > 100)
+  const names2 = git3(["remote"]).trim().split("\n").filter(Boolean);
+  if (names2.length > 100)
     throw mismatch();
-  return names.flatMap((name) => {
+  return names2.flatMap((name) => {
     if (!/^[a-zA-Z0-9._/-]+$/.test(name) || name.startsWith("-"))
       throw mismatch();
     return git3(["remote", "get-url", "--all", "--", name]).trim().split("\n").map((url) => ({
@@ -6098,10 +6098,10 @@ async function newlyStagedPaths(previous3, current) {
     const size = Number(await git(current.root, ["cat-file", "-s", oid]));
     if (!Number.isSafeInteger(size) || size < 0 || size > 2 * 1024 * 1024)
       throw new SourceCaptureError("source-unavailable");
-    const text8 = await git(current.root, ["cat-file", "blob", oid]);
-    if (text8.includes("\0"))
+    const text9 = await git(current.root, ["cat-file", "blob", oid]);
+    if (text9.includes("\0"))
       throw new SourceCaptureError("source-unavailable");
-    const count = (text8.match(/\n/g)?.length ?? 0) + Number(!!text8 && !text8.endsWith("\n"));
+    const count = (text9.match(/\n/g)?.length ?? 0) + Number(!!text9 && !text9.endsWith("\n"));
     lineCounts.set(oid, count);
     return count;
   };
@@ -6632,11 +6632,11 @@ var ServiceJobs = class _ServiceJobs {
       const source2 = restoreLocalSource(row.value);
       source2.close();
       const startedAt = Date.now();
-      const running = { ...job, state: "running", owner: token2, startedAt };
-      delete running.waitingReason;
-      await this.update(running, job);
+      const running2 = { ...job, state: "running", owner: token2, startedAt };
+      delete running2.waitingReason;
+      await this.update(running2, job);
       return {
-        job: running,
+        job: running2,
         registration,
         source: row.value
       };
@@ -7041,8 +7041,8 @@ var LocalReviewActivity = class {
 
 // src/extension.ts
 var fs10 = __toESM(require("fs"));
-var path38 = __toESM(require("path"));
-var vscode22 = __toESM(require("vscode"));
+var path40 = __toESM(require("path"));
+var vscode23 = __toESM(require("vscode"));
 
 // src/reviewOutcome.ts
 function reviewStatus2(review) {
@@ -7471,9 +7471,9 @@ function captureStagedSnapshot(repoRoot, patterns = []) {
     if (entry.type !== "blob" || !["100644", "100755"].includes(entry.mode) || !selectReviewInputs(repoRoot, [file], patterns, { gitTree: true }).files.length) {
       throw new Error(`Source excluded from Git snapshot: ${file}`);
     }
-    const text8 = run2(repoRoot, ["cat-file", "blob", entry.oid]);
-    if (text8.includes("\0")) throw new Error(`Binary source cannot be reviewed as text: ${file}`);
-    return text8;
+    const text9 = run2(repoRoot, ["cat-file", "blob", entry.oid]);
+    if (text9.includes("\0")) throw new Error(`Binary source cannot be reviewed as text: ${file}`);
+    return text9;
   };
   return {
     files: [...selected.keys()],
@@ -7486,9 +7486,9 @@ function captureStagedSnapshot(repoRoot, patterns = []) {
     readSelected(file) {
       const change = selected.get(file);
       if (!change) throw new Error(`File is not selected in Git snapshot: ${file}`);
-      const text8 = read(file, change.status === "D" ? base2 : source2);
-      if (text8 === void 0) throw new Error(`Snapshot source is missing: ${file}`);
-      return text8;
+      const text9 = read(file, change.status === "D" ? base2 : source2);
+      if (text9 === void 0) throw new Error(`Snapshot source is missing: ${file}`);
+      return text9;
     },
     diff(files = [...selected.keys()]) {
       const paths2 = new Set(files.flatMap((file) => selected.get(file)?.paths ?? []));
@@ -7509,8 +7509,8 @@ function readGitTreeFile(repoRoot, tree, file) {
 }
 
 // src/reviewSource.ts
-function sourceHash(text8) {
-  return (0, import_crypto.createHash)("sha256").update(text8).digest("hex");
+function sourceHash(text9) {
+  return (0, import_crypto.createHash)("sha256").update(text9).digest("hex");
 }
 function validLine(line, count) {
   return typeof line === "number" && Number.isSafeInteger(line) && line >= 0 && line <= count;
@@ -7523,16 +7523,16 @@ var SourceViewCache = class {
   }
   values = /* @__PURE__ */ new Map();
   bytes = 0;
-  put(text8) {
-    const hash4 = sourceHash(text8);
-    const size = Buffer.byteLength(text8);
+  put(text9) {
+    const hash4 = sourceHash(text9);
+    const size = Buffer.byteLength(text9);
     if (size > this.limit || this.values.has(hash4)) return hash4;
     while (this.bytes + size > this.limit) {
       const first = this.values.keys().next().value;
       this.bytes -= Buffer.byteLength(this.values.get(first));
       this.values.delete(first);
     }
-    this.values.set(hash4, text8);
+    this.values.set(hash4, text9);
     this.bytes += size;
     return hash4;
   }
@@ -7542,10 +7542,10 @@ var SourceViewCache = class {
 };
 var sourceViews = new SourceViewCache();
 function retainCapturedSources(report, sources) {
-  for (const [file, text8] of Object.entries(sources ?? {})) {
+  for (const [file, text9] of Object.entries(sources ?? {})) {
     const anchor = sourceAnchor(report, file);
-    if (anchor && typeof text8 === "string" && sourceHash(text8) === anchor.sha256 && text8.split(/\r?\n/).length === anchor.line_count)
-      sourceViews.put(text8);
+    if (anchor && typeof text9 === "string" && sourceHash(text9) === anchor.sha256 && text9.split(/\r?\n/).length === anchor.line_count)
+      sourceViews.put(text9);
   }
 }
 function attachReviewSources(report, sources, sideOf = () => "source") {
@@ -7600,12 +7600,12 @@ function readRecordedSource(repoRoot, report, file) {
   if (cached !== void 0) return cached;
   try {
     const snapshot = report.source_snapshot;
-    const text8 = snapshot?.kind === "index" || snapshot?.kind === "commit-tree" ? readGitTreeFile(
+    const text9 = snapshot?.kind === "index" || snapshot?.kind === "commit-tree" ? readGitTreeFile(
       repoRoot,
       anchor.side === "base" ? snapshot.base_tree : snapshot.source_tree,
       file
     ) : readReviewFile(repoRoot, file);
-    return text8 !== void 0 && sourceHash(text8) === anchor.sha256 ? text8 : void 0;
+    return text9 !== void 0 && sourceHash(text9) === anchor.sha256 ? text9 : void 0;
   } catch {
     return void 0;
   }
@@ -7616,12 +7616,12 @@ function liveSource(repoRoot, report, file, editorText) {
   if (sourceAnchor(report, file)?.side === "base") return void 0;
   try {
     if (!selectReviewInputs(repoRoot, [file]).files.length) return void 0;
-    const text8 = editorText ?? readReviewFile(repoRoot, file);
+    const text9 = editorText ?? readReviewFile(repoRoot, file);
     const anchor = sourceAnchor(report, file);
     if ((report.source_snapshot || report.source_anchors) && !anchor)
       return void 0;
-    if (anchor && sourceHash(text8) !== anchor.sha256) return void 0;
-    return text8;
+    if (anchor && sourceHash(text9) !== anchor.sha256) return void 0;
+    return text9;
   } catch {
     return void 0;
   }
@@ -7639,10 +7639,10 @@ function liveBlocks(report, repoRoot, blocks, editorText) {
           editorText?.(block.file)
         )?.split(/\r?\n/)
       );
-    const text8 = lines2.get(block.file);
-    if (!text8 || !validLine(block.line, text8.length) || block.line === 0)
+    const text9 = lines2.get(block.file);
+    if (!text9 || !validLine(block.line, text9.length) || block.line === 0)
       return false;
-    return block.col === void 0 || Number.isSafeInteger(block.col) && block.col >= 1 && block.col <= text8[block.line - 1].length + 1;
+    return block.col === void 0 || Number.isSafeInteger(block.col) && block.col >= 1 && block.col <= text9[block.line - 1].length + 1;
   });
 }
 
@@ -11308,7 +11308,7 @@ function resolveAllAttention(events, context) {
   let index2 = -1;
   let open4;
   let group;
-  let text8;
+  let text9;
   let openingSequence;
   let closingSequence;
   let use;
@@ -11346,7 +11346,7 @@ function resolveAllAttention(events, context) {
             },
             end
           };
-          text8 = {
+          text9 = {
             type: use > 1 ? "strongText" : "emphasisText",
             start: {
               ...events[open4][1].end
@@ -11374,9 +11374,9 @@ function resolveAllAttention(events, context) {
           if (events[open4][1].end.offset - events[open4][1].start.offset) {
             nextEvents = push(nextEvents, [["enter", events[open4][1], context], ["exit", events[open4][1], context]]);
           }
-          nextEvents = push(nextEvents, [["enter", group, context], ["enter", openingSequence, context], ["exit", openingSequence, context], ["enter", text8, context]]);
+          nextEvents = push(nextEvents, [["enter", group, context], ["enter", openingSequence, context], ["exit", openingSequence, context], ["enter", text9, context]]);
           nextEvents = push(nextEvents, resolveAll(context.parser.constructs.insideSpan.null, events.slice(open4 + 1, index2), context));
-          nextEvents = push(nextEvents, [["exit", text8, context], ["enter", closingSequence, context], ["exit", closingSequence, context], ["exit", group, context]]);
+          nextEvents = push(nextEvents, [["exit", text9, context], ["enter", closingSequence, context], ["exit", closingSequence, context], ["exit", group, context]]);
           if (events[index2][1].end.offset - events[index2][1].start.offset) {
             offset = 2;
             nextEvents = push(nextEvents, [["enter", events[index2][1], context], ["exit", events[index2][1], context]]);
@@ -12824,7 +12824,7 @@ function resolveHeadingAtx(events, context) {
   let contentEnd = events.length - 2;
   let contentStart = 3;
   let content3;
-  let text8;
+  let text9;
   if (events[contentStart][1].type === "whitespace") {
     contentStart += 2;
   }
@@ -12840,13 +12840,13 @@ function resolveHeadingAtx(events, context) {
       start: events[contentStart][1].start,
       end: events[contentEnd][1].end
     };
-    text8 = {
+    text9 = {
       type: "chunkText",
       start: events[contentStart][1].start,
       end: events[contentEnd][1].end,
       contentType: "text"
     };
-    splice(events, contentStart, contentEnd - contentStart + 1, [["enter", content3, context], ["enter", text8, context], ["exit", text8, context], ["exit", content3, context]]);
+    splice(events, contentStart, contentEnd - contentStart + 1, [["enter", content3, context], ["enter", text9, context], ["exit", text9, context], ["exit", content3, context]]);
   }
   return events;
 }
@@ -13736,7 +13736,7 @@ function resolveToLabelEnd(events, context) {
       ...events[close][1].end
     }
   };
-  const text8 = {
+  const text9 = {
     type: "labelText",
     start: {
       ...events[open4 + offset + 2][1].end
@@ -13747,9 +13747,9 @@ function resolveToLabelEnd(events, context) {
   };
   media = [["enter", group, context], ["enter", label, context]];
   media = push(media, events.slice(open4 + 1, open4 + offset + 3));
-  media = push(media, [["enter", text8, context]]);
+  media = push(media, [["enter", text9, context]]);
   media = push(media, resolveAll(context.parser.constructs.insideSpan.null, events.slice(open4 + offset + 4, close - 3), context));
-  media = push(media, [["exit", text8, context], events[close - 2], events[close - 1], ["exit", label, context]]);
+  media = push(media, [["exit", text9, context], events[close - 2], events[close - 1], ["exit", label, context]]);
   media = push(media, events.slice(close + 1));
   media = push(media, [["exit", group, context]]);
   splice(events, open4, events.length, media);
@@ -14129,7 +14129,7 @@ var setextUnderline = {
 function resolveToSetextUnderline(events, context) {
   let index2 = events.length;
   let content3;
-  let text8;
+  let text9;
   let definition4;
   while (index2--) {
     if (events[index2][0] === "enter") {
@@ -14138,7 +14138,7 @@ function resolveToSetextUnderline(events, context) {
         break;
       }
       if (events[index2][1].type === "paragraph") {
-        text8 = index2;
+        text9 = index2;
       }
     } else {
       if (events[index2][1].type === "content") {
@@ -14158,9 +14158,9 @@ function resolveToSetextUnderline(events, context) {
       ...events[events.length - 1][1].end
     }
   };
-  events[text8][1].type = "setextHeadingText";
+  events[text9][1].type = "setextHeadingText";
   if (definition4) {
-    events.splice(text8, 0, ["enter", heading2, context]);
+    events.splice(text9, 0, ["enter", heading2, context]);
     events.splice(definition4 + 1, 0, ["exit", events[content3][1], context]);
     events[content3][1].end = {
       ...events[definition4][1].end
@@ -14264,10 +14264,10 @@ function initializeFactory(field) {
   function initializeText(effects) {
     const self = this;
     const constructs2 = this.parser.constructs[field];
-    const text8 = effects.attempt(constructs2, start, notText);
+    const text9 = effects.attempt(constructs2, start, notText);
     return start;
     function start(code3) {
-      return atBreak(code3) ? text8(code3) : notText(code3);
+      return atBreak(code3) ? text9(code3) : notText(code3);
     }
     function notText(code3) {
       if (code3 === null) {
@@ -14281,7 +14281,7 @@ function initializeFactory(field) {
     function data(code3) {
       if (atBreak(code3)) {
         effects.exit("data");
-        return text8(code3);
+        return text9(code3);
       }
       effects.consume(code3);
       return data;
@@ -15338,7 +15338,7 @@ function compiler(options) {
     const siblings = node2.children;
     let tail2 = siblings[siblings.length - 1];
     if (!tail2 || tail2.type !== "text") {
-      tail2 = text8();
+      tail2 = text9();
       tail2.position = {
         start: point2(token2.start),
         // @ts-expect-error: we’ll add `end` later.
@@ -15583,7 +15583,7 @@ function compiler(options) {
       children: []
     };
   }
-  function text8() {
+  function text9() {
     return {
       type: "text",
       value: ""
@@ -16537,12 +16537,12 @@ function linkReference(node2, _, state, info) {
   let subexit = state.enter("label");
   const tracker = state.createTracker(info);
   let value = tracker.move("[");
-  const text8 = state.containerPhrasing(node2, {
+  const text9 = state.containerPhrasing(node2, {
     before: value,
     after: "]",
     ...tracker.current()
   });
-  value += tracker.move(text8 + "][");
+  value += tracker.move(text9 + "][");
   subexit();
   const stack = state.stack;
   state.stack = [];
@@ -16555,7 +16555,7 @@ function linkReference(node2, _, state, info) {
   subexit();
   state.stack = stack;
   exit2();
-  if (type === "full" || !text8 || text8 !== reference) {
+  if (type === "full" || !text9 || text9 !== reference) {
     value += tracker.move(reference + "]");
   } else if (type === "shortcut") {
     value = value.slice(0, -1);
@@ -17876,7 +17876,7 @@ function transformGfmAutolinkLiterals(tree) {
     { ignore: ["link", "linkReference"] }
   );
 }
-function findUrl(_, protocol, domain2, path39, match) {
+function findUrl(_, protocol, domain2, path41, match) {
   let prefix = "";
   if (!previous2(match)) {
     return false;
@@ -17889,7 +17889,7 @@ function findUrl(_, protocol, domain2, path39, match) {
   if (!isCorrectDomain(domain2)) {
     return false;
   }
-  const parts2 = splitUrl(domain2 + path39);
+  const parts2 = splitUrl(domain2 + path41);
   if (!parts2[0]) return false;
   const result = {
     type: "link",
@@ -17967,8 +17967,8 @@ function safeMarkdown(input, resolveLink) {
     if (node2.type === "image" || node2.type === "imageReference")
       return [{ type: "text", value: node2.alt ?? "" }];
     if (node2.type === "html") {
-      const text8 = { type: "text", value: node2.value };
-      return ["root", "blockquote", "listItem"].includes(parent.type) ? [{ type: "paragraph", children: [text8] }] : [text8];
+      const text9 = { type: "text", value: node2.value };
+      return ["root", "blockquote", "listItem"].includes(parent.type) ? [{ type: "paragraph", children: [text9] }] : [text9];
     }
     if ("children" in node2) {
       node2.children = node2.children.flatMap(
@@ -18051,10 +18051,10 @@ var ReviewLinks = class {
       return void 0;
     let anchor = sourceAnchor(report, file);
     if (!anchor && !report.source_snapshot && !report.source_anchors) {
-      const text8 = liveSource(repoRoot, report, file);
-      if (text8 === void 0) return void 0;
+      const text9 = liveSource(repoRoot, report, file);
+      if (text9 === void 0) return void 0;
       report = { ...report, source_snapshot: void 0 };
-      attachReviewSources(report, /* @__PURE__ */ new Map([[file, text8]]));
+      attachReviewSources(report, /* @__PURE__ */ new Map([[file, text9]]));
       anchor = sourceAnchor(report, file);
     }
     if (!anchor || !validLine(line, anchor.line_count)) return void 0;
@@ -18136,9 +18136,9 @@ var SummaryView = class {
     );
     return href ? `<a href="${href}">${esc(label)}</a>` : esc(label);
   }
-  markdown(text8, file) {
+  markdown(text9, file) {
     return safeMarkdownHtml(
-      text8,
+      text9,
       (raw) => this.href(this.links.markdown(this.repoRoot, this.report, raw, file))
     );
   }
@@ -18485,9 +18485,9 @@ var ReviewNavigation = class {
       })
     );
   }
-  markdown(text8, repoRoot, report, file) {
+  markdown(text9, repoRoot, report, file) {
     let linked = false;
-    const body2 = safeMarkdown(text8, (raw) => {
+    const body2 = safeMarkdown(text9, (raw) => {
       const id4 = this.links.markdown(repoRoot, report, raw, file);
       if (!id4) return void 0;
       linked = true;
@@ -18604,13 +18604,13 @@ function captureWorkingFiles(repoRoot, files, patterns) {
 }
 
 // src/skipMarkers.ts
-function markedLines(text8, file) {
+function markedLines(text9, file) {
   const marked = /* @__PURE__ */ new Set();
   const hashComments = /\.(?:py|pyi|sh|bash|zsh|rb|r|R|yaml|yml|toml)$/.test(file);
   let quote2 = "";
   let blockComment = false;
   let escaped = false;
-  const lines2 = text8.split(/\r?\n/);
+  const lines2 = text9.split(/\r?\n/);
   for (let line = 0; line < lines2.length; line++) {
     const value = lines2[line];
     for (let i = 0; i < value.length; i++) {
@@ -18656,7 +18656,7 @@ function markedLines(text8, file) {
   return marked;
 }
 function applyMarkers(comments2, sources) {
-  const skipMap = new Map([...sources].map(([file, text8]) => [file, markedLines(text8, file)]));
+  const skipMap = new Map([...sources].map(([file, text9]) => [file, markedLines(text9, file)]));
   return comments2.filter((comment) => !skipMap.get(comment.file)?.has(comment.line));
 }
 
@@ -18782,11 +18782,11 @@ function robustJson(raw) {
   }
   throw new Error("No valid JSON found in response");
 }
-function repairTruncated(text8) {
+function repairTruncated(text9) {
   const stack = [];
   let inString = false;
   let escapeNext = false;
-  for (const ch of text8) {
+  for (const ch of text9) {
     if (escapeNext) {
       escapeNext = false;
       continue;
@@ -18814,7 +18814,7 @@ function repairTruncated(text8) {
   for (let i = stack.length - 1; i >= 0; i--) {
     suffix += stack[i] === "{" ? "}" : "]";
   }
-  return text8 + suffix;
+  return text9 + suffix;
 }
 var P3_PATTERNS = new RegExp(
   [
@@ -19143,7 +19143,7 @@ function ctxLine(req) {
 function err(req, msg) {
   const detail = `${msg}
 ${ctxLine(req)}`;
-  const redacted = req.apiKey ? [req.apiKey, encodeURIComponent(req.apiKey)].reduce((text8, secret) => text8.split(secret).join("[redacted]"), detail) : detail;
+  const redacted = req.apiKey ? [req.apiKey, encodeURIComponent(req.apiKey)].reduce((text9, secret) => text9.split(secret).join("[redacted]"), detail) : detail;
   return { raw: "", error: redacted };
 }
 async function withTimeout(req, fn) {
@@ -19584,7 +19584,7 @@ async function callAzureOpenAI(req) {
 }
 async function callOpenAI(req) {
   if (!req.apiKey) {
-    return err(req, "Missing OpenAI API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing OpenAI API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_OPENAI).replace(/\/+$/, "");
   const url = `${base2}/chat/completions`;
@@ -19663,7 +19663,7 @@ function openaiHttpError(req, resp, body2) {
 }
 async function callAnthropic(req) {
   if (!req.apiKey) {
-    return err(req, "Missing Anthropic API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing Anthropic API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_ANTHROPIC).replace(/\/+$/, "");
   const url = `${base2}/messages`;
@@ -19717,7 +19717,7 @@ async function callAnthropic(req) {
 }
 async function callGemini(req) {
   if (!req.apiKey) {
-    return err(req, "Missing Gemini API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing Gemini API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_GEMINI).replace(/\/+$/, "");
   const model = req.model || "gemini-2.5-flash";
@@ -19956,7 +19956,7 @@ ${entry.summary}`).join("\n\n---\n\n"),
     const report = this.assembleReport(relPaths, review, Date.now() - start);
     report.source_exclusions = exclusions;
     report.source_snapshot = { kind: "working-tree", content_sha256: Object.fromEntries(
-      [...sources].map(([file, text8]) => [file, (0, import_crypto5.createHash)("sha256").update(text8).digest("hex")])
+      [...sources].map(([file, text9]) => [file, (0, import_crypto5.createHash)("sha256").update(text9).digest("hex")])
     ) };
     attachReviewSources(report, sources);
     return this.runResult(report);
@@ -20468,9 +20468,9 @@ var LegacyReviewBackend = class {
     } : {
       files: captured.files,
       excluded: captured.exclusions,
-      sources: [...captured.sources].map(([file, text8]) => [
+      sources: [...captured.sources].map(([file, text9]) => [
         file,
-        sourceHash(text8)
+        sourceHash(text9)
       ]),
       errors: [...captured.readErrors].map(([file, error2]) => [
         file,
@@ -20702,7 +20702,7 @@ function knowledgeEditorValues(value) {
   if (!data.body.trim()) throw Error("Enter the knowledge body.");
   return data;
 }
-var lines = (text8) => text8.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+var lines = (text9) => text9.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
 function knowledgeEditorChanges(value, kind) {
   const expiresAt = value.expiresAt.trim();
   if (expiresAt && (!Number.isFinite(Date.parse(expiresAt)) || new Date(expiresAt).toISOString() !== expiresAt))
@@ -21029,9 +21029,29 @@ var import_promises9 = require("node:fs/promises");
 var fs4 = __toESM(require("fs"));
 var path22 = __toESM(require("path"));
 var vscode3 = __toESM(require("vscode"));
+var heldModelConfig;
+var heldUserSettings;
+var setupSettled = Promise.resolve();
+function holdModelConfiguration(snapshot) {
+  if (heldModelConfig) throw Error("model-setup-in-progress");
+  heldModelConfig = getConfig();
+  heldUserSettings = snapshot;
+  let settle;
+  setupSettled = new Promise((resolve4) => {
+    settle = resolve4;
+  });
+  return () => {
+    heldModelConfig = void 0;
+    heldUserSettings = void 0;
+    settle();
+  };
+}
+async function waitForModelConfiguration() {
+  await setupSettled;
+}
 function getStandaloneReviewSettings(fileCount, repoRoot) {
   const cfg = vscode3.workspace.getConfiguration("commitDefender", repoRoot ? vscode3.Uri.file(repoRoot) : void 0);
-  const user = (name) => cfg.inspect(name)?.globalValue;
+  const user = (name) => heldUserSettings && name in heldUserSettings ? heldUserSettings[name] : cfg.inspect(name)?.globalValue;
   const provider = user("aiProvider") ?? "unconfigured";
   const seconds = user(fileCount === 1 ? "fileTimeoutSeconds" : "directoryTimeoutSeconds");
   return {
@@ -21054,6 +21074,7 @@ function getStandaloneReviewSettings(fileCount, repoRoot) {
   };
 }
 function getConfig() {
+  if (heldModelConfig) return { ...heldModelConfig };
   const cfg = vscode3.workspace.getConfiguration("commitDefender");
   return {
     aiProvider: cfg.get("aiProvider") ?? "aoai",
@@ -21094,9 +21115,9 @@ function resolveCodexPath(configured2) {
   }
   const platform = process.platform;
   const arches = process.arch === "arm64" ? ["aarch64", "arm64"] : [process.arch];
-  const names = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
+  const names2 = process.platform === "win32" ? ["codex.exe", "codex"] : ["codex"];
   for (const arch of arches) {
-    for (const name of names) {
+    for (const name of names2) {
       const candidate = path22.join(extensionPath, "bin", `${platform}-${arch}`, name);
       if (fs4.existsSync(candidate)) {
         return candidate;
@@ -22235,21 +22256,21 @@ async function configureManagedHooks(options) {
       return { status: "removed" };
     }
     const route = options.route ?? Object.values(state.routes)[0];
-    const names = new Set(hookNames);
+    const names2 = new Set(hookNames);
     try {
       for (const name of await import_promises10.default.readdir(
         import_node_path17.default.resolve(loc.root, state.original)
       ))
-        if (/^[a-z][a-z0-9-]*$/.test(name)) names.add(name);
+        if (/^[a-z][a-z0-9-]*$/.test(name)) names2.add(name);
     } catch (error2) {
       if (!["ENOENT", "ENOTDIR"].includes(
         error2.code ?? ""
       ))
         throw error2;
     }
-    for (const name of names) {
+    for (const name of names2) {
       const original = import_node_path17.default.join(state.original, name);
-      const text8 = `#!/bin/sh
+      const text9 = `#!/bin/sh
 # Commit Defender managed forwarding hook v1
 ${["pre-commit", "pre-push"].includes(name) ? `if [ -x ${quote(route.node)} ] && [ -f ${quote(options.adapter)} ]; then
   exec ${quote(route.node)} ${quote(options.adapter)} ${quote(loc.stateFile)} ${quote(name)} ${quote(original)} "$@"
@@ -22261,22 +22282,22 @@ exit 0
       if (process.platform === "win32") {
         const published = await windowsWritePrivateFile(
           file,
-          Buffer.from(text8),
+          Buffer.from(text9),
           Boolean(state.files[name])
         );
         if (!published) throw Error("Unowned managed hook file exists.");
       } else if (!state.files[name]) {
-        await import_promises10.default.writeFile(file, text8, { flag: "wx", mode: 448 });
+        await import_promises10.default.writeFile(file, text9, { flag: "wx", mode: 448 });
       } else {
         const temporary = `${file}.${(0, import_node_crypto17.randomUUID)()}`;
         try {
-          await import_promises10.default.writeFile(temporary, text8, { flag: "wx", mode: 448 });
+          await import_promises10.default.writeFile(temporary, text9, { flag: "wx", mode: 448 });
           await import_promises10.default.rename(temporary, file);
         } finally {
           await import_promises10.default.rm(temporary, { force: true });
         }
       }
-      state.files[name] = digest2(text8);
+      state.files[name] = digest2(text9);
     }
     await writeJson(loc.stateFile, state);
     if (!state.attached) {
@@ -24085,7 +24106,7 @@ async function showLocalKnowledge(context, scope, changed) {
         const handle2 = await import("node:fs/promises").then(
           (fs11) => fs11.open(uri.fsPath, "r")
         );
-        let text8;
+        let text9;
         try {
           if ((await handle2.stat()).size > 1e6)
             throw Error("Import exceeds size limit.");
@@ -24093,13 +24114,13 @@ async function showLocalKnowledge(context, scope, changed) {
           const read = await handle2.read(bytes, 0, bytes.length, 0);
           if (read.bytesRead > 1e6)
             throw Error("Import exceeds size limit.");
-          text8 = bytes.subarray(0, read.bytesRead).toString("utf8");
+          text9 = bytes.subarray(0, read.bytesRead).toString("utf8");
         } finally {
           await handle2.close();
         }
         selected = await withLocalKnowledge(
           scope,
-          (store) => store.importKnowledge(JSON.parse(text8))
+          (store) => store.importKnowledge(JSON.parse(text9))
         );
         createKind = void 0;
         await changed();
@@ -24315,6 +24336,352 @@ async function resolveModelRuntimeConfig(cfg, profileId, ports = {}) {
   };
 }
 
+// src/modelSetupView.ts
+var vscode12 = __toESM(require("vscode"));
+var import_node_path23 = __toESM(require("node:path"));
+
+// src/accountModelCatalog.ts
+var import_promises14 = require("node:fs/promises");
+var import_node_os4 = __toESM(require("node:os"));
+var import_node_path21 = __toESM(require("node:path"));
+
+// src/ai/managedProcess.ts
+var import_node_child_process8 = require("node:child_process");
+var ExecutorError = class extends Error {
+  constructor(code3) {
+    super(code3);
+    this.code = code3;
+    this.name = code3 === "cancelled" ? "AbortError" : "ExecutorError";
+  }
+};
+async function runManagedProcess(input) {
+  if (!["darwin", "linux", "win32"].includes(process.platform))
+    throw new ExecutorError("executor-unavailable");
+  if (input.signal?.aborted) throw new ExecutorError("cancelled");
+  const maximum2 = input.outputBytes ?? 4 * 1024 * 1024;
+  if (!Number.isSafeInteger(input.timeoutMs) || input.timeoutMs < 1 || input.timeoutMs > 6e5 || !Number.isSafeInteger(maximum2) || maximum2 < 1 || maximum2 > 16 * 1024 * 1024 || Buffer.byteLength(input.stdin) > 2 * 1024 * 1024)
+    throw new ExecutorError("executor-unavailable");
+  if (process.platform === "win32") {
+    const result = await windowsNative(
+      {
+        operation: "process",
+        command: input.command,
+        args: input.args,
+        cwd: input.cwd,
+        env: { SystemRoot: windowsEnvironmentValue("SystemRoot"), ...input.env },
+        stdin: input.stdin,
+        timeout: input.timeoutMs,
+        maximum: maximum2
+      },
+      {
+        ...input.signal ? { signal: input.signal } : {},
+        timeoutMs: input.timeoutMs + 3e3
+      }
+    );
+    if (result.error) {
+      const known = [
+        "cancelled",
+        "timeout",
+        "output-limit",
+        "executable-unavailable",
+        "cleanup-failed"
+      ];
+      throw new ExecutorError(
+        known.includes(result.error) ? result.error : "process-failed"
+      );
+    }
+    if (typeof result.code !== "number" || typeof result.stdout !== "string" || typeof result.stderr !== "string")
+      throw new ExecutorError("process-failed");
+    return { code: result.code, stdout: result.stdout, stderr: result.stderr };
+  }
+  return new Promise((resolve4, reject) => {
+    const child = (0, import_node_child_process8.spawn)(input.command, [...input.args], {
+      cwd: input.cwd,
+      env: { ...input.env },
+      detached: true,
+      shell: false,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    let failure2;
+    let total = 0;
+    const stdout = [];
+    const stderr = [];
+    let closed = false;
+    let code3 = null;
+    let done = false;
+    let terminating = false;
+    let killed = false;
+    let killTimer;
+    let drainTimer;
+    const timeout = setTimeout(() => stop(new ExecutorError("timeout")), input.timeoutMs);
+    const finish = () => {
+      if (done || !closed || !killed) return;
+      done = true;
+      clearTimeout(timeout);
+      if (killTimer) clearTimeout(killTimer);
+      if (drainTimer) clearTimeout(drainTimer);
+      input.signal?.removeEventListener("abort", abort);
+      if (failure2) reject(failure2);
+      else
+        resolve4({
+          code: code3 ?? 1,
+          stdout: Buffer.concat(stdout).toString("utf8"),
+          stderr: Buffer.concat(stderr).toString("utf8")
+        });
+    };
+    const signalGroup = (signal) => {
+      if (!child.pid) return;
+      try {
+        process.kill(-child.pid, signal);
+      } catch (error2) {
+        if (error2.code !== "ESRCH")
+          failure2 ??= new ExecutorError("cleanup-failed");
+      }
+    };
+    function stop(error2) {
+      failure2 ??= error2;
+      if (terminating) return;
+      terminating = true;
+      child.stdin.destroy();
+      signalGroup("SIGTERM");
+      killTimer = setTimeout(() => {
+        signalGroup("SIGKILL");
+        killed = true;
+        finish();
+        if (!done)
+          drainTimer = setTimeout(() => {
+            failure2 ??= new ExecutorError("cleanup-failed");
+            child.stdout.destroy();
+            child.stderr.destroy();
+            closed = true;
+            finish();
+          }, 750);
+      }, 250);
+    }
+    const abort = () => stop(new ExecutorError("cancelled"));
+    input.signal?.addEventListener("abort", abort, { once: true });
+    if (input.signal?.aborted) abort();
+    const collect = (target, chunk) => {
+      if (failure2 || done) return;
+      if (chunk.length > maximum2 - total) {
+        stop(new ExecutorError("output-limit"));
+        return;
+      }
+      total += chunk.length;
+      target.push(chunk);
+    };
+    child.stdout.on("data", (chunk) => collect(stdout, chunk));
+    child.stderr.on("data", (chunk) => collect(stderr, chunk));
+    child.on("error", (error2) => {
+      stop(
+        new ExecutorError(error2.code === "ENOENT" ? "executable-unavailable" : "process-failed")
+      );
+    });
+    child.on("exit", () => stop());
+    child.on("close", (exitCode) => {
+      closed = true;
+      code3 = exitCode;
+      stop();
+      finish();
+    });
+    child.stdin.on("error", (error2) => {
+      if (error2.code !== "EPIPE" && !terminating) stop(new ExecutorError("process-failed"));
+    });
+    child.stdin.end(input.stdin);
+  });
+}
+
+// src/accountModelCatalog.ts
+var AccountCatalogError = class extends Error {
+  constructor(code3) {
+    super(code3);
+    this.code = code3;
+  }
+};
+function accountEnvironment(provider) {
+  const env4 = { ...process.env, DISABLE_AUTOUPDATER: "1", AGY_CLI_DISABLE_AUTO_UPDATE: "true" };
+  for (const name of [
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_BASE_URL",
+    "CLAUDE_CODE_USE_BEDROCK",
+    "CLAUDE_CODE_USE_VERTEX",
+    "CLAUDE_CODE_USE_FOUNDRY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "GOOGLE_GEMINI_BASE_URL"
+  ]) delete env4[name];
+  if (provider === "codex") env4.ELECTRON_RUN_AS_NODE = "1";
+  return env4;
+}
+var text8 = (value, maximum2 = 512) => typeof value === "string" && value.length <= maximum2 && !/[\u0000-\u001f\u007f]/.test(value) ? value : "";
+var supported = (items, allowed) => Array.isArray(items) ? [...new Set(items.filter((value) => typeof value === "string" && allowed.includes(value)))] : [];
+function parseCodexModels(raw) {
+  if (!Array.isArray(raw)) throw new AccountCatalogError("invalid-catalog");
+  return raw.filter((m) => m && !m.hidden).map((m) => {
+    const id4 = text8(m.model, 128);
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(id4)) throw new AccountCatalogError("invalid-catalog");
+    const efforts = supported(
+      m.supportedReasoningEfforts?.map((e) => e.reasoningEffort),
+      ["none", "minimal", "low", "medium", "high", "xhigh"]
+    );
+    return {
+      id: id4,
+      label: text8(m.displayName) || id4,
+      description: text8(m.description),
+      efforts,
+      defaultEffort: efforts.includes(m.defaultReasoningEffort) ? m.defaultReasoningEffort : efforts[0] ?? ""
+    };
+  }).filter((m) => m.efforts.length > 0);
+}
+function parseClaudeModels(raw) {
+  if (!Array.isArray(raw)) throw new AccountCatalogError("invalid-catalog");
+  return raw.map((m) => {
+    const id4 = text8(m?.value);
+    if (!id4) throw new AccountCatalogError("invalid-catalog");
+    const efforts = m.supportsEffort === true ? supported(m.supportedEffortLevels, ["low", "medium", "high", "xhigh", "max"]) : [];
+    return { id: id4, label: text8(m.displayName) || id4, description: text8(m.description), efforts, defaultEffort: "" };
+  });
+}
+function parseAntigravityModels(raw) {
+  const models = /* @__PURE__ */ new Map();
+  for (const line of raw.replace(/\x1b\[[0-9;]*m/g, "").split(/\r?\n/)) {
+    const match = /^([a-zA-Z0-9][a-zA-Z0-9._-]{0,127})\t([^\t]+)$/.exec(line);
+    if (!match) continue;
+    const [, id4, label] = match;
+    const variant = /^(.*)-(low|medium|high|max)$/.exec(id4);
+    const group = variant ? variant[1] : id4;
+    const entry = models.get(group) ?? {
+      id: id4,
+      label: variant ? label.replace(/ \((Low|Medium|High|Max)\)$/, "") : label,
+      description: "Available to the signed-in Antigravity account",
+      efforts: [],
+      defaultEffort: "",
+      variants: {}
+    };
+    if (variant) {
+      entry.efforts.push(variant[2]);
+      entry.variants[variant[2]] = id4;
+      entry.defaultEffort ||= variant[2];
+    }
+    models.set(group, entry);
+  }
+  return [...models.values()];
+}
+async function loadAccountModels(provider, executablePath, options) {
+  if (!import_node_path21.default.isAbsolute(executablePath)) throw new AccountCatalogError("cli-unavailable");
+  let command;
+  try {
+    command = await (0, import_promises14.realpath)(executablePath);
+  } catch {
+    throw new AccountCatalogError("cli-unavailable");
+  }
+  if (process.platform === "win32" && !command.toLowerCase().endsWith(".exe")) throw new AccountCatalogError("cli-unavailable");
+  const env4 = accountEnvironment(provider);
+  const run3 = options.run ?? runManagedProcess;
+  const invoke = (args, stdin = "", override) => run3({
+    command: override ?? command,
+    args,
+    cwd: import_node_os4.default.tmpdir(),
+    env: env4,
+    stdin,
+    timeoutMs: 3e4,
+    outputBytes: 2097152,
+    signal: options.signal
+  });
+  let models;
+  if (provider === "codex") {
+    const version = await invoke(["--version"]);
+    if (!["codex-cli 0.153.4", "codex-cli 0.154.0"].includes(version.stdout.trim()))
+      throw new AccountCatalogError("cli-unavailable");
+    const result = await invoke([options.workerPath, command], "", process.execPath);
+    if (result.code !== 0) throw new AccountCatalogError("catalog-unavailable");
+    let value;
+    try {
+      value = JSON.parse(result.stdout);
+    } catch {
+      throw new AccountCatalogError("invalid-catalog");
+    }
+    if (value.error) throw new AccountCatalogError(["auth-unavailable", "connection-failed", "cli-unavailable"].includes(value.error) ? value.error : "catalog-unavailable");
+    models = parseCodexModels(value.models);
+    const bundled = await invoke(["debug", "models", "--bundled"]);
+    let local;
+    try {
+      local = JSON.parse(bundled.stdout);
+    } catch {
+      throw new AccountCatalogError("invalid-catalog");
+    }
+    const available = Array.isArray(local) ? local : local.models;
+    if (bundled.code !== 0 || !Array.isArray(available)) throw new AccountCatalogError("invalid-catalog");
+    models = models.map((model) => {
+      const descriptor = available.find((entry) => entry.slug === model.id);
+      const efforts = model.efforts.filter((e) => descriptor?.supported_reasoning_levels?.some((v) => v.effort === e));
+      return { ...model, efforts, defaultEffort: efforts.includes(model.defaultEffort) ? model.defaultEffort : efforts[0] ?? "" };
+    }).filter((model) => model.efforts.length > 0);
+  } else if (provider === "claudecode") {
+    const auth = await invoke(["auth", "status", "--json"]);
+    let status;
+    try {
+      status = JSON.parse(auth.stdout);
+    } catch {
+      throw new AccountCatalogError("auth-unavailable");
+    }
+    if (auth.code !== 0 || status.loggedIn !== true || status.authMethod !== "claude.ai") throw new AccountCatalogError("auth-unavailable");
+    const input = [
+      { type: "control_request", request_id: "cd-models", request: { subtype: "initialize" } },
+      { type: "control_request", request_id: "cd-connection", request: { subtype: "get_usage" } }
+    ].map((v) => JSON.stringify(v)).join("\n") + "\n";
+    const result = await invoke([
+      "--safe-mode",
+      "-p",
+      "--input-format",
+      "stream-json",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--tools",
+      "",
+      "--no-session-persistence",
+      "--disable-slash-commands",
+      "--no-chrome",
+      "--strict-mcp-config",
+      "--mcp-config",
+      '{"mcpServers":{}}'
+    ], input);
+    if (result.code !== 0) throw new AccountCatalogError("connection-failed");
+    let responses;
+    try {
+      responses = result.stdout.trim().split("\n").map((line) => JSON.parse(line)).filter((v) => v.type === "control_response").map((v) => v.response);
+    } catch {
+      throw new AccountCatalogError("invalid-catalog");
+    }
+    const catalog = responses.find((v) => v.request_id === "cd-models");
+    const connection = responses.find((v) => v.request_id === "cd-connection");
+    if (catalog?.subtype !== "success" || connection?.subtype !== "success" || connection.response?.rate_limits_available !== true) throw new AccountCatalogError("connection-failed");
+    models = parseClaudeModels(catalog.response.models);
+  } else {
+    const result = await invoke(["models"]);
+    if (result.code !== 0) throw new AccountCatalogError("connection-failed");
+    models = parseAntigravityModels(result.stdout);
+  }
+  if (!models.length || models.length > 500) throw new AccountCatalogError("catalog-unavailable");
+  if (new Set(models.map((m) => m.id)).size !== models.length) throw new AccountCatalogError("invalid-catalog");
+  return models;
+}
+
+// src/apiModelCapabilities.ts
+function apiReasoningEfforts(provider, model) {
+  if (!["openai", "aoai"].includes(provider)) return [];
+  if (/^(o3|o3-mini|o4-mini)(-\d{4}-\d{2}-\d{2})?$/.test(model)) return ["low", "medium", "high"];
+  if (/^gpt-5(-mini|-nano)?(-\d{4}-\d{2}-\d{2})?$/.test(model)) return ["minimal", "low", "medium", "high"];
+  if (/^gpt-5\.1(-\d{4}-\d{2}-\d{2})?$/.test(model)) return ["none", "low", "medium", "high"];
+  if (/^gpt-5\.(2|4|5)(-\d{4}-\d{2}-\d{2})?$/.test(model)) return ["none", "low", "medium", "high", "xhigh"];
+  return [];
+}
+
 // src/modelCredentialView.ts
 var vscode11 = __toESM(require("vscode"));
 
@@ -24340,7 +24707,7 @@ async function migrateSettingsModelCredential(profileId, binding, expectedSecret
 
 // src/hook/config.ts
 var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path21 = __toESM(require("node:path"));
+var import_node_path22 = __toESM(require("node:path"));
 var import_node_crypto21 = require("node:crypto");
 var HookCredentialMigrationRequired = class extends Error {
   constructor() {
@@ -24354,7 +24721,7 @@ var failure = () => new Error(
   "Hook configuration could not be confirmed or changed. Refresh before retrying."
 );
 function safeDirectory(repoRoot, create) {
-  const dir = import_node_path21.default.join(import_node_fs6.default.realpathSync(repoRoot), ".commit-defender");
+  const dir = import_node_path22.default.join(import_node_fs6.default.realpathSync(repoRoot), ".commit-defender");
   if (create) import_node_fs6.default.mkdirSync(dir, { recursive: true, mode: 448 });
   try {
     const stat = import_node_fs6.default.lstatSync(dir);
@@ -24372,7 +24739,7 @@ function readHookConfigSnapshot(repoRoot) {
   let fd;
   try {
     fd = import_node_fs6.default.openSync(
-      import_node_path21.default.join(dir, "hook.json"),
+      import_node_path22.default.join(dir, "hook.json"),
       import_node_fs6.default.constants.O_RDONLY | import_node_fs6.default.constants.O_NOFOLLOW | import_node_fs6.default.constants.O_NONBLOCK
     );
   } catch (error2) {
@@ -24386,10 +24753,10 @@ function readHookConfigSnapshot(repoRoot) {
     const bytes = Buffer.alloc(1000001);
     const length = import_node_fs6.default.readSync(fd, bytes, 0, bytes.length, 0);
     if (length > 1e6) throw failure();
-    const text8 = bytes.subarray(0, length).toString("utf8");
-    const raw = JSON.parse(text8);
+    const text9 = bytes.subarray(0, length).toString("utf8");
+    const raw = JSON.parse(text9);
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw failure();
-    return { text: text8, raw };
+    return { text: text9, raw };
   } catch {
     throw failure();
   } finally {
@@ -24433,36 +24800,36 @@ var providers = [
   "antigravity"
 ];
 function hookConfigSettings(raw) {
-  const text8 = (name, fallback) => {
+  const text9 = (name, fallback) => {
     const value = raw[name] ?? fallback;
     if (typeof value !== "string" || value.length > 4096 || value.includes("\0"))
       throw failure();
     return value;
   };
-  const aiProvider = text8("aiProvider", "aoai");
+  const aiProvider = text9("aiProvider", "aoai");
   if (!providers.includes(aiProvider)) throw failure();
   if (raw.excludePatterns !== void 0 && (!Array.isArray(raw.excludePatterns) || raw.excludePatterns.length > 1e3 || raw.excludePatterns.some((x) => typeof x !== "string" || x.length > 4096)))
     throw failure();
   return {
     aiProvider,
-    model: text8("model", ""),
-    endpoint: text8("endpoint", ""),
-    apiVersion: text8("apiVersion", "2024-08-01-preview"),
+    model: text9("model", ""),
+    endpoint: text9("endpoint", ""),
+    apiVersion: text9("apiVersion", "2024-08-01-preview"),
     apiKey: "",
-    codexPath: text8("codexPath", "codex"),
-    claudeCodePath: text8("claudeCodePath", "claude"),
-    geminiCliPath: text8("geminiCliPath", "gemini"),
-    antigravityPath: text8("antigravityPath", "agy"),
+    codexPath: text9("codexPath", "codex"),
+    claudeCodePath: text9("claudeCodePath", "claude"),
+    geminiCliPath: text9("geminiCliPath", "gemini"),
+    antigravityPath: text9("antigravityPath", "agy"),
     maxTokens: typeof raw.maxTokens === "number" && Number.isFinite(raw.maxTokens) ? raw.maxTokens : 4096,
-    severityLevel: text8(
+    severityLevel: text9(
       "severityLevel",
       "moderate"
     ),
-    richnessLevel: text8(
+    richnessLevel: text9(
       "richnessLevel",
       "moderate"
     ),
-    locale: text8("locale", "en"),
+    locale: text9("locale", "en"),
     excludePatterns: raw.excludePatterns ?? [],
     colorPalette: "theme-adaptive",
     preCommitHook: "enable",
@@ -24489,15 +24856,15 @@ async function readHookRuntimeConfig(repoRoot, ports = {}) {
   return cfg;
 }
 function acquireLock(dir) {
-  const lock2 = import_node_path21.default.join(dir, ".hook-config-lock");
-  const prepared = import_node_path21.default.join(dir, `.hook-lock-${(0, import_node_crypto21.randomUUID)()}`);
+  const lock2 = import_node_path22.default.join(dir, ".hook-config-lock");
+  const prepared = import_node_path22.default.join(dir, `.hook-lock-${(0, import_node_crypto21.randomUUID)()}`);
   const owner = JSON.stringify({
     format: 1,
     pid: process.pid,
     nonce: (0, import_node_crypto21.randomUUID)()
   });
   import_node_fs6.default.mkdirSync(prepared, { mode: 448 });
-  import_node_fs6.default.writeFileSync(import_node_path21.default.join(prepared, "owner.json"), owner, {
+  import_node_fs6.default.writeFileSync(import_node_path22.default.join(prepared, "owner.json"), owner, {
     flag: "wx",
     mode: 384
   });
@@ -24517,7 +24884,7 @@ function acquireLock(dir) {
         const entries = import_node_fs6.default.readdirSync(lock2);
         if (entries.length !== 1 || entries[0] !== "owner.json")
           throw failure();
-        const ownerPath = import_node_path21.default.join(lock2, "owner.json");
+        const ownerPath = import_node_path22.default.join(lock2, "owner.json");
         const ownerStat = import_node_fs6.default.lstatSync(ownerPath);
         if (!ownerStat.isFile() || ownerStat.isSymbolicLink() || ownerStat.size > 1024)
           throw failure();
@@ -24543,16 +24910,16 @@ function acquireLock(dir) {
     throw failure();
   }
   return () => {
-    if (import_node_fs6.default.readFileSync(import_node_path21.default.join(lock2, "owner.json"), "utf8") !== owner)
+    if (import_node_fs6.default.readFileSync(import_node_path22.default.join(lock2, "owner.json"), "utf8") !== owner)
       throw failure();
-    import_node_fs6.default.unlinkSync(import_node_path21.default.join(lock2, "owner.json"));
+    import_node_fs6.default.unlinkSync(import_node_path22.default.join(lock2, "owner.json"));
     import_node_fs6.default.rmdirSync(lock2);
   };
 }
 function publishConfig(repoRoot, cfg, expectedText) {
   const dir = safeDirectory(repoRoot, true);
   const release = acquireLock(dir);
-  const temporary = import_node_path21.default.join(dir, `.hook-config-${(0, import_node_crypto21.randomUUID)()}`);
+  const temporary = import_node_path22.default.join(dir, `.hook-config-${(0, import_node_crypto21.randomUUID)()}`);
   try {
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
@@ -24569,7 +24936,7 @@ function publishConfig(repoRoot, cfg, expectedText) {
     }
     if (readHookConfigSnapshot(repoRoot)?.text !== expectedText)
       throw failure();
-    import_node_fs6.default.renameSync(temporary, import_node_path21.default.join(dir, "hook.json"));
+    import_node_fs6.default.renameSync(temporary, import_node_path22.default.join(dir, "hook.json"));
     const directory2 = import_node_fs6.default.openSync(dir, import_node_fs6.default.constants.O_RDONLY);
     try {
       import_node_fs6.default.fsyncSync(directory2);
@@ -24793,17 +25160,294 @@ async function manageModelCredential(repoRoot) {
   }
 }
 
+// src/modelSetupSettings.ts
+var modelSetupKeys = [
+  "localProfile",
+  "aiProvider",
+  "model",
+  "endpoint",
+  "apiVersion",
+  "reviewReasoningEffort",
+  "modelCredentialRef",
+  "codexPath",
+  "claudeCodePath",
+  "antigravityPath"
+];
+var same = (a, b) => a === void 0 || b === void 0 ? a === b : canonicalJson(a) === canonicalJson(b);
+function captureModelSettings(port2) {
+  return Object.fromEntries(modelSetupKeys.map((key3) => [key3, port2.read(key3)]));
+}
+function modelSettingsUnchanged(port2, snapshot) {
+  return modelSetupKeys.every((key3) => same(port2.read(key3), snapshot[key3]));
+}
+async function commitModelSettings(port2, snapshot, values) {
+  const expected = { ...snapshot };
+  const written = [];
+  try {
+    if (!modelSettingsUnchanged(port2, expected)) throw Error("configuration-changed");
+    const entries = Object.entries(values).sort(([a], [b]) => a === "aiProvider" ? 1 : b === "aiProvider" ? -1 : 0);
+    for (const [key3, value] of entries) {
+      if (!modelSettingsUnchanged(port2, expected)) throw Error("configuration-changed");
+      await port2.write(key3, value);
+      written.push(key3);
+      expected[key3] = value;
+      if (!modelSettingsUnchanged(port2, expected)) throw Error("configuration-changed");
+    }
+  } catch (error2) {
+    for (const key3 of written.reverse()) {
+      if (same(port2.read(key3), expected[key3])) await port2.write(key3, snapshot[key3]);
+    }
+    throw error2;
+  }
+}
+
+// src/modelSetupView.ts
+var names = { codex: "Codex", claudecode: "Claude Code", antigravity: "Antigravity" };
+var running = false;
+var port = {
+  read: (key3) => vscode12.workspace.getConfiguration("commitDefender").inspect(key3)?.globalValue,
+  write: async (key3, value) => {
+    await vscode12.workspace.getConfiguration("commitDefender").update(key3, value, vscode12.ConfigurationTarget.Global);
+  }
+};
+async function apply(snapshot, values) {
+  const release = holdModelConfiguration(snapshot);
+  try {
+    await commitModelSettings(port, snapshot, values);
+  } finally {
+    release();
+  }
+}
+async function effort(model, provider, current) {
+  if (!model.efforts.length) return "";
+  const defaults = provider === "codex" || Object.keys(model.variants ?? {}).length ? [] : [{ label: "Provider default", effort: "", description: "Do not send an effort override" }];
+  const picked = await vscode12.window.showQuickPick([...defaults, ...model.efforts.map((value) => ({
+    label: value,
+    effort: value,
+    description: value === current ? "Current selection" : value === model.defaultEffort ? "Model default" : void 0
+  }))], {
+    title: `Commit Defender: Use Account \xB7 ${names[provider] ?? provider} \xB7 Effort (3/3)`,
+    placeHolder: `Choose reasoning effort for ${model.label}`,
+    ignoreFocusOut: true
+  });
+  return picked?.effort;
+}
+async function accountFlow(extensionPath, signIn, selected) {
+  const snapshot = captureModelSettings(port);
+  const cfg = getConfig();
+  const provider = selected ?? (await vscode12.window.showQuickPick([
+    { label: "Codex", provider: "codex", description: "Use the existing Codex account", detail: "Checks CLI auth, server connection and account model catalog. No API key required." },
+    { label: "Claude Code", provider: "claudecode", description: "Use the existing Claude subscription", detail: "Checks Claude Code auth and its supported models. Credentials stay in the CLI / OS store." },
+    { label: "Antigravity", provider: "antigravity", description: "Use the existing Google account", detail: "Uses the standalone agy CLI and its account model list. Gemini API keys belong in Use API Credential." }
+  ], { title: "Commit Defender: Use Account (1/3)", placeHolder: "Use a saved CLI login, independently of GCR", ignoreFocusOut: true }))?.provider;
+  if (!provider) return;
+  const executable = getStandaloneReviewSettings(1).provider === provider ? getStandaloneReviewSettings(1).executablePath : provider === "codex" ? resolveCodexPath(String(snapshot.codexPath ?? "codex")) : resolveExternalCliPath(String(provider === "claudecode" ? snapshot.claudeCodePath ?? "claude" : snapshot.antigravityPath ?? "agy"), provider === "claudecode" ? "claude" : "agy");
+  let models;
+  for (; ; ) {
+    try {
+      models = await vscode12.window.withProgress({
+        location: vscode12.ProgressLocation.Notification,
+        title: `Commit Defender: Verifying ${names[provider]} account and fetching models\u2026`,
+        cancellable: true
+      }, async (_, token2) => {
+        const controller = new AbortController();
+        const listener = token2.onCancellationRequested(() => controller.abort());
+        if (token2.isCancellationRequested) controller.abort();
+        try {
+          return await loadAccountModels(provider, executable, { workerPath: import_node_path23.default.join(extensionPath, "out", "account-catalog-worker.js"), signal: controller.signal });
+        } finally {
+          listener.dispose();
+        }
+      });
+      break;
+    } catch (error2) {
+      if (error2 instanceof Error && error2.name === "AbortError") return;
+      const code3 = error2 instanceof AccountCatalogError ? error2.code : error2.code;
+      const reason = code3 === "cli-unavailable" || code3 === "executable-unavailable" ? "The CLI executable is unavailable. Check its path in User Settings." : code3 === "auth-unavailable" ? "A usable account login was not found. Sign in with the CLI, then retry. API-key logins are configured with Use API Credential." : code3 === "timeout" ? "The authentication/model query timed out." : "The account connection or model catalog could not be verified. Check network access and the CLI version. No guessed models were substituted.";
+      const action = await vscode12.window.showErrorMessage(`Commit Defender: ${names[provider]} \u2014 ${reason} Your model selection was preserved.`, "Retry", "Sign In\u2026", "Open Settings");
+      if (action === "Retry") continue;
+      if (action === "Sign In\u2026") await signIn(provider);
+      if (action === "Open Settings") await vscode12.commands.executeCommand("commitDefender.openSettings");
+      return;
+    }
+  }
+  for (; ; ) {
+    const picked = await vscode12.window.showQuickPick([
+      ...models.map((model) => ({
+        label: model.label,
+        description: model.id === cfg.model || Object.values(model.variants ?? {}).includes(cfg.model) ? "Current selection" : model.id,
+        detail: model.description,
+        model
+      })),
+      { label: "Refresh model list\u2026", description: "Recheck this account", model: void 0 }
+    ], {
+      title: `Commit Defender: Use Account \xB7 ${names[provider]} \xB7 Model (2/3)`,
+      placeHolder: "Select a model returned by the authenticated CLI",
+      ignoreFocusOut: true,
+      matchOnDetail: true
+    });
+    if (!picked) return;
+    if (!picked.model) {
+      await accountFlow(extensionPath, signIn, provider);
+      return;
+    }
+    const chosenEffort = await effort(picked.model, provider, String(snapshot.reviewReasoningEffort ?? ""));
+    if (chosenEffort === void 0) return;
+    const modelId = picked.model.variants?.[chosenEffort] ?? picked.model.id;
+    await apply(snapshot, { model: modelId, reviewReasoningEffort: picked.model.variants ? "" : chosenEffort, aiProvider: provider });
+    void vscode12.window.showInformationMessage(`Commit Defender: ${names[provider]} \xB7 ${modelId} \xB7 ${chosenEffort || "provider default"} selected. Account connection verified; no review model request was made.`);
+    return;
+  }
+}
+function endpointError(provider, endpoint) {
+  try {
+    modelCredentialBinding({ aiProvider: provider, endpoint: endpoint.trim(), model: "validation", apiVersion: "" });
+  } catch {
+    return "Enter an HTTPS base endpoint without credentials, query or fragment. HTTP is supported only on localhost.";
+  }
+}
+async function apiFlow(repoRoot) {
+  const snapshot = captureModelSettings(port);
+  const cfg = getConfig();
+  const picked = await vscode12.window.showQuickPick([
+    { label: "OpenAI / compatible API", provider: "openai", detail: "API key, base endpoint and model name. Billed by the API provider, separately from a CLI account." },
+    { label: "Azure OpenAI", provider: "aoai", detail: "Azure endpoint, deployment name and API version. Deployment names do not identify the underlying model." },
+    { label: "Anthropic API", provider: "anthropic", detail: "Anthropic Messages API key and model name. This adapter does not send reasoning effort." },
+    { label: "Gemini API", provider: "gemini", detail: "Gemini generateContent API key and model name. This adapter does not send reasoning effort." },
+    { label: "Existing keys and plaintext migration\u2026", provider: void 0, detail: "Manage the currently configured API destination; migrate User Settings, Workspace Settings or hook keys." }
+  ], { title: "Commit Defender: Use API Credential \xB7 Provider", placeHolder: "Configure an API destination, independently of GCR and CLI login", ignoreFocusOut: true });
+  if (!picked) return;
+  if (!picked.provider) {
+    await manageModelCredential(repoRoot);
+    return;
+  }
+  const provider = picked.provider;
+  const endpoint = await vscode12.window.showInputBox({
+    title: "Commit Defender: Use API Credential \xB7 Endpoint",
+    prompt: provider === "aoai" ? "Azure resource base URL (not a chat/completions URL)" : "API base URL (for OpenAI-compatible servers, include /v1)",
+    value: cfg.aiProvider === provider && cfg.endpoint ? cfg.endpoint : provider === "aoai" ? "" : API_DEFAULT_ENDPOINTS[provider],
+    ignoreFocusOut: true,
+    validateInput: (value) => endpointError(provider, value)
+  });
+  if (endpoint === void 0) return;
+  const model = await vscode12.window.showInputBox({
+    title: `Commit Defender: Use API Credential \xB7 ${provider === "aoai" ? "Deployment name" : "Model name"}`,
+    prompt: provider === "aoai" ? "Enter the deployment name from your Azure resource" : "Enter the model name accepted by this endpoint",
+    value: cfg.aiProvider === provider ? cfg.model : "",
+    ignoreFocusOut: true,
+    validateInput: (value) => value.trim() && value.trim().length <= 512 && !/[\u0000-\u001f\u007f]/.test(value) ? void 0 : "Enter a model/deployment name (maximum 512 characters)."
+  });
+  if (model === void 0) return;
+  let apiVersion = "";
+  let capabilityModel = model.trim();
+  if (provider === "aoai") {
+    const version = await vscode12.window.showInputBox({
+      title: "Commit Defender: Use API Credential \xB7 Azure API version",
+      value: cfg.apiVersion,
+      prompt: "Use an API version supported by your Azure resource",
+      ignoreFocusOut: true,
+      validateInput: (value) => /^\d{4}-\d{2}-\d{2}(-preview)?$/.test(value.trim()) ? void 0 : "Use YYYY-MM-DD or YYYY-MM-DD-preview."
+    });
+    if (version === void 0) return;
+    apiVersion = version.trim();
+    const underlying = await vscode12.window.showInputBox({
+      title: "Commit Defender: Use API Credential \xB7 Underlying model (optional)",
+      prompt: "Enter the Azure deployment\u2019s actual model name to select documented effort levels. Leave empty to use the server default; the deployment name is not used to guess support.",
+      ignoreFocusOut: true
+    });
+    if (underlying === void 0) return;
+    capabilityModel = underlying.trim();
+  }
+  const official = provider === "aoai" || endpoint.trim().replace(/\/+$/, "") === API_DEFAULT_ENDPOINTS.openai;
+  const efforts = official ? apiReasoningEfforts(provider, capabilityModel) : [];
+  let chosenEffort = "";
+  if (efforts.length) {
+    const selected = await vscode12.window.showQuickPick([
+      { label: "Server default", value: "", detail: "Do not send a reasoning_effort parameter" },
+      ...efforts.map((value) => ({ label: value, value, detail: "Documented for this model; endpoint acceptance is checked when a review runs" }))
+    ], {
+      title: "Commit Defender: Use API Credential \xB7 Reasoning effort",
+      placeHolder: `Choose effort for ${capabilityModel}`,
+      ignoreFocusOut: true
+    });
+    if (!selected) return;
+    chosenEffort = selected.value;
+  }
+  const binding = modelCredentialBinding({ aiProvider: provider, endpoint: endpoint.trim(), model: model.trim(), apiVersion });
+  const keyAction = await vscode12.window.showQuickPick([
+    { label: "Enter API key\u2026", value: "enter", detail: "Password input. The key is stored in encrypted OS-backed storage, never settings." },
+    { label: "Use a key already stored for this destination", value: "reuse", detail: "Matches the current local profile, endpoint, model and API version." }
+  ], { title: "Commit Defender: Use API Credential \xB7 Key", placeHolder: efforts.length ? "Choose a credential for this API destination" : "Effort support is unknown or unavailable in this adapter; the server default will be used", ignoreFocusOut: true });
+  if (!keyAction) return;
+  const profileId = String(snapshot.localProfile ?? "default");
+  let reference;
+  if (keyAction.value === "reuse") {
+    reference = modelCredentialReference(profileId, binding);
+    await resolveModelCredential(reference, binding);
+  } else {
+    const secret = await vscode12.window.showInputBox({
+      title: "Commit Defender: Use API Credential \xB7 API key",
+      prompt: `Store the model API key for ${binding.endpoint}. This is not a GCR reader key.`,
+      password: true,
+      ignoreFocusOut: true,
+      validateInput: (value) => value.length && value.length <= 16384 && !/[\u0000-\u001f\u007f]/.test(value) ? void 0 : "Enter a nonempty API key without control characters."
+    });
+    if (secret === void 0) return;
+    if (!modelSettingsUnchanged(port, snapshot)) throw Error("configuration-changed");
+    try {
+      reference = await saveModelCredential(profileId, binding, secret);
+    } catch (error2) {
+      if (!(error2 instanceof ModelCredentialError) || error2.code !== "credential-conflict") throw error2;
+      const revision = await modelCredentialRevision(profileId, binding);
+      const action = await vscode12.window.showWarningMessage(`Commit Defender: Replace the existing key for ${binding.endpoint} (${binding.model})? Other destinations are preserved.`, { modal: true }, "Replace Key");
+      if (action !== "Replace Key") return;
+      if (!modelSettingsUnchanged(port, snapshot)) throw Error("configuration-changed");
+      reference = await saveModelCredential(profileId, binding, secret, {}, revision);
+    }
+    if (await resolveModelCredential(reference, binding) !== secret) throw Error("credential-verification-failed");
+  }
+  await apply(snapshot, {
+    aiProvider: provider,
+    endpoint: binding.endpoint,
+    model: binding.model,
+    apiVersion: binding.apiVersion,
+    reviewReasoningEffort: chosenEffort,
+    modelCredentialRef: reference
+  });
+  void vscode12.window.showInformationMessage(`Commit Defender: ${provider} \xB7 ${binding.model} configured. Stored credential verified. API access and model availability will be checked on review; no model request was made.`);
+}
+async function guarded(work) {
+  if (running) {
+    void vscode12.window.showInformationMessage("Commit Defender: Model setup is already open. Finish or cancel it first.");
+    return;
+  }
+  running = true;
+  try {
+    await work();
+  } catch {
+    void vscode12.window.showErrorMessage("Commit Defender: Model setup could not be completed. Check CLI authentication, the API destination, OS credential store, or concurrent User Settings changes. No success was recorded.", "Open Settings").then((action) => action === "Open Settings" ? vscode12.commands.executeCommand("commitDefender.openSettings") : void 0);
+  } finally {
+    running = false;
+  }
+}
+function useAccount(extensionPath, signIn, selected) {
+  return guarded(() => accountFlow(extensionPath, signIn, selected));
+}
+function useApiCredential(repoRoot) {
+  return guarded(() => apiFlow(repoRoot));
+}
+
 // src/codeLens.ts
-var vscode13 = __toESM(require("vscode"));
+var vscode14 = __toESM(require("vscode"));
 
 // src/findingsStore.ts
-var path31 = __toESM(require("path"));
-var vscode12 = __toESM(require("vscode"));
+var path33 = __toESM(require("path"));
+var vscode13 = __toESM(require("vscode"));
 var FindingsStore = class {
   _data = /* @__PURE__ */ new Map();
   _last;
   /** Fires whenever the store is updated or cleared. */
-  onDidChange = new vscode12.EventEmitter();
+  onDidChange = new vscode13.EventEmitter();
   /** Populate the store from a completed AnalysisReport. */
   update(report, repoRoot, displayBlocks) {
     const blocks = normalizeReport(report);
@@ -24813,8 +25457,8 @@ var FindingsStore = class {
       if (b.line <= 0) {
         continue;
       }
-      const absPath = path31.join(repoRoot, b.file);
-      const uriKey = vscode12.Uri.file(absPath).toString();
+      const absPath = path33.join(repoRoot, b.file);
+      const uriKey = vscode13.Uri.file(absPath).toString();
       const set = this._getOrCreate(uriKey);
       const line0 = b.line - 1;
       const bucket = set.byLine.get(line0) ?? [];
@@ -24851,9 +25495,9 @@ var FindingsStore = class {
 var findingsStore = new FindingsStore();
 
 // src/codeLens.ts
-var path32 = __toESM(require("path"));
+var path34 = __toESM(require("path"));
 var SuggestionCodeLensProvider = class {
-  _onDidChangeCodeLenses = new vscode13.EventEmitter();
+  _onDidChangeCodeLenses = new vscode14.EventEmitter();
   onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
   constructor() {
     findingsStore.onDidChange.event(() => this._onDidChangeCodeLenses.fire());
@@ -24864,7 +25508,7 @@ var SuggestionCodeLensProvider = class {
     if (!set || !last || document3.uri.scheme !== "file") {
       return [];
     }
-    const file = path32.relative(last.repoRoot, document3.uri.fsPath).split(path32.sep).join("/");
+    const file = path34.relative(last.repoRoot, document3.uri.fsPath).split(path34.sep).join("/");
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) === void 0) return [];
     const lenses = [];
     for (const [line0, blocks] of set.byLine) {
@@ -24883,7 +25527,7 @@ var SuggestionCodeLensProvider = class {
       const meta = metaForBlock(worst);
       const count = blocks.length;
       const first = blocks[0].comment.split("\n")[0];
-      lenses.push(new vscode13.CodeLens(new vscode13.Range(line0, 0, line0, 0), {
+      lenses.push(new vscode14.CodeLens(new vscode14.Range(line0, 0, line0, 0), {
         title: `${meta.emoji} ${count} finding${count > 1 ? "s" : ""}`,
         tooltip: first,
         command: "commitDefender.showLineSuggestion",
@@ -24895,8 +25539,8 @@ var SuggestionCodeLensProvider = class {
 };
 
 // src/comments.ts
-var path33 = __toESM(require("path"));
-var vscode14 = __toESM(require("vscode"));
+var path35 = __toESM(require("path"));
+var vscode15 = __toESM(require("vscode"));
 var CommentManager = class {
   threads = [];
   clearAll() {
@@ -24928,9 +25572,9 @@ var CommentManager = class {
    *   body         → just the AI-generated comment (no redundant header)
    */
   _createThread(ctrl, repoRoot, b, report) {
-    const uri = vscode14.Uri.file(path33.join(repoRoot, b.file));
+    const uri = vscode15.Uri.file(path35.join(repoRoot, b.file));
     const line = Math.max(0, b.line - 1);
-    const range = new vscode14.Range(line, 0, line, 0);
+    const range = new vscode15.Range(line, 0, line, 0);
     const meta = metaForBlock(b);
     const pov = b.category && b.priority !== "P0" ? ` \xB7 ${formatCategory(b.category)}` : "";
     const header2 = `${meta.emoji} ${b.priority} ${meta.label}${pov}`;
@@ -24939,24 +25583,24 @@ var CommentManager = class {
     const comment = {
       author: { name: "Commit Defender" },
       body: md,
-      mode: vscode14.CommentMode.Preview
+      mode: vscode15.CommentMode.Preview
     };
     const thread = ctrl.createCommentThread(uri, range, [comment]);
     thread.label = header2;
-    thread.collapsibleState = vscode14.CommentThreadCollapsibleState.Expanded;
+    thread.collapsibleState = vscode15.CommentThreadCollapsibleState.Expanded;
     thread.canReply = false;
     this.threads.push(thread);
   }
 };
 
 // src/diagnostics.ts
-var path34 = __toESM(require("path"));
-var vscode15 = __toESM(require("vscode"));
+var path36 = __toESM(require("path"));
+var vscode16 = __toESM(require("vscode"));
 var PRIORITY_SEVERITY = {
-  P3: vscode15.DiagnosticSeverity.Error,
-  P2: vscode15.DiagnosticSeverity.Warning,
-  P1: vscode15.DiagnosticSeverity.Information,
-  P0: vscode15.DiagnosticSeverity.Hint
+  P3: vscode16.DiagnosticSeverity.Error,
+  P2: vscode16.DiagnosticSeverity.Warning,
+  P1: vscode16.DiagnosticSeverity.Information,
+  P0: vscode16.DiagnosticSeverity.Hint
 };
 function applyDiagnostics(blocks, repoRoot, collection) {
   collection.clear();
@@ -24970,17 +25614,17 @@ function applyDiagnostics(blocks, repoRoot, collection) {
     byFile.set(b.file, list5);
   }
   for (const [relFile, fileBlocks] of byFile) {
-    const uri = vscode15.Uri.file(path34.join(repoRoot, relFile));
+    const uri = vscode16.Uri.file(path36.join(repoRoot, relFile));
     const diagnostics = fileBlocks.map((b) => {
       const line = Math.max(0, b.line - 1);
       const col = Math.max(0, (b.col ?? 1) - 1);
-      const range = new vscode15.Range(line, col, line, col);
+      const range = new vscode16.Range(line, col, line, col);
       const cat = b.category ? formatCategory(b.category) : "";
       const catPart = cat ? `\xB7${cat}` : "";
       const prefix = `[${b.priority}${catPart}]`;
       const body2 = b.comment.split("\n")[0].trim();
       const message2 = b.source === "lint" && b.rule ? `${prefix} ${b.rule} \u2014 ${body2}` : `${prefix} ${body2}`;
-      const diag = new vscode15.Diagnostic(range, message2, PRIORITY_SEVERITY[b.priority]);
+      const diag = new vscode16.Diagnostic(range, message2, PRIORITY_SEVERITY[b.priority]);
       diag.source = `commit-defender \xB7 ${b.source}`;
       if (b.source === "lint" && b.rule) {
         diag.code = b.rule;
@@ -24993,11 +25637,11 @@ function applyDiagnostics(blocks, repoRoot, collection) {
 
 // src/gitHelper.ts
 var fs8 = __toESM(require("fs"));
-var path35 = __toESM(require("path"));
+var path37 = __toESM(require("path"));
 var import_child_process4 = require("child_process");
 function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
   const results = [];
-  const relative4 = (file) => path35.relative(path35.resolve(repoRoot), path35.resolve(file)).split(path35.sep).join("/");
+  const relative4 = (file) => path37.relative(path37.resolve(repoRoot), path37.resolve(file)).split(path37.sep).join("/");
   function walk(dir) {
     const rel = relative4(dir);
     if (rel) {
@@ -25012,18 +25656,18 @@ function collectFiles(dirPath, repoRoot, excludePatterns = [], onExcluded) {
       onExcluded?.({ path: rel || ".", reason: "unreadable" });
       return;
     }
-    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path35.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
+    const selection = selectReviewInputs(repoRoot, entries.map((entry) => relative4(path37.join(dir, entry.name))), excludePatterns, { allowDirectories: true });
     selection.excluded.forEach((entry) => onExcluded?.(entry));
     const allowed = new Set(selection.files);
     for (const entry of entries) {
-      const absolute = path35.join(dir, entry.name);
+      const absolute = path37.join(dir, entry.name);
       const file = relative4(absolute);
       if (!allowed.has(file)) continue;
       if (entry.isDirectory()) walk(absolute);
       else if (entry.isFile()) results.push(file);
     }
   }
-  walk(path35.resolve(dirPath));
+  walk(path37.resolve(dirPath));
   return results.sort();
 }
 async function getRepoRoot(cwd) {
@@ -25040,14 +25684,14 @@ async function getStagedFiles(repoRoot, excludePatterns = [], onExcluded) {
 }
 
 // src/historyProvider.ts
-var vscode16 = __toESM(require("vscode"));
+var vscode17 = __toESM(require("vscode"));
 var HistoryProvider = class {
   _history = [];
   _blocks = [];
   _lastReport;
   _isRunning = false;
   _cfg;
-  _emitter = new vscode16.EventEmitter();
+  _emitter = new vscode17.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   constructor(cfg) {
     this._cfg = cfg;
@@ -25081,8 +25725,8 @@ var HistoryProvider = class {
     this._blocks = blocks;
     this._emitter.fire(void 0);
   }
-  setRunning(running) {
-    this._isRunning = running;
+  setRunning(running2) {
+    this._isRunning = running2;
     this._emitter.fire(void 0);
   }
   updateConfig(cfg) {
@@ -25099,16 +25743,16 @@ var HistoryProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "section": {
-        const collapsed = node2.collapsed ? vscode16.TreeItemCollapsibleState.Collapsed : vscode16.TreeItemCollapsibleState.Expanded;
-        const item = new vscode16.TreeItem(node2.label, collapsed);
-        item.iconPath = new vscode16.ThemeIcon(node2.icon);
+        const collapsed = node2.collapsed ? vscode17.TreeItemCollapsibleState.Collapsed : vscode17.TreeItemCollapsibleState.Expanded;
+        const item = new vscode17.TreeItem(node2.label, collapsed);
+        item.iconPath = new vscode17.ThemeIcon(node2.icon);
         item.id = node2.id;
         return item;
       }
       case "command": {
-        const item = new vscode16.TreeItem(node2.label);
+        const item = new vscode17.TreeItem(node2.label);
         item.description = node2.desc;
-        item.iconPath = new vscode16.ThemeIcon(node2.icon);
+        item.iconPath = new vscode17.ThemeIcon(node2.icon);
         item.command = { command: node2.command, title: node2.label, arguments: node2.args };
         item.tooltip = node2.desc;
         item.id = node2.id;
@@ -25117,9 +25761,9 @@ var HistoryProvider = class {
       case "finding": {
         const meta = PRIORITY_META[node2.priority];
         const label = `${meta.emoji} ${node2.priority} ${meta.label}`;
-        const item = new vscode16.TreeItem(`${label}  \xD7${node2.count}`);
+        const item = new vscode17.TreeItem(`${label}  \xD7${node2.count}`);
         item.description = `${node2.count} finding${node2.count !== 1 ? "s" : ""}`;
-        item.iconPath = new vscode16.ThemeIcon(
+        item.iconPath = new vscode17.ThemeIcon(
           node2.priority === "P3" ? "error" : node2.priority === "P2" ? "warning" : node2.priority === "P1" ? "info" : "pass"
         );
         item.command = {
@@ -25131,9 +25775,9 @@ var HistoryProvider = class {
         return item;
       }
       case "status": {
-        const item = new vscode16.TreeItem(node2.label);
+        const item = new vscode17.TreeItem(node2.label);
         item.description = node2.value;
-        item.iconPath = new vscode16.ThemeIcon(node2.icon);
+        item.iconPath = new vscode17.ThemeIcon(node2.icon);
         item.tooltip = node2.tooltip ?? `${node2.label}: ${node2.value}`;
         if (node2.command) {
           item.command = { command: node2.command, title: node2.label };
@@ -25143,9 +25787,9 @@ var HistoryProvider = class {
       }
       case "entry": {
         const e = node2.entry;
-        const item = new vscode16.TreeItem(e.label, vscode16.TreeItemCollapsibleState.None);
+        const item = new vscode17.TreeItem(e.label, vscode17.TreeItemCollapsibleState.None);
         item.description = `${scopeTag(e.scope)} \xB7 ${formatTime(e.timestamp)}`;
-        item.iconPath = new vscode16.ThemeIcon(scopeIcon(e.scope));
+        item.iconPath = new vscode17.ThemeIcon(scopeIcon(e.scope));
         item.tooltip = `${e.timestamp.toLocaleString()}
 [${scopeTag(e.scope)}] ${e.report.review.summary.slice(0, 200)}`;
         item.contextValue = "historyEntry";
@@ -25158,8 +25802,8 @@ var HistoryProvider = class {
         return item;
       }
       default: {
-        const item = new vscode16.TreeItem(node2.label);
-        item.iconPath = new vscode16.ThemeIcon(node2.icon ?? "info");
+        const item = new vscode17.TreeItem(node2.label);
+        item.iconPath = new vscode17.ThemeIcon(node2.icon ?? "info");
         item.id = node2.id;
         return item;
       }
@@ -25358,15 +26002,15 @@ function formatTime(d) {
 
 // src/hook/install.ts
 var fs9 = __toESM(require("fs"));
-var path36 = __toESM(require("path"));
-var vscode18 = __toESM(require("vscode"));
+var path38 = __toESM(require("path"));
+var vscode19 = __toESM(require("vscode"));
 
 // src/outputChannel.ts
-var vscode17 = __toESM(require("vscode"));
+var vscode18 = __toESM(require("vscode"));
 var _channel;
 function getOutputChannel() {
   if (!_channel) {
-    _channel = vscode17.window.createOutputChannel("Commit Defender", "ansi");
+    _channel = vscode18.window.createOutputChannel("Commit Defender", "ansi");
   }
   return _channel;
 }
@@ -25385,22 +26029,22 @@ async function writeHookConfig2(repoRoot, cfg) {
   ensureGitignored(repoRoot);
 }
 function ensureGitignored(repoRoot) {
-  const gi = path36.join(repoRoot, ".gitignore");
-  let text8 = "";
+  const gi = path38.join(repoRoot, ".gitignore");
+  let text9 = "";
   try {
-    text8 = fs9.readFileSync(gi, "utf8");
+    text9 = fs9.readFileSync(gi, "utf8");
   } catch {
   }
-  if (text8.split(/\r?\n/).some((line) => line.trim() === GITIGNORE_LINE)) {
+  if (text9.split(/\r?\n/).some((line) => line.trim() === GITIGNORE_LINE)) {
     return;
   }
-  const sep5 = text8.length === 0 || text8.endsWith("\n") ? "" : "\n";
-  fs9.writeFileSync(gi, `${text8}${sep5}# commit-defender local hook configuration
+  const sep5 = text9.length === 0 || text9.endsWith("\n") ? "" : "\n";
+  fs9.writeFileSync(gi, `${text9}${sep5}# commit-defender local hook configuration
 ${GITIGNORE_LINE}
 `);
 }
 function buildHookScript(extensionPath) {
-  const cliPath = path36.join(extensionPath, "out", "hook-cli.js");
+  const cliPath = path38.join(extensionPath, "out", "hook-cli.js");
   return [
     "#!/usr/bin/env sh",
     HOOK_SIGNATURE,
@@ -25425,12 +26069,12 @@ function shellQuote(s) {
 }
 async function installHook(repoRoot, extensionPath, cfg) {
   const channel = getOutputChannel();
-  const hookDir = path36.join(repoRoot, ".git", "hooks");
-  const hookPath = path36.join(hookDir, "pre-commit");
+  const hookDir = path38.join(repoRoot, ".git", "hooks");
+  const hookPath = path38.join(hookDir, "pre-commit");
   try {
     fs9.mkdirSync(hookDir, { recursive: true });
   } catch (e) {
-    vscode18.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
+    vscode19.window.showErrorMessage(`Commit Defender: Cannot create ${hookDir} \u2014 ${e.message}`);
     return;
   }
   let existing = "";
@@ -25439,7 +26083,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   if (existing && !existing.includes(HOOK_SIGNATURE)) {
-    const action = await vscode18.window.showWarningMessage(
+    const action = await vscode19.window.showWarningMessage(
       "Commit Defender: A pre-commit hook already exists. Replacing it would discard the current contents.",
       { modal: true },
       "Replace",
@@ -25460,7 +26104,7 @@ async function installHook(repoRoot, extensionPath, cfg) {
   try {
     await writeHookConfig2(repoRoot, cfg);
   } catch {
-    void vscode18.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
+    void vscode19.window.showErrorMessage("Commit Defender: Hook configuration could not be saved. Configure or migrate the model API credential first. Existing hook was preserved.");
     return;
   }
   fs9.writeFileSync(hookPath, buildHookScript(extensionPath), { mode: 493 });
@@ -25469,22 +26113,22 @@ async function installHook(repoRoot, extensionPath, cfg) {
   } catch {
   }
   channel.appendLine(`[Commit Defender] Pre-commit hook installed at ${hookPath}`);
-  vscode18.window.showInformationMessage(
+  vscode19.window.showInformationMessage(
     "Commit Defender: Pre-commit hook installed. Commits in this repo will be reviewed automatically \u2014 even outside VS Code."
   );
 }
 async function uninstallHook(repoRoot) {
   const channel = getOutputChannel();
-  const hookPath = path36.join(repoRoot, ".git", "hooks", "pre-commit");
+  const hookPath = path38.join(repoRoot, ".git", "hooks", "pre-commit");
   let existing = "";
   try {
     existing = fs9.readFileSync(hookPath, "utf8");
   } catch {
-    vscode18.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
+    vscode19.window.showInformationMessage("Commit Defender: No pre-commit hook found.");
     return;
   }
   if (!existing.includes(HOOK_SIGNATURE)) {
-    vscode18.window.showInformationMessage(
+    vscode19.window.showInformationMessage(
       "Commit Defender: Pre-commit hook was not installed by Commit Defender \u2014 skipping removal."
     );
     return;
@@ -25493,22 +26137,22 @@ async function uninstallHook(repoRoot) {
     fs9.unlinkSync(hookPath);
     channel.appendLine(`[Commit Defender] Removed pre-commit hook at ${hookPath}`);
   } catch (e) {
-    vscode18.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
+    vscode19.window.showErrorMessage(`Commit Defender: Could not remove hook \u2014 ${e.message}`);
     return;
   }
-  vscode18.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
+  vscode19.window.showInformationMessage("Commit Defender: Pre-commit hook removed.");
 }
 function hookIsInstalled(repoRoot) {
   try {
-    return fs9.readFileSync(path36.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
+    return fs9.readFileSync(path38.join(repoRoot, ".git", "hooks", "pre-commit"), "utf8").includes(HOOK_SIGNATURE);
   } catch {
     return false;
   }
 }
 
 // src/panelProvider.ts
-var path37 = __toESM(require("path"));
-var vscode19 = __toESM(require("vscode"));
+var path39 = __toESM(require("path"));
+var vscode20 = __toESM(require("vscode"));
 var PRIORITY_ICON = {
   P3: "error",
   P2: "warning",
@@ -25532,12 +26176,12 @@ var PanelProvider = class {
   _blocks = [];
   _repoRoot = "";
   _isRunning = false;
-  _emitter = new vscode19.EventEmitter();
+  _emitter = new vscode20.EventEmitter();
   onDidChangeTreeData = this._emitter.event;
   // Map decoration URIs → priority + optional badge so a single
   // FileDecorationProvider can paint every row.
   _decorations = /* @__PURE__ */ new Map();
-  _decoEmitter = new vscode19.EventEmitter();
+  _decoEmitter = new vscode20.EventEmitter();
   decorationProvider = {
     onDidChangeFileDecorations: this._decoEmitter.event,
     provideFileDecoration: (uri) => {
@@ -25548,7 +26192,7 @@ var PanelProvider = class {
       if (!entry) {
         return void 0;
       }
-      return new vscode19.FileDecoration(entry.badge, entry.tooltip);
+      return new vscode20.FileDecoration(entry.badge, entry.tooltip);
     }
   };
   _report;
@@ -25559,13 +26203,13 @@ var PanelProvider = class {
     this._rebuildDecorations();
     this._emitter.fire(void 0);
   }
-  setRunning(running) {
-    this._isRunning = running;
+  setRunning(running2) {
+    this._isRunning = running2;
     this._emitter.fire(void 0);
   }
   clear() {
     this._report = void 0;
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode20.Uri.parse(s));
     this._blocks = [];
     this._repoRoot = "";
     this._decorations.clear();
@@ -25577,17 +26221,17 @@ var PanelProvider = class {
   getTreeItem(node2) {
     switch (node2.kind) {
       case "file": {
-        const item = new vscode19.TreeItem(
-          path37.basename(node2.file),
-          vscode19.TreeItemCollapsibleState.Expanded
+        const item = new vscode20.TreeItem(
+          path39.basename(node2.file),
+          vscode20.TreeItemCollapsibleState.Expanded
         );
         item.resourceUri = node2.uri;
-        const dir = path37.dirname(node2.file);
+        const dir = path39.dirname(node2.file);
         item.description = `${dir === "." ? "" : dir + "  "}\xB7 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}`;
         const worst = worstPriority2(node2.blocks);
         const counts = countByPriority(node2.blocks);
         item.tooltip = `${node2.file} \u2014 ${node2.blocks.length} finding${node2.blocks.length !== 1 ? "s" : ""}` + (worst ? ` (worst: ${worst})` : "") + summarizeCounts(counts);
-        item.iconPath = worst ? new vscode19.ThemeIcon(PRIORITY_ICON[worst], new vscode19.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode19.ThemeIcon("file");
+        item.iconPath = worst ? new vscode20.ThemeIcon(PRIORITY_ICON[worst], new vscode20.ThemeColor(PRIORITY_COLOR_ID[worst])) : new vscode20.ThemeIcon("file");
         item.id = node2.id;
         return item;
       }
@@ -25599,27 +26243,27 @@ var PanelProvider = class {
         const body2 = b.comment.split("\n")[0].trim();
         const ruleTag = b.source === "lint" && b.rule ? `${b.rule} \u2014 ` : "";
         const label = `${emoji} @${author}: ${ruleTag}${body2}`;
-        const item = new vscode19.TreeItem(label);
+        const item = new vscode20.TreeItem(label);
         item.resourceUri = node2.uri;
-        item.iconPath = new vscode19.ThemeIcon(
+        item.iconPath = new vscode20.ThemeIcon(
           PRIORITY_ICON[b.priority],
-          new vscode19.ThemeColor(PRIORITY_COLOR_ID[b.priority])
+          new vscode20.ThemeColor(PRIORITY_COLOR_ID[b.priority])
         );
         const lineRef = b.line > 0 ? `Ln ${b.line}${b.col ? `, Col ${b.col}` : ""}` : "file-level";
         item.description = lineRef;
         const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** \xB7 _@${author}_
 
 ${b.comment}`;
-        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode19.MarkdownString(safeMarkdown(tooltip, () => void 0));
+        item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode20.MarkdownString(safeMarkdown(tooltip, () => void 0));
         item.command = this._report ? reviewNavigation.sourceCommand(this._repoRoot, this._report, b.file, b.line) : void 0;
         item.id = node2.id;
         return item;
       }
       default: {
-        const item = new vscode19.TreeItem(node2.label);
-        item.iconPath = new vscode19.ThemeIcon(
+        const item = new vscode20.TreeItem(node2.label);
+        item.iconPath = new vscode20.ThemeIcon(
           this._isRunning ? "loading~spin" : "shield",
-          new vscode19.ThemeColor("charts.blue")
+          new vscode20.ThemeColor("charts.blue")
         );
         item.id = node2.id;
         return item;
@@ -25679,7 +26323,7 @@ ${b.comment}`;
         kind: "file",
         id: id4,
         file,
-        absPath: path37.join(this._repoRoot, file),
+        absPath: path39.join(this._repoRoot, file),
         blocks,
         uri: this._fileUri(id4, blocks)
       };
@@ -25687,13 +26331,13 @@ ${b.comment}`;
   }
   // ── Decoration plumbing ───────────────────────────────────────────────────
   _fileUri(id4, blocks) {
-    return vscode19.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
+    return vscode20.Uri.from({ scheme: URI_SCHEME, path: `/file/${id4}`, query: `n=${blocks.length}` });
   }
   _blockUri(id4) {
-    return vscode19.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
+    return vscode20.Uri.from({ scheme: URI_SCHEME, path: `/block/${encodeURIComponent(id4)}` });
   }
   _rebuildDecorations() {
-    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
+    const oldUris = Array.from(this._decorations.keys()).map((s) => vscode20.Uri.parse(s));
     this._decorations.clear();
     const byFile = /* @__PURE__ */ new Map();
     for (const b of this._blocks) {
@@ -25743,7 +26387,7 @@ ${b.comment}`;
         });
       });
     });
-    const newUris = Array.from(this._decorations.keys()).map((s) => vscode19.Uri.parse(s));
+    const newUris = Array.from(this._decorations.keys()).map((s) => vscode20.Uri.parse(s));
     const fired = [...oldUris, ...newUris];
     if (fired.length) {
       this._decoEmitter.fire(fired);
@@ -25779,11 +26423,11 @@ ${parts2.join(" ")}` : "";
 }
 
 // src/statusBar.ts
-var vscode20 = __toESM(require("vscode"));
+var vscode21 = __toESM(require("vscode"));
 var StatusBarManager = class {
   item;
   constructor() {
-    this.item = vscode20.window.createStatusBarItem(vscode20.StatusBarAlignment.Left, 100);
+    this.item = vscode21.window.createStatusBarItem(vscode21.StatusBarAlignment.Left, 100);
     this.item.command = "commitDefender.analyze";
     this.setIdle();
     this.item.show();
@@ -25826,13 +26470,13 @@ var StatusBarManager = class {
     this.item.tooltip = `${reviewCoverage(report)}. ${report.gcr ? "Standalone review is advisory" : `Legacy hook: ${resolveExitCode(report) ? "would block" : "allows commit"}`}. Click to re-analyze.`;
     this.item.command = "commitDefender.analyze";
     this.item.backgroundColor = void 0;
-    this.item.color = new vscode20.ThemeColor(meta.color);
+    this.item.color = new vscode21.ThemeColor(meta.color);
   }
   setError(message2) {
     this.item.text = "$(warning) CD: Error";
     this.item.tooltip = `Commit Defender error: ${message2}`;
     this.item.command = "commitDefender.analyze";
-    this.item.backgroundColor = new vscode20.ThemeColor("statusBarItem.warningBackground");
+    this.item.backgroundColor = new vscode21.ThemeColor("statusBarItem.warningBackground");
     this.item.color = void 0;
   }
   dispose() {
@@ -25841,16 +26485,16 @@ var StatusBarManager = class {
 };
 
 // src/reviewChat.ts
-var vscode21 = __toESM(require("vscode"));
+var vscode22 = __toESM(require("vscode"));
 var import_node_crypto23 = require("node:crypto");
 
 // src/reviewChatView.ts
 var import_node_crypto22 = require("node:crypto");
-var esc5 = (text8) => text8.replace(
+var esc5 = (text9) => text9.replace(
   /[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
 );
-var markdown = (text8) => safeMarkdownHtml(text8, () => void 0);
+var markdown = (text9) => safeMarkdownHtml(text9, () => void 0);
 var ReviewChatView = class {
   id = (0, import_node_crypto22.randomBytes)(16).toString("hex");
   revision = 0;
@@ -25894,7 +26538,7 @@ var ReviewChatView = class {
     this.sources.clear();
     this.findings.clear();
     const { conversation: chat, review } = this.state;
-    const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running = last?.status === "running";
+    const last = chat.turns.at(-1), waiting = last?.status === "awaiting_input", queued = last?.status === "queued", running2 = last?.status === "running";
     const limits = chat.limits;
     const summary = `<details><summary>Review summary and findings</summary><div>${markdown(review.summary)}</div><ul>${review.findings.map((f) => {
       const id4 = (0, import_node_crypto22.randomBytes)(12).toString("hex");
@@ -25920,10 +26564,10 @@ var ReviewChatView = class {
       meta: `${chat.identity.client.mode} \xB7 ${chat.identity.executor.model} \xB7 source ${chat.identity.source.hash.slice(0, 12)} \xB7 per turn: ${limits.modelCalls} model calls, ${Math.round(limits.durationMs / 1e3)}s, ${Math.round(limits.sourceBytes / 1024)} KiB`,
       placeholder: waiting ? "Answer the confirmation question\u2026" : "Ask about this review\u2026",
       sendLabel: waiting ? "Answer and resume" : "Send",
-      canSend: !chat.closed && !running && !queued,
+      canSend: !chat.closed && !running2 && !queued,
       canResume: !!queued,
       canCancel: !!last && ["queued", "running", "awaiting_input"].includes(last.status),
-      status: waiting ? "Waiting for your answer. No model process is running." : running ? "A conversation step is running. Refresh to check its result, or cancel it." : queued ? "A saved turn is ready. Resume when you want to continue." : "Ready"
+      status: waiting ? "Waiting for your answer. No model process is running." : running2 ? "A conversation step is running. Refresh to check its result, or cancel it." : queued ? "A saved turn is ready. Resume when you want to continue." : "Ready"
     };
   }
   get html() {
@@ -26028,7 +26672,7 @@ async function settleReviewChats() {
 }
 async function openReviewChat(report, repoRoot, context) {
   if (!report.gcr) {
-    void vscode21.window.showInformationMessage(
+    void vscode22.window.showInformationMessage(
       "Run a fixed-source review before starting a review conversation."
     );
     return;
@@ -26051,7 +26695,7 @@ async function openReviewChat(report, repoRoot, context) {
   );
   const initial = settings(), fingerprint = contentHash(initial);
   if (initial.profileId !== core.identity.client.profileId || !initial.workspaceTrusted || scope.kind !== "repository" || scope.repositoryKey !== core.identity.client.repositoryKey || scope.worktreeKey !== core.identity.client.worktreeKey) {
-    void vscode21.window.showErrorMessage(
+    void vscode22.window.showErrorMessage(
       "Commit Defender: Review discussion \u2014 reopen this review from the current trusted workspace and profile."
     );
     return;
@@ -26061,10 +26705,10 @@ async function openReviewChat(report, repoRoot, context) {
     panels.get(key3).reveal();
     return;
   }
-  const panel = vscode21.window.createWebviewPanel(
+  const panel = vscode22.window.createWebviewPanel(
     "commitDefenderReviewChat",
     "Commit Defender \u2014 Review conversation",
-    vscode21.ViewColumn.Beside,
+    vscode22.ViewColumn.Beside,
     {
       enableScripts: true,
       retainContextWhenHidden: true,
@@ -26072,10 +26716,10 @@ async function openReviewChat(report, repoRoot, context) {
     }
   );
   const view = new ReviewChatView();
-  let closed = false, running, cancelRequested = false;
+  let closed = false, running2, cancelRequested = false;
   const current = () => {
     try {
-      return !closed && vscode21.workspace.isTrusted && contentHash(settings()) === fingerprint;
+      return !closed && vscode22.workspace.isTrusted && contentHash(settings()) === fingerprint;
     } catch {
       return false;
     }
@@ -26086,7 +26730,7 @@ async function openReviewChat(report, repoRoot, context) {
   };
   const workerFile = context.asAbsolutePath("out/review-chat-worker.js");
   const execute = async (action) => {
-    if (!current() || running) return;
+    if (!current() || running2) return;
     post({
       type: "progress",
       message: action.type === "source" ? "Opening the saved source\u2026" : action.type === "read" ? "Opening the saved conversation\u2026" : "Checking the conversation before continuing\u2026"
@@ -26101,7 +26745,7 @@ async function openReviewChat(report, repoRoot, context) {
       (message2) => post({ type: "progress", message: message2 })
     );
     const job = { controller, promise };
-    running = job;
+    running2 = job;
     active.add(job);
     try {
       const result = await promise;
@@ -26122,7 +26766,7 @@ async function openReviewChat(report, repoRoot, context) {
       post({ type: "error", message: chatError(error2).message });
     } finally {
       active.delete(job);
-      if (running === job) running = void 0;
+      if (running2 === job) running2 = void 0;
       if (cancelRequested && current()) {
         cancelRequested = false;
         const turnId = "turnId" in action ? action.turnId : view.state?.conversation.turns.at(-1)?.id;
@@ -26137,7 +26781,7 @@ async function openReviewChat(report, repoRoot, context) {
   panel.onDidDispose(() => {
     closed = true;
     clearInterval(timer);
-    running?.controller.abort();
+    running2?.controller.abort();
     panels.delete(key3);
   });
   const lifetime = {
@@ -26152,9 +26796,9 @@ async function openReviewChat(report, repoRoot, context) {
       const message2 = view.message(value);
       if (!message2) return;
       if (message2.command === "cancel") {
-        if (running) {
+        if (running2) {
           cancelRequested = true;
-          running.controller.abort();
+          running2.controller.abort();
           post({
             type: "progress",
             message: "Cancelling and waiting for the model process to exit\u2026"
@@ -26165,7 +26809,7 @@ async function openReviewChat(report, repoRoot, context) {
         }
         return;
       }
-      if (running) return;
+      if (running2) return;
       if (message2.command === "ready" || message2.command === "refresh")
         await execute({ type: "read" });
       else if (message2.command === "source") {
@@ -26205,21 +26849,19 @@ async function openReviewChat(report, repoRoot, context) {
 var ALL_FILES = { scheme: "file" };
 var settleExecutions;
 async function activate(context) {
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.openConnectionGuide",
     (language) => openConnectionGuide(context, language)
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.openSettings",
     openCommitDefenderSettings
   ));
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
   reviewNavigation.register(context);
-  let lastConfiguredProvider = getConfig().aiProvider;
-  let providerUpdateFromWizard;
   async function resolveRepoRoot() {
-    const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!ws) {
       return void 0;
     }
@@ -26229,128 +26871,23 @@ async function activate(context) {
       return void 0;
     }
   }
-  async function chooseAccountModel(provider, includeDefault = true) {
-    const current = getConfig();
-    const choices = [];
-    if (provider === "codex") {
-      choices.push({
-        label: "$(sparkle) gpt-6-astra",
-        description: "Uses your selected reasoning effort",
-        detail: "Requires the supported local Codex executable. Uses captured source, base and related context.",
-        model: "gpt-6-astra"
-      });
-    } else if (includeDefault) {
-      choices.push({
-        label: "$(sparkle) CLI default model",
-        description: "Recommended",
-        detail: "Let the authenticated CLI select its current default model.",
-        model: ""
-      });
-    }
-    if (provider === "claudecode") {
-      choices.push(
-        { label: "$(symbol-variable) sonnet", description: "Claude Code alias", model: "sonnet" },
-        { label: "$(symbol-variable) opus", description: "Claude Code alias", model: "opus" }
-      );
-    }
-    if (current.aiProvider === provider && current.model.trim() && !choices.some((choice2) => choice2.model === current.model.trim())) {
-      choices.splice(includeDefault ? 1 : 0, 0, {
-        label: `$(history) ${current.model.trim()}`,
-        description: "Current model",
-        model: current.model.trim()
-      });
-    }
-    choices.push({
-      label: "$(edit) Enter a model ID\u2026",
-      detail: "Use any model name accepted by the selected local CLI and account.",
-      custom: true
-    });
-    const picked = await vscode22.window.showQuickPick(choices, {
-      title: `Commit Defender: Select ${accountProviderName(provider)} model`,
-      placeHolder: includeDefault ? "Choose the CLI default, an alias, or enter an exact model ID" : "Choose an alias or enter an exact model ID",
-      ignoreFocusOut: true
-    });
-    if (!picked) {
-      return void 0;
-    }
-    if (!picked.custom) {
-      return picked.model ?? "";
-    }
-    return vscode22.window.showInputBox({
-      title: `Commit Defender: ${accountProviderName(provider)} model ID`,
-      prompt: "Enter an exact model ID supported by the local CLI and authenticated account.",
-      value: current.aiProvider === provider ? current.model : "",
-      ignoreFocusOut: true,
-      validateInput: (value) => value.trim() ? void 0 : "Enter a model ID, or go back and choose CLI default."
-    }).then((value) => value?.trim());
-  }
-  async function applyAccountProvider(provider, model) {
-    const settings = vscode22.workspace.getConfiguration("commitDefender");
-    const target = vscode22.ConfigurationTarget.Global;
-    providerUpdateFromWizard = provider;
-    await settings.update("model", model, target);
-    await settings.update("aiProvider", provider, target);
-    setTimeout(() => {
-      if (providerUpdateFromWizard === provider) {
-        providerUpdateFromWizard = void 0;
-      }
-    }, 1e3);
-    const modelLabel = model || "CLI default";
-    vscode22.window.showInformationMessage(
-      `Commit Defender: ${accountProviderName(provider)} is now the AI provider (${modelLabel}).`
-    );
-  }
   async function promptModelAtProviderSetup(provider) {
-    const model = await chooseAccountModel(provider, provider !== "codex");
-    if (model === void 0) return false;
-    if (provider !== "codex") {
-      const efforts = provider === "claudecode" ? ["", "low", "medium", "high", "xhigh"] : ["", "low", "medium", "high"];
-      const current = getStandaloneReviewSettings(1).reasoningEffort;
-      const effort = await vscode22.window.showQuickPick(efforts.map((value) => ({
-        label: value || "CLI default reasoning",
-        description: value === current ? "Current selection" : void 0,
-        effort: value
-      })), { title: `Commit Defender: Select ${accountProviderName(provider)} reasoning effort`, ignoreFocusOut: true });
-      if (!effort) return false;
-      await vscode22.workspace.getConfiguration("commitDefender").update("reviewReasoningEffort", effort.effort, vscode22.ConfigurationTarget.Global);
-    }
-    await applyAccountProvider(provider, model);
-    return true;
-  }
-  async function promptProviderChangeAfterSignIn(provider) {
-    const action = await vscode22.window.showInformationMessage(
-      `Commit Defender: ${accountProviderName(provider)} sign-in opened in the terminal. Select this provider and its review model?`,
-      "Select Provider and Model\u2026",
-      "Keep Current Provider"
-    );
-    if (action === "Select Provider and Model\u2026") await promptModelAtProviderSetup(provider);
+    if (provider === "geminicli") return;
+    await useAccount(context.extensionPath, (value) => signIn(value, false), provider);
   }
   async function selectAccountProviderAndModel() {
-    const choices = [
-      { label: "Codex", description: "Local review with your selected model and reasoning effort", provider: "codex" },
-      { label: "Claude Code", description: "Local review with your subscription model and reasoning effort", detail: "Requires Claude Code with safe mode. Reviews captured source with tools disabled.", provider: "claudecode" },
-      { label: "Antigravity", description: "Local review with your Google account model and reasoning effort", detail: "Requires the Antigravity agent CLI (agy), not the IDE launcher. Reviews captured source with tools disabled.", provider: "antigravity" }
-    ];
-    const picked = await vscode22.window.showQuickPick(choices, {
-      title: "Commit Defender: Select account provider",
-      placeHolder: "Choose the authenticated CLI backbone",
-      ignoreFocusOut: true
-    });
-    if (!picked) {
-      return;
-    }
-    await promptModelAtProviderSetup(picked.provider);
+    await useAccount(context.extensionPath, (value) => signIn(value, false));
   }
-  async function signIn(provider) {
+  async function signIn(provider, configureAfter = true) {
     const config = getConfig();
     const isCodex = provider === "codex";
     const isClaude = provider === "claudecode";
     const isGeminiCli = provider === "geminicli";
     const name = accountProviderName(provider);
     const executable = isCodex ? config.codexPath : isClaude ? config.claudeCodePath : isGeminiCli ? config.geminiCliPath : config.antigravityPath;
-    const cwd = await resolveRepoRoot() ?? vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
-    if (path38.isAbsolute(executable) && !fs10.existsSync(executable)) {
-      vscode22.window.showErrorMessage(
+    const cwd = await resolveRepoRoot() ?? vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
+    if (path40.isAbsolute(executable) && !fs10.existsSync(executable)) {
+      vscode23.window.showErrorMessage(
         `Commit Defender: ${name} CLI executable was not found at "${executable}". Update the corresponding path setting.`
       );
       return false;
@@ -26366,7 +26903,7 @@ async function activate(context) {
       env4.GOOGLE_GENAI_USE_VERTEXAI = null;
       env4.GOOGLE_GENAI_USE_GCA = "true";
     }
-    const terminal = vscode22.window.createTerminal({
+    const terminal = vscode23.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
@@ -26375,52 +26912,48 @@ async function activate(context) {
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
-    await promptProviderChangeAfterSignIn(provider);
+    if (configureAfter && provider !== "geminicli") {
+      const action = await vscode23.window.showInformationMessage(
+        `Commit Defender: Finish ${name} sign-in in the terminal, then verify the account and choose a model.`,
+        "Use Account"
+      );
+      if (action === "Use Account") await promptModelAtProviderSetup(provider);
+    }
     return true;
   }
   context.subscriptions.push(
-    vscode22.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
-    vscode22.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
-    vscode22.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
-    vscode22.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
-    vscode22.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
+    vscode23.commands.registerCommand("commitDefender.signInCodex", () => signIn("codex")),
+    vscode23.commands.registerCommand("commitDefender.signInClaudeCode", () => signIn("claudecode")),
+    vscode23.commands.registerCommand("commitDefender.signInGeminiCli", () => signIn("geminicli")),
+    vscode23.commands.registerCommand("commitDefender.signInAntigravity", () => signIn("antigravity")),
+    vscode23.commands.registerCommand("commitDefender.selectAccountProviderAndModel", selectAccountProviderAndModel)
   );
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.installPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode22.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode23.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await installHook(repoRoot, context.extensionPath, getConfig());
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.uninstallPreCommitHook",
     async () => {
       const repoRoot = await resolveRepoRoot();
       if (!repoRoot) {
-        vscode22.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
+        vscode23.window.showWarningMessage("Commit Defender: No git repository found in workspace.");
         return;
       }
       await uninstallHook(repoRoot);
     }
   ));
-  context.subscriptions.push(vscode22.workspace.onDidChangeConfiguration(async (e) => {
+  context.subscriptions.push(vscode23.workspace.onDidChangeConfiguration(async (e) => {
     if (e.affectsConfiguration("commitDefender")) {
-      const nextConfig = getConfig();
-      const previousProvider = lastConfiguredProvider;
-      lastConfiguredProvider = nextConfig.aiProvider;
-      historyProvider.updateConfig(nextConfig);
-      if (e.affectsConfiguration("commitDefender.aiProvider") && nextConfig.aiProvider !== previousProvider) {
-        const account = accountProvider(nextConfig.aiProvider);
-        if (account && providerUpdateFromWizard === account) {
-          providerUpdateFromWizard = void 0;
-        } else if (account) {
-          await promptModelAtProviderSetup(account);
-        }
-      }
+      await waitForModelConfiguration();
+      historyProvider.updateConfig(getConfig());
       const repoRoot = await resolveRepoRoot();
       if (repoRoot && hookIsInstalled(repoRoot)) {
         try {
@@ -26433,9 +26966,9 @@ async function activate(context) {
     if (e.affectsConfiguration("commitDefender.preCommitHook")) {
       const hook = getConfig().preCommitHook;
       if (hook === "enable") {
-        vscode22.commands.executeCommand("commitDefender.installPreCommitHook");
+        vscode23.commands.executeCommand("commitDefender.installPreCommitHook");
       } else {
-        vscode22.commands.executeCommand("commitDefender.uninstallPreCommitHook");
+        vscode23.commands.executeCommand("commitDefender.uninstallPreCommitHook");
       }
     }
     if (e.affectsConfiguration("commitDefender.colorPalette")) {
@@ -26452,8 +26985,8 @@ async function activate(context) {
       }
     });
   }
-  const diagnostics = vscode22.languages.createDiagnosticCollection("commit-defender");
-  const commentCtrl = vscode22.comments.createCommentController("commit-defender", "Commit Defender");
+  const diagnostics = vscode23.languages.createDiagnosticCollection("commit-defender");
+  const commentCtrl = vscode23.comments.createCommentController("commit-defender", "Commit Defender");
   const commentManager = new CommentManager();
   const statusBar = new StatusBarManager();
   const execution = new ReviewExecutionOwner();
@@ -26475,7 +27008,7 @@ async function activate(context) {
   const codeLensProvider = new SuggestionCodeLensProvider();
   const historyProvider = new HistoryProvider(cfg);
   const panelProvider = new PanelProvider();
-  const localProfile = () => vscode22.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
+  const localProfile = () => vscode23.workspace.getConfiguration("commitDefender").inspect("localProfile")?.globalValue ?? "default";
   const centralSynchronization = new CentralSynchronization({
     onState: (_key, state) => {
       if (state.phase === "ready") void refreshVisibleContext();
@@ -26488,14 +27021,14 @@ async function activate(context) {
   async function refreshCentralSynchronization() {
     const generation = ++syncDiscovery;
     if (syncManagement > 0) return;
-    if (!vscode22.workspace.isTrusted) {
+    if (!vscode23.workspace.isTrusted) {
       centralSynchronization.stop();
       return;
     }
     const profileId = localProfile();
     try {
-      const roots = await Promise.all((vscode22.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
-      if (generation !== syncDiscovery || !vscode22.workspace.isTrusted || localProfile() !== profileId) return;
+      const roots = await Promise.all((vscode23.workspace.workspaceFolders ?? []).filter((folder) => folder.uri.scheme === "file").map((folder) => getRepoRoot(folder.uri.fsPath).catch(() => void 0)));
+      if (generation !== syncDiscovery || !vscode23.workspace.isTrusted || localProfile() !== profileId) return;
       centralSynchronization.reconcile([...new Set(roots.filter((root2) => !!root2))].map((repoRoot) => {
         const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
         return { scope, repositoryRoot: repoRoot, selection: readSelection(context.globalState, scope) };
@@ -26517,27 +27050,27 @@ async function activate(context) {
   const localReviewActivity = new LocalReviewActivity(async () => {
     const profileId = localProfile();
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode22.workspace.isTrusted) throw new Error("Trusted worktree required");
+    if (!repoRoot || !vscode23.workspace.isTrusted) throw new Error("Trusted worktree required");
     const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
     const selection = readSelection(context.globalState, scope);
     if (selectedReviewSettings(getStandaloneReviewSettings(1), selection).mode === "centralized" && selection?.mode !== "centralized")
       throw new StandaloneReviewError("central-connection-required");
     const selected = JSON.stringify(selection);
     const history = await readSelectedHistory({ profileId, repoRoot, scope: "repository" }, selection);
-    if (!vscode22.workspace.isTrusted || localProfile() !== profileId || await resolveRepoRoot() !== repoRoot || JSON.stringify(readSelection(context.globalState, scope)) !== selected)
+    if (!vscode23.workspace.isTrusted || localProfile() !== profileId || await resolveRepoRoot() !== repoRoot || JSON.stringify(readSelection(context.globalState, scope)) !== selected)
       throw new Error("Local history selection changed");
     return { scope, repository: repoRoot, reports: history.reports, incompleteHistory: history.incompleteHistory };
   });
   context.subscriptions.push(
     localReviewActivity,
-    vscode22.commands.registerCommand("commitDefender.localReviewActivity", (days) => localReviewActivity.show(days))
+    vscode23.commands.registerCommand("commitDefender.localReviewActivity", (days) => localReviewActivity.show(days))
   );
   let historyLoad = 0;
   async function refreshLocalHistory() {
     const generation = ++historyLoad;
     const profileId = localProfile();
     const repoRoot = await resolveRepoRoot();
-    if (!repoRoot || !vscode22.workspace.isTrusted) return;
+    if (!repoRoot || !vscode23.workspace.isTrusted) return;
     try {
       const scope = knowledgeScope({ profileId, repoRoot, scope: "repository" });
       if (scope.kind !== "repository") return;
@@ -26562,11 +27095,11 @@ async function activate(context) {
     renderSummary(view.report, view.repoRoot);
   }
   context.subscriptions.push(
-    vscode22.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
+    vscode23.commands.registerCommand("commitDefender.manageCentralConnection", async () => {
       const repoRoot = await resolveRepoRoot();
       const profileId = localProfile();
-      if (!repoRoot || !vscode22.workspace.isTrusted) {
-        void vscode22.window.showWarningMessage("Commit Defender: Open and trust a Git worktree before managing central review.");
+      if (!repoRoot || !vscode23.workspace.isTrusted) {
+        void vscode23.window.showWarningMessage("Commit Defender: Open and trust a Git worktree before managing central review.");
         return;
       }
       const scope = knowledgeScope({ repoRoot, profileId, scope: "repository" });
@@ -26579,7 +27112,7 @@ async function activate(context) {
         await manageCentralConnection(context, scope, {
           repositoryRoot: repoRoot,
           assertCurrent() {
-            if (!vscode22.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
+            if (!vscode23.workspace.isTrusted || localProfile() !== profileId || selectionKey(knowledgeScope({ repoRoot, profileId, scope: "repository" })) !== selectionKey(scope))
               throw Error("Connection selection changed.");
           },
           async invalidate() {
@@ -26589,7 +27122,7 @@ async function activate(context) {
             reviewIntent++;
             execution.invalidate();
             await execution.settled();
-            await vscode22.commands.executeCommand("commitDefender.clearFindings");
+            await vscode23.commands.executeCommand("commitDefender.clearFindings");
           },
           refresh: refreshLocalHistory
         });
@@ -26599,39 +27132,39 @@ async function activate(context) {
         await automaticReviews.refresh();
       }
     }),
-    vscode22.commands.registerCommand("commitDefender.manageModelCredential", async () => manageModelCredential(await resolveRepoRoot())),
-    vscode22.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
-    vscode22.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
+    vscode23.commands.registerCommand("commitDefender.manageModelCredential", async () => useApiCredential(await resolveRepoRoot())),
+    vscode23.commands.registerCommand("commitDefender.refreshLocalHistory", refreshLocalHistory),
+    vscode23.commands.registerCommand("commitDefender.manageLocalKnowledge", async () => {
       const repoRoot = await resolveRepoRoot();
       const choices = [
-        ...repoRoot && vscode22.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
+        ...repoRoot && vscode23.workspace.isTrusted ? [{ label: "This worktree", description: "Only this repository and worktree", scope: "repository" }] : [],
         { label: "Current profile", description: "Shared across repositories in this local profile", scope: "profile" }
       ];
-      const selected = await vscode22.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
+      const selected = await vscode23.window.showQuickPick(choices, { title: "Local Memory and Skills: choose scope" });
       if (!selected) return;
       try {
         const scope = knowledgeScope({ repoRoot, profileId: localProfile(), scope: selected.scope });
         await showLocalKnowledge(context, scope, refreshVisibleContext);
       } catch {
-        void vscode22.window.showErrorMessage("Commit Defender: Local Memory and Skills could not be opened. Check the profile and OS credential store.");
+        void vscode23.window.showErrorMessage("Commit Defender: Local Memory and Skills could not be opened. Check the profile and OS credential store.");
       }
     }),
-    vscode22.window.onDidChangeWindowState((event) => {
+    vscode23.window.onDidChangeWindowState((event) => {
       if (event.focused) {
         void refreshVisibleContext();
         void refreshCentralSynchronization().then(() => centralSynchronization.wake());
       }
     }),
-    vscode22.workspace.onDidChangeWorkspaceFolders(() => {
+    vscode23.workspace.onDidChangeWorkspaceFolders(() => {
       localReviewActivity.dispose();
       syncDiscovery++;
       centralSynchronization.stop();
       void refreshCentralSynchronization();
     }),
-    vscode22.workspace.onDidGrantWorkspaceTrust(() => {
+    vscode23.workspace.onDidGrantWorkspaceTrust(() => {
       void refreshCentralSynchronization();
     }),
-    vscode22.workspace.onDidChangeConfiguration((event) => {
+    vscode23.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("commitDefender.localProfile") || event.affectsConfiguration("commitDefender.reviewMode")) {
         localReviewActivity.dispose();
         syncDiscovery++;
@@ -26640,17 +27173,17 @@ async function activate(context) {
         historyLoad++;
         messageIntent++;
         messageExecution.invalidate();
-        void vscode22.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
+        void vscode23.commands.executeCommand("commitDefender.clearFindings").then(() => refreshLocalHistory());
       }
     })
   );
   void refreshLocalHistory();
   void refreshCentralSynchronization();
-  const historyView = vscode22.window.createTreeView("commitDefender.history", {
+  const historyView = vscode23.window.createTreeView("commitDefender.history", {
     treeDataProvider: historyProvider,
     showCollapseAll: false
   });
-  const panelView = vscode22.window.createTreeView("commitDefender.panelView", {
+  const panelView = vscode23.window.createTreeView("commitDefender.panelView", {
     treeDataProvider: panelProvider,
     showCollapseAll: true
   });
@@ -26660,14 +27193,14 @@ async function activate(context) {
     statusBar.item,
     historyView,
     panelView,
-    vscode22.window.registerFileDecorationProvider(panelProvider.decorationProvider),
-    vscode22.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
+    vscode23.window.registerFileDecorationProvider(panelProvider.decorationProvider),
+    vscode23.languages.registerCodeLensProvider(ALL_FILES, codeLensProvider)
   );
   const invalidateChangedSource = (document3) => {
     if (document3.uri.scheme !== "file") return;
     const last = findingsStore.lastReport();
     if (!last) return;
-    const file = path38.relative(last.repoRoot, document3.uri.fsPath).split(path38.sep).join("/");
+    const file = path40.relative(last.repoRoot, document3.uri.fsPath).split(path40.sep).join("/");
     if (!last.report.staged_files.includes(file)) return;
     if (liveSource(last.repoRoot, last.report, file, document3.getText()) !== void 0) return;
     diagnostics.delete(document3.uri);
@@ -26675,8 +27208,8 @@ async function activate(context) {
     findingsStore.invalidateFile(document3.uri);
   };
   context.subscriptions.push(
-    vscode22.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
-    vscode22.workspace.onDidOpenTextDocument(invalidateChangedSource)
+    vscode23.workspace.onDidChangeTextDocument((event) => invalidateChangedSource(event.document)),
+    vscode23.workspace.onDidOpenTextDocument(invalidateChangedSource)
   );
   async function analyze(relPaths, repoRoot, scope = "staged", scopeTarget, sourceExclusions = [], automatic, feedback) {
     if (!automatic) lastManualStartedAt = Date.now();
@@ -26687,7 +27220,7 @@ async function activate(context) {
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope2));
     } catch (error2) {
       if (automatic) throw error2;
-      void vscode22.window.showErrorMessage(`Commit Defender: Review setup \u2014 ${standaloneError(error2).message}`);
+      void vscode23.window.showErrorMessage(`Commit Defender: Review setup \u2014 ${standaloneError(error2).message}`);
       return;
     }
     if (feedback) {
@@ -26738,15 +27271,15 @@ async function activate(context) {
         const message2 = error2 instanceof Error ? error2.message : "Local review preparation failed.";
         statusBar.setError(message2);
         getOutputChannel().appendLine(`[Commit Defender] ${message2}`);
-        void vscode22.window.showErrorMessage(
+        void vscode23.window.showErrorMessage(
           `Commit Defender: Review preparation \u2014 ${error2 instanceof Error ? error2.message : "Local review preparation failed."}`,
           "Central Review Connection\u2026",
-          "Choose Account and Model\u2026",
+          "Use Account\u2026",
           "Open User Settings"
         ).then((action) => {
-          if (action === "Central Review Connection\u2026") return vscode22.commands.executeCommand("commitDefender.manageCentralConnection");
-          if (action === "Choose Account and Model\u2026") return selectAccountProviderAndModel();
-          if (action === "Open User Settings") return vscode22.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
+          if (action === "Central Review Connection\u2026") return vscode23.commands.executeCommand("commitDefender.manageCentralConnection");
+          if (action === "Use Account\u2026") return selectAccountProviderAndModel();
+          if (action === "Open User Settings") return vscode23.commands.executeCommand("workbench.action.openSettings", "@ext:pydemia.commit-defender");
         });
       },
       finished: () => {
@@ -26768,8 +27301,8 @@ async function activate(context) {
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
-          const uri = vscode22.Uri.file(path38.join(repoRoot, file)).toString();
-          return vscode22.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
+          const uri = vscode23.Uri.file(path40.join(repoRoot, file)).toString();
+          return vscode23.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
         });
         findingsStore.update(result.report, repoRoot, displayBlocks);
         historyProvider.push(result.report, repoRoot, scope, scopeTarget);
@@ -26786,15 +27319,15 @@ async function activate(context) {
           const provider = accountProvider(cfg2.aiProvider);
           const signIn2 = provider ? signInLabel(provider) : void 0;
           const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
-          void vscode22.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
-            if (action === signIn2 && provider) await vscode22.commands.executeCommand(signInCommand(provider));
+          void vscode23.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
+            if (action === signIn2 && provider) await vscode23.commands.executeCommand(signInCommand(provider));
             else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
             else if (action === "Show Output") getOutputChannel().show();
           });
         }
         if (automatic) return;
         showSummaryPanel(result.report, repoRoot, context);
-        await vscode22.commands.executeCommand("commitDefender.panelView.focus");
+        await vscode23.commands.executeCommand("commitDefender.panelView.focus");
         if (!isCurrent()) return;
         const srcFile = result.report.staged_files[0];
         const command = srcFile && reviewNavigation.sourceCommand(repoRoot, result.report, srcFile, 1);
@@ -26808,7 +27341,7 @@ async function activate(context) {
     }
     if (automatic) return { completionConfirmed: automaticCompletionConfirmed };
   }
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.analyzeCurrentFile",
     async (uri) => {
       const intent = ++reviewIntent;
@@ -26816,14 +27349,14 @@ async function activate(context) {
       if (uri?.scheme === "file") {
         filePath = uri.fsPath;
       } else {
-        const editor = vscode22.window.activeTextEditor;
+        const editor = vscode23.window.activeTextEditor;
         if (!editor || editor.document.uri.scheme !== "file") {
-          vscode22.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
+          vscode23.window.showWarningMessage("Commit Defender: Open a file in the editor first.");
           return;
         }
         filePath = editor.document.uri.fsPath;
       }
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26837,7 +27370,7 @@ async function activate(context) {
           resolvedFile = fs10.realpathSync(filePath);
         } catch {
         }
-        const relPath = path38.relative(resolvedRoot, resolvedFile);
+        const relPath = path40.relative(resolvedRoot, resolvedFile);
         const channel = getOutputChannel();
         channel.appendLine(`
 [Commit Defender] Analyze File:`);
@@ -26845,7 +27378,7 @@ async function activate(context) {
         channel.appendLine(`  rawRoot : ${rawRoot}`);
         channel.appendLine(`  relPath : ${relPath || "(empty)"}`);
         if (!relPath || relPath.startsWith("..")) {
-          vscode22.window.showWarningMessage("Commit Defender: File is outside the repository.");
+          vscode23.window.showWarningMessage("Commit Defender: File is outside the repository.");
           setPreflightIdle(void 0, intent);
           return;
         }
@@ -26856,11 +27389,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.analyzeDirectory",
     async (uri) => {
       const intent = ++reviewIntent;
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26883,12 +27416,12 @@ async function activate(context) {
         if (relPaths.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No supported files found", intent);
-          vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+          vscode23.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
           return;
         }
         const channel = getOutputChannel();
         channel.appendLine(`
-[Commit Defender] Analyze Directory: ${path38.relative(rawRoot, dirPath) || "."}`);
+[Commit Defender] Analyze Directory: ${path40.relative(rawRoot, dirPath) || "."}`);
         channel.appendLine(`  ${relPaths.length} file(s) found`);
         if (intent !== reviewIntent) return;
         await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
@@ -26897,13 +27430,13 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.analyze",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode22.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode23.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       try {
@@ -26915,11 +27448,11 @@ async function activate(context) {
         if (staged.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No staged files", intent);
-          vscode22.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
+          vscode23.window.showInformationMessage('Commit Defender: No staged files to analyze. Use "Analyze Directory" or "Analyze Repository" for a broader scan.');
           return;
         }
         if (cfg2.stagedFilesWarnThreshold > 0 && staged.length > cfg2.stagedFilesWarnThreshold) {
-          const answer = await vscode22.window.showWarningMessage(
+          const answer = await vscode23.window.showWarningMessage(
             `Commit Defender: ${staged.length} files are staged. Analyzing this many files may take a while.`,
             { modal: true },
             "Proceed to Analyze",
@@ -26928,12 +27461,12 @@ async function activate(context) {
           );
           if (answer === "Skip") {
             setPreflightIdle("Analysis skipped", intent);
-            vscode22.window.showInformationMessage("Commit Defender: Analysis skipped.");
+            vscode23.window.showInformationMessage("Commit Defender: Analysis skipped.");
             return;
           }
           if (answer === "Abort" || answer === void 0) {
             setPreflightIdle("Commit aborted", intent);
-            vscode22.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
+            vscode23.window.showWarningMessage("Commit Defender: Commit aborted. Fix or unstage files before committing.");
             return;
           }
         }
@@ -26947,11 +27480,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.analyzeRepository",
     async () => {
       const intent = ++reviewIntent;
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -26964,11 +27497,11 @@ async function activate(context) {
         if (allFiles.length === 0) {
           logSourceExclusions(sourceExclusions, true);
           setPreflightIdle("No files found", intent);
-          vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+          vscode23.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
           return;
         }
         if (cfg2.repoAnalysisWarnThreshold > 0 && allFiles.length > cfg2.repoAnalysisWarnThreshold) {
-          const answer = await vscode22.window.showWarningMessage(
+          const answer = await vscode23.window.showWarningMessage(
             `Commit Defender: Found ${allFiles.length} files. The captured selection may exceed the review budget. Any unfinished file coverage will be reported as incomplete. Continue?`,
             { modal: true },
             "Analyze"
@@ -26988,11 +27521,11 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.cancel", () => {
+  context.subscriptions.push(vscode23.commands.registerCommand("commitDefender.cancel", () => {
     reviewIntent++;
     execution.cancel();
   }));
-  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.clearFindings", () => {
+  context.subscriptions.push(vscode23.commands.registerCommand("commitDefender.clearFindings", () => {
     localReviewActivity.dispose();
     reviewIntent++;
     execution.invalidate();
@@ -27007,57 +27540,57 @@ async function activate(context) {
     panelProvider.clear();
     setPreflightIdle();
   }));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.showLineSuggestion",
     async (uri, line0) => {
-      if (!(uri instanceof vscode22.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
+      if (!(uri instanceof vscode23.Uri) || uri.scheme !== "file" || typeof line0 !== "number" || !Number.isSafeInteger(line0) || line0 < 0) return;
       const last = findingsStore.lastReport();
       if (!last || !findingsStore.get(uri)?.byLine.has(line0)) return;
-      const file = path38.relative(last.repoRoot, uri.fsPath).split(path38.sep).join("/");
+      const file = path40.relative(last.repoRoot, uri.fsPath).split(path40.sep).join("/");
       const command = reviewNavigation.sourceCommand(last.repoRoot, last.report, file, line0 + 1);
       if (command) await reviewNavigation.open(command.arguments?.[0]);
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.showSummary",
     () => {
       const last = findingsStore.lastReport();
       if (!last) {
-        vscode22.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
+        vscode23.window.showInformationMessage("Commit Defender: No analysis has been run yet.");
         return;
       }
       showSummaryPanel(last.report, last.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
+  context.subscriptions.push(vscode23.commands.registerCommand("commitDefender.openReviewChat", async (arg) => {
     const entry = arg?.kind === "entry" ? arg.entry : arg;
     const selected = entry?.report && entry.repoRoot ? entry : findingsStore.lastReport();
     if (!selected?.report || !selected.repoRoot) {
-      void vscode22.window.showInformationMessage("Select a saved review in history or run a review first.");
+      void vscode23.window.showInformationMessage("Select a saved review in history or run a review first.");
       return;
     }
     try {
       await openReviewChat(selected.report, selected.repoRoot, context);
     } catch {
-      void vscode22.window.showErrorMessage("Commit Defender: The review conversation could not be opened. Check the current workspace and review connection.");
+      void vscode23.window.showErrorMessage("Commit Defender: The review conversation could not be opened. Check the current workspace and review connection.");
     }
   }));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.showHistoryEntry",
     (entry) => {
       showSummaryPanel(entry.report, entry.repoRoot, context);
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.reanalyzeHistoryEntry",
     async (arg) => {
       const intent = ++reviewIntent;
       const histEntry = arg?.kind === "entry" ? arg.entry : arg?.report ? arg : void 0;
       if (!histEntry) {
-        vscode22.window.showWarningMessage("Commit Defender: Could not read history entry.");
+        vscode23.window.showWarningMessage("Commit Defender: Could not read history entry.");
         return;
       }
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
         return;
       }
@@ -27073,7 +27606,7 @@ async function activate(context) {
             if (staged.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No staged files", intent);
-              vscode22.window.showInformationMessage("Commit Defender: No staged files to analyze.");
+              vscode23.window.showInformationMessage("Commit Defender: No staged files to analyze.");
               return;
             }
             channel.appendLine(`
@@ -27086,7 +27619,7 @@ async function activate(context) {
           case "file": {
             const files = histEntry.report.staged_files;
             if (!files.length) {
-              vscode22.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
+              vscode23.window.showWarningMessage("Commit Defender: No file recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
@@ -27099,7 +27632,7 @@ async function activate(context) {
           case "directory": {
             const dirPath = histEntry.scopeTarget;
             if (!dirPath) {
-              vscode22.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
+              vscode23.window.showWarningMessage("Commit Defender: No directory recorded in this history entry.");
               setPreflightIdle(void 0, intent);
               return;
             }
@@ -27108,11 +27641,11 @@ async function activate(context) {
             if (relPaths.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No supported files found", intent);
-              vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
+              vscode23.window.showInformationMessage("Commit Defender: No analyzable files found in that directory.");
               return;
             }
             channel.appendLine(`
-[Commit Defender] Re-analyze (directory): ${path38.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
+[Commit Defender] Re-analyze (directory): ${path40.relative(rawRoot, dirPath) || "."}, ${relPaths.length} file(s)`);
             if (intent !== reviewIntent) return;
             await analyze(relPaths, rawRoot, "directory", dirPath, sourceExclusions);
             break;
@@ -27123,7 +27656,7 @@ async function activate(context) {
             if (allFiles.length === 0) {
               logSourceExclusions(sourceExclusions, true);
               setPreflightIdle("No files found", intent);
-              vscode22.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
+              vscode23.window.showInformationMessage("Commit Defender: No analyzable files found in the repository.");
               return;
             }
             channel.appendLine(`
@@ -27138,20 +27671,20 @@ async function activate(context) {
       }
     }
   ));
-  context.subscriptions.push(vscode22.commands.registerCommand(
+  context.subscriptions.push(vscode23.commands.registerCommand(
     "commitDefender.generateCommitMessage",
     async () => {
       const intent = ++messageIntent;
-      const ws = vscode22.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const ws = vscode23.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (!ws) {
-        vscode22.window.showWarningMessage("Commit Defender: No workspace folder open.");
+        vscode23.window.showWarningMessage("Commit Defender: No workspace folder open.");
         return;
       }
       let repoRoot;
       try {
         repoRoot = await getRepoRoot(ws);
       } catch {
-        vscode22.window.showWarningMessage("Commit Defender: No git repository found.");
+        vscode23.window.showWarningMessage("Commit Defender: No git repository found.");
         return;
       }
       if (intent !== messageIntent) return;
@@ -27163,8 +27696,8 @@ async function activate(context) {
         const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot);
         return {
           ...prepared,
-          run: async (runSignal) => vscode22.window.withProgress(
-            { location: vscode22.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
+          run: async (runSignal) => vscode23.window.withProgress(
+            { location: vscode23.ProgressLocation.Notification, title: "Commit Defender: Generating commit message\u2026", cancellable: false },
             () => prepared.run(runSignal)
           )
         };
@@ -27174,40 +27707,40 @@ async function activate(context) {
             handleError(error2, statusBar, !execution.isRunning);
             return;
           }
-          void vscode22.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Manage Model API Credential").then((action) => {
-            if (action && intent === messageIntent) return manageModelCredential(repoRoot);
+          void vscode23.window.showErrorMessage("Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.", "Use API Credential").then((action) => {
+            if (action && intent === messageIntent) return useApiCredential(repoRoot);
           });
         },
         result: async (result, isCurrent) => {
           if (result.is_error || !result.commit_message) {
             const provider = accountProvider(cfg2.aiProvider);
             const signIn2 = provider ? signInLabel(provider) : void 0;
-            const action = await vscode22.window.showErrorMessage(
+            const action = await vscode23.window.showErrorMessage(
               `Commit Defender: ${result.error || "Failed to generate commit message"}`,
               ...signIn2 ? [signIn2] : []
             );
             if (action === signIn2 && provider) {
-              await vscode22.commands.executeCommand(signInCommand(provider));
+              await vscode23.commands.executeCommand(signInCommand(provider));
             }
             return;
           }
-          const gitExt = vscode22.extensions.getExtension("vscode.git");
+          const gitExt = vscode23.extensions.getExtension("vscode.git");
           const gitApi = gitExt?.exports?.getAPI?.(1);
-          const repo = gitApi?.getRepository?.(vscode22.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
+          const repo = gitApi?.getRepository?.(vscode23.Uri.file(repoRoot)) ?? gitApi?.repositories?.[0];
           if (repo?.inputBox) {
             repo.inputBox.value = result.commit_message;
-            vscode22.window.showInformationMessage(
+            vscode23.window.showInformationMessage(
               "Commit Defender: Commit message inserted into the Source Control input box."
             );
           } else {
-            await vscode22.env.clipboard.writeText(result.commit_message);
+            await vscode23.env.clipboard.writeText(result.commit_message);
             if (!isCurrent()) return;
-            vscode22.window.showInformationMessage(
+            vscode23.window.showInformationMessage(
               "Commit Defender: Commit message copied to clipboard.",
               "Preview"
             ).then((action) => {
               if (action === "Preview") {
-                vscode22.window.showInputBox({
+                vscode23.window.showInputBox({
                   value: result.commit_message,
                   prompt: "Generated commit message (read-only preview)",
                   ignoreFocusOut: true
@@ -27220,12 +27753,12 @@ async function activate(context) {
     }
   ));
   const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);
-  context.subscriptions.push(vscode22.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
+  context.subscriptions.push(vscode23.commands.registerCommand("commitDefender.recoverBackgroundReview", () => recoverBackgroundReview(backgroundHooks, refreshLocalHistory, (job) => {
     const originalRoot = fs10.realpathSync(job.root);
-    if (!vscode22.workspace.isTrusted || !vscode22.workspace.workspaceFolders?.some((folder) => {
+    if (!vscode23.workspace.isTrusted || !vscode23.workspace.workspaceFolders?.some((folder) => {
       if (folder.uri.scheme !== "file") return false;
       const workspaceRoot = fs10.realpathSync(folder.uri.fsPath);
-      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path38.sep);
+      return originalRoot === workspaceRoot || originalRoot.startsWith(workspaceRoot + path40.sep);
     })) throw Error("Open and trust the original workspace before recovering this review.");
     if (getStandaloneReviewSettings(2, job.root).profileId !== job.profileId) throw Error("Select the original local profile before recovering this review.");
   })));
@@ -27237,7 +27770,7 @@ async function activate(context) {
       const initial = getStandaloneReviewSettings(2, root2);
       const scope = knowledgeScope({ repoRoot: root2, profileId: initial.profileId, scope: "repository" });
       const settings = selectedReviewSettings(initial, readSelection(context.globalState, scope));
-      const cfg2 = vscode22.workspace.getConfiguration("commitDefender");
+      const cfg2 = vscode23.workspace.getConfiguration("commitDefender");
       try {
         await backgroundHooks.configure(root2, automatic, settings, cfg2.inspect("serviceNodePath")?.globalValue ?? "node", (cfg2.inspect("hookReviewWaitSeconds")?.globalValue ?? 0) * 1e3);
       } catch (error2) {
@@ -27259,15 +27792,15 @@ async function activate(context) {
   let backgroundPolling = false;
   const observedBackgroundResults = /* @__PURE__ */ new Set();
   const displayBackgroundResult = async (job) => {
-    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode22.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
+    if (!job.currentRegistration || !["save", "stage"].includes(job.trigger) || !job.result?.runId || !vscode23.workspace.isTrusted || execution.isRunning || localProfile() !== job.profileId) return;
     const canonicalRoot = fs10.realpathSync(job.root);
-    const folder = vscode22.workspace.workspaceFolders?.find((folder2) => {
+    const folder = vscode23.workspace.workspaceFolders?.find((folder2) => {
       if (folder2.uri.scheme !== "file") return false;
       const root2 = fs10.realpathSync(folder2.uri.fsPath);
-      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path38.sep) || canonicalRoot.startsWith(root2 + path38.sep);
+      return root2 === canonicalRoot || root2.startsWith(canonicalRoot + path40.sep) || canonicalRoot.startsWith(root2 + path40.sep);
     });
     if (!folder) return;
-    const displayRoot = path38.resolve(folder.uri.fsPath, path38.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
+    const displayRoot = path40.resolve(folder.uri.fsPath, path40.relative(fs10.realpathSync(folder.uri.fsPath), canonicalRoot));
     const scope = knowledgeScope({ repoRoot: job.root, profileId: job.profileId, scope: "repository" });
     if (scope.kind !== "repository") return;
     const selection = readSelection(context.globalState, scope), selected = JSON.stringify(selection), intent = reviewIntent;
@@ -27275,13 +27808,13 @@ async function activate(context) {
     const entry = mergeLocalHistory([], history.reports, job.root, scope, history.audience, history.fallbackConnectionId).find((entry2) => entry2.id === job.result.runId);
     const core = entry?.report.gcr?.report;
     if (!entry || !core || !core.finishedAt || Date.parse(core.finishedAt) < backgroundOpenedAt || Date.parse(core.startedAt ?? core.requestedAt) < lastManualStartedAt) return;
-    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode22.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
-    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode22.workspace.textDocuments.find((document3) => {
+    if ((await checkLocalContextFreshness(core)).status !== "current" || intent !== reviewIntent || execution.isRunning || localProfile() !== job.profileId || !vscode23.workspace.isTrusted || JSON.stringify(readSelection(context.globalState, scope)) !== selected) return;
+    const blocks = liveBlocks(entry.report, displayRoot, normalizeReport(entry.report), (file) => vscode23.workspace.textDocuments.find((document3) => {
       if (document3.uri.scheme !== "file") return false;
       try {
-        return fs10.realpathSync(document3.uri.fsPath) === path38.join(canonicalRoot, file);
+        return fs10.realpathSync(document3.uri.fsPath) === path40.join(canonicalRoot, file);
       } catch {
-        return path38.resolve(document3.uri.fsPath) === path38.resolve(displayRoot, file);
+        return path40.resolve(document3.uri.fsPath) === path40.resolve(displayRoot, file);
       }
     })?.getText());
     findingsStore.update(entry.report, displayRoot, blocks);
@@ -27350,7 +27883,7 @@ function signInCommand(provider) {
 async function pickDirectory(root2) {
   let current = root2;
   while (true) {
-    const rel = path38.relative(root2, current) || ".";
+    const rel = path40.relative(root2, current) || ".";
     const label = rel === "." ? "$(root-folder) workspace root" : `$(folder) ${rel}`;
     const items = [];
     items.push({
@@ -27367,9 +27900,9 @@ async function pickDirectory(root2) {
     } catch {
     }
     for (const name of subdirs) {
-      items.push({ label: `$(folder) ${name}`, description: path38.join(rel, name) });
+      items.push({ label: `$(folder) ${name}`, description: path40.join(rel, name) });
     }
-    const picked = await vscode22.window.showQuickPick(items, {
+    const picked = await vscode23.window.showQuickPick(items, {
       title: `Commit Defender \u2014 Select directory  [${label}]`,
       placeHolder: 'Navigate or choose "Analyze this directory"'
     });
@@ -27380,9 +27913,9 @@ async function pickDirectory(root2) {
       return current;
     }
     if (picked.label.startsWith("$(arrow-left)")) {
-      current = path38.dirname(current);
+      current = path40.dirname(current);
     } else {
-      current = path38.join(current, picked.label.replace("$(folder) ", ""));
+      current = path40.join(current, picked.label.replace("$(folder) ", ""));
     }
   }
 }
@@ -27390,7 +27923,7 @@ function handleError(err2, statusBar, updateStatus = true) {
   const message2 = err2 instanceof Error ? err2.message : String(err2);
   if (updateStatus) statusBar.setError(message2);
   const firstLine = message2.split("\n")[0];
-  vscode22.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
+  vscode23.window.showErrorMessage(`Commit Defender: ${firstLine}`, "Show Output").then((action) => {
     if (action === "Show Output") {
       getOutputChannel().show();
     }
@@ -27408,12 +27941,12 @@ function renderSummary(report, repoRoot) {
 }
 function showSummaryPanel(report, repoRoot, context) {
   if (_summaryPanel) {
-    _summaryPanel.reveal(vscode22.ViewColumn.Beside, true);
+    _summaryPanel.reveal(vscode23.ViewColumn.Beside, true);
   } else {
-    _summaryPanel = vscode22.window.createWebviewPanel(
+    _summaryPanel = vscode23.window.createWebviewPanel(
       "commitDefenderSummary",
       "Commit Defender \u2014 Summary",
-      { viewColumn: vscode22.ViewColumn.Beside, preserveFocus: true },
+      { viewColumn: vscode23.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [] }
     );
     _summaryPanel.onDidDispose(() => {
@@ -27428,10 +27961,10 @@ function showSummaryPanel(report, repoRoot, context) {
         if (message2.command === "open") {
           await reviewNavigation.open(message2.id);
         } else if (message2.command === "discuss") {
-          await vscode22.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
+          await vscode23.commands.executeCommand("commitDefender.openReviewChat", { report: view2.report, repoRoot: view2.repoRoot });
         } else {
-          const doc = await vscode22.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
-          await vscode22.window.showTextDocument(doc, { preview: true, preserveFocus: false });
+          const doc = await vscode23.workspace.openTextDocument({ content: JSON.stringify(view2.report, null, 2), language: "json" });
+          await vscode23.window.showTextDocument(doc, { preview: true, preserveFocus: false });
         }
       },
       void 0,

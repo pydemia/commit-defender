@@ -28,3 +28,5 @@ scripts/**
 !out/gcr-service/windows-native.exe
 !out/gcr-service/windows-native.json
 tmp/**
+
+!out/account-catalog-worker.js

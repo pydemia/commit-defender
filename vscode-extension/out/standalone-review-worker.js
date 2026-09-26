@@ -10457,7 +10457,7 @@ async function callAzureOpenAI(req) {
 }
 async function callOpenAI(req) {
   if (!req.apiKey) {
-    return err(req, "Missing OpenAI API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing OpenAI API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_OPENAI).replace(/\/+$/, "");
   const url = `${base2}/chat/completions`;
@@ -10536,7 +10536,7 @@ function openaiHttpError(req, resp, body2) {
 }
 async function callAnthropic(req) {
   if (!req.apiKey) {
-    return err(req, "Missing Anthropic API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing Anthropic API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_ANTHROPIC).replace(/\/+$/, "");
   const url = `${base2}/messages`;
@@ -10590,7 +10590,7 @@ async function callAnthropic(req) {
 }
 async function callGemini(req) {
   if (!req.apiKey) {
-    return err(req, "Missing Gemini API key. Use Commit Defender: Manage Model API Credential.");
+    return err(req, "Missing Gemini API key. Use Commit Defender: Use API Credential.");
   }
   const base2 = (req.endpoint || DEFAULT_GEMINI).replace(/\/+$/, "");
   const model = req.model || "gemini-2.5-flash";
