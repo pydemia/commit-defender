@@ -100,7 +100,7 @@ Example User Settings for a Codex review (replace the model placeholder using yo
 | --- | --- |
 | `aiProvider`, `model`, `reviewReasoningEffort`, `codexPath` | Local execution identity; read from User Settings |
 | `reviewMode`, `localProfile` | Standalone/central selection and local storage identity |
-| `fileTimeoutSeconds`, `directoryTimeoutSeconds` | Model-run limit; zero uses 300/360 seconds, maximum 600. Preparation has its own limit |
+| `fileTimeoutSeconds`, `directoryTimeoutSeconds` | Model-run limit; zero uses 180/360 seconds, maximum 600. Preparation has its own limit |
 | `excludePatterns` | Additional source exclusions; cannot authorize sensitive source otherwise excluded |
 | Central Review Connection | Explicit repository connection, synchronization, history and cache policy |
 | Automatic Reviews | Save/Stage/Commit/Push opt-in; defaults off for new installations |

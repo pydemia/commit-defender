@@ -12,6 +12,8 @@ export interface ReviewPrefetchMetrics {
 // Leave most of the 100-call source budget for callers, contracts and tests.
 const MAX_READS = 24;
 const MAX_BYTES = 65_536;
+// Large optional callers are still available through fixed-source tools.
+const MAX_RELATED_FILE_BYTES = 16_384;
 
 /** A bounded local text heuristic, not a verified call graph. Include direct
  * module references from captured source only; the model still checks relevance.
@@ -29,7 +31,9 @@ export function reviewPrefetchTargets(snapshot: LocalSourceSnapshot, required: r
   const related: SourceFile[] = [];
   let scanned = 0;
   for (const file of files) {
-    if (file.side !== 'source' || selectedPaths.has(file.path) || file.byteLength > 65_536 || !/\.(?:[cm]?[jt]sx?|py)$/.test(file.path)) continue;
+    if (file.side !== 'source' || selectedPaths.has(file.path) ||
+      file.byteLength > MAX_RELATED_FILE_BYTES ||
+      !/\.(?:[cm]?[jt]sx?|py)$/.test(file.path)) continue;
     if ((scanned += file.byteLength) > 8_388_608 || related.length >= 8) break;
     const read = snapshot.readFile(file.path, file.side);
     if (read.status !== 'available') continue;

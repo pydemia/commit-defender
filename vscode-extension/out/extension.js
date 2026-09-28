@@ -21214,7 +21214,7 @@ function getStandaloneReviewSettings(fileCount, repoRoot) {
     } : {},
     executablePath: provider === "claudecode" ? resolveExternalCliPath(user("claudeCodePath") ?? "claude", "claude") : provider === "antigravity" ? resolveExternalCliPath(user("antigravityPath") ?? "agy", "agy") : resolveCodexPath(user("codexPath") ?? "codex"),
     workspaceTrusted: vscode3.workspace.isTrusted,
-    durationMs: seconds && Number.isFinite(seconds) && seconds > 0 ? Math.min(6e5, Math.floor(seconds * 1e3)) : fileCount === 1 ? 3e5 : 36e4,
+    durationMs: seconds && Number.isFinite(seconds) && seconds > 0 ? Math.min(6e5, Math.floor(seconds * 1e3)) : fileCount === 1 ? 18e4 : 36e4,
     // Repository exclusions may only narrow the immutable source selection.
     excludePatterns: cfg.get("excludePatterns") ?? []
   };
@@ -21241,7 +21241,7 @@ function getConfig() {
     commitMessageFormat: cfg.get("commitMessageFormat") ?? DEFAULT_COMMIT_MESSAGE_FORMAT,
     colorPalette: cfg.get("colorPalette") ?? "theme-adaptive",
     preCommitHook: cfg.get("preCommitHook") ?? "disable",
-    fileTimeoutSeconds: cfg.get("fileTimeoutSeconds") ?? 300,
+    fileTimeoutSeconds: cfg.get("fileTimeoutSeconds") ?? 180,
     directoryTimeoutSeconds: cfg.get("directoryTimeoutSeconds") ?? 360,
     stagedFilesWarnThreshold: cfg.get("stagedFilesWarnThreshold") ?? 20,
     repoAnalysisWarnThreshold: cfg.get("repoAnalysisWarnThreshold") ?? 80,

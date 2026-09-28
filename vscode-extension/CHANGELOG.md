@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.14.7
+
+- Keep large optional callers and examples out of Codex's initial review
+  prompt. Selected source and base stay prioritized; the fixed-source tools
+  still allow the model to inspect related files when needed.
+- Set the default single-file model limit to 180 seconds. Explicit user
+  settings remain unchanged.
+
 ## 2.14.6
 
 - Open **Commit Defender Settings → Memory & GCR** from the GCR connection

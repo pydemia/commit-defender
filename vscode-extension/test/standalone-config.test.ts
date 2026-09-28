@@ -99,11 +99,11 @@ test("repository-only legacy account settings are preserved but cannot authorize
   assert.equal(values.repository.aiProvider, "codex");
 });
 
-test("a new installation allows five minutes for one file and six for several", () => {
+test("a new installation allows three minutes for one file and six for several", () => {
   values.global = {};
   values.repository = {};
-  assert.equal(getConfig().fileTimeoutSeconds, 300);
-  assert.equal(getStandaloneReviewSettings(1).durationMs, 300_000);
+  assert.equal(getConfig().fileTimeoutSeconds, 180);
+  assert.equal(getStandaloneReviewSettings(1).durationMs, 180_000);
   assert.equal(getStandaloneReviewSettings(2).durationMs, 360_000);
 });
 

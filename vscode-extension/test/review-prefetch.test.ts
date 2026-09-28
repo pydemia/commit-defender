@@ -67,6 +67,7 @@ test('local import matching includes callers/tests but never excluded or unrelat
   f.write('lib/api.ts','export const total = 1;\n');
   f.write('invoice.ts', 'import { total } from "./lib/api";\nexport const amount = total;\n');
   f.write('api.test.ts', 'import { total } from "./lib/api";\n');
+  f.write('large-example.ts', 'import { total } from "./lib/api";\n' + '// example\n'.repeat(2000));
   f.write('other.ts', 'import { total } from "./lib/not-api";\n');
   f.write('.env', 'from lib.api import total\n');
   f.git('add','.');f.git('commit','-m','base');f.write('lib/api.ts','export const total = 2;\n');
@@ -75,6 +76,7 @@ test('local import matching includes callers/tests but never excluded or unrelat
     const targets=reviewPrefetchTargets(snapshot,[]);
     assert.deepEqual(targets.slice(0,2).map(f=>f.path),['lib/api.ts','lib/api.ts']);
     assert.deepEqual(new Set(targets.slice(2).map(f=>f.path)),new Set(['invoice.ts','api.test.ts']));
-    assert(!targets.some(f=>f.path==='.env'||f.path==='other.ts'));
+    assert(!targets.some(f=>['.env','other.ts','large-example.ts'].includes(f.path)));
+    assert.equal(snapshot.readFile('large-example.ts','source').status,'available');
   } finally {snapshot.close();}
 });

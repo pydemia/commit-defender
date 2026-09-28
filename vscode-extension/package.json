@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.14.6",
+    "version": "2.14.7",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -429,9 +429,9 @@
                 "commitDefender.fileTimeoutSeconds": {
                     "type": "number",
                     "scope": "application",
-                    "default": 300,
+                    "default": 180,
                     "minimum": 0,
-                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 300 seconds. Legacy commit-message behavior is unchanged."
+                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 180 seconds. Legacy commit-message behavior is unchanged."
                 },
                 "commitDefender.directoryTimeoutSeconds": {
                     "type": "number",

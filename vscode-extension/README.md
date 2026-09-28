@@ -377,7 +377,7 @@ in **User Settings**.
 | `reviewMode` / `localProfile` | `standalone` / `default` | Context mode and storage profile |
 | `modelCredentialRef` | unset | Non-secret reference created by credential management |
 | `excludePatterns` | `[]` | Additional gitignore-style source exclusions |
-| `fileTimeoutSeconds` / `directoryTimeoutSeconds` | `300` / `360` | Run limits, maximum 600; zero uses the default; preparation has a separate equal limit |
+| `fileTimeoutSeconds` / `directoryTimeoutSeconds` | `180` / `360` | Run limits, maximum 600; zero uses the default; preparation has a separate equal limit |
 | `maxTokens` | `4096` | API output limit; not a hard Codex output-token cap |
 | `stagedFilesWarnThreshold` / `repoAnalysisWarnThreshold` | `20` / `80` | Large-review confirmation thresholds; zero disables the prompt |
 | `colorPalette` | `theme-adaptive` | Finding colors, including accessible palettes |

@@ -32,6 +32,7 @@ var import_node_path20 = __toESM(require("node:path"));
 var import_node_path = __toESM(require("node:path"));
 var MAX_READS = 24;
 var MAX_BYTES = 65536;
+var MAX_RELATED_FILE_BYTES = 16384;
 function reviewPrefetchTargets(snapshot, required) {
   const files = snapshot.sourceFiles;
   const selectedPaths = new Set(snapshot.selected.flatMap((change) => [change.path, ...change.oldPath ? [change.oldPath] : []]));
@@ -45,7 +46,7 @@ function reviewPrefetchTargets(snapshot, required) {
   const related = [];
   let scanned = 0;
   for (const file of files) {
-    if (file.side !== "source" || selectedPaths.has(file.path) || file.byteLength > 65536 || !/\.(?:[cm]?[jt]sx?|py)$/.test(file.path)) continue;
+    if (file.side !== "source" || selectedPaths.has(file.path) || file.byteLength > MAX_RELATED_FILE_BYTES || !/\.(?:[cm]?[jt]sx?|py)$/.test(file.path)) continue;
     if ((scanned += file.byteLength) > 8388608 || related.length >= 8) break;
     const read = snapshot.readFile(file.path, file.side);
     if (read.status !== "available") continue;
