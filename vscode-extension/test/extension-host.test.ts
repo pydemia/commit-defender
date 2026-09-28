@@ -15,6 +15,7 @@ import { knowledgeScope } from "../src/localKnowledge.js";
 import { clientReviewReport } from "@gcr/client-contract";
 import { centralSourcesKnowledgeHtml } from "../src/centralKnowledgeView.js";
 import { checkModelSetup } from './model-setup-host.js';
+import { checkSettingsRendering } from './settings-host.js';
 
 /** Executed by the real VS Code Extension Host, not by a vscode module mock. */
 export async function run(): Promise<void> {
@@ -43,6 +44,24 @@ export async function run(): Promise<void> {
   assert.equal(extension.packageJSON.contributes.commands.find((item: any) => item.command === 'commitDefender.selectAccountProviderAndModel').title, 'Commit Defender: Use Account');
   assert.equal(extension.packageJSON.contributes.commands.find((item: any) => item.command === 'commitDefender.manageModelCredential').title, 'Commit Defender: Use API Credential');
   assert(existsSync(path.join(extension.extensionPath, 'out', 'account-catalog-worker.js')));
+  const settingsBefore = JSON.stringify(vscode.workspace.getConfiguration('commitDefender'));
+  const settingsCommands = ['openSettings', 'openModelSettings', 'openCommitSettings', 'openReviewSettings',
+    'openAutomaticSettings', 'openKnowledgeSettings', 'openAdvancedSettings'];
+  for (const suffix of settingsCommands) {
+    await vscode.commands.executeCommand('commitDefender.' + suffix);
+    for (let attempt = 0; attempt < 40 && !vscode.window.tabGroups.all.flatMap(group => group.tabs)
+      .some(tab => tab.label === 'Commit Defender Settings'); attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    const tabs = vscode.window.tabGroups.all.flatMap(group => group.tabs)
+      .filter(tab => tab.label === 'Commit Defender Settings');
+    assert.equal(tabs.length, 1, 'Settings commands must reuse one branded editor');
+    assert(tabs[0].input instanceof vscode.TabInputWebview);
+  }
+  assert.equal(JSON.stringify(vscode.workspace.getConfiguration('commitDefender')), settingsBefore);
+  await vscode.window.tabGroups.close(vscode.window.tabGroups.all.flatMap(group => group.tabs)
+    .filter(tab => tab.label === 'Commit Defender Settings'));
+  const settingsRendering = await checkSettingsRendering();
   const modelSetup = process.env.CD_TEST_MODEL_SETUP === '1' ? await checkModelSetup() : undefined;
   for (const removed of [
     "commitDefender.analyzeWithExecutor",
@@ -301,6 +320,9 @@ export async function run(): Promise<void> {
     extensionVersion: extension.packageJSON.version,
     delivery: process.env.CD_TEST_DELIVERY ?? "source-checkout",
     commandCount: declared.length,
+    settingsEditor: { title: 'Commit Defender Settings', singleEditor: true, settingsUnchanged: true,
+      commands: settingsCommands, renderedUiAssertion: false },
+    settingsRendering,
     activation: true,
     encryptedActivityFixture: process.env.CD_TEST_ACTIVITY_FIXTURE === "1",
     hookDefault: "disable",

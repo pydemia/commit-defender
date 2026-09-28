@@ -113,6 +113,8 @@ export interface AnalysisReport {
 
 /** Internal result from DockerRunner */
 export interface RunResult {
+  /** Local timing diagnostics only; never sent to GCR or persisted as model evidence. */
+  performance?: { preparationMs: number; runMs: number; reads: number; bytes: number; prefetchMs: number; modelMs: number };
   /** The shared request and encrypted report were both confirmed by the worker. */
   reviewCompletionConfirmed?: boolean;
   report: AnalysisReport;

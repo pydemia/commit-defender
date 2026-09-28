@@ -25,7 +25,7 @@ export async function openConnectionGuide(
   }
 }
 
-/** Keep settings in the native UI; opening it does not change their values. */
+/** Advanced fallback for repository overrides and settings not edited in our panel. */
 export async function openCommitDefenderSettings(): Promise<void> {
   try {
     await vscode.commands.executeCommand('workbench.action.openSettings2', {

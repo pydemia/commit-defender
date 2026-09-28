@@ -201,18 +201,34 @@ export function buildUserMessage(mode: ReviewMode, content: string, skillsText =
   return `## Staged diff\n\n\`\`\`diff\n${content || '(no diff available)'}\n\`\`\`${material}\n\nPlease review the above and respond with the JSON object as instructed.\n`;
 }
 
-/** Commit-message generator system prompt — direct port. */
-export const COMMIT_MESSAGE_SYSTEM_PROMPT = `# Git Commit Message Generation Prompt
+/** Localize human-readable text while retaining the commit type and JSON contract. */
+export function buildCommitMessageSystemPrompt(locale: Locale): string {
+  const korean = locale === 'ko';
+  const languageRules = korean
+    ? '제목과 본문은 한국어로 작성하세요. 영어 문법 규칙을 적용하거나 영어로 번역하지 마세요. 간결한 한국어 표현을 사용하세요.'
+    : 'Write the title and body in English. Capitalize the first letter of the title and each bullet. Start with a base verb and exclude past tense.';
+  const example = korean
+    ? `[Improve] 사용자 인증 로직 개선
 
-Construct a commit message consisting of a title and a body
+- 데이터베이스 접근 전 세션 토큰 검증
+- 암호화 키 교체로 보안 강화
+- 로그인 처리 지연 감소`
+    : `[Improve] Refine user authentication logic
+
+- Validate session tokens before database access
+- Enhance security by rotating encryption keys
+- Reduce latency in login process`;
+  return `# Git Commit Message Generation Prompt
+
+Analyze the staged diff and return the structured parts of a useful commit message.
+
+## Language Rules
+${languageRules}
+Keep the JSON keys, the type labels (Feature, Improve, Fix, Doc, Refactor, Test, Chore), code identifiers and file paths unchanged. Do not translate them.
 
 ## Title Rules
-- Limit title to 50 characters
-- Capitalize the first letter
-- Avoid periods and special characters
-- Start with a base verb
-- Exclude past tense
-- Use format: [{type}] {title_text}
+- Keep the title concise enough for Git history, normally within 72 characters
+- Describe the concrete change rather than using a vague summary
 - Select one type from the list below:
   - Feature: Add new functionality
   - Improve: Refine business logic or performance
@@ -223,26 +239,22 @@ Construct a commit message consisting of a title and a body
   - Chore: Update build tasks or package managers
 
 ## Body Rules
-- Limit total text to 300 characters
-- Keep each bullet point under 50 characters
-- Focus on what and why instead of how
-- Provide clear reasons for code changes
-- Write in concise bullet points
-- Capitalize the first letter of each line
-- Avoid periods and special characters
-- Exclude past tense
-- Start each line with a base verb
+- Cover every material staged change; do not omit a changed behavior merely to shorten the message
+- Explain what changed and why it changed, including compatibility or operational effects when the diff supports them
+- Use focused bullet points or short paragraphs
+- Avoid repeating the title and avoid claims that are not supported by the diff
 
 ## Output Example
-[Improve] Refine user authentication logic
-
-- Validate session tokens before database access
-- Enhance security by rotating encryption keys
-- Reduce latency in login process
+${example}
 
 ## Output Format
 Respond ONLY with a valid JSON object — no markdown fences, no extra keys:
 {
-  "commit_message": "<title>\\n\\n<body>"
+  "commit_message": "[<type>] <title>\\n\\n<body>",
+  "type": "<Feature | Improve | Fix | Doc | Refactor | Test | Chore>",
+  "scope": "<optional short scope or empty string>",
+  "title": "<title without type prefix>",
+  "body": "<complete body>"
 }
 `;
+}

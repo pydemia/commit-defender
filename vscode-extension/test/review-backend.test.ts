@@ -13,6 +13,7 @@ import {
 } from "../src/reviewExecution.js";
 import type { RunResult, CommitMessageResult } from "../src/types.js";
 import { fixture } from "./helpers/review-fixture.js";
+import { captureStagedSnapshot } from "../src/gitSnapshot.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -58,7 +59,7 @@ function callbacks<T>(events: string[], label: string): ExecutionCallbacks<T> {
   };
 }
 const flush = () => Promise.resolve();
-function provider(f: ReturnType<typeof fixture>, commit = false) {
+function provider(f: ReturnType<typeof fixture>, commit = false, message = "[Fix] Preserve source snapshot") {
   fs.writeFileSync(
     f.executable,
     `#!/usr/bin/env node
@@ -66,7 +67,7 @@ const fs = require('node:fs'); let text = '';
 process.stdin.on('data', chunk => text += chunk);
 process.stdin.on('end', () => {
   fs.appendFileSync(${JSON.stringify(f.capture)}, JSON.stringify({text, args:process.argv.slice(2)})+'\\n');
-  process.stdout.write(JSON.stringify(${JSON.stringify(commit ? { commit_message: "[Fix] Preserve source snapshot" } : { summary: "Synthetic review.", blocking: false, grade: "proficient", file_comments: [] })}));
+  process.stdout.write(JSON.stringify(${JSON.stringify(commit ? { commit_message: message } : { summary: "Synthetic review.", blocking: false, grade: "proficient", file_comments: [] })}));
 });\n`,
   );
 }
@@ -435,6 +436,72 @@ test("a captured input failure is retained if the repository is repaired before 
   } finally {
     f.cleanup();
   }
+});
+
+for (const locale of ["ko", "en"] as const) {
+  test(`commit-message provider receives the captured ${locale} locale and preserves its response`, async () => {
+    const f = fixture();
+    try {
+      f.cfg.locale = locale;
+      const message = locale === "ko"
+        ? "[Fix] retryDelay 재시도 간격 조정\n\n- 요청 간 대기 시간 확보"
+        : "[Fix] Adjust retryDelay\n\n- Allow time between requests";
+      provider(f, true, message);
+      f.write("source.ts", "export const retryDelay = 200;");
+      f.git("add", ".");
+      const prepared = createLegacyReviewBackend(f.cfg).prepareCommitMessage(f.repo);
+      f.cfg.locale = locale === "ko" ? "en" : "ko";
+      const result = await prepared.run(new AbortController().signal);
+      assert.equal(result.is_error, false);
+      assert.equal(result.commit_message, message);
+      assert.equal(calls(f).length, 1);
+      const request = calls(f)[0].text;
+      assert(request.includes("retryDelay = 200"));
+      assert(request.includes('Keep the JSON keys'));
+      if (locale === "ko") {
+        assert(request.includes("제목과 본문은 한국어로 작성하세요"));
+        assert(request.includes("[Improve] 사용자 인증 로직 개선"));
+        assert(!request.includes("Write the title and body in English"));
+        assert(!request.includes("Capitalize the first letter"));
+      } else {
+        assert(request.includes("Write the title and body in English"));
+        assert(request.includes("[Improve] Refine user authentication logic"));
+        assert(!request.includes("제목과 본문은 한국어로 작성하세요"));
+      }
+    } finally { f.cleanup(); }
+  });
+}
+
+test('commit-message generation applies the saved variable format after model output', async () => {
+  const f = fixture();
+  try {
+    f.cfg.commitMessageFormat = '$type($scope): $title\n\n$body\n\nBranch: $branch';
+    provider(f, true, '[Fix] Preserve source snapshot\n\n- Keep the frozen staged diff');
+    f.write('source.ts', 'export const value = 2;'); f.git('add', '.');
+    const result = await createLegacyReviewBackend(f.cfg).prepareCommitMessage(f.repo)
+      .run(new AbortController().signal);
+    assert.equal(result.is_error, false);
+    assert.equal(result.commit_message,
+      'Fix(): Preserve source snapshot\n\n- Keep the frozen staged diff\n\nBranch: main');
+  } finally { f.cleanup(); }
+});
+
+test("commit-message preflight snapshot is retained across later index changes", async () => {
+  const f = fixture();
+  try {
+    provider(f, true);
+    f.write("source.ts", "const PREFLIGHT = 1;");
+    f.git("add", ".");
+    const snapshot = captureStagedSnapshot(f.repo, f.cfg.excludePatterns);
+    f.write("source.ts", "const LATER_INDEX = 2;");
+    f.git("add", "source.ts");
+    const prepared = createLegacyReviewBackend(f.cfg).prepareCommitMessage(f.repo, snapshot);
+    const result = await prepared.run(new AbortController().signal);
+    assert.equal(result.is_error, false);
+    assert.equal(calls(f).length, 1);
+    assert(calls(f)[0].text.includes("PREFLIGHT = 1"));
+    assert(!calls(f)[0].text.includes("LATER_INDEX"));
+  } finally { f.cleanup(); }
 });
 
 test("commit-message preparation uses a separate operation identity and one frozen diff per shared execution", async () => {

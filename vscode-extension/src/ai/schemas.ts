@@ -39,7 +39,11 @@ export const COMMIT_MESSAGE_OUTPUT_SCHEMA: JsonSchema = {
   type: 'object',
   properties: {
     commit_message: { type: 'string' },
+    type: { type: 'string', enum: ['Feature', 'Improve', 'Fix', 'Doc', 'Refactor', 'Test', 'Chore'] },
+    scope: { type: 'string' },
+    title: { type: 'string' },
+    body: { type: 'string' },
   },
-  required: ['commit_message'],
+  required: ['commit_message', 'type', 'scope', 'title', 'body'],
   additionalProperties: false,
 };

@@ -138,6 +138,34 @@ async function answer(input: Parameters<LocalReviewExecutor["review"]>[0]) {
 }
 const abort = () => new AbortController().signal;
 
+for (const omitBase of [false, true]) {
+  test(`Codex preload receipts preserve full source/base coverage validation (omit base=${omitBase})`, async t => {
+    const f = setup(t);
+    let modelRuns = 0;
+    const prepared = await prepareStandaloneReview(f.request, settings, abort(), {
+      dataDirectory: f.dataDirectory, keys: f.keyStore,
+      prepareExecutor: async () => ({ descriptor: { ...descriptor, id: 'codex-account' },
+        async review(input) {
+          modelRuns++;
+          const data = JSON.parse(input.prompt.slice(input.prompt.lastIndexOf('\n') + 1));
+          const reads = data.fixedSourceReads;
+          assert(reads.some((read: any) => read.source.side === 'source'));
+          assert(reads.some((read: any) => read.source.side === 'base'));
+          return { model: descriptor.model, raw: JSON.stringify({summary:'Reviewed fixed supplied source',
+            files:[{path:'sum.ts',side:'source',complete:true,summary:'Checked supplied reads',
+              readIds:reads.filter((read: any) => !omitBase || read.source.side !== 'base').map((read: any) => read.readId)}],
+            findings:[],questions:[]}) };
+        } }),
+    });
+    try {
+      const result = await prepared.run(abort());
+      assert.equal(modelRuns, 1);
+      assert.equal(result.performance?.reads, 2);
+      assert.equal(result.report.gcr?.report.status, omitBase ? 'partial' : 'completed');
+    } finally { prepared.dispose(); }
+  });
+}
+
 for (const failure of ["history", "request"] as const) {
   test(`a ${failure} persistence failure cannot acknowledge automatic completion`, async t => {
     const f = setup(t);

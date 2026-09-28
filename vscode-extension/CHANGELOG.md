@@ -1,5 +1,59 @@
 # Changelog
 
+## 2.14.5
+
+- Deliver the 2.14.0–2.14.4 settings, review prefetch, and commit-message
+  changes together. Completed reviews with identical source, context, and
+  executor settings continue to reuse their encrypted saved results.
+
+## 2.14.4
+
+- Add a multiline commit-message format field to Commit Defender Settings.
+  Formats support `$type`, `$scope`, `$title`, `$body`, `$branch`, `$branchId`,
+  `$issueId`, `$prId`, `$commitId`, and `$date`; `${name}` is equivalent and
+  `$$` emits a literal dollar sign.
+- Render the saved format locally from structured model output and Git metadata.
+  Unavailable repository variables stop before a model request. Existing
+  settings keep the prior `[$type] $title` plus body layout by default.
+- Remove the previous 300-character body cap and request coverage of every
+  material staged change while keeping the title suitable for Git history.
+
+## 2.14.3
+
+- Preload up to 64 KiB / 24 authorized source reads into Codex reviews to reduce
+  model/tool round trips for selected source, captured base and required context.
+  Larger reviews continue through the existing fixed-source tools. Source
+  receipts, full-coverage validation, model/effort, cancellation, revocation and
+  review budgets are unchanged.
+- Record preparation, execution, source-preload and model durations in Commit
+  Defender Output. Reused reports do not start a new model review.
+
+## 2.14.2
+
+- Honor `commitDefender.locale` when generating commit messages. Korean titles
+  and bodies use Korean instructions and examples while type labels, JSON keys,
+  code identifiers and file paths retain their original spelling.
+
+## 2.14.1
+
+- Distinguish Commit Defender's Source Control header action with a commit
+  icon and document its separate entry point from GitHub Copilot's button.
+- Use the selected SCM repository, check staging and source exclusions before
+  resolving credentials, and record generation progress in Commit Defender Output.
+- Preserve drafts edited during generation. Stop presenting every generation
+  failure as an account sign-in problem.
+
+## 2.14.0
+
+- Add the named **Commit Defender Settings** editor with Account & Model,
+  Review & Display, Automatic Reviews, Memory & GCR, and Profiles & Executables.
+  Reuse verified account/catalog and OS-backed API credential setup flows.
+- Save changed User Settings explicitly, retain drafts across sections, validate
+  values in the Extension Host and reject concurrent settings overwrites.
+- Organize Side Panel review actions, findings, settings/connections and history.
+  Provider/Model rows open model settings; add section-specific Command Palette
+  entry points and keep native VS Code Settings available for workspace overrides.
+
 ## 2.13.6
 
 - Replace manual account model IDs with **Use Account**: verify the existing

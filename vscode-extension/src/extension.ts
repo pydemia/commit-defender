@@ -20,6 +20,7 @@ import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
 import { openConnectionGuide, openCommitDefenderSettings } from './connectionGuide.js';
+import { CommitDefenderSettings } from './settingsView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
 import { ModelCredentialError, resolveModelRuntimeConfig } from './modelCredentials.js';
@@ -31,6 +32,7 @@ import { ExtensionConfig, getConfig, getStandaloneReviewSettings, waitForModelCo
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
+import { captureStagedSnapshot, type StagedSnapshot } from './gitSnapshot.js';
 import type { SourceExclusion } from './sourcePolicy.js';
 import { HistoryProvider, AnalysisScope } from './historyProvider.js';
 import { hookIsInstalled, installHook, uninstallHook, writeHookConfig } from './hook/install.js';
@@ -41,6 +43,7 @@ import { AnalysisReport, CommitMessageResult, RunResult } from './types.js';
 import { resolvePalette } from './palette.js';
 import { normalizeReport } from './commentFormatter.js';
 import { openReviewChat, settleReviewChats } from './reviewChat.js';
+import { DEFAULT_COMMIT_MESSAGE_FORMAT, unavailableRepositoryVariables } from './gitTemplates.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 let settleExecutions: (() => Promise<void>) | undefined;
@@ -50,9 +53,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.openConnectionGuide', language => openConnectionGuide(context, language),
   ));
-  context.subscriptions.push(vscode.commands.registerCommand(
-    'commitDefender.openSettings', openCommitDefenderSettings,
-  ));
+  const settingsView = new CommitDefenderSettings(context);
+  context.subscriptions.push(settingsView,
+    vscode.commands.registerCommand('commitDefender.openSettings', section => settingsView.open(section)),
+    vscode.commands.registerCommand('commitDefender.openModelSettings', () => settingsView.open('model')),
+    vscode.commands.registerCommand('commitDefender.openCommitSettings', () => settingsView.open('git')),
+    vscode.commands.registerCommand('commitDefender.openReviewSettings', () => settingsView.open('review')),
+    vscode.commands.registerCommand('commitDefender.openAutomaticSettings', () => settingsView.open('automatic')),
+    vscode.commands.registerCommand('commitDefender.openKnowledgeSettings', () => settingsView.open('knowledge')),
+    vscode.commands.registerCommand('commitDefender.openAdvancedSettings', () => settingsView.open('advanced')),
+    vscode.commands.registerCommand('commitDefender.openNativeSettings', openCommitDefenderSettings),
+  );
   const backgroundOpenedAt = Date.now();
   let lastManualStartedAt = 0;
   reviewNavigation.register(context);
@@ -68,8 +79,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (provider === 'geminicli') return;
     await useAccount(context.extensionPath, value => signIn(value, false), provider);
   }
-  async function selectAccountProviderAndModel(): Promise<void> {
-    await useAccount(context.extensionPath, value => signIn(value, false));
+  async function selectAccountProviderAndModel(selected?: unknown): Promise<void> {
+    const provider = selected === 'codex' || selected === 'claudecode' || selected === 'antigravity' ? selected : undefined;
+    await useAccount(context.extensionPath, value => signIn(value, false), provider);
   }
 
   async function signIn(provider: AccountProvider, configureAfter = true): Promise<boolean> {
@@ -475,6 +487,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ).values()];
         logSourceExclusions(result.report.source_exclusions);
         if (result.stderr) getOutputChannel().appendLine(`[Commit Defender] ${result.stderr}`);
+        if (result.performance) {
+          const p = result.performance;
+          getOutputChannel().appendLine(`[Commit Defender] Review timing: preparation ${p.preparationMs} ms; execution ${p.runMs} ms; source preload ${p.prefetchMs} ms (${p.reads} reads, ${p.bytes} bytes); model ${p.modelMs} ms. Model time is 0 for a reused review.`);
+        }
 
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), file => {
           const uri = vscode.Uri.file(path.join(repoRoot, file)).toString();
@@ -883,82 +899,126 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // ── Generate commit message ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(
     'commitDefender.generateCommitMessage',
-    async () => {
-      const intent = ++messageIntent;
-      const ws = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (!ws) {
-        vscode.window.showWarningMessage('Commit Defender: No workspace folder open.');
-        return;
-      }
-      let repoRoot: string;
-      try { repoRoot = await getRepoRoot(ws); }
-      catch { vscode.window.showWarningMessage('Commit Defender: No git repository found.'); return; }
+    async (sourceControl?: vscode.SourceControl) => vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
+      async progress => {
+        const intent = ++messageIntent;
+        const ws = sourceControl?.rootUri?.scheme === 'file'
+          ? sourceControl.rootUri.fsPath
+          : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!ws) {
+          vscode.window.showWarningMessage('Commit Defender: No workspace folder open.');
+          return;
+        }
+        let repoRoot: string;
+        try { repoRoot = await getRepoRoot(ws); }
+        catch { vscode.window.showWarningMessage('Commit Defender: No git repository found.'); return; }
 
-      if (intent !== messageIntent) return;
-      const cfg = getConfig();
-      const profileId = localProfile();
-      await messageExecution.prepare(async signal => {
-        const runtime = await resolveModelRuntimeConfig(cfg, profileId);
-        if (signal.aborted) throw new Error('Commit message preparation was cancelled.');
-        const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot);
-        return {
-          ...prepared,
-          run: async runSignal => vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: 'Commit Defender: Generating commit message…', cancellable: false },
-            () => prepared.run(runSignal),
-          ),
-        };
-      }, {
-        error: error => {
-          if (!(error instanceof ModelCredentialError)) { handleError(error, statusBar, !execution.isRunning); return; }
-          void vscode.window.showErrorMessage('Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.', 'Use API Credential').then(action => {
-            if (action && intent === messageIntent) return useApiCredential(repoRoot);
-          });
-        },
-        result: async (result, isCurrent) => {
-          if (result.is_error || !result.commit_message) {
-            const provider = accountProvider(cfg.aiProvider);
-            const signIn = provider ? signInLabel(provider) : undefined;
-            const action = await vscode.window.showErrorMessage(
-              `Commit Defender: ${result.error || 'Failed to generate commit message'}`,
-              ...(signIn ? [signIn] : []),
-            );
-            if (action === signIn && provider) {
-              await vscode.commands.executeCommand(signInCommand(provider));
-            }
+        if (intent !== messageIntent) return;
+        const cfg = getConfig();
+        const channel = getOutputChannel();
+        channel.appendLine('\n[Commit Defender] Generate Commit Message: checking staged changes.');
+        progress.report({ message: 'Checking staged changes…' });
+        const gitExt = vscode.extensions.getExtension('vscode.git');
+        await gitExt?.activate();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const gitApi = (gitExt?.exports as any)?.getAPI?.(1);
+        // Git may canonicalize aliases such as macOS /var -> /private/var;
+        // the Git extension retains the workspace URI used to open the repository.
+        const repo = gitApi?.getRepository?.(vscode.Uri.file(ws))
+          ?? gitApi?.getRepository?.(vscode.Uri.file(repoRoot));
+        const originalDraft: string | undefined = repo?.inputBox?.value;
+        // Flush the notification before synchronous Git snapshot preparation.
+        await new Promise<void>(resolve => setImmediate(resolve));
+        if (intent !== messageIntent) return;
+        let staged: StagedSnapshot;
+        try {
+          staged = captureStagedSnapshot(repoRoot, cfg.excludePatterns);
+          if (staged.excluded.length) {
+            channel.appendLine('[Commit Defender] Commit message stopped: staged paths are excluded by source policy. No model request was made.');
+            void vscode.window.showWarningMessage(`Commit Defender: ${staged.excluded.length} staged path(s) are excluded by source policy. No model request was made.`);
             return;
           }
-
-          const gitExt = vscode.extensions.getExtension('vscode.git');
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const gitApi = (gitExt?.exports as any)?.getAPI?.(1);
-          const repo   = gitApi?.getRepository?.(vscode.Uri.file(repoRoot))
-                      ?? gitApi?.repositories?.[0];
-
-          if (repo?.inputBox) {
-            repo.inputBox.value = result.commit_message;
-            vscode.window.showInformationMessage(
-              'Commit Defender: Commit message inserted into the Source Control input box.'
-            );
-          } else {
-            await vscode.env.clipboard.writeText(result.commit_message);
-            if (!isCurrent()) return;
-            vscode.window.showInformationMessage(
-              'Commit Defender: Commit message copied to clipboard.',
-              'Preview'
-            ).then(action => {
-              if (action === 'Preview') {
-                vscode.window.showInputBox({
-                  value: result.commit_message,
-                  prompt: 'Generated commit message (read-only preview)',
-                  ignoreFocusOut: true,
-                });
-              }
-            });
+          if (!staged.files.length) {
+            channel.appendLine('[Commit Defender] Commit message skipped: no staged changes. No model request was made.');
+            void vscode.window.showWarningMessage('Commit Defender: Stage the changes you want to describe, then run Generate Commit Message. No model request was made.');
+            return;
           }
-        },
-      }, cfg.fileTimeoutSeconds * 1000);
-    }
+          const unavailable = unavailableRepositoryVariables(
+            cfg.commitMessageFormat ?? DEFAULT_COMMIT_MESSAGE_FORMAT, repoRoot,
+          );
+          if (unavailable.length) {
+            channel.appendLine(`[Commit Defender] Commit message stopped: template variables are unavailable (${unavailable.map(name => `$${name}`).join(', ')}). No model request was made.`);
+            const action = await vscode.window.showWarningMessage(
+              `Commit Defender: The current repository cannot resolve ${unavailable.map(name => `$${name}`).join(', ')} used by the commit message format. No model request was made.`,
+              'Edit Commit Message Format',
+            );
+            if (action === 'Edit Commit Message Format') settingsView.open('git');
+            return;
+          }
+        } catch (error) {
+          handleError(error, statusBar, !execution.isRunning);
+          return;
+        }
+        if (intent !== messageIntent) return;
+        const profileId = localProfile();
+        await messageExecution.prepare(async signal => {
+          const runtime = await resolveModelRuntimeConfig(cfg, profileId);
+          if (signal.aborted) throw new Error('Commit message preparation was cancelled.');
+          const prepared = createLegacyReviewBackend(runtime).prepareCommitMessage(repoRoot, staged);
+          return prepared;
+        }, {
+          preparing: () => channel.appendLine('[Commit Defender] Commit message: preparing selected model and staged snapshot.'),
+          started: () => {
+            progress.report({ message: 'Generating with the selected provider…' });
+            channel.appendLine('[Commit Defender] Commit message: generating with the selected provider.');
+          },
+          error: error => {
+            channel.appendLine('[Commit Defender] Commit message failed during preparation or model execution.');
+            if (!(error instanceof ModelCredentialError)) { handleError(error, statusBar, !execution.isRunning); return; }
+            void vscode.window.showErrorMessage('Commit Defender: Model API credential is unavailable or does not match the selected profile and destination.', 'Use API Credential').then(action => {
+              if (action && intent === messageIntent) return useApiCredential(repoRoot);
+            });
+          },
+          result: async (result, isCurrent) => {
+            if (!isCurrent()) return;
+            if (result.is_error || !result.commit_message) {
+              handleError(new Error(result.error || 'Failed to generate commit message'), statusBar, !execution.isRunning);
+              return;
+            }
+            channel.appendLine('[Commit Defender] Commit message generated successfully.');
+            if (repo?.inputBox) {
+              if (repo.inputBox.value !== originalDraft) {
+                const preview = await vscode.workspace.openTextDocument({ language: 'git-commit', content: result.commit_message });
+                if (!isCurrent()) return;
+                await vscode.window.showTextDocument(preview, { preview: true });
+                void vscode.window.showInformationMessage('Commit Defender: Your commit message draft changed during generation. The generated message is open in a preview; your draft was preserved.');
+                return;
+              }
+              repo.inputBox.value = result.commit_message;
+              vscode.window.showInformationMessage(
+                'Commit Defender: Commit message inserted into the Source Control input box.'
+              );
+            } else {
+              await vscode.env.clipboard.writeText(result.commit_message);
+              if (!isCurrent()) return;
+              vscode.window.showInformationMessage(
+                'Commit Defender: Commit message copied to clipboard.',
+                'Preview'
+              ).then(action => {
+                if (action === 'Preview') {
+                  vscode.window.showInputBox({
+                    value: result.commit_message,
+                    prompt: 'Generated commit message (read-only preview)',
+                    ignoreFocusOut: true,
+                  });
+                }
+              });
+            }
+          },
+        }, cfg.fileTimeoutSeconds * 1000);
+      },
+    ),
   ));
 
   const backgroundHooks = new BackgroundHooks(context.extensionPath, context.globalState);

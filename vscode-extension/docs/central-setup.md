@@ -9,7 +9,7 @@ reasoning settings.
 
 This guide is bundled with the extension and can be read without Internet
 access or a GCR connection. Open **Commit Defender: GCR Connection Guide** in
-the Command Palette, use the help icon in the CD sidebar, or choose **Central
+the Command Palette, select **Setup Guide** in Settings, or choose **Central
 Review Connection → GCR connection guide**. The guide follows your VS Code
 display language: Korean for `ko` locales, English otherwise. Use the link
 above to switch languages manually.
@@ -20,10 +20,11 @@ and **Open Settings**. It does not open a text editor or Markdown preview.
 The first step includes a language link. Step checks track pages read, not
 successful authentication or review execution.
 
-**Commit Defender: Open Settings** opens VS Code's graphical Settings filtered
-to this extension. Use **User** settings for account, provider, model, and
-reasoning. Reader and model API keys belong in their credential dialogs, not
-Settings. Existing settings remain unchanged until you edit them.
+**Commit Defender: Open Settings** opens the named **Commit Defender Settings**
+editor. Use **Account & Model** for verified account/model selection or API
+credential setup. Reader and model API keys belong in their masked credential
+dialogs. **VS Code Settings** in the editor opens native extension settings
+for workspace overrides. Opening either editor preserves existing values.
 
 The guide uses the native viewer's static SVG path, which does not register a
 Service Worker. A VS Code `Error loading webview` elsewhere does not indicate
@@ -68,23 +69,20 @@ Run the following commands from the Command Palette:
 
 ## 3. Select your CD account and model
 
-For a Codex account, run **Commit Defender: Select Account Provider and Model**
-and select Codex and a model. If your model is not listed, choose **Enter a
-model ID…** and enter an ID supported by your account and CLI. CD uses the
-existing Codex login. If you need to sign in, run **Commit Defender: Sign in
-with Codex**.
+Open **Commit Defender Settings → Account & Model** and choose **Choose
+account & model…**, or run **Commit Defender: Use Account**. Choose Codex,
+Claude Code or Antigravity, then a model returned by the authenticated CLI
+and its supported effort. Model IDs are not entered manually. A missing
+login offers sign-in and retry; cancelling preserves the saved selection.
+The provider rows also offer direct model selection and sign-in. GCR's
+analysis account does not automatically configure CD.
 
-In VS Code **User Settings**, set `commitDefender.reviewReasoningEffort` to a
-value supported by the selected model, such as `high`. Supported Codex CLI
-versions are currently `0.153.4` and `0.154.0`; CD validates the model,
-reasoning, and CLI capabilities when running a review. An analysis account
-registered in GCR does not automatically configure CD.
-
-For OpenAI, Azure OpenAI, Anthropic, or Gemini APIs, set
-`commitDefender.aiProvider`, `commitDefender.model`, and any required endpoint
-in User Settings. Then run **Commit Defender: Manage Model API Credential**
-to store the key. Set review reasoning to an empty string for Anthropic and
-Gemini APIs. See [provider setup](standalone-review.md) for supported behavior.
+For OpenAI, Azure OpenAI, Anthropic or Gemini APIs, choose **Configure API
+destination & key…**, or run **Commit Defender: Use API Credential**. Select
+the endpoint, deployment/model and supported effort, then use a masked key
+input or an existing destination-bound key. Unknown capabilities and adapters
+without effort use the server default. See [provider setup](standalone-review.md)
+and [Settings](settings.md).
 
 Account and model choices belong in User Settings. Opening this guide does
 not change your account, model, or automatic-review settings.

@@ -54,11 +54,23 @@ records their hashes/source commit. See [platform selection](platforms.md).
 
 ## Configure an account and model
 
-Run **Commit Defender: Select Account Provider and Model**. Store choices in **User Settings**. Workspace settings can narrow source exclusions but cannot authorize another account, model, executable or local profile.
+Open **Commit Defender: Open Settings → Account & Model**. Choose **Choose
+account & model…** (also **Use Account** in the Command Palette), or **Configure
+API destination & key…** (also **Use API Credential**). See [Settings](settings.md)
+for the integrated editor. Choices are saved in User Settings; workspace
+settings can narrow exclusions but cannot authorize another execution identity.
 
-For Codex, use **Commit Defender: Sign in with Codex** with a supported CLI already installed on the machine. The CLI owns account login. `commitDefender.codexPath` can select the intended executable without replacing it. Choose a model available to that account and set `commitDefender.reviewReasoningEffort` to a supported value. Choosing an account does not overwrite an existing reasoning setting.
+Account setup verifies the existing Codex, Claude Code or Antigravity login,
+loads the account catalog and offers the selected model's supported effort.
+Sign-in remains CLI-owned. Cancelling keeps the complete prior selection.
+Use **Profiles & Executables** to change the CLI path when needed.
 
-For API models, choose the provider, model and destination first, then run **Commit Defender: Manage Model API Credential**. Azure uses the deployment name as the model and needs its endpoint/API version. The key is stored in OS-backed encrypted storage; do not paste a key into a repository file. If an old installation has `commitDefender.apiKey`, use the command's explicit migration flow. The new review path does not silently read that legacy value.
+API setup asks for provider, endpoint, deployment/model, supported effort and
+an existing destination-bound key or masked key input. Azure requires its
+endpoint/API version; its deployment name is not an underlying model identity.
+Unknown capability uses server-default effort. The key is stored in OS-backed
+encrypted storage. **Existing keys and plaintext migration…** manages explicit
+legacy migration; the review runtime does not silently read `apiKey`.
 
 Example User Settings for a Codex review (replace the model placeholder using your account catalog):
 

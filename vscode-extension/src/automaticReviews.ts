@@ -12,7 +12,7 @@ import {
   type AutomaticState,
 } from "@gcr/client-core";
 import type { ReviewRequest } from "./reviewBackend.js";
-import { getAutomaticUserSettings } from "./config.js";
+import { getAutomaticUserSettings, waitForModelConfiguration } from "./config.js";
 import {
   automaticSettings,
   readAutomaticOverride,
@@ -187,6 +187,14 @@ export class AutomaticReviews implements vscode.Disposable {
             "model",
             "aiProvider",
             "codexPath",
+            "claudeCodePath",
+            "antigravityPath",
+            "endpoint",
+            "apiVersion",
+            "modelCredentialRef",
+            "maxTokens",
+            "fileTimeoutSeconds",
+            "directoryTimeoutSeconds",
             "excludePatterns",
           ].some((k) => e.affectsConfiguration(`commitDefender.${k}`))
         )
@@ -253,6 +261,10 @@ export class AutomaticReviews implements vscode.Disposable {
   }
   private async refreshRoots() {
     const generation = ++this.generation;
+    // A multi-field settings save may still roll back. Never configure hooks
+    // from its intermediate provider/profile/trigger values.
+    await waitForModelConfiguration();
+    if (generation !== this.generation || this.disposed) return;
     this.scheduler.clear();
     for (const root of this.roots.values())
       root.watches.forEach((w) => w.dispose());

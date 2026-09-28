@@ -4,7 +4,7 @@ Manual reviews use the shared GCR core over captured local source. Standalone mo
 
 ## Select an account
 
-Run **Commit Defender: Select Account Provider and Model** and choose Codex, Claude Code or Antigravity in the native VS Code picker. Claude Code and Antigravity also offer a reasoning selection before applying the provider. Cancelling keeps your current account choice. Use a CLI model alias/ID accepted by your account or select CLI default. Set `codexPath`, `claudeCodePath` or `antigravityPath` in User Settings if the corresponding executable is not found. Workspace settings cannot select another executable or model.
+Open **Commit Defender Settings → Account & Model → Choose account & model…** or run **Commit Defender: Use Account**. Choose Codex, Claude Code or Antigravity, then a model and supported effort from the authenticated CLI catalog. No manual model ID or guessed fallback is used. Cancelling keeps the previous selection. Use **Profiles & Executables** to change `codexPath`, `claudeCodePath` or `antigravityPath` in User Settings when needed. Workspace settings cannot select another executable or model.
 
 Claude Code requires a native CLI supporting `--safe-mode`. Captured source is supplied through stdin; tools, hooks, MCP, skills and session persistence are disabled. Antigravity requires the **agent CLI** (`agy`), rather than an IDE launcher. It runs a private temporary main agent with no tools, skills, plugins or MCP servers. Both retain their CLI-owned authentication; the extension does not copy tokens. Reviews retain exact captured read IDs and use the same report validation as Codex and API reviews. Non-success, missing final output, invalid source evidence, timeout and cancellation cannot be reported as completed.
 

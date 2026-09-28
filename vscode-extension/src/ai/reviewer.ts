@@ -21,9 +21,11 @@ import { applyMarkers } from '../skipMarkers.js';
 import { loadSkillMaterial } from '../skills.js';
 import { AnalysisReport, CommitMessageResult, FileComment, IncompleteReason, PerFileSummary, ReviewResult, ReviewStatus, RunResult } from '../types.js';
 import { ParsedReview, enforceP3, parseReviewJson } from './json.js';
-import { COMMIT_MESSAGE_SYSTEM_PROMPT, SEVERITY_MIN_RANK, ReviewMode, buildSystemPrompt, buildUserMessage } from './prompt.js';
+import { SEVERITY_MIN_RANK, ReviewMode, buildSystemPrompt, buildUserMessage, buildCommitMessageSystemPrompt } from './prompt.js';
 import { ProviderRequest, callProvider } from './providers.js';
 import { COMMIT_MESSAGE_OUTPUT_SCHEMA, REVIEW_OUTPUT_SCHEMA } from './schemas.js';
+import { commitMessageParts, commitTemplateValues, DEFAULT_COMMIT_MESSAGE_FORMAT,
+  renderGitTemplate, validateGitTemplate } from '../gitTemplates.js';
 
 const PRIORITY_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 const GRADE_RANK: Record<string, number> = {
@@ -187,9 +189,9 @@ export class Reviewer {
 
     const req: ProviderRequest = this.buildProviderRequest(
       repoRoot,
-      COMMIT_MESSAGE_SYSTEM_PROMPT,
+      buildCommitMessageSystemPrompt(this.cfg.locale),
       `Generate a commit message for the following staged diff:\n\n\`\`\`diff\n${diff}\n\`\`\``,
-      Math.min(this.cfg.maxTokens, 512),
+      Math.min(this.cfg.maxTokens, 1024),
       signal,
       COMMIT_MESSAGE_OUTPUT_SCHEMA,
     );
@@ -207,11 +209,21 @@ export class Reviewer {
     } catch (e) {
       return { commit_message: '', is_error: true, error: `Failed to parse model response: ${(e as Error).message}` };
     }
-    const msg = String(parsed?.commit_message ?? '').trim();
-    if (!msg) {
-      return { commit_message: '', is_error: true, error: 'Model returned an empty commit_message.' };
+    const parts = commitMessageParts(parsed && typeof parsed === 'object' ? parsed : {});
+    if (!parts) return { commit_message: '', is_error: true, error: 'Model returned incomplete commit-message fields.' };
+    const format = this.cfg.commitMessageFormat ?? DEFAULT_COMMIT_MESSAGE_FORMAT;
+    const invalid = validateGitTemplate(format);
+    if (invalid) return { commit_message: '', is_error: true, error: `Commit message format is invalid: ${invalid}` };
+    try {
+      const msg = renderGitTemplate(format, commitTemplateValues(repoRoot, parts)).trim();
+      if (!msg) return { commit_message: '', is_error: true, error: 'Commit message format produced an empty message.' };
+      return { commit_message: msg, is_error: false, error: '' };
+    } catch (error) {
+      const variable = (error as Error).message.match(/^missing-template-variable:(.+)$/)?.[1];
+      return { commit_message: '', is_error: true, error: variable
+        ? `Commit message variable $${variable} is unavailable in this repository.`
+        : `Commit message formatting failed: ${(error as Error).message}` };
     }
-    return { commit_message: msg, is_error: false, error: '' };
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────

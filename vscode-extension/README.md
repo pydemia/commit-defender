@@ -19,22 +19,24 @@ Reviews do not edit files, run tests, or create commits.
 ## Get started
 
 For the GCR setup guide inside VS Code, run **Commit Defender: GCR Connection
-Guide** or use the help icon in the Commit Defender sidebar. The bundled
+Guide**, select **Setup Guide** in Settings, or use the sidebar view menu. The bundled
 [English guide](docs/central-setup.md) and [한국어 연결 가이드](docs/central-setup.ko.md)
 cover reader keys, local model selection, synchronization, and the first
 review. The command follows the VS Code display language (Korean or English
 fallback), and both guides can be read offline.
 The guide uses VS Code's built-in Walkthrough viewer, with rendered steps and
 buttons for account selection, GCR connection, and Settings. Run **Commit
-Defender: Open Settings** for the native settings UI, or use the sidebar gear.
+Defender: Open Settings** or use the sidebar gear to open **Commit Defender
+Settings**, the integrated account, model and review-preferences editor.
 Guide rendering does not depend on the Markdown preview Service Worker.
 
 1. Install **Commit Defender** (`pydemia.commit-defender`) from Marketplace, or
    use **Extensions → Install from VSIX…** with a supplied package. Open a
    trusted Git workspace.
-2. Choose one model authentication method from the Command Palette
-   (`Ctrl+Shift+P` / `Cmd+Shift+P`): **Commit Defender: Use Account** or
-   **Commit Defender: Use API Credential**. Both save only to User Settings;
+2. Open **Commit Defender Settings → Account & Model**, then choose **Choose
+   account & model…** or **Configure API destination & key…**. The same flows
+   are available as **Commit Defender: Use Account** and **Use API Credential**
+   in the Command Palette. Both save only to User Settings;
    cancelling a step leaves the current selection unchanged.
 3. **Use Account** checks the existing Codex, Claude Code or Antigravity CLI
    login and server connection, lists the account's models, then offers supported
@@ -196,10 +198,27 @@ clarification with **Answer and resume**. Missing historical source or changed
 authorization can prevent continuation. See
 [review conversations](docs/review-conversations.md).
 
-**Generate Commit Message**, also available from the Source Control wand
-button, drafts a message from the staged diff into the SCM input box. Edit it
-before committing; generation does not create a commit. Its account-provider
+**Commit Defender: Generate Commit Message**, available from the Command
+Palette, Commit Defender sidebar and the commit icon in the Source Control
+repository header, drafts a message from the staged diff into that repository's
+SCM input box. Hover over the icon to check its Commit Defender title; the
+sparkle icon beside the input belongs to GitHub Copilot. Stage the changes first.
+If the draft changes during generation, the generated message opens separately
+so the draft is preserved. Progress and failures are recorded in
+**Output → Commit Defender**. Edit it before committing; generation does not
+create a commit. Its account-provider
 range is broader than fixed-source review, as shown above.
+The `commitDefender.locale` setting also controls the generated title and body:
+`ko` produces Korean text and `en` produces English text. Type labels such as
+`[Fix]`, code identifiers and file paths keep their original spelling.
+
+Use **Commit Defender Settings → Commit Message** to define the final layout.
+The multiline format supports model fields (`$type`, `$scope`, `$title`,
+`$body`) and local Git metadata (`$branch`, `$branchId`, `$issueId`, `$prId`,
+`$commitId`, `$date`). `${title}` is also valid and `$$` emits a literal dollar
+sign. Commit Defender applies the format locally after generation. If a Git
+variable cannot be resolved from the current repository and branch, no model
+request is made. See [settings](docs/settings.md#commit-message-format).
 
 ## Memory, Skills, and earlier PR reviews
 
@@ -318,6 +337,9 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 
 | Command | Purpose |
 | --- | --- |
+| Open Settings | Open the integrated Commit Defender Settings editor |
+| Settings: Account and Model / Review and Display / Automatic Reviews / Memory and GCR / Profiles and Executables | Jump directly to a settings section |
+| Settings: Open VS Code Settings | Edit workspace overrides and advanced settings in the native editor |
 | Analyze Staged Files / Current File / Directory… / Repository | Start a manual review |
 | Cancel Analysis / Clear Findings | Stop a review or clear displayed findings |
 | Show Summary Panel / Show History Entry / Re-analyze | Inspect saved reports or start another review |
@@ -326,7 +348,7 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 | Use API Credential | Store, reconnect, replace, or migrate a key |
 | Local Memory and Skills | Author and activate local guidance |
 | Central Review Connection | Connect, synchronize, browse history, or select offline/standalone mode |
-| Automatic Reviews / Recover Background Review | Manage opt-in triggers and interrupted work |
+| Automatic Reviews (This Worktree) / Recover Background Review | Manage worktree overrides and interrupted work |
 | Refresh Local History / Local Review Activity | Reload reports or inspect recorded activity |
 | Discuss Review | Ask about a report and captured source |
 | Generate Commit Message | Draft a message in the SCM input box |
@@ -334,8 +356,21 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 
 ## Settings
 
-Open **Settings → Extensions → Commit Defender**. Each setting below uses the
-`commitDefender.` prefix. Store execution choices in **User Settings**.
+Open **Commit Defender: Open Settings** for account/model setup, commit-message
+formatting, review and display preferences, global automation defaults,
+Memory/GCR actions and CLI paths. Changes to editable fields are applied with **Save User Settings**;
+**Discard edits** leaves stored settings unchanged. Account and API setup use
+the existing verified flows and masked credential input.
+
+The Side Panel separates Review Actions, Current Findings, Settings &
+Connections, and History. Provider/Model rows open Account & Model; the title
+gear opens the settings editor, and the refresh icon reloads local history.
+See [Settings](docs/settings.md) for scopes, overrides and troubleshooting.
+
+For workspace overrides and remaining legacy settings, use **VS Code Settings**
+in the editor or **Settings: Open VS Code Settings** from the Command Palette.
+Each setting below uses the `commitDefender.` prefix. Store execution choices
+in **User Settings**.
 
 | Setting | Default | Effect |
 | --- | --- | --- |

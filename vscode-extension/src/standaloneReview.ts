@@ -1,4 +1,5 @@
 import path from "node:path";
+import { prefetchReviewSource, reviewPrefetchTargets, type ReviewPrefetchMetrics } from "./reviewPrefetch.js";
 import {
   centralSelection,
   selectedCentralSources,
@@ -72,6 +73,8 @@ export async function prepareStandaloneReview(
   signal: AbortSignal,
   ports: StandaloneReviewPorts = {},
 ): Promise<PreparedExecution<RunResult> & { dispose(): void }> {
+  const preparationStarted = performance.now();
+  const performanceMetrics: ReviewPrefetchMetrics = { reads: 0, bytes: 0, prefetchMs: 0, modelMs: 0 };
   let snapshot: LocalSourceSnapshot | undefined;
   const opened: LocalRecordStore[] = [];
   let connections: CentralConnections | undefined;
@@ -372,6 +375,9 @@ export async function prepareStandaloneReview(
       throw new StandaloneReviewError("executor-unavailable");
     }
     checkAbort(signal);
+    if (executor.descriptor.id === "codex-account") {
+      executor = prefetchReviewSource(executor, reviewPrefetchTargets(snapshot, context.context.sources), performanceMetrics);
+    }
     const resolution = resolveLocalExecutionPolicy({
       context,
       snapshot,
@@ -417,11 +423,13 @@ export async function prepareStandaloneReview(
         identity.audience,
       );
     }
+    const preparationMs = Math.round(performance.now() - preparationStarted);
     return {
       backendId: client.mode,
       key: reviewRequestKey(policy.identity),
       dispose,
       async run(runSignal, progress) {
+        const runStarted = performance.now();
         if (disposed || running) throw new StandaloneReviewError("disposed");
         running = true;
         try {
@@ -533,6 +541,7 @@ export async function prepareStandaloneReview(
             }
           }
           return {
+            ...(executor.descriptor.id === "codex-account" ? { performance: { preparationMs, runMs: Math.round(performance.now() - runStarted), ...performanceMetrics } } : {}),
             reviewCompletionConfirmed,
             report: projectCommitDefender(report),
             capturedSources: Object.fromEntries(

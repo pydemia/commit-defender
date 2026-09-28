@@ -24,6 +24,7 @@ import { AutomaticStageCheckpoint } from "../src/automaticStageCheckpoint.js";
 import { contentHash, observeAutomaticRepository } from "@gcr/client-core";
 import type { LocalReviewExecutor } from "@gcr/client-core";
 import { prepareStandaloneReview } from "../src/standaloneReview.js";
+import { holdModelConfiguration } from "../src/config.js";
 async function until(check: () => boolean, timeout = 12000) {
   const end = Date.now() + timeout;
   while (!check()) {
@@ -31,6 +32,26 @@ async function until(check: () => boolean, timeout = 12000) {
     await new Promise((r) => setTimeout(r, 20));
   }
 }
+test("automatic hooks wait for a multi-field settings transaction and never enable a rolled-back trigger", async (t) => {
+  const configured: boolean[] = [];
+  const f = setup(t, {}, undefined, {
+    configureHooks: async (_root, settings) => { configured.push(settings.commit); },
+  });
+  await f.controller.refresh();
+  const initialCount = configured.length;
+  const release = holdModelConfiguration({ ...values.global });
+  try {
+    values.global.runOnCommit = true;
+    events.config.fire({ affectsConfiguration: (key: string) => key === 'commitDefender.runOnCommit' });
+    await new Promise(resolve => setTimeout(resolve, 50));
+    assert.equal(configured.length, initialCount);
+    values.global.runOnCommit = false;
+    events.config.fire({ affectsConfiguration: (key: string) => key === 'commitDefender.runOnCommit' });
+  } finally { release(); }
+  await f.controller.settled();
+  assert(configured.length > initialCount);
+  assert(configured.every(commit => commit === false));
+});
 function setup(
   t: test.TestContext,
   settings: Record<string, unknown> = {},

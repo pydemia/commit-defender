@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { PaletteId } from './palette.js';
 import type { StandaloneReviewSettings } from './standaloneReviewProtocol.js';
 import type { ModelCredentialReference } from './modelCredentials.js';
+import { DEFAULT_COMMIT_MESSAGE_FORMAT } from './gitTemplates.js';
 
 export type SeverityLevel   = 'severe' | 'rigorous' | 'moderate' | 'generous' | 'lean';
 export type RichnessLevel   = 'colorful' | 'chatty' | 'moderate' | 'simple' | 'silent';
@@ -49,6 +50,8 @@ export interface ResolvedConfig {
   richnessLevel: RichnessLevel;
   locale: Locale;
   excludePatterns: string[];
+  /** User-owned literal layout. The model returns fields; the extension renders this format. */
+  commitMessageFormat?: string;
   // UX (extension only — hook ignores these)
   colorPalette: PaletteId;
   preCommitHook: PreCommitHook;
@@ -113,6 +116,7 @@ export function getConfig(): ResolvedConfig {
     richnessLevel:             (cfg.get<string>('richnessLevel') ?? 'moderate') as RichnessLevel,
     locale:                    (cfg.get<string>('locale')        ?? 'en') as Locale,
     excludePatterns:           cfg.get<string[]>('excludePatterns') ?? [],
+    commitMessageFormat:       cfg.get<string>('commitMessageFormat') ?? DEFAULT_COMMIT_MESSAGE_FORMAT,
     colorPalette:              (cfg.get<string>('colorPalette')  ?? 'theme-adaptive') as PaletteId,
     preCommitHook:             (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
     fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 120,

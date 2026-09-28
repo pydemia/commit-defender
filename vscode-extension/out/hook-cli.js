@@ -4018,17 +4018,29 @@ ${content || "(no diff available)"}
 Please review the above and respond with the JSON object as instructed.
 `;
 }
-var COMMIT_MESSAGE_SYSTEM_PROMPT = `# Git Commit Message Generation Prompt
+function buildCommitMessageSystemPrompt(locale) {
+  const korean = locale === "ko";
+  const languageRules = korean ? "\uC81C\uBAA9\uACFC \uBCF8\uBB38\uC740 \uD55C\uAD6D\uC5B4\uB85C \uC791\uC131\uD558\uC138\uC694. \uC601\uC5B4 \uBB38\uBC95 \uADDC\uCE59\uC744 \uC801\uC6A9\uD558\uAC70\uB098 \uC601\uC5B4\uB85C \uBC88\uC5ED\uD558\uC9C0 \uB9C8\uC138\uC694. \uAC04\uACB0\uD55C \uD55C\uAD6D\uC5B4 \uD45C\uD604\uC744 \uC0AC\uC6A9\uD558\uC138\uC694." : "Write the title and body in English. Capitalize the first letter of the title and each bullet. Start with a base verb and exclude past tense.";
+  const example = korean ? `[Improve] \uC0AC\uC6A9\uC790 \uC778\uC99D \uB85C\uC9C1 \uAC1C\uC120
 
-Construct a commit message consisting of a title and a body
+- \uB370\uC774\uD130\uBCA0\uC774\uC2A4 \uC811\uADFC \uC804 \uC138\uC158 \uD1A0\uD070 \uAC80\uC99D
+- \uC554\uD638\uD654 \uD0A4 \uAD50\uCCB4\uB85C \uBCF4\uC548 \uAC15\uD654
+- \uB85C\uADF8\uC778 \uCC98\uB9AC \uC9C0\uC5F0 \uAC10\uC18C` : `[Improve] Refine user authentication logic
+
+- Validate session tokens before database access
+- Enhance security by rotating encryption keys
+- Reduce latency in login process`;
+  return `# Git Commit Message Generation Prompt
+
+Analyze the staged diff and return the structured parts of a useful commit message.
+
+## Language Rules
+${languageRules}
+Keep the JSON keys, the type labels (Feature, Improve, Fix, Doc, Refactor, Test, Chore), code identifiers and file paths unchanged. Do not translate them.
 
 ## Title Rules
-- Limit title to 50 characters
-- Capitalize the first letter
-- Avoid periods and special characters
-- Start with a base verb
-- Exclude past tense
-- Use format: [{type}] {title_text}
+- Keep the title concise enough for Git history, normally within 72 characters
+- Describe the concrete change rather than using a vague summary
 - Select one type from the list below:
   - Feature: Add new functionality
   - Improve: Refine business logic or performance
@@ -4039,29 +4051,25 @@ Construct a commit message consisting of a title and a body
   - Chore: Update build tasks or package managers
 
 ## Body Rules
-- Limit total text to 300 characters
-- Keep each bullet point under 50 characters
-- Focus on what and why instead of how
-- Provide clear reasons for code changes
-- Write in concise bullet points
-- Capitalize the first letter of each line
-- Avoid periods and special characters
-- Exclude past tense
-- Start each line with a base verb
+- Cover every material staged change; do not omit a changed behavior merely to shorten the message
+- Explain what changed and why it changed, including compatibility or operational effects when the diff supports them
+- Use focused bullet points or short paragraphs
+- Avoid repeating the title and avoid claims that are not supported by the diff
 
 ## Output Example
-[Improve] Refine user authentication logic
-
-- Validate session tokens before database access
-- Enhance security by rotating encryption keys
-- Reduce latency in login process
+${example}
 
 ## Output Format
 Respond ONLY with a valid JSON object \u2014 no markdown fences, no extra keys:
 {
-  "commit_message": "<title>\\n\\n<body>"
+  "commit_message": "[<type>] <title>\\n\\n<body>",
+  "type": "<Feature | Improve | Fix | Doc | Refactor | Test | Chore>",
+  "scope": "<optional short scope or empty string>",
+  "title": "<title without type prefix>",
+  "body": "<complete body>"
 }
 `;
+}
 
 // src/ai/providers.ts
 var import_child_process3 = require("child_process");
@@ -4800,11 +4808,127 @@ var REVIEW_OUTPUT_SCHEMA = {
 var COMMIT_MESSAGE_OUTPUT_SCHEMA = {
   type: "object",
   properties: {
-    commit_message: { type: "string" }
+    commit_message: { type: "string" },
+    type: { type: "string", enum: ["Feature", "Improve", "Fix", "Doc", "Refactor", "Test", "Chore"] },
+    scope: { type: "string" },
+    title: { type: "string" },
+    body: { type: "string" }
   },
-  required: ["commit_message"],
+  required: ["commit_message", "type", "scope", "title", "body"],
   additionalProperties: false
 };
+
+// src/gitTemplates.ts
+var import_node_child_process3 = require("node:child_process");
+var DEFAULT_COMMIT_MESSAGE_FORMAT = "[$type] $title\n\n$body";
+var COMMIT_TEMPLATE_VARIABLES = [
+  "type",
+  "scope",
+  "title",
+  "body",
+  "branch",
+  "branchId",
+  "issueId",
+  "prId",
+  "commitId",
+  "date"
+];
+var PLACEHOLDER = /\$(?:\{([a-z][a-zA-Z0-9]*)\}|([a-z][a-zA-Z0-9]*))/g;
+var ESCAPED_DOLLAR = "";
+var TYPES = /* @__PURE__ */ new Map([
+  ["feature", "Feature"],
+  ["improve", "Improve"],
+  ["fix", "Fix"],
+  ["doc", "Doc"],
+  ["refactor", "Refactor"],
+  ["test", "Test"],
+  ["chore", "Chore"]
+]);
+function templateVariables(template) {
+  return [...template.replace(/\$\$/g, ESCAPED_DOLLAR).matchAll(PLACEHOLDER)].map((match) => match[1] ?? match[2]);
+}
+function validateGitTemplate(template) {
+  if (!template.trim()) return "A pattern is required.";
+  if (template.length > 4096 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(template)) {
+    return "The pattern contains unsupported control characters.";
+  }
+  const allowed = new Set(COMMIT_TEMPLATE_VARIABLES);
+  const variables = templateVariables(template);
+  const unknown = variables.find((variable) => !allowed.has(variable));
+  if (unknown) return `Unknown variable: $${unknown}`;
+  if (!variables.includes("title")) return "The commit format must include $title.";
+  return void 0;
+}
+function renderGitTemplate(template, values) {
+  return template.replace(/\$\$/g, ESCAPED_DOLLAR).replace(PLACEHOLDER, (_whole, braced, plain) => {
+    const variable = braced ?? plain;
+    const value = values[variable];
+    if (value === void 0) throw Error(`missing-template-variable:${variable}`);
+    return value;
+  }).replaceAll(ESCAPED_DOLLAR, "$");
+}
+function gitValue(repoRoot, args) {
+  try {
+    return (0, import_node_child_process3.execFileSync)("git", ["-C", repoRoot, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5e3
+    }).trim();
+  } catch {
+    return "";
+  }
+}
+function readGitTemplateValues(repoRoot) {
+  const branch = gitValue(repoRoot, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
+  const commitId = gitValue(repoRoot, ["rev-parse", "--short=12", "HEAD"]);
+  const branchId = branch.match(/(?:^|[\/_-])(\d+)(?=$|[\/_-])/)?.[1] ?? "";
+  const issueId = branch.match(/(?:^|[\/_-])(?:issue|issues|gh)[\/_-]?(\d+)(?=$|[\/_-])/i)?.[1] ?? branchId;
+  const prId = branch.match(/(?:^|[\/_-])(?:pr|pull)[\/_-]?(\d+)(?=$|[\/_-])/i)?.[1] ?? "";
+  const now = /* @__PURE__ */ new Date();
+  const date2 = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return {
+    branch: branch || void 0,
+    branchId: branchId || void 0,
+    issueId: issueId || void 0,
+    prId: prId || void 0,
+    commitId: commitId || void 0,
+    date: date2
+  };
+}
+function normalizedType(value) {
+  const raw = String(value ?? "").trim().replace(/^\[|\]$/g, "");
+  return TYPES.get(raw.toLowerCase()) ?? raw;
+}
+function parseCommitMessage(message2) {
+  const [first = "", ...rest] = message2.trim().split(/\r?\n/);
+  const body2 = rest.join("\n").trim();
+  const bracket = first.match(/^\[([^\]]+)]\s*(.+)$/);
+  if (bracket) return { type: normalizedType(bracket[1]), scope: "", title: bracket[2].trim(), body: body2 };
+  const conventional = first.match(/^([a-zA-Z]+)(?:\(([^)]+)\))?!?:\s*(.+)$/);
+  if (conventional) return {
+    type: normalizedType(conventional[1]),
+    scope: conventional[2]?.trim() ?? "",
+    title: conventional[3].trim(),
+    body: body2
+  };
+  return { title: first.trim(), body: body2 };
+}
+function commitMessageParts(value) {
+  const fallback = parseCommitMessage(String(value.commit_message ?? ""));
+  const type = normalizedType(value.type ?? fallback.type);
+  const title = String(value.title ?? fallback.title ?? "").trim().replace(/[\r\n]+/g, " ");
+  const body2 = String(value.body ?? fallback.body ?? "").trim();
+  const scope = String(value.scope ?? fallback.scope ?? "").trim().replace(/[\r\n]+/g, " ");
+  if (!type || !title) return void 0;
+  return { type, title, body: body2, scope };
+}
+function commitTemplateValues(repoRoot, parts) {
+  return {
+    ...readGitTemplateValues(repoRoot),
+    ...parts,
+    type: normalizedType(parts.type)
+  };
+}
 
 // src/ai/reviewer.ts
 var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2, P3: 3 };
@@ -4979,13 +5103,13 @@ ${entry.summary}`).join("\n\n---\n\n"),
     }
     const req = this.buildProviderRequest(
       repoRoot,
-      COMMIT_MESSAGE_SYSTEM_PROMPT,
+      buildCommitMessageSystemPrompt(this.cfg.locale),
       `Generate a commit message for the following staged diff:
 
 \`\`\`diff
 ${diff}
 \`\`\``,
-      Math.min(this.cfg.maxTokens, 512),
+      Math.min(this.cfg.maxTokens, 1024),
       signal,
       COMMIT_MESSAGE_OUTPUT_SCHEMA
     );
@@ -5000,11 +5124,19 @@ ${diff}
     } catch (e) {
       return { commit_message: "", is_error: true, error: `Failed to parse model response: ${e.message}` };
     }
-    const msg = String(parsed?.commit_message ?? "").trim();
-    if (!msg) {
-      return { commit_message: "", is_error: true, error: "Model returned an empty commit_message." };
+    const parts = commitMessageParts(parsed && typeof parsed === "object" ? parsed : {});
+    if (!parts) return { commit_message: "", is_error: true, error: "Model returned incomplete commit-message fields." };
+    const format = this.cfg.commitMessageFormat ?? DEFAULT_COMMIT_MESSAGE_FORMAT;
+    const invalid2 = validateGitTemplate(format);
+    if (invalid2) return { commit_message: "", is_error: true, error: `Commit message format is invalid: ${invalid2}` };
+    try {
+      const msg = renderGitTemplate(format, commitTemplateValues(repoRoot, parts)).trim();
+      if (!msg) return { commit_message: "", is_error: true, error: "Commit message format produced an empty message." };
+      return { commit_message: msg, is_error: false, error: "" };
+    } catch (error) {
+      const variable = error.message.match(/^missing-template-variable:(.+)$/)?.[1];
+      return { commit_message: "", is_error: true, error: variable ? `Commit message variable $${variable} is unavailable in this repository.` : `Commit message formatting failed: ${error.message}` };
     }
-    return { commit_message: msg, is_error: false, error: "" };
   }
   // ── Internals ─────────────────────────────────────────────────────────────
   async singleCall(opts) {

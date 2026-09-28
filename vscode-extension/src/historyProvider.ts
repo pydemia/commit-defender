@@ -206,15 +206,12 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     }
 
     children.push(
-      { kind: 'command', id: 'cmd-central-connection', label: 'Central Review Connection', desc: 'Select, synchronize or disconnect central knowledge', icon: 'plug', command: 'commitDefender.manageCentralConnection' },
-      { kind: 'command', id: 'cmd-local-knowledge', label: 'Local Memory and Skills', desc: 'Manage encrypted personal review knowledge', icon: 'book', command: 'commitDefender.manageLocalKnowledge' },
       { kind: 'command', id: 'cmd-local-activity', label: 'Local Review Activity', desc: 'View saved execution status, duration and knowledge sources', icon: 'graph', command: 'commitDefender.localReviewActivity' },
-      { kind: 'command', id: 'cmd-local-history', label: 'Refresh Local History', desc: 'Load history shared with the GCR CLI', icon: 'refresh', command: 'commitDefender.refreshLocalHistory' },
       { kind: 'command', id: 'cmd-summary', label: 'Show Summary Panel', desc: 'Reopen last summary',                  icon: 'preview',   command: 'commitDefender.showSummary' },
       { kind: 'command', id: 'cmd-clear',   label: 'Clear Findings',     desc: 'Remove all comments & diagnostics',   icon: 'clear-all', command: 'commitDefender.clearFindings' },
     );
 
-    return { kind: 'section', id: 'sec-commands', label: 'Commands', icon: 'terminal', children };
+    return { kind: 'section', id: 'sec-commands', label: 'Review Actions', icon: 'checklist', children };
   }
 
   // ── Current Findings section ──────────────────────────────────────────────
@@ -254,51 +251,46 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
   private _buildSettings(): TreeNode {
     const cfg = this._cfg;
 
-    const openSettings = 'workbench.action.openSettings';
-    const settingsQuery = '@ext:pydemia.commit-defender';
-
-    const hookEnabled = cfg.preCommitHook === 'enable';
-
     const children: TreeNode[] = [
       {
+        kind: 'command', id: 'cfg-open-settings',
+        label: 'Commit Defender Settings', desc: 'Accounts, models and review preferences',
+        icon: 'settings-gear', command: 'commitDefender.openSettings',
+      },
+      {
         kind: 'status', id: 'cfg-provider',
-        label: 'Provider', value: cfg.aiProvider || '(not set)',
-        icon: 'cloud', command: openSettings, tooltip: `AI provider: ${cfg.aiProvider}\nClick to open settings`,
+        label: 'Account / Provider', value: cfg.aiProvider || '(not set)',
+        icon: 'account', command: 'commitDefender.openModelSettings', tooltip: `Saved AI provider: ${cfg.aiProvider}\nChoose an account or API destination`,
       },
       {
         kind: 'status', id: 'cfg-model',
         label: 'Model', value: cfg.model || '(not set)',
-        icon: 'symbol-method', command: openSettings, tooltip: `Model: ${cfg.model || 'not configured'}\nClick to open settings`,
+        icon: 'symbol-method', command: 'commitDefender.openModelSettings', tooltip: `Saved model: ${cfg.model || 'not configured'}\nChange model and supported reasoning effort`,
       },
       {
         kind: 'status', id: 'cfg-severity',
-        label: 'Severity', value: cfg.severityLevel || 'moderate',
-        icon: 'pulse', command: openSettings, tooltip: `Severity level: ${cfg.severityLevel}\nClick to open settings`,
+        label: 'Review & Display', value: '',
+        icon: 'settings', command: 'commitDefender.openReviewSettings', tooltip: 'Exclusions, limits, legacy feedback and finding colors',
       },
       {
-        kind: 'status', id: 'cfg-run-on-stage',
-        label: 'Run on Stage', value: cfg.runOnStage ? 'enabled' : 'disabled',
-        icon: cfg.runOnStage ? 'eye' : 'eye-closed',
-        command: openSettings,
-        tooltip: `Auto-analyze on git add: ${cfg.runOnStage ? 'on' : 'off'}\nClick to open settings`,
+        kind: 'command', id: 'cfg-automatic', label: 'Automatic Reviews', desc: 'Global defaults and worktree overrides',
+        icon: 'watch', command: 'commitDefender.openAutomaticSettings',
       },
       {
-        kind: 'status', id: 'cfg-hook',
-        label: 'Pre-commit Hook', value: hookEnabled ? 'enabled' : 'disabled',
-        icon: hookEnabled ? 'check' : 'circle-slash',
-        tooltip: `Git pre-commit hook: ${hookEnabled ? 'installed' : 'not installed'}`,
+        kind: 'command', id: 'cfg-knowledge', label: 'Local Memory and Skills', desc: 'Manage encrypted review guidance',
+        icon: 'book', command: 'commitDefender.manageLocalKnowledge',
       },
-      hookEnabled
-        ? { kind: 'command', id: 'cfg-hook-uninstall', label: 'Uninstall Pre-commit Hook', desc: 'Remove .git/hooks/pre-commit', icon: 'trash',    command: 'commitDefender.uninstallPreCommitHook' }
-        : { kind: 'command', id: 'cfg-hook-install',   label: 'Install Pre-commit Hook',   desc: 'Block commits on P3 findings', icon: 'terminal', command: 'commitDefender.installPreCommitHook' },
       {
-        kind: 'command', id: 'cfg-open-settings',
-        label: 'Open Settings', desc: 'All extension settings',
-        icon: 'gear', command: openSettings, args: [settingsQuery],
+        kind: 'command', id: 'cfg-connection', label: 'GCR Connection & Sync', desc: 'Worktree connection, knowledge and history',
+        icon: 'plug', command: 'commitDefender.manageCentralConnection',
+      },
+      {
+        kind: 'command', id: 'cfg-advanced', label: 'Profiles & Executables', desc: 'Local profile and CLI paths',
+        icon: 'terminal', command: 'commitDefender.openAdvancedSettings',
       },
     ];
 
-    return { kind: 'section', id: 'sec-settings', label: 'Settings & Hooks', icon: 'settings-gear', collapsed: true, children };
+    return { kind: 'section', id: 'sec-settings', label: 'Settings & Connections', icon: 'settings-gear', children };
   }
 
   // ── History section ───────────────────────────────────────────────────────
@@ -307,6 +299,8 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
     const children: TreeNode[] = this._history.length > 0
       ? this._history.map(e => ({ kind: 'entry' as const, id: `entry-${e.id}`, entry: e }))
       : [{ kind: 'empty', id: 'history-empty', label: 'No analyses yet' }];
+    children.unshift({ kind: 'command', id: 'cmd-local-history', label: 'Refresh Local History',
+      desc: 'Load reports shared with the GCR CLI', icon: 'refresh', command: 'commitDefender.refreshLocalHistory' });
 
     return { kind: 'section', id: 'sec-history', label: 'History', icon: 'history', children, collapsed: false };
   }

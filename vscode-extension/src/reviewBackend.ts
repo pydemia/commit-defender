@@ -158,11 +158,12 @@ class LegacyReviewBackend {
   }
   prepareCommitMessage(
     repoRoot: string,
+    preparedSnapshot?: StagedSnapshot,
   ): PreparedExecution<CommitMessageResult> {
     let captured: string | Error;
     let identity: unknown;
     try {
-      const snapshot = captureStagedSnapshot(
+      const snapshot = preparedSnapshot ?? captureStagedSnapshot(
         repoRoot,
         this.config.excludePatterns,
       );
