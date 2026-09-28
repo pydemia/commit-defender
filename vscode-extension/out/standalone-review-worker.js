@@ -11006,6 +11006,10 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
       if (settings.freshness !== "online" && settings.freshness !== "offline")
         throw new StandaloneReviewError("central-connection-required");
     }
+    if (ports.localFallback && (settings.mode !== "centralized" || settings.requiredCentralSnapshot || !["standalone", "cache-then-standalone"].includes(
+      settings.offlineBehavior ?? "pause"
+    )))
+      throw new StandaloneReviewError("policy-unavailable");
     if (!settings.workspaceTrusted)
       throw new StandaloneReviewError("untrusted-workspace");
     if (settings.provider === "unconfigured")
@@ -11094,6 +11098,8 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     }
     checkAbort(signal);
     if (!snapshot.selected.length) throw new StandaloneReviewError("no-source");
+    if (ports.localFallback && snapshot.identity.hash !== ports.localFallback.sourceHash)
+      throw new StandaloneReviewError("source-changed");
     for (const scope of [
       repositoryScope,
       { kind: "profile", profileId: client.profileId }
@@ -11130,6 +11136,11 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
         connectionId: settings.connectionId,
         freshness: settings.freshness,
         central: async (freshness) => {
+          if (ports.localFallback)
+            throw new KnowledgeSyncError(
+              ports.localFallback.reason,
+              "Central knowledge became unavailable during review."
+            );
           connections ??= await CentralConnections.open({
             scope: repositoryScope,
             ...ports,
@@ -11301,7 +11312,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
           let report;
           let reviewCompletionConfirmed = false;
           try {
-            const result = await executeReviewRequest({
+            const executionRequest = {
               storage: {
                 scope: repositoryScope,
                 ...ports.dataDirectory ? { dataDirectory: ports.dataDirectory } : {},
@@ -11324,9 +11335,62 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
               loadReport: (id3) => history.getReview(id3),
               saveReport,
               run: runReview
-            });
+            };
+            let result = await executeReviewRequest(executionRequest);
+            if (result.reused && result.report.status !== "completed") {
+              result = await executeReviewRequest({
+                ...executionRequest,
+                retryFinished: true
+              });
+            }
             report = result.report;
             reviewCompletionConfirmed = result.persisted && result.recorded;
+            if (central && report.status === "cancelled" && !result.reused && !runSignal.aborted && !settings.requiredCentralSnapshot && !ports.localFallback && ["standalone", "cache-then-standalone"].includes(
+              settings.offlineBehavior ?? "pause"
+            )) {
+              let reason;
+              try {
+                await context.context.observeCentralSnapshot();
+              } catch (error2) {
+                try {
+                  reason = fallbackReason(error2.code);
+                } catch {
+                  reason = "cache-unavailable";
+                }
+              }
+              if (reason) {
+                const fallback = await prepareStandaloneReview(
+                  request,
+                  settings,
+                  runSignal,
+                  {
+                    ...ports,
+                    localFallback: {
+                      reason,
+                      sourceHash: fixedSnapshot.identity.hash
+                    }
+                  }
+                );
+                try {
+                  const retried = await fallback.run(runSignal, progress);
+                  const p = retried.performance;
+                  return {
+                    ...retried,
+                    stderr: `Central knowledge became unavailable during review; retried with local criteria (${reason}).${retried.stderr ? ` ${retried.stderr}` : ""}`,
+                    ...p ? { performance: {
+                      preparationMs: preparationMs + p.preparationMs,
+                      runMs: Math.round(performance.now() - runStarted),
+                      prefetchMs: performanceMetrics.prefetchMs + p.prefetchMs,
+                      reads: performanceMetrics.reads + p.reads,
+                      bytes: performanceMetrics.bytes + p.bytes,
+                      modelMs: performanceMetrics.modelMs + p.modelMs
+                    } } : {}
+                  };
+                } finally {
+                  fallback.dispose();
+                }
+              }
+            }
             if (!result.persisted)
               diagnostic = "The displayed review could not be confirmed in encrypted history. Export the report before closing it.";
             else if (!result.recorded)

@@ -18146,9 +18146,8 @@ var SummaryView = class {
 };
 function _renderOverallSummary(review, blocks, view, palette) {
   const perFile = review.per_file_summaries ?? [];
-  if (perFile.length === 0) {
-    return `<div class="per-file-summary">${view.markdown(review.summary)}</div>`;
-  }
+  if (perFile.length === 0)
+    return `<div class="overall-summary">${view.markdown(review.summary)}</div>`;
   const worstByFile = /* @__PURE__ */ new Map();
   for (const b of blocks) {
     const cur = worstByFile.get(b.file);
@@ -18156,7 +18155,8 @@ function _renderOverallSummary(review, blocks, view, palette) {
       worstByFile.set(b.file, b.priority);
     }
   }
-  let html2 = "";
+  let html2 = `<div class="overall-summary">${view.markdown(review.summary)}</div>
+    <h3>${view.locale === "ko" ? "\uD30C\uC77C\uBCC4 \uAC80\uD1A0" : "Per-file review"}</h3>`;
   for (const pfs of perFile) {
     const priority = worstByFile.get(pfs.file) ?? pfs.priority;
     const pMeta = priority ? PRIORITY_META[priority] : void 0;
@@ -18231,23 +18231,27 @@ function buildSummaryHtml(report, view, palette) {
       </div>
       <div class="meta">${metaParts.map(esc).join(" &nbsp;\xB7&nbsp; ")}</div>
     </div>`;
+  const execution = report.gcr?.report.identity.client.execution;
+  if (execution?.effectiveMode === "standalone" && execution.fallbackReason)
+    body2 += `<p class="fallback-note">${view.locale === "ko" ? "\uC911\uC559 \uC815\uCC45\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC5B4 \uB85C\uCEEC \uAE30\uC900\uC73C\uB85C \uAC80\uD1A0\uD588\uC2B5\uB2C8\uB2E4." : "Central knowledge was unavailable; this review used local criteria."}
+      <code>${esc(execution.fallbackReason)}</code></p>`;
+  let technicalDetails = "";
   if (report.gcr) {
     const core = report.gcr.report;
     if (core.problems.length) {
-      body2 += `<section><h2>Review problems</h2><ul>${core.problems.map((problem) => `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
+      technicalDetails += `<section><h2>Review problems</h2><ul>${core.problems.map((problem) => `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
-    const execution = core.identity.client.execution;
-    if (execution) body2 += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} \xB7 Effective mode: ${esc(execution.effectiveMode)} \xB7 Knowledge: ${esc(execution.knowledgeSource)}</p>
+    if (execution) technicalDetails += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} \xB7 Effective mode: ${esc(execution.effectiveMode)} \xB7 Knowledge: ${esc(execution.knowledgeSource)}</p>
       ${execution.fallbackReason ? `<p>Fallback reason: ${esc(execution.fallbackReason)}. ${execution.effectiveMode === "standalone" ? "This review used local/built-in knowledge only and does not establish compliance with central policy." : "This review used the authorized signed cache."}</p>` : ""}
       ${execution.lastSynchronizedAt ? `<p>Last successful knowledge sync: ${esc(execution.lastSynchronizedAt)}</p>` : ""}</section>`;
     const central = core.identity.context.centralSnapshot;
-    if (central) body2 += `<section><h2>Central knowledge used</h2>
+    if (central) technicalDetails += `<section><h2>Central knowledge used</h2>
       <p>Server ${esc(central.audience.serverId)} \xB7 Tenant ${esc(central.audience.tenantId)} \xB7 Repository ${esc(central.audience.repositoryId)} \xB7 User ${esc(central.audience.userId)}</p>
       <p>Snapshot <code>${esc(central.id)}</code> \xB7 <code>${esc(central.hash)}</code><br>Signed offline validity: ${esc(central.offlineValidUntil)}</p>
       <p>This report records the snapshot used during review. Open Central Review Connection to check its current authorization and cache status.</p></section>`;
     const freshness = report.local_context_freshness;
     const current = !freshness ? "Current local entries have not been checked." : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review." : freshness.status === "stale" ? "One or more local entries used by this review changed, expired or became inactive. Run another review to use current context." : "Current local entries could not be checked. The report retains the context captured when it ran.";
-    body2 += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
+    technicalDetails += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
       ${freshness ? `<p>Checked ${esc(freshness.checkedAt)}</p>` : ""}
       <p>Run <code>${esc(core.runId)}</code> \xB7 ${esc(core.identity.source.kind)} \xB7 ${esc(core.finishedAt ?? "No completion timestamp")}</p>
       <p>Source <code>${esc(core.identity.source.hash)}</code><br>Context <code>${esc(core.identity.context.hash)}</code></p>
@@ -18268,11 +18272,11 @@ function buildSummaryHtml(report, view, palette) {
     body2 += `<p class="summary-error">${esc(String(report.review.rejected_finding_count))} invalid finding(s) rejected. Review output is incomplete.</p>`;
   }
   if (report.source_exclusions?.length) {
-    body2 += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
+    technicalDetails += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
     for (const entry of report.source_exclusions) {
-      body2 += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
+      technicalDetails += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
     }
-    body2 += "</ul></section>";
+    technicalDetails += "</ul></section>";
   }
   if (report.review.summary) {
     if (isCancelled) {
@@ -18290,7 +18294,6 @@ function buildSummaryHtml(report, view, palette) {
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
       body2 += `<section><h2>\u{1F4CB} ${view.locale === "ko" ? "\uC804\uCCB4 \uC694\uC57D" : "Overall Summary"}</h2>
-        ${report.review.per_file_summaries?.length && report.gcr?.report.identity.context.entries.some((entry) => entry.id.startsWith("history-")) ? `<div class="per-file-summary">${view.markdown(report.review.summary)}</div>` : ""}
         ${_renderOverallSummary(report.review, blocks, view, pal)}</section>`;
     }
   }
@@ -18306,6 +18309,7 @@ function buildSummaryHtml(report, view, palette) {
     }
     body2 += "</ul></section>";
   }
+  if (technicalDetails) body2 += `<details class="review-details"><summary>${view.locale === "ko" ? "\uC2E4\uD589\xB7\uADFC\uAC70\xB7\uC81C\uC678 \uACBD\uB85C" : "Execution, evidence and exclusions"}</summary>${technicalDetails}</details>`;
   return `<!DOCTYPE html>
 <html lang="${view.locale}">
 <head>
@@ -18338,6 +18342,7 @@ function buildSummaryHtml(report, view, palette) {
   h1 { font-size: 1.3em; margin: 0 0 6px; }
   h2 { font-size: 1em; font-weight: 600; margin: 1.8em 0 0.6em;
        border-bottom: 1px solid var(--vscode-widget-border); padding-bottom: 4px; }
+  h3 { font-size: 0.92em; margin: 1.2em 0 0.3em; }
   a  { color: var(--vscode-textLink-foreground); text-decoration: none; }
   a:hover { text-decoration: underline; }
   code {
@@ -18385,6 +18390,10 @@ function buildSummaryHtml(report, view, palette) {
   .file-list { margin: 4px 0; padding-left: 20px; }
   .file-list li { margin: 2px 0; font-size: 0.88em; }
   .summary-text p { margin: 6px 0; }
+  .overall-summary p { margin: 6px 0; }
+  .fallback-note { color: var(--vscode-descriptionForeground); margin: 0 0 16px; }
+  .review-details { border-top: 1px solid var(--vscode-widget-border); padding-top: 10px; }
+  .review-details > summary { cursor: pointer; color: var(--vscode-descriptionForeground); }
   .per-file-summary {
     padding: 10px 0;
     border-bottom: 1px solid var(--vscode-widget-border);
@@ -21094,7 +21103,7 @@ function selectedReviewSettings(settings, selection) {
     mode: "centralized",
     connectionId: checked.connectionId,
     freshness: checked.freshness,
-    offlineBehavior: checked.offlineBehavior ?? "pause",
+    offlineBehavior: checked.offlineBehavior ?? "cache-then-standalone",
     ...checked.sources ? { centralSources: checked.sources } : {}
   };
 }
@@ -27109,9 +27118,9 @@ var StatusBarManager = class {
     this.item.color = void 0;
   }
   setRunning() {
-    this.item.text = "$(loading~spin) Analyzing... $(stop-circle)";
-    this.item.tooltip = "Commit Defender is running \u2014 click to cancel";
-    this.item.command = "commitDefender.cancel";
+    this.item.text = "$(loading~spin) Analyzing...";
+    this.item.tooltip = "Commit Defender is running \u2014 click to open Output. Use Cancel Analysis to stop.";
+    this.item.command = "commitDefender.showReviewOutput";
     this.item.backgroundColor = void 0;
     this.item.color = void 0;
   }
@@ -27122,13 +27131,13 @@ var StatusBarManager = class {
   }
   setPreparing() {
     this.setRunning();
-    this.item.text = "$(loading~spin) Preparing local review... $(stop-circle)";
-    this.item.tooltip = "Capturing source and opening local context \u2014 click to cancel";
+    this.item.text = "$(loading~spin) Preparing local review...";
+    this.item.tooltip = "Capturing source and opening local context \u2014 click to open Output.";
   }
   setProgress(current, total, file) {
-    this.item.text = `$(loading~spin) CD: ${current}/${total} \u2014 ${file.split("/").pop()} $(stop-circle)`;
-    this.item.tooltip = `Analyzing file ${current} of ${total}: ${file} \u2014 click to cancel`;
-    this.item.command = "commitDefender.cancel";
+    this.item.text = `$(loading~spin) CD: ${current}/${total} \u2014 ${file.split("/").pop()}`;
+    this.item.tooltip = `Analyzing file ${current} of ${total}: ${file} \u2014 click to open Output.`;
+    this.item.command = "commitDefender.showReviewOutput";
     this.item.backgroundColor = void 0;
     this.item.color = void 0;
   }
@@ -28209,8 +28218,12 @@ async function activate(context) {
       }
     }
   ));
+  context.subscriptions.push(vscode24.commands.registerCommand("commitDefender.showReviewOutput", () => {
+    getOutputChannel().show(true);
+  }));
   context.subscriptions.push(vscode24.commands.registerCommand("commitDefender.cancel", () => {
     reviewIntent++;
+    getOutputChannel().appendLine("[Commit Defender] Review cancelled by user command.");
     execution.cancel();
   }));
   context.subscriptions.push(vscode24.commands.registerCommand("commitDefender.clearFindings", () => {

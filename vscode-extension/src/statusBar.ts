@@ -22,9 +22,9 @@ export class StatusBarManager {
   }
 
   setRunning(): void {
-    this.item.text = '$(loading~spin) Analyzing... $(stop-circle)';
-    this.item.tooltip = 'Commit Defender is running — click to cancel';
-    this.item.command = 'commitDefender.cancel';
+    this.item.text = '$(loading~spin) Analyzing...';
+    this.item.tooltip = 'Commit Defender is running — click to open Output. Use Cancel Analysis to stop.';
+    this.item.command = 'commitDefender.showReviewOutput';
     this.item.backgroundColor = undefined;
     this.item.color = undefined;
   }
@@ -37,14 +37,14 @@ export class StatusBarManager {
 
   setPreparing(): void {
     this.setRunning();
-    this.item.text = '$(loading~spin) Preparing local review... $(stop-circle)';
-    this.item.tooltip = 'Capturing source and opening local context — click to cancel';
+    this.item.text = '$(loading~spin) Preparing local review...';
+    this.item.tooltip = 'Capturing source and opening local context — click to open Output.';
   }
 
   setProgress(current: number, total: number, file: string): void {
-    this.item.text = `$(loading~spin) CD: ${current}/${total} — ${file.split('/').pop()} $(stop-circle)`;
-    this.item.tooltip = `Analyzing file ${current} of ${total}: ${file} — click to cancel`;
-    this.item.command = 'commitDefender.cancel';
+    this.item.text = `$(loading~spin) CD: ${current}/${total} — ${file.split('/').pop()}`;
+    this.item.tooltip = `Analyzing file ${current} of ${total}: ${file} — click to open Output.`;
+    this.item.command = 'commitDefender.showReviewOutput';
     this.item.backgroundColor = undefined;
     this.item.color = undefined;
   }

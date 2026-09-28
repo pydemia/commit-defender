@@ -167,7 +167,7 @@ export function selectedReviewSettings(
         mode: "centralized",
         connectionId: checked.connectionId,
         freshness: checked.freshness,
-        offlineBehavior: checked.offlineBehavior ?? "pause",
+        offlineBehavior: checked.offlineBehavior ?? "cache-then-standalone",
         ...(checked.sources ? { centralSources: checked.sources } : {}),
       };
 }

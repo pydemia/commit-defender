@@ -725,6 +725,38 @@ test("independent preparations share one model review and encrypted history for 
   assert.deepEqual(reused.report, results[0].report);
 });
 
+test("an unchanged source retries a failed review, then reuses the completed review", async (t) => {
+  const f = setup(t);
+  let calls = 0;
+  const ports = {
+    dataDirectory: f.dataDirectory,
+    keys: f.keyStore,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        calls++;
+        return {
+          raw: calls === 1
+            ? "invalid response"
+            : JSON.stringify((await answer(input)).response),
+          model: descriptor.model,
+        };
+      },
+    }),
+  };
+  const first = await prepareStandaloneReview(f.request, settings, abort(), ports);
+  const failed = await first.run(abort());
+  assert.equal(failed.report.review.status, "failed");
+  const second = await prepareStandaloneReview(f.request, settings, abort(), ports);
+  const completed = await second.run(abort());
+  assert.equal(completed.report.review.status, "completed");
+  assert.equal(calls, 2);
+  const third = await prepareStandaloneReview(f.request, settings, abort(), ports);
+  const reused = await third.run(abort());
+  assert.equal(calls, 2);
+  assert.deepEqual(reused.report, completed.report);
+});
+
 test("Korean review language reaches the executor and changes the reuse key", async (t) => {
   const f = setup(t);
   const prompts: string[] = [];

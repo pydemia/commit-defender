@@ -69,10 +69,8 @@ function _renderOverallSummary(
   palette: Palette,
 ): string {
   const perFile = review.per_file_summaries ?? [];
-
-  if (perFile.length === 0) {
-    return `<div class="per-file-summary">${view.markdown(review.summary)}</div>`;
-  }
+  if (perFile.length === 0)
+    return `<div class="overall-summary">${view.markdown(review.summary)}</div>`;
 
   const worstByFile = new Map<string, CommentPriority>();
   for (const b of blocks) {
@@ -82,7 +80,8 @@ function _renderOverallSummary(
     }
   }
 
-  let html = "";
+  let html = `<div class="overall-summary">${view.markdown(review.summary)}</div>
+    <h3>${view.locale === 'ko' ? '파일별 검토' : 'Per-file review'}</h3>`;
   for (const pfs of perFile) {
     const priority = worstByFile.get(pfs.file) ?? pfs.priority;
     const pMeta = priority ? PRIORITY_META[priority] : undefined;
@@ -184,18 +183,25 @@ function buildSummaryHtml(
       <div class="meta">${metaParts.map(esc).join(" &nbsp;·&nbsp; ")}</div>
     </div>`;
 
+  const execution = report.gcr?.report.identity.client.execution;
+  if (execution?.effectiveMode === 'standalone' && execution.fallbackReason)
+    body += `<p class="fallback-note">${view.locale === 'ko'
+      ? '중앙 정책을 사용할 수 없어 로컬 기준으로 검토했습니다.'
+      : 'Central knowledge was unavailable; this review used local criteria.'}
+      <code>${esc(execution.fallbackReason)}</code></p>`;
+
+  let technicalDetails = "";
   if (report.gcr) {
     const core = report.gcr.report;
     if (core.problems.length) {
-      body += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
+      technicalDetails += `<section><h2>Review problems</h2><ul>${core.problems.map(problem =>
         `<li><code>${esc(problem.code)}</code>: ${esc(problem.message)}</li>`).join("")}</ul></section>`;
     }
-    const execution = core.identity.client.execution;
-    if (execution) body += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} · Effective mode: ${esc(execution.effectiveMode)} · Knowledge: ${esc(execution.knowledgeSource)}</p>
+    if (execution) technicalDetails += `<section><h2>Review execution</h2><p>Configured mode: ${esc(execution.configuredMode)} · Effective mode: ${esc(execution.effectiveMode)} · Knowledge: ${esc(execution.knowledgeSource)}</p>
       ${execution.fallbackReason ? `<p>Fallback reason: ${esc(execution.fallbackReason)}. ${execution.effectiveMode === "standalone" ? "This review used local/built-in knowledge only and does not establish compliance with central policy." : "This review used the authorized signed cache."}</p>` : ""}
       ${execution.lastSynchronizedAt ? `<p>Last successful knowledge sync: ${esc(execution.lastSynchronizedAt)}</p>` : ""}</section>`;
     const central = core.identity.context.centralSnapshot;
-    if (central) body += `<section><h2>Central knowledge used</h2>
+    if (central) technicalDetails += `<section><h2>Central knowledge used</h2>
       <p>Server ${esc(central.audience.serverId)} · Tenant ${esc(central.audience.tenantId)} · Repository ${esc(central.audience.repositoryId)} · User ${esc(central.audience.userId)}</p>
       <p>Snapshot <code>${esc(central.id)}</code> · <code>${esc(central.hash)}</code><br>Signed offline validity: ${esc(central.offlineValidUntil)}</p>
       <p>This report records the snapshot used during review. Open Central Review Connection to check its current authorization and cache status.</p></section>`;
@@ -204,7 +210,7 @@ function buildSummaryHtml(
       : freshness.status === "current" ? "The local entries used by this review still match their saved active revisions. Newly added entries apply to the next review."
       : freshness.status === "stale" ? "One or more local entries used by this review changed, expired or became inactive. Run another review to use current context."
       : "Current local entries could not be checked. The report retains the context captured when it ran.";
-    body += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
+    technicalDetails += `<section><h2>Review source and context</h2><p>${esc(current)}</p>
       ${freshness ? `<p>Checked ${esc(freshness.checkedAt)}</p>` : ""}
       <p>Run <code>${esc(core.runId)}</code> · ${esc(core.identity.source.kind)} · ${esc(core.finishedAt ?? "No completion timestamp")}</p>
       <p>Source <code>${esc(core.identity.source.hash)}</code><br>Context <code>${esc(core.identity.context.hash)}</code></p>
@@ -229,11 +235,11 @@ function buildSummaryHtml(
   }
 
   if (report.source_exclusions?.length) {
-    body += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
+    technicalDetails += `<section><h2>Source coverage</h2><p>${report.staged_files.length} file(s) selected; ${report.source_exclusions.length} path(s) excluded. Excluded paths may include whole directories.</p><ul>`;
     for (const entry of report.source_exclusions) {
-      body += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
+      technicalDetails += `<li><code>${esc(JSON.stringify(entry.path))}</code>: ${esc(entry.reason)}</li>`;
     }
-    body += "</ul></section>";
+    technicalDetails += "</ul></section>";
   }
 
   if (report.review.summary) {
@@ -258,7 +264,6 @@ function buildSummaryHtml(
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
       body += `<section><h2>📋 ${view.locale === 'ko' ? '전체 요약' : 'Overall Summary'}</h2>
-        ${report.review.per_file_summaries?.length && report.gcr?.report.identity.context.entries.some(entry => entry.id.startsWith("history-")) ? `<div class="per-file-summary">${view.markdown(report.review.summary)}</div>` : ""}
         ${_renderOverallSummary(report.review, blocks, view, pal)}</section>`;
     }
   }
@@ -276,6 +281,8 @@ function buildSummaryHtml(
     }
     body += "</ul></section>";
   }
+
+  if (technicalDetails) body += `<details class="review-details"><summary>${view.locale === 'ko' ? '실행·근거·제외 경로' : 'Execution, evidence and exclusions'}</summary>${technicalDetails}</details>`;
 
   return `<!DOCTYPE html>
 <html lang="${view.locale}">
@@ -309,6 +316,7 @@ function buildSummaryHtml(
   h1 { font-size: 1.3em; margin: 0 0 6px; }
   h2 { font-size: 1em; font-weight: 600; margin: 1.8em 0 0.6em;
        border-bottom: 1px solid var(--vscode-widget-border); padding-bottom: 4px; }
+  h3 { font-size: 0.92em; margin: 1.2em 0 0.3em; }
   a  { color: var(--vscode-textLink-foreground); text-decoration: none; }
   a:hover { text-decoration: underline; }
   code {
@@ -356,6 +364,10 @@ function buildSummaryHtml(
   .file-list { margin: 4px 0; padding-left: 20px; }
   .file-list li { margin: 2px 0; font-size: 0.88em; }
   .summary-text p { margin: 6px 0; }
+  .overall-summary p { margin: 6px 0; }
+  .fallback-note { color: var(--vscode-descriptionForeground); margin: 0 0 16px; }
+  .review-details { border-top: 1px solid var(--vscode-widget-border); padding-top: 10px; }
+  .review-details > summary { cursor: pointer; color: var(--vscode-descriptionForeground); }
   .per-file-summary {
     padding: 10px 0;
     border-bottom: 1px solid var(--vscode-widget-border);

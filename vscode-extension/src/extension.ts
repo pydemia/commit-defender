@@ -749,8 +749,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ));
 
   // ── Cancel running analysis ────────────────────────────────────────────
+  context.subscriptions.push(vscode.commands.registerCommand('commitDefender.showReviewOutput', () => {
+    getOutputChannel().show(true);
+  }));
   context.subscriptions.push(vscode.commands.registerCommand('commitDefender.cancel', () => {
     reviewIntent++;
+    getOutputChannel().appendLine('[Commit Defender] Review cancelled by user command.');
     execution.cancel();
   }));
 

@@ -71,6 +71,9 @@ test("standalone summary distinguishes pinned evidence and a later local-context
   assert(view.html.includes(core.identity.source.hash));
   assert(view.html.includes(core.identity.context.hash));
   assert(view.html.includes("Raw JSON"));
+  assert(view.html.includes("<details class=\"review-details\">"));
+  assert(view.html.indexOf("Overall Summary") < view.html.indexOf("Review source and context"));
+  assert(view.html.includes(core.summary));
   assert.deepEqual(projected.gcr?.report, original);
 });
 

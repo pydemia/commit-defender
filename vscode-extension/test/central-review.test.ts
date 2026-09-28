@@ -111,6 +111,7 @@ async function setup(t: TestContext, codeCriterion = false) {
     mode: "centralized",
     connectionId: connected.id,
     freshness: "online",
+    offlineBehavior: "pause",
   };
   const settings = selectedReviewSettings(defaults, selection);
   const request = {
@@ -163,6 +164,10 @@ test("explicit worktree selections cannot cross profiles or authorize credential
   assert.throws(() => centralSelection({ ...value, freshness: "automatic" }));
   assert.throws(() => centralSelection({ ...value, connectionId: "bad" }));
   assert.equal(selectedReviewSettings(defaults).mode, "standalone");
+  assert.equal(
+    selectedReviewSettings(defaults, value).offlineBehavior,
+    "cache-then-standalone",
+  );
   assert.equal(
     selectedReviewSettings(
       { ...defaults, connectionId: value.connectionId },
@@ -625,6 +630,74 @@ test("confirmed fallback uses signed cache during outage or local-only knowledge
     ).reports.length,
     0,
   );
+});
+
+test("central access lost during a model call retries the same source with local knowledge", async (t) => {
+  const f = await setup(t);
+  let calls = 0;
+  const job = await prepareStandaloneReview(
+    f.request,
+    { ...f.settings, offlineBehavior: "standalone" },
+    signal(),
+    {
+      ...f.ports,
+      prepareExecutor: async () => ({
+        descriptor,
+        async review(input) {
+          calls++;
+          if (calls === 1) {
+            assert(input.prompt.includes("CD_CENTRAL_POLICY"));
+            await withCentralConnection(
+              f.scope,
+              (manager) => manager.disconnect(f.selection.connectionId),
+              f.ports,
+            );
+            await new Promise<void>((resolve) => {
+              if (input.signal?.aborted) resolve();
+              else input.signal?.addEventListener("abort", () => resolve(), { once: true });
+            });
+            throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+          }
+          assert(!input.prompt.includes("CD_CENTRAL_POLICY"));
+          return response(input);
+        },
+      }),
+    },
+  );
+  const result = await job.run(signal());
+  const report = result.report.gcr!.report;
+  assert.equal(calls, 2);
+  assert.equal(report.status, "completed");
+  assert.equal(report.identity.client.execution?.effectiveMode, "standalone");
+  assert.equal(report.identity.client.execution?.fallbackReason, "authentication-required");
+  assert.equal(report.identity.context.centralSnapshot, undefined);
+  assert(result.reviewCompletionConfirmed);
+  assert(result.stderr.includes("retried with local criteria"));
+});
+
+test("an executor cancellation does not switch to local knowledge while central access works", async (t) => {
+  const f = await setup(t);
+  let calls = 0;
+  const job = await prepareStandaloneReview(
+    f.request,
+    { ...f.settings, offlineBehavior: "standalone" },
+    signal(),
+    {
+      ...f.ports,
+      prepareExecutor: async () => ({
+        descriptor,
+        async review() {
+          calls++;
+          throw Object.assign(new Error("cancelled"), { code: "cancelled" });
+        },
+      }),
+    },
+  );
+  const result = await job.run(signal());
+  assert.equal(calls, 1);
+  assert.equal(result.report.review.status, "cancelled");
+  assert.equal(result.report.gcr?.report.identity.client.execution?.effectiveMode,
+    "centralized");
 });
 
 test("identity failure permits only confirmed local fallback and never switches model providers", async (t) => {

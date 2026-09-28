@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.14.8
+
+- Retry with local review criteria when central knowledge becomes unavailable
+  during a review and the connection permits standalone fallback. Preserve the
+  selected account, model and source snapshot; show the fallback reason.
+- Retry saved failed, cancelled and incomplete reviews on the next run while
+  continuing to reuse completed reviews with identical inputs.
+- Restore the Commit Defender Summary order: overall result, per-file review,
+  source-linked comments and selected files. Move execution metadata, evidence
+  and excluded paths into a collapsible detail section.
+- Open Output when the running status indicator is clicked. Use **Cancel
+  Analysis** for explicit cancellation and record that command in Output.
+
 ## 2.14.7
 
 - Keep large optional callers and examples out of Codex's initial review
