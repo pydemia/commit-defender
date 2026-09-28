@@ -34,6 +34,7 @@ import {
   resolveLocalExecutionPolicy,
   runLocalReview,
   loadSelectedSourceHistory,
+  contentHash,
   type LocalKeyStore,
   type LocalReviewExecutor,
   type LocalSourceSnapshot,
@@ -64,6 +65,27 @@ function checkAbort(signal: AbortSignal): void {
     throw new StandaloneReviewError(
       signal.reason === "timeout" ? "timeout" : "cancelled",
     );
+}
+
+function applyReviewLocale(
+  executor: LocalReviewExecutor,
+  locale: StandaloneReviewSettings["locale"],
+): LocalReviewExecutor {
+  if (locale !== "ko") return executor;
+  return {
+    descriptor: {
+      ...executor.descriptor,
+      configHash: contentHash({ executor: executor.descriptor.configHash, locale }),
+    },
+    review: input => executor.review({
+      ...input,
+      prompt: input.prompt + "\n\nCommit Defender output language: " +
+        "Write user-facing review summaries, finding titles, " +
+        "rationales, counter-evidence, and questions in Korean. Preserve " +
+        "JSON keys, enum values, paths, source IDs, URLs, and code symbols " +
+        "exactly as required by the schema.",
+    }),
+  };
 }
 
 /** Owns factory-created core objects in one worker. No snapshot is reconstructed from JSON. */
@@ -378,6 +400,7 @@ export async function prepareStandaloneReview(
     if (executor.descriptor.id === "codex-account") {
       executor = prefetchReviewSource(executor, reviewPrefetchTargets(snapshot, context.context.sources), performanceMetrics);
     }
+    executor = applyReviewLocale(executor, settings.locale);
     const resolution = resolveLocalExecutionPolicy({
       context,
       snapshot,

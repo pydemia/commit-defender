@@ -18109,10 +18109,11 @@ function reviewMessage(value, viewId, allowed) {
 
 // src/summaryView.ts
 var SummaryView = class {
-  constructor(report, repoRoot, links, palette) {
+  constructor(report, repoRoot, links, palette, locale = "en") {
     this.report = report;
     this.repoRoot = repoRoot;
     this.links = links;
+    this.locale = locale;
     this.html = buildSummaryHtml(report, this, palette);
   }
   id = (0, import_crypto3.randomBytes)(16).toString("hex");
@@ -18209,6 +18210,7 @@ function buildSummaryHtml(report, view, palette) {
   const outcome = OUTCOME_META[status];
   const grade2 = status === "completed" ? report.review.grade : "";
   const isError = status === "failed";
+  const isCancelled = status === "cancelled";
   const wp = worstPriority(blocks);
   const wpMeta = wp ? PRIORITY_META[wp] : void 0;
   const headerBadge = `<span class="badge" style="background:var(--vscode-${outcome.color.replaceAll(".", "-")})">${outcome.label.toUpperCase()}</span>`;
@@ -18273,15 +18275,21 @@ function buildSummaryHtml(report, view, palette) {
     body2 += "</ul></section>";
   }
   if (report.review.summary) {
-    if (isError) {
-      const txt = report.review.summary.replace(
+    if (isCancelled) {
+      const detail = view.locale === "ko" && report.review.summary === "Review did not complete." ? "\uB9AC\uBDF0\uAC00 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4." : report.review.summary;
+      body2 += `<section><h2>${view.locale === "ko" ? "\uCDE8\uC18C\uB41C \uB9AC\uBDF0" : "Cancelled review"}</h2>
+        <div class="summary-error">${view.markdown(detail)}</div></section>`;
+    } else if (isError) {
+      const original = report.review.summary.replace(
         /^AI review unavailable:\s*/i,
         ""
       );
-      body2 += `<section><h2>\u26A0 AI Review Error</h2>
+      const timedOut = report.gcr?.report.problems.some((problem) => problem.code === "timeout");
+      const txt = timedOut ? view.locale === "ko" ? "\uBAA8\uB378 \uB9AC\uBDF0\uAC00 \uC81C\uD55C \uC2DC\uAC04\uC5D0 \uB3C4\uB2EC\uD574 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. Review & Display\uC5D0\uC11C \uB2E8\uC77C \uD30C\uC77C \uC81C\uD55C \uC2DC\uAC04\uC744 \uB298\uB9B0 \uB4A4 \uB2E4\uC2DC \uC2E4\uD589\uD558\uC2ED\uC2DC\uC624." : "The model review exceeded its time limit. Increase the single-file timeout in Review & Display, then retry." : view.locale === "ko" && original === "Review did not complete." ? "\uB9AC\uBDF0\uAC00 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4." : original;
+      body2 += `<section><h2>\u26A0 ${view.locale === "ko" ? "\uB9AC\uBDF0 \uC2E4\uD328" : "AI Review Error"}</h2>
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
-      body2 += `<section><h2>\u{1F4CB} Overall Summary</h2>
+      body2 += `<section><h2>\u{1F4CB} ${view.locale === "ko" ? "\uC804\uCCB4 \uC694\uC57D" : "Overall Summary"}</h2>
         ${report.review.per_file_summaries?.length && report.gcr?.report.identity.context.entries.some((entry) => entry.id.startsWith("history-")) ? `<div class="per-file-summary">${view.markdown(report.review.summary)}</div>` : ""}
         ${_renderOverallSummary(report.review, blocks, view, pal)}</section>`;
     }
@@ -18299,7 +18307,7 @@ function buildSummaryHtml(report, view, palette) {
     body2 += "</ul></section>";
   }
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${view.locale}">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${view.id}'; style-src 'nonce-${view.id}'; style-src-attr 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -19239,12 +19247,12 @@ async function callClaudeCodeCli(req) {
   if (req.model.trim()) {
     args.push("--model", req.model.trim());
   }
-  const env4 = { ...process.env };
-  delete env4.ANTHROPIC_API_KEY;
-  delete env4.ANTHROPIC_AUTH_TOKEN;
-  env4.CLAUDE_AGENT_SDK_CLIENT_APP = env4.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
+  const env3 = { ...process.env };
+  delete env3.ANTHROPIC_API_KEY;
+  delete env3.ANTHROPIC_AUTH_TOKEN;
+  env3.CLAUDE_AGENT_SDK_CLIENT_APP = env3.CLAUDE_AGENT_SDK_CLIENT_APP ?? "commit-defender/2";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env4);
+    const result = await runCli(command, args, req.userMessage, req, env3);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Claude Code", result, "Run `claude auth login`, then retry."));
     }
@@ -19284,13 +19292,13 @@ async function callGeminiCli(req) {
   if (req.model.trim()) {
     args.unshift("--model", req.model.trim());
   }
-  const env4 = { ...process.env };
-  delete env4.GEMINI_API_KEY;
-  delete env4.GOOGLE_API_KEY;
-  delete env4.GOOGLE_GENAI_USE_VERTEXAI;
-  env4.GOOGLE_GENAI_USE_GCA = "true";
+  const env3 = { ...process.env };
+  delete env3.GEMINI_API_KEY;
+  delete env3.GOOGLE_API_KEY;
+  delete env3.GOOGLE_GENAI_USE_VERTEXAI;
+  env3.GOOGLE_GENAI_USE_GCA = "true";
   try {
-    const result = await runCli(command, args, req.userMessage, req, env4);
+    const result = await runCli(command, args, req.userMessage, req, env3);
     if (result.code !== 0) {
       return err(req, cliExitMessage("Gemini", result, "Run the Commit Defender Gemini sign-in command, then retry."));
     }
@@ -19411,7 +19419,7 @@ async function withSchemaFile(schema, fn) {
     await (0, import_promises6.rm)(dir, { recursive: true, force: true }).catch(() => void 0);
   }
 }
-function runCli(command, args, stdin, req, env4) {
+function runCli(command, args, stdin, req, env3) {
   return new Promise((resolve4, reject) => {
     if (req.signal?.aborted) {
       reject(abortError());
@@ -19419,7 +19427,7 @@ function runCli(command, args, stdin, req, env4) {
     }
     const child = (0, import_child_process3.spawn)(command, args, {
       cwd: req.workingDirectory || process.cwd(),
-      env: env4,
+      env: env3,
       shell: false,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"]
@@ -21197,6 +21205,7 @@ function getStandaloneReviewSettings(fileCount, repoRoot) {
     provider,
     model: user("model") ?? "",
     reasoningEffort: user("reviewReasoningEffort") ?? (provider === "codex" ? "xhigh" : ""),
+    locale: cfg.get("locale") === "ko" ? "ko" : "en",
     ...["aoai", "openai", "anthropic", "gemini"].includes(provider) ? {
       endpoint: user("endpoint") ?? "",
       apiVersion: user("apiVersion") ?? "2024-08-01-preview",
@@ -21205,7 +21214,7 @@ function getStandaloneReviewSettings(fileCount, repoRoot) {
     } : {},
     executablePath: provider === "claudecode" ? resolveExternalCliPath(user("claudeCodePath") ?? "claude", "claude") : provider === "antigravity" ? resolveExternalCliPath(user("antigravityPath") ?? "agy", "agy") : resolveCodexPath(user("codexPath") ?? "codex"),
     workspaceTrusted: vscode3.workspace.isTrusted,
-    durationMs: seconds && Number.isFinite(seconds) && seconds > 0 ? Math.min(6e5, Math.floor(seconds * 1e3)) : fileCount === 1 ? 12e4 : 36e4,
+    durationMs: seconds && Number.isFinite(seconds) && seconds > 0 ? Math.min(6e5, Math.floor(seconds * 1e3)) : fileCount === 1 ? 3e5 : 36e4,
     // Repository exclusions may only narrow the immutable source selection.
     excludePatterns: cfg.get("excludePatterns") ?? []
   };
@@ -21232,7 +21241,7 @@ function getConfig() {
     commitMessageFormat: cfg.get("commitMessageFormat") ?? DEFAULT_COMMIT_MESSAGE_FORMAT,
     colorPalette: cfg.get("colorPalette") ?? "theme-adaptive",
     preCommitHook: cfg.get("preCommitHook") ?? "disable",
-    fileTimeoutSeconds: cfg.get("fileTimeoutSeconds") ?? 120,
+    fileTimeoutSeconds: cfg.get("fileTimeoutSeconds") ?? 300,
     directoryTimeoutSeconds: cfg.get("directoryTimeoutSeconds") ?? 360,
     stagedFilesWarnThreshold: cfg.get("stagedFilesWarnThreshold") ?? 20,
     repoAnalysisWarnThreshold: cfg.get("repoAnalysisWarnThreshold") ?? 80,
@@ -22148,12 +22157,12 @@ var quote = (value) => {
   return `'${shellPath.replace(/'/g, "'\\''")}'`;
 };
 function git2(root2, args, missing = false) {
-  const env4 = { ...process.env };
-  for (const key3 of Object.keys(env4))
-    if (key3.startsWith("GIT_")) delete env4[key3];
+  const env3 = { ...process.env };
+  for (const key3 of Object.keys(env3))
+    if (key3.startsWith("GIT_")) delete env3[key3];
   try {
     return (0, import_node_child_process7.execFileSync)("git", ["-C", root2, ...args], {
-      env: env4,
+      env: env3,
       encoding: "utf8",
       stdio: "pipe",
       timeout: 15e3,
@@ -22773,8 +22782,8 @@ var BackgroundHooks = class {
           "Background reviews require trusted user-selected Codex model/reasoning settings and an online central connection when selected."
         );
       }
-      const env4 = { ...process.env };
-      for (const k of Object.keys(env4)) if (k.startsWith("GIT_")) delete env4[k];
+      const env3 = { ...process.env };
+      for (const k of Object.keys(env3)) if (k.startsWith("GIT_")) delete env3[k];
       const node2 = JSON.parse(
         (await (0, import_node_util.promisify)(import_node_child_process8.execFile)(
           process.platform === "win32" ? await windowsExecutable(nodePath) : nodePath,
@@ -22782,7 +22791,7 @@ var BackgroundHooks = class {
             "-p",
             'JSON.stringify({path:process.execPath,major:Number(process.versions.node.split(".")[0])})'
           ],
-          { cwd: import_node_os3.default.homedir(), env: env4, timeout: 1e4, windowsHide: true }
+          { cwd: import_node_os3.default.homedir(), env: env3, timeout: 1e4, windowsHide: true }
         )).stdout
       );
       if (node2.major < 22 || !import_node_path18.default.isAbsolute(node2.path))
@@ -22812,7 +22821,7 @@ var BackgroundHooks = class {
           "--data-dir",
           dataDirectory
         ],
-        { cwd: import_node_os3.default.homedir(), env: env4, timeout: 65e3, windowsHide: true }
+        { cwd: import_node_os3.default.homedir(), env: env3, timeout: 65e3, windowsHide: true }
       );
       const service = JSON.parse(started.stdout);
       if (service.status !== "running")
@@ -22832,7 +22841,7 @@ var BackgroundHooks = class {
       const executorPath = process.platform === "win32" ? await windowsExecutable(settings.executablePath) : import_node_path18.default.isAbsolute(settings.executablePath) ? settings.executablePath : (await (0, import_node_util.promisify)(import_node_child_process8.execFile)(
         "/usr/bin/which",
         [settings.executablePath],
-        { env: env4, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
+        { env: env3, cwd: import_node_os3.default.homedir(), timeout: 1e4 }
       )).stdout.trim();
       const options = {
         mode: settings.mode,
@@ -23102,7 +23111,7 @@ var CentralSynchronization = class {
 };
 
 // src/centralConnectionView.ts
-var vscode9 = __toESM(require("vscode"));
+var vscode8 = __toESM(require("vscode"));
 var import_node_fs5 = require("node:fs");
 var import_promises12 = require("node:fs/promises");
 var import_node_crypto19 = require("node:crypto");
@@ -23337,37 +23346,6 @@ async function browseCentralHistory(context, read, validate) {
   }
 }
 
-// src/connectionGuide.ts
-var vscode8 = __toESM(require("vscode"));
-async function openConnectionGuide(context, requestedLanguage) {
-  const language = requestedLanguage === "en" || requestedLanguage === "ko" ? requestedLanguage : /^ko(?:-|$)/i.test(vscode8.env.language) ? "ko" : "en";
-  try {
-    if (requestedLanguage === "en" || requestedLanguage === "ko") {
-      await vscode8.commands.executeCommand("welcome.goBack");
-    }
-    await vscode8.commands.executeCommand(
-      "workbench.action.openWalkthrough",
-      `${context.extension.id}#gcrConnection${language.toUpperCase()}`,
-      false
-    );
-  } catch {
-    await vscode8.window.showErrorMessage(
-      "Commit Defender: GCR connection guide could not be opened. Check the extension installation and try again."
-    );
-  }
-}
-async function openCommitDefenderSettings() {
-  try {
-    await vscode8.commands.executeCommand("workbench.action.openSettings2", {
-      query: "@ext:pydemia.commit-defender"
-    });
-  } catch {
-    await vscode8.window.showErrorMessage(
-      "Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender."
-    );
-  }
-}
-
 // src/centralConnectionView.ts
 var esc4 = (value) => String(value).replace(
   /[&<>"']/g,
@@ -23412,7 +23390,7 @@ function centralStatusHtml(value) {
   return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><style>body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);padding:24px}td,th{padding:8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--vscode-panel-border);overflow-wrap:anywhere}table{width:100%;table-layout:fixed}th{width:12em}p{max-width:70ch}code{word-break:break-all}</style></head><body><h1>Central review connection</h1><p>This connection reads PR history, Skills, prompts and published guidance from GCR. Your selected local provider, model and reasoning stay unchanged. Local code and results are not uploaded to GCR; approved source and context go to the model provider you select.</p><p>Online reviews require fresh signed knowledge; the current server uses a five-minute manifest lifetime. An already running review keeps its pinned version and can stop at expiry. Offline reviews require a valid signed lease and active authority. Model failures are checked separately from connection and cache failures.</p><table>${rows2.map(([label, item]) => `<tr><th>${esc4(label)}</th><td>${esc4(item ?? "Unavailable")}</td></tr>`).join("")}</table><h2>Signed knowledge bundles</h2><p>Read-only snapshot metadata. To inspect originals, replies and versions, choose Browse PR review history. Use View downloaded review knowledge for Skills and guidance. Local Memory and Skills remain separately editable and are not uploaded.</p><table>${bundles || "<tr><td>No verified snapshot is available.</td></tr>"}</table></body></html>`;
 }
 async function askApiKey(serverUrl) {
-  return vscode9.window.showInputBox({
+  return vscode8.window.showInputBox({
     title: "GCR API key",
     prompt: `API key for ${serverUrl}. Stored in the OS credential store.`,
     password: true,
@@ -23465,9 +23443,9 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     selection = value;
     await actions.refresh();
   };
-  const progress = (title, work) => vscode9.window.withProgress(
+  const progress = (title, work) => vscode8.window.withProgress(
     {
-      location: vscode9.ProgressLocation.Notification,
+      location: vscode8.ProgressLocation.Notification,
       title,
       cancellable: true
     },
@@ -23488,12 +23466,12 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
   try {
     actions.assertCurrent();
     selection = readSelection(context.globalState, scope);
-    const choice2 = await vscode9.window.showQuickPick(
+    const choice2 = await vscode8.window.showQuickPick(
       [
         {
-          label: "GCR connection guide",
-          action: "guide",
-          description: "API key, account/model, connection and first review"
+          label: "Memory & GCR settings",
+          action: "settings",
+          description: "Open Commit Defender Settings for local knowledge and connections"
         },
         {
           label: "Connect with API key\u2026",
@@ -23561,8 +23539,8 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       }
     );
     if (!choice2) return;
-    if (choice2.action === "guide") {
-      await openConnectionGuide(context);
+    if (choice2.action === "settings") {
+      await vscode8.commands.executeCommand("commitDefender.openKnowledgeSettings");
       return;
     }
     actions.assertCurrent();
@@ -23582,7 +23560,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const behavior = selection?.mode === "centralized" ? selection.offlineBehavior ?? "pause" : "cache-then-standalone";
       try {
         if (choice2.action === "import-json") {
-          const files = await vscode9.window.showOpenDialog({
+          const files = await vscode8.window.showOpenDialog({
             title: "Choose trusted central connection configuration",
             canSelectMany: false,
             filters: { JSON: ["json"] }
@@ -23592,7 +23570,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           config = await readConfig(files[0].fsPath);
           config.serverUrl = normalizeCentralServerUrl(config.serverUrl);
         } else {
-          const url = await vscode9.window.showInputBox({
+          const url = await vscode8.window.showInputBox({
             title: "GCR server URL",
             prompt: "Use the HTTPS server URL shown in GCR Profile \u2192 Clients. No JSON is required.",
             ignoreFocusOut: true,
@@ -23623,7 +23601,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
             metadata = await discover();
           } catch (cause) {
             if (!(cause instanceof CentralDiscoveryTlsError)) throw cause;
-            const selected = await vscode9.window.showInformationMessage(
+            const selected = await vscode8.window.showInformationMessage(
               "Commit Defender: GCR uses a CA certificate that is not trusted on this machine.",
               {
                 modal: true,
@@ -23632,7 +23610,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
               "Choose CA certificate\u2026"
             );
             if (!selected) return;
-            const files = await vscode9.window.showOpenDialog({
+            const files = await vscode8.window.showOpenDialog({
               title: "Choose public GCR CA certificate",
               canSelectMany: false,
               filters: { Certificates: ["pem", "crt"] }
@@ -23646,7 +23624,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           }
           actions.assertCurrent();
           if (!metadata.repositories.length) {
-            void vscode9.window.showInformationMessage(
+            void vscode8.window.showInformationMessage(
               "Commit Defender: This API key has no currently accessible repositories. Check GCR permissions and key scope."
             );
             return;
@@ -23674,7 +23652,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         const pins = config.trustedKeys.map(
           (k) => `${k.id}: ${(0, import_node_crypto19.createHash)("sha256").update(k.pem).digest("hex")}`
         ).join(" \xB7 ");
-        const confirmed = await vscode9.window.showInformationMessage(
+        const confirmed = await vscode8.window.showInformationMessage(
           `Connect to ${config.serverUrl} and read authorized review knowledge?`,
           {
             modal: true,
@@ -23735,7 +23713,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           actions.assertCurrent();
           await context.globalState.update(`${key3}:catalog`, group);
           await select(group);
-          void vscode9.window.showInformationMessage(
+          void vscode8.window.showInformationMessage(
             `Commit Defender: Connected. ${sources2.length} review sources are available. Relevant material is selected locally; your model settings stay unchanged.`
           );
         } else {
@@ -23768,7 +23746,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
             freshness: "online",
             offlineBehavior: behavior
           });
-          void vscode9.window.showInformationMessage(
+          void vscode8.window.showInformationMessage(
             "Central knowledge could not be activated. The confirmed local fallback policy is available; reconnect to use central knowledge."
           );
         } else throw cause;
@@ -23797,7 +23775,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       const entries = connections.filter(
         (c) => c.status === "connected" && c.clientId === "commit-defender"
       );
-      const picked = await vscode9.window.showQuickPick(
+      const picked = await vscode8.window.showQuickPick(
         entries.map((c) => ({
           label: c.serverUrl,
           description: `Repository ${c.audience.repositoryId} \xB7 User ${c.audience.userId}`,
@@ -23815,7 +23793,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
           offlineBehavior: selection?.mode === "centralized" && selection.connectionId === picked.id ? selection.offlineBehavior ?? "pause" : connections.find((c) => c.id === picked.id)?.offlineBehavior ?? "pause"
         });
       else if (!entries.length)
-        void vscode9.window.showInformationMessage(
+        void vscode8.window.showInformationMessage(
           "No active Commit Defender connection exists in this profile and worktree."
         );
       return;
@@ -23851,7 +23829,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         }
         return result;
       });
-      const picked = await vscode9.window.showQuickPick(entries, {
+      const picked = await vscode8.window.showQuickPick(entries, {
         title: "Reference sources \xB7 all authorized sources are included by default",
         canPickMany: true,
         matchOnDescription: true,
@@ -23867,7 +23845,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         ).values()
       ];
       if (!kept.length) {
-        void vscode9.window.showInformationMessage(
+        void vscode8.window.showInformationMessage(
           "Commit Defender: No reference sources selected. Use standalone review to review without central material."
         );
         return;
@@ -23892,7 +23870,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       return;
     }
     if (choice2.action === "history" && sources.length > 1) {
-      const picked = await vscode9.window.showQuickPick(
+      const picked = await vscode8.window.showQuickPick(
         sources.map((source2) => ({
           label: source2.label,
           source: source2,
@@ -24025,7 +24003,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
       return;
     }
     if (choice2.action === "fallback") {
-      const picked = await vscode9.window.showQuickPick(
+      const picked = await vscode8.window.showQuickPick(
         [
           {
             label: "Cache, then standalone",
@@ -24084,7 +24062,7 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
         cacheCleanupPending: results.some((r) => r.cacheCleanupPending)
       };
       await actions.refresh();
-      void vscode9.window.showInformationMessage(
+      void vscode8.window.showInformationMessage(
         result.credentialCleanupPending || result.cacheCleanupPending ? "Connection disabled. Some local cleanup remains pending; retry disconnect." : `Connection disconnected. Central knowledge is unavailable; offline behavior is ${selection.offlineBehavior ?? "pause"}. Reconnect to restore central reviews.`
       );
       return;
@@ -24097,10 +24075,10 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     actions.assertCurrent();
     const status = await withManager((manager) => manager.status(id4));
     actions.assertCurrent();
-    const panel = vscode9.window.createWebviewPanel(
+    const panel = vscode8.window.createWebviewPanel(
       "commitDefender.centralConnection",
       "Central review connection",
-      vscode9.ViewColumn.Active,
+      vscode8.ViewColumn.Active,
       { enableScripts: false, localResourceRoots: [] }
     );
     panel.webview.html = centralStatusHtml({
@@ -24115,11 +24093,25 @@ async function manageCentralConnection(context, scope, actions, ports = {}) {
     );
     context.subscriptions.push(panel);
   } catch (error2) {
-    void vscode9.window.showErrorMessage(
+    void vscode8.window.showErrorMessage(
       `Commit Defender: Central review connection \u2014 ${standaloneError(error2).message}`
     );
   } finally {
     activeViews.delete(key3);
+  }
+}
+
+// src/nativeSettings.ts
+var vscode9 = __toESM(require("vscode"));
+async function openCommitDefenderSettings() {
+  try {
+    await vscode9.commands.executeCommand("workbench.action.openSettings2", {
+      query: "@ext:pydemia.commit-defender"
+    });
+  } catch {
+    await vscode9.window.showErrorMessage(
+      "Commit Defender: Settings could not be opened. Open VS Code Settings and search for Commit Defender."
+    );
   }
 }
 
@@ -24230,7 +24222,7 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 @media(max-width: 760px) { header { flex-wrap: wrap; padding: 16px; } .layout { grid-template-columns: 1fr; } nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); } nav button { width: auto; } .nav-foot { display: none; } main { padding: 20px 16px 0; } .form-grid { grid-template-columns: 1fr; } .provider { align-items: flex-start; flex-wrap: wrap; } }
 </style></head><body>
 <header><div class="brand"><svg aria-hidden="true" viewBox="0 0 24 28" fill="none"><path d="M12 2 22 6v8c0 6-6 10-10 12C8 24 2 20 2 14V6Z" stroke="currentColor" stroke-width="2"/><path d="m7 13 3 3 7-7" stroke="currentColor" stroke-width="2"/></svg><div><h1>Commit Defender Settings</h1><div class="muted">Accounts, models and local review preferences</div></div></div>
-<div class="actions"><button class="secondary" id="refresh">Refresh</button><button class="secondary" data-action="native">VS Code Settings</button><button class="secondary" data-action="guide">Setup Guide</button></div></header>
+<div class="actions"><button class="secondary" id="refresh">Refresh</button><button class="secondary" data-action="native">VS Code Settings</button></div></header>
 <div class="layout"><nav aria-label="Settings sections" id="navigation"><div class="nav-foot" id="context"></div></nav>
 <main aria-busy="true" id="main"><h2 id="section-title">Loading settings…</h2><p class="muted" id="section-description">Reading Commit Defender User Settings.</p>
 <div id="section-content"></div><form id="settings-form"><div class="form-grid" id="fields"></div>
@@ -24284,7 +24276,7 @@ function details(parent) {
       const title = node('strong', provider.label); if (state.model.provider === provider.id) title.append(node('span', 'Selected provider', 'badge'));
       info.append(title, node('p', provider.description, 'help'));
       const buttons = node('div', undefined, 'actions');
-      buttons.append(actionButton('Choose model…', 'account', provider.id), actionButton('Sign in…', 'signin', provider.id));
+      buttons.append(actionButton('Choose model…', 'account', provider.id), actionButton('Sign in / switch…', 'signin', provider.id));
       row.append(info, buttons); list.append(row);
     }
     parent.append(list);
@@ -24295,7 +24287,7 @@ function details(parent) {
     paragraph(parent, '$type, $scope, $title and $body come from the generated message. Git variables are resolved locally. $issueId uses the issue number in the current branch; $prId requires a PR/pull marker in the branch name.', 'help');
     actions(parent, [['Generate commit message…', 'commitMessage', undefined, true]]);
   } else if (section === 'review') {
-    paragraph(parent, 'Strictness, detail and language apply to the legacy reviewer. Shared-core review criteria come from active Memory, Skills and published GCR guidance.', 'notice');
+    paragraph(parent, 'Review language applies to model-written summaries and findings. Strictness and detail apply to the legacy reviewer. Shared-core review criteria come from active Memory, Skills and published GCR guidance.', 'notice');
   } else if (section === 'automatic') {
     paragraph(parent, 'These are global User Settings. Existing worktree overrides remain in effect; manage them separately below. Save applies only changes you make. Commit/Push triggers use advisory background hooks.', 'notice');
     actions(parent, [['Manage this worktree…', 'automatic', undefined, true], ['Review activity', 'activity'], ['Recover interrupted review…', 'recover']]);
@@ -24402,7 +24394,7 @@ var settingsFields = [
   { key: "colorPalette", label: "Finding color palette", section: "review" },
   { key: "severityLevel", label: "Legacy reviewer strictness", section: "review" },
   { key: "richnessLevel", label: "Legacy feedback detail", section: "review" },
-  { key: "locale", label: "Legacy review language", section: "review" },
+  { key: "locale", label: "Review language", section: "review" },
   { key: "runOnSave", label: "Review saved changes", section: "automatic" },
   { key: "runOnStage", label: "Review staged changes", section: "automatic" },
   { key: "runOnCommit", label: "Review commits in the background", section: "automatic" },
@@ -24477,7 +24469,6 @@ var actionCommands = {
   recover: "commitDefender.recoverBackgroundReview",
   installHook: "commitDefender.installPreCommitHook",
   uninstallHook: "commitDefender.uninstallPreCommitHook",
-  guide: "commitDefender.openConnectionGuide",
   commitMessage: "commitDefender.generateCommitMessage",
   native: "commitDefender.openNativeSettings",
   json: "workbench.action.openSettingsJson"
@@ -24591,8 +24582,8 @@ var CommitDefenderSettings = class {
           effort: String(snapshot.reviewReasoningEffort ?? (provider === "codex" ? "xhigh" : "")),
           endpoint: account ? "" : displayEndpoint(snapshot.endpoint),
           apiVersion: provider === "aoai" ? String(snapshot.apiVersion ?? "2024-08-01-preview") : "",
-          credential: account ? "CLI-owned login; checked during setup or review" : reference?.version === 1 && reference.id ? "OS-backed reference configured; checked when review runs" : "No OS-backed API credential selected",
-          notice: !provider || !snapshot.model ? "Choose an account and model or configure an API destination to start reviewing." : "Saved selection. Opening Settings does not check login, contact a model or start a review."
+          credential: account ? "CLI-owned login; current status not checked here" : reference?.version === 1 && reference.id ? "OS-backed reference configured; checked when review runs" : "No OS-backed API credential selected",
+          notice: !provider || !snapshot.model ? "Choose an account and model or configure an API destination to start reviewing." : "Saved selection. Choosing an account model verifies its CLI login. Opening Settings does not recheck login or contact a model."
         }
       }
     });
@@ -25206,7 +25197,7 @@ var AccountCatalogError = class extends Error {
   }
 };
 function accountEnvironment(provider) {
-  const env4 = { ...process.env, DISABLE_AUTOUPDATER: "1", AGY_CLI_DISABLE_AUTO_UPDATE: "true" };
+  const env3 = { ...process.env, DISABLE_AUTOUPDATER: "1", AGY_CLI_DISABLE_AUTO_UPDATE: "true" };
   for (const name of [
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
@@ -25219,9 +25210,9 @@ function accountEnvironment(provider) {
     "GOOGLE_API_KEY",
     "GOOGLE_GENAI_USE_VERTEXAI",
     "GOOGLE_GEMINI_BASE_URL"
-  ]) delete env4[name];
-  if (provider === "codex") env4.ELECTRON_RUN_AS_NODE = "1";
-  return env4;
+  ]) delete env3[name];
+  if (provider === "codex") env3.ELECTRON_RUN_AS_NODE = "1";
+  return env3;
 }
 var text8 = (value, maximum2 = 512) => typeof value === "string" && value.length <= maximum2 && !/[\u0000-\u001f\u007f]/.test(value) ? value : "";
 var supported = (items, allowed) => Array.isArray(items) ? [...new Set(items.filter((value) => typeof value === "string" && allowed.includes(value)))] : [];
@@ -25286,13 +25277,13 @@ async function loadAccountModels(provider, executablePath, options) {
     throw new AccountCatalogError("cli-unavailable");
   }
   if (process.platform === "win32" && !command.toLowerCase().endsWith(".exe")) throw new AccountCatalogError("cli-unavailable");
-  const env4 = accountEnvironment(provider);
+  const env3 = accountEnvironment(provider);
   const run3 = options.run ?? runManagedProcess;
   const invoke = (args, stdin = "", override) => run3({
     command: override ?? command,
     args,
     cwd: import_node_os4.default.tmpdir(),
-    env: env4,
+    env: env3,
     stdin,
     timeoutMs: 3e4,
     outputBytes: 2097152,
@@ -27527,13 +27518,10 @@ async function openReviewChat(report, repoRoot, context) {
 var ALL_FILES = { scheme: "file" };
 var settleExecutions;
 async function activate(context) {
-  context.subscriptions.push(vscode24.commands.registerCommand(
-    "commitDefender.openConnectionGuide",
-    (language) => openConnectionGuide(context, language)
-  ));
   const settingsView = new CommitDefenderSettings(context);
   context.subscriptions.push(
     settingsView,
+    vscode24.commands.registerCommand("commitDefender.openConnectionGuide", () => settingsView.open("knowledge")),
     vscode24.commands.registerCommand("commitDefender.openSettings", (section) => settingsView.open(section)),
     vscode24.commands.registerCommand("commitDefender.openModelSettings", () => settingsView.open("model")),
     vscode24.commands.registerCommand("commitDefender.openCommitSettings", () => settingsView.open("git")),
@@ -27580,22 +27568,22 @@ async function activate(context) {
       return false;
     }
     const shellArgs = isCodex ? ["login"] : isClaude ? ["auth", "login", "--claudeai"] : [];
-    const env4 = {};
+    const env3 = {};
     if (isClaude) {
-      env4.ANTHROPIC_API_KEY = null;
-      env4.ANTHROPIC_AUTH_TOKEN = null;
+      env3.ANTHROPIC_API_KEY = null;
+      env3.ANTHROPIC_AUTH_TOKEN = null;
     } else if (provider === "geminicli") {
-      env4.GEMINI_API_KEY = null;
-      env4.GOOGLE_API_KEY = null;
-      env4.GOOGLE_GENAI_USE_VERTEXAI = null;
-      env4.GOOGLE_GENAI_USE_GCA = "true";
+      env3.GEMINI_API_KEY = null;
+      env3.GOOGLE_API_KEY = null;
+      env3.GOOGLE_GENAI_USE_VERTEXAI = null;
+      env3.GOOGLE_GENAI_USE_GCA = "true";
     }
     const terminal = vscode24.window.createTerminal({
       name: `Commit Defender: ${name} Sign in`,
       shellPath: executable,
       shellArgs,
       cwd,
-      env: env4
+      env: env3
     });
     terminal.show(false);
     getOutputChannel().appendLine(`[Commit Defender] Started ${name} sign-in in an integrated terminal: ${executable}`);
@@ -27981,6 +27969,13 @@ async function activate(context) {
         if (automatic && !automatic.isCurrent()) return;
         automaticResultDisplayed = !!automatic;
         automaticCompletionConfirmed = result.reviewCompletionConfirmed === true;
+        const status = reviewStatus2(result.report.review);
+        if (execution.isPreparing) statusBar.setPreparing();
+        else {
+          statusBar.setReport(result.report);
+          historyProvider.setRunning(false);
+          panelProvider.setRunning(false);
+        }
         retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...result.report.source_exclusions ?? []].map((entry) => [`${entry.path}\0${entry.reason}`, entry])
@@ -27991,6 +27986,10 @@ async function activate(context) {
           const p = result.performance;
           getOutputChannel().appendLine(`[Commit Defender] Review timing: preparation ${p.preparationMs} ms; execution ${p.runMs} ms; source preload ${p.prefetchMs} ms (${p.reads} reads, ${p.bytes} bytes); model ${p.modelMs} ms. Model time is 0 for a reused review.`);
         }
+        const core = result.report.gcr?.report;
+        getOutputChannel().appendLine(
+          `[Commit Defender] Review result: ${reviewStatus2(result.report.review)}; problems ${core?.problems.map((problem) => problem.code).join(", ") || "none"}; knowledge ${core?.identity.client.execution?.knowledgeSource ?? "unknown"}; executor ${core?.identity.executor.id ?? "unknown"}.`
+        );
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
           const uri = vscode24.Uri.file(path40.join(repoRoot, file)).toString();
           return vscode24.workspace.textDocuments.find((document3) => document3.uri.toString() === uri)?.getText();
@@ -28002,16 +28001,14 @@ async function activate(context) {
         panelProvider.updateFindings(blocks, repoRoot, result.report);
         applyDiagnostics(displayBlocks, repoRoot, diagnostics);
         commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
-        const status = reviewStatus2(result.report.review);
-        if (execution.isPreparing) statusBar.setPreparing();
-        else statusBar.setReport(result.report);
         if (status === "failed" && !automatic) {
-          const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
+          const msg = result.timedOut ? `Model review exceeded the ${Math.ceil(localSettings.durationMs / 1e3)}-second limit.` : result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
           const provider = accountProvider(cfg2.aiProvider);
-          const signIn2 = provider ? signInLabel(provider) : void 0;
-          const actions = signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
+          const signIn2 = !result.timedOut && provider ? signInLabel(provider) : void 0;
+          const actions = result.timedOut ? ["Open Review Settings", "Show Summary", "Show Output"] : signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
           void vscode24.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
-            if (action === signIn2 && provider) await vscode24.commands.executeCommand(signInCommand(provider));
+            if (action === "Open Review Settings") await vscode24.commands.executeCommand("commitDefender.openReviewSettings");
+            else if (action === signIn2 && provider) await vscode24.commands.executeCommand(signInCommand(provider));
             else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
             else if (action === "Show Output") getOutputChannel().show();
           });
@@ -28669,7 +28666,18 @@ function handleError(err2, statusBar, updateStatus = true) {
 var _summaryPanel;
 var _summaryView;
 function renderSummary(report, repoRoot) {
-  _summaryView = new SummaryView(report, repoRoot, reviewNavigation.links, resolvePalette(getConfig().colorPalette));
+  const config = getConfig();
+  const locale = vscode24.workspace.getConfiguration(
+    "commitDefender",
+    vscode24.Uri.file(repoRoot)
+  ).get("locale") ?? config.locale;
+  _summaryView = new SummaryView(
+    report,
+    repoRoot,
+    reviewNavigation.links,
+    resolvePalette(config.colorPalette),
+    locale
+  );
   if (_summaryPanel) _summaryPanel.webview.html = _summaryView.html;
 }
 function showSummaryPanel(report, repoRoot, context) {

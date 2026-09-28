@@ -8,29 +8,17 @@ you select in CD. Connecting to GCR does not change your provider, model, or
 reasoning settings.
 
 This guide is bundled with the extension and can be read without Internet
-access or a GCR connection. Open **Commit Defender: GCR Connection Guide** in
-the Command Palette, select **Setup Guide** in Settings, or choose **Central
-Review Connection → GCR connection guide**. The guide follows your VS Code
-display language: Korean for `ko` locales, English otherwise. Use the link
-above to switch languages manually.
+access or a GCR connection. Run **Commit Defender: GCR Connection Settings**
+in the Command Palette or choose **Central Review Connection → Memory & GCR
+settings**. Both open **Commit Defender Settings → Memory & GCR**. Select
+**GCR connection & sync…** there to configure the connection. Use the link
+above to read this document in Korean.
 
-The command opens VS Code's built-in **Walkthrough** viewer, with rendered
-instructions, diagrams, and buttons for account selection, GCR connection,
-and **Open Settings**. It does not open a text editor or Markdown preview.
-The first step includes a language link. Step checks track pages read, not
-successful authentication or review execution.
-
-**Commit Defender: Open Settings** opens the named **Commit Defender Settings**
-editor. Use **Account & Model** for verified account/model selection or API
-credential setup. Reader and model API keys belong in their masked credential
-dialogs. **VS Code Settings** in the editor opens native extension settings
-for workspace overrides. Opening either editor preserves existing values.
-
-The guide uses the native viewer's static SVG path, which does not register a
-Service Worker. A VS Code `Error loading webview` elsewhere does not indicate
-a GCR login or reader-key failure. CD's own error notifications start with
-**Commit Defender:** and identify the operation; VS Code's internal error
-screen is outside CD's notification handler.
+**Commit Defender: Open Settings** opens the same editor. Use **Account &
+Model** for account/model selection or API credential setup. Reader and model
+API keys belong in their masked credential dialogs. **VS Code Settings** in
+the editor opens native extension settings for workspace overrides. Opening
+either editor preserves existing values.
 
 ## 1. Prepare a reader key and connection file in GCR
 

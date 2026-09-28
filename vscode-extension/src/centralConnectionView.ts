@@ -39,7 +39,6 @@ import {
   showAuthorizedCentralText,
 } from "./centralKnowledgeView.js";
 import { browseCentralHistory } from "./centralHistoryView.js";
-import { openConnectionGuide } from "./connectionGuide.js";
 
 const esc = (value: unknown) =>
   String(value).replace(
@@ -200,9 +199,9 @@ export async function manageCentralConnection(
     const choice = await vscode.window.showQuickPick(
       [
         {
-          label: "GCR connection guide",
-          action: "guide",
-          description: "API key, account/model, connection and first review",
+          label: "Memory & GCR settings",
+          action: "settings",
+          description: "Open Commit Defender Settings for local knowledge and connections",
         },
         {
           label: "Connect with API key…",
@@ -278,8 +277,8 @@ export async function manageCentralConnection(
       },
     );
     if (!choice) return;
-    if (choice.action === "guide") {
-      await openConnectionGuide(context);
+    if (choice.action === "settings") {
+      await vscode.commands.executeCommand('commitDefender.openKnowledgeSettings');
       return;
     }
     actions.assertCurrent();

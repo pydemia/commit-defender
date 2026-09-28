@@ -10960,6 +10960,19 @@ function checkAbort(signal) {
       signal.reason === "timeout" ? "timeout" : "cancelled"
     );
 }
+function applyReviewLocale(executor, locale) {
+  if (locale !== "ko") return executor;
+  return {
+    descriptor: {
+      ...executor.descriptor,
+      configHash: contentHash({ executor: executor.descriptor.configHash, locale })
+    },
+    review: (input2) => executor.review({
+      ...input2,
+      prompt: input2.prompt + "\n\nCommit Defender output language: Write user-facing review summaries, finding titles, rationales, counter-evidence, and questions in Korean. Preserve JSON keys, enum values, paths, source IDs, URLs, and code symbols exactly as required by the schema."
+    })
+  };
+}
 async function prepareStandaloneReview(request, settings, signal, ports = {}) {
   const preparationStarted = performance.now();
   const performanceMetrics = { reads: 0, bytes: 0, prefetchMs: 0, modelMs: 0 };
@@ -11209,6 +11222,7 @@ async function prepareStandaloneReview(request, settings, signal, ports = {}) {
     if (executor.descriptor.id === "codex-account") {
       executor = prefetchReviewSource(executor, reviewPrefetchTargets(snapshot, context.context.sources), performanceMetrics);
     }
+    executor = applyReviewLocale(executor, settings.locale);
     const resolution = resolveLocalExecutionPolicy({
       context,
       snapshot,

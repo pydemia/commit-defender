@@ -19,7 +19,7 @@ import { clientReviewReport } from '@gcr/client-contract';
 import type { ReviewRequest } from './reviewBackend.js';
 import { CentralSynchronization } from './centralSynchronization.js';
 import { manageCentralConnection } from './centralConnectionView.js';
-import { openConnectionGuide, openCommitDefenderSettings } from './connectionGuide.js';
+import { openCommitDefenderSettings } from './nativeSettings.js';
 import { CommitDefenderSettings } from './settingsView.js';
 import { standaloneError, StandaloneReviewError } from './standaloneReviewProtocol.js';
 import { showLocalKnowledge } from './localKnowledgeView.js';
@@ -50,11 +50,9 @@ let settleExecutions: (() => Promise<void>) | undefined;
 
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  context.subscriptions.push(vscode.commands.registerCommand(
-    'commitDefender.openConnectionGuide', language => openConnectionGuide(context, language),
-  ));
   const settingsView = new CommitDefenderSettings(context);
   context.subscriptions.push(settingsView,
+    vscode.commands.registerCommand('commitDefender.openConnectionGuide', () => settingsView.open('knowledge')),
     vscode.commands.registerCommand('commitDefender.openSettings', section => settingsView.open(section)),
     vscode.commands.registerCommand('commitDefender.openModelSettings', () => settingsView.open('model')),
     vscode.commands.registerCommand('commitDefender.openCommitSettings', () => settingsView.open('git')),
@@ -481,6 +479,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (automatic && !automatic.isCurrent()) return;
         automaticResultDisplayed = !!automatic;
         automaticCompletionConfirmed = result.reviewCompletionConfirmed === true;
+        const status = reviewStatus(result.report.review);
+        if (execution.isPreparing) statusBar.setPreparing();
+        else {
+          statusBar.setReport(result.report);
+          historyProvider.setRunning(false);
+          panelProvider.setRunning(false);
+        }
         retainCapturedSources(result.report, result.capturedSources);
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
@@ -491,6 +496,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           const p = result.performance;
           getOutputChannel().appendLine(`[Commit Defender] Review timing: preparation ${p.preparationMs} ms; execution ${p.runMs} ms; source preload ${p.prefetchMs} ms (${p.reads} reads, ${p.bytes} bytes); model ${p.modelMs} ms. Model time is 0 for a reused review.`);
         }
+        const core = result.report.gcr?.report;
+        getOutputChannel().appendLine(
+          `[Commit Defender] Review result: ${reviewStatus(result.report.review)}; ` +
+          `problems ${core?.problems.map(problem => problem.code).join(', ') || 'none'}; ` +
+          `knowledge ${core?.identity.client.execution?.knowledgeSource ?? 'unknown'}; ` +
+          `executor ${core?.identity.executor.id ?? 'unknown'}.`,
+        );
 
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), file => {
           const uri = vscode.Uri.file(path.join(repoRoot, file)).toString();
@@ -504,16 +516,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         applyDiagnostics(displayBlocks, repoRoot, diagnostics);
         commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
 
-        const status = reviewStatus(result.report.review);
-        if (execution.isPreparing) statusBar.setPreparing();
-        else statusBar.setReport(result.report);
         if (status === 'failed' && !automatic) {
-          const msg = result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
+          const msg = result.timedOut
+            ? `Model review exceeded the ${Math.ceil(localSettings.durationMs / 1000)}-second limit.`
+            : result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
           const provider = accountProvider(cfg.aiProvider);
-          const signIn = provider ? signInLabel(provider) : undefined;
-          const actions = signIn ? [signIn, 'Show Summary', 'Show Output'] : ['Show Summary', 'Show Output'];
+          const signIn = !result.timedOut && provider ? signInLabel(provider) : undefined;
+          const actions = result.timedOut ? ['Open Review Settings', 'Show Summary', 'Show Output']
+            : signIn ? [signIn, 'Show Summary', 'Show Output'] : ['Show Summary', 'Show Output'];
           void vscode.window.showErrorMessage(`Commit Defender: Review failed — ${msg}`, ...actions).then(async action => {
-            if (action === signIn && provider) await vscode.commands.executeCommand(signInCommand(provider));
+            if (action === 'Open Review Settings') await vscode.commands.executeCommand('commitDefender.openReviewSettings');
+            else if (action === signIn && provider) await vscode.commands.executeCommand(signInCommand(provider));
             else if (action === 'Show Summary') showSummaryPanel(result.report, repoRoot, context);
             else if (action === 'Show Output') getOutputChannel().show();
           });
@@ -1232,7 +1245,12 @@ let _summaryPanel: vscode.WebviewPanel | undefined;
 let _summaryView: SummaryView | undefined;
 
 function renderSummary(report: AnalysisReport, repoRoot: string): void {
-  _summaryView = new SummaryView(report, repoRoot, reviewNavigation.links, resolvePalette(getConfig().colorPalette));
+  const config = getConfig();
+  const locale = vscode.workspace.getConfiguration(
+    'commitDefender', vscode.Uri.file(repoRoot),
+  ).get<'en' | 'ko'>('locale') ?? config.locale;
+  _summaryView = new SummaryView(report, repoRoot, reviewNavigation.links,
+    resolvePalette(config.colorPalette), locale);
   if (_summaryPanel) _summaryPanel.webview.html = _summaryView.html;
 }
 

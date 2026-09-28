@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.14.6
+
+- Open **Commit Defender Settings → Memory & GCR** from the GCR connection
+  command instead of opening VS Code Welcome.
+- Apply the effective review language to shared-core model output. Korean and
+  English reviews use separate reuse keys, so an earlier English result is not
+  reused for a Korean request.
+- Raise the default single-file model limit from 120 to 300 seconds. Show
+  timeouts as failed reviews with a settings action, clear the findings spinner
+  when a result arrives, and distinguish cancelled reviews in the summary.
+- Clarify that **Sign in / switch…** is an account action, not a live login
+  status indicator. Preserve existing user-selected time limits.
+
 ## 2.14.5
 
 - Deliver the 2.14.0–2.14.4 settings, review prefetch, and commit-message

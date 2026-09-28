@@ -78,6 +78,7 @@ export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string
     provider,
     model: user<string>('model') ?? '',
     reasoningEffort: user<string>('reviewReasoningEffort') ?? (provider === 'codex' ? 'xhigh' : ''),
+    locale: cfg.get<string>('locale') === 'ko' ? 'ko' : 'en',
     ...(['aoai', 'openai', 'anthropic', 'gemini'].includes(provider) ? {
       endpoint: user<string>('endpoint') ?? '',
       apiVersion: user<string>('apiVersion') ?? '2024-08-01-preview',
@@ -91,7 +92,7 @@ export function getStandaloneReviewSettings(fileCount: number, repoRoot?: string
         : resolveCodexPath(user<string>('codexPath') ?? 'codex'),
     workspaceTrusted: vscode.workspace.isTrusted,
     durationMs: seconds && Number.isFinite(seconds) && seconds > 0
-      ? Math.min(600_000, Math.floor(seconds * 1000)) : (fileCount === 1 ? 120_000 : 360_000),
+      ? Math.min(600_000, Math.floor(seconds * 1000)) : (fileCount === 1 ? 300_000 : 360_000),
     // Repository exclusions may only narrow the immutable source selection.
     excludePatterns: cfg.get<string[]>('excludePatterns') ?? [],
   };
@@ -119,7 +120,7 @@ export function getConfig(): ResolvedConfig {
     commitMessageFormat:       cfg.get<string>('commitMessageFormat') ?? DEFAULT_COMMIT_MESSAGE_FORMAT,
     colorPalette:              (cfg.get<string>('colorPalette')  ?? 'theme-adaptive') as PaletteId,
     preCommitHook:             (cfg.get<string>('preCommitHook') ?? 'disable') as PreCommitHook,
-    fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 120,
+    fileTimeoutSeconds:        cfg.get<number>('fileTimeoutSeconds')        ?? 300,
     directoryTimeoutSeconds:   cfg.get<number>('directoryTimeoutSeconds')   ?? 360,
     stagedFilesWarnThreshold:  cfg.get<number>('stagedFilesWarnThreshold')  ?? 20,
     repoAnalysisWarnThreshold: cfg.get<number>('repoAnalysisWarnThreshold') ?? 80,

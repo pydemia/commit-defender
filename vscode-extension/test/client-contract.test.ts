@@ -97,6 +97,26 @@ test("failed standalone summary exposes the stored problem and escapes message m
   assert.equal(projected.review.blocking, false);
 });
 
+test("timeout and cancellation render as incomplete outcomes in Korean", () => {
+  const failed = clientReviewReport({
+    ...reportFor("failed"),
+    problems: [{ code: "timeout", message: "No complete review is available." }],
+  });
+  const timeout = new SummaryView(
+    projectCommitDefender(failed), "/synthetic", new ReviewLinks(),
+    undefined, "ko",
+  );
+  assert(timeout.html.includes("모델 리뷰가 제한 시간에 도달"));
+  assert(!timeout.html.includes("<h2>📋 전체 요약</h2>"));
+
+  const cancelled = new SummaryView(
+    projectCommitDefender(reportFor("cancelled")), "/synthetic",
+    new ReviewLinks(), undefined, "ko",
+  );
+  assert(cancelled.html.includes("<h2>취소된 리뷰</h2>"));
+  assert(!cancelled.html.includes("<h2>📋 전체 요약</h2>"));
+});
+
 test("history reload preserves a concurrently completed review and excludes other profiles and worktrees", () => {
   const old = reportFor("working-tree");
   const newer = clientReviewReport({

@@ -60,7 +60,7 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 @media(max-width: 760px) { header { flex-wrap: wrap; padding: 16px; } .layout { grid-template-columns: 1fr; } nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); } nav button { width: auto; } .nav-foot { display: none; } main { padding: 20px 16px 0; } .form-grid { grid-template-columns: 1fr; } .provider { align-items: flex-start; flex-wrap: wrap; } }
 </style></head><body>
 <header><div class="brand"><svg aria-hidden="true" viewBox="0 0 24 28" fill="none"><path d="M12 2 22 6v8c0 6-6 10-10 12C8 24 2 20 2 14V6Z" stroke="currentColor" stroke-width="2"/><path d="m7 13 3 3 7-7" stroke="currentColor" stroke-width="2"/></svg><div><h1>Commit Defender Settings</h1><div class="muted">Accounts, models and local review preferences</div></div></div>
-<div class="actions"><button class="secondary" id="refresh">Refresh</button><button class="secondary" data-action="native">VS Code Settings</button><button class="secondary" data-action="guide">Setup Guide</button></div></header>
+<div class="actions"><button class="secondary" id="refresh">Refresh</button><button class="secondary" data-action="native">VS Code Settings</button></div></header>
 <div class="layout"><nav aria-label="Settings sections" id="navigation"><div class="nav-foot" id="context"></div></nav>
 <main aria-busy="true" id="main"><h2 id="section-title">Loading settings…</h2><p class="muted" id="section-description">Reading Commit Defender User Settings.</p>
 <div id="section-content"></div><form id="settings-form"><div class="form-grid" id="fields"></div>
@@ -114,7 +114,7 @@ function details(parent) {
       const title = node('strong', provider.label); if (state.model.provider === provider.id) title.append(node('span', 'Selected provider', 'badge'));
       info.append(title, node('p', provider.description, 'help'));
       const buttons = node('div', undefined, 'actions');
-      buttons.append(actionButton('Choose model…', 'account', provider.id), actionButton('Sign in…', 'signin', provider.id));
+      buttons.append(actionButton('Choose model…', 'account', provider.id), actionButton('Sign in / switch…', 'signin', provider.id));
       row.append(info, buttons); list.append(row);
     }
     parent.append(list);
@@ -125,7 +125,7 @@ function details(parent) {
     paragraph(parent, '$type, $scope, $title and $body come from the generated message. Git variables are resolved locally. $issueId uses the issue number in the current branch; $prId requires a PR/pull marker in the branch name.', 'help');
     actions(parent, [['Generate commit message…', 'commitMessage', undefined, true]]);
   } else if (section === 'review') {
-    paragraph(parent, 'Strictness, detail and language apply to the legacy reviewer. Shared-core review criteria come from active Memory, Skills and published GCR guidance.', 'notice');
+    paragraph(parent, 'Review language applies to model-written summaries and findings. Strictness and detail apply to the legacy reviewer. Shared-core review criteria come from active Memory, Skills and published GCR guidance.', 'notice');
   } else if (section === 'automatic') {
     paragraph(parent, 'These are global User Settings. Existing worktree overrides remain in effect; manage them separately below. Save applies only changes you make. Commit/Push triggers use advisory background hooks.', 'notice');
     actions(parent, [['Manage this worktree…', 'automatic', undefined, true], ['Review activity', 'activity'], ['Recover interrupted review…', 'recover']]);

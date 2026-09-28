@@ -20,7 +20,7 @@ const actionCommands: Record<string, string> = {
   knowledge: 'commitDefender.manageLocalKnowledge', connection: 'commitDefender.manageCentralConnection',
   activity: 'commitDefender.localReviewActivity', history: 'commitDefender.refreshLocalHistory',
   recover: 'commitDefender.recoverBackgroundReview', installHook: 'commitDefender.installPreCommitHook',
-  uninstallHook: 'commitDefender.uninstallPreCommitHook', guide: 'commitDefender.openConnectionGuide',
+  uninstallHook: 'commitDefender.uninstallPreCommitHook',
   commitMessage: 'commitDefender.generateCommitMessage',
   native: 'commitDefender.openNativeSettings', json: 'workbench.action.openSettingsJson',
 };
@@ -114,10 +114,10 @@ export class CommitDefenderSettings implements vscode.Disposable {
           effort: String(snapshot.reviewReasoningEffort ?? (provider === 'codex' ? 'xhigh' : '')),
           endpoint: account ? '' : displayEndpoint(snapshot.endpoint),
           apiVersion: provider === 'aoai' ? String(snapshot.apiVersion ?? '2024-08-01-preview') : '',
-          credential: account ? 'CLI-owned login; checked during setup or review'
+          credential: account ? 'CLI-owned login; current status not checked here'
             : reference?.version === 1 && reference.id ? 'OS-backed reference configured; checked when review runs' : 'No OS-backed API credential selected',
           notice: !provider || !snapshot.model ? 'Choose an account and model or configure an API destination to start reviewing.'
-            : 'Saved selection. Opening Settings does not check login, contact a model or start a review.',
+            : 'Saved selection. Choosing an account model verifies its CLI login. Opening Settings does not recheck login or contact a model.',
         },
       },
     });

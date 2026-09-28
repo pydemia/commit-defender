@@ -29,6 +29,8 @@ test('Settings opens with a product title, valid script, no network assets, no s
   assert.equal(f.panel.title, 'Commit Defender Settings');
   assert.equal(f.panel.options.enableScripts, true);
   assert.deepEqual(f.panel.options.localResourceRoots, []);
+  assert(f.panel.webview.html.includes('Sign in / switch…'));
+  assert(!f.panel.webview.html.includes('Setup Guide'));
   new Script(f.panel.webview.html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)[1]);
   await f.send({ type: 'ready' });
   const snapshot = f.latest().state;

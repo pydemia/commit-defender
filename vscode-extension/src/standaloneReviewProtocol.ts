@@ -15,6 +15,8 @@ export interface StandaloneReviewSettings {
   provider: string;
   model: string;
   reasoningEffort: string;
+  /** User-level output language; absent in older worker messages means English. */
+  locale?: "en" | "ko";
   executablePath: string;
   workspaceTrusted: boolean;
   durationMs: number;

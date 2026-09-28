@@ -29,7 +29,7 @@ export const settingsFields: SettingsField[] = [
   { key: 'colorPalette', label: 'Finding color palette', section: 'review' },
   { key: 'severityLevel', label: 'Legacy reviewer strictness', section: 'review' },
   { key: 'richnessLevel', label: 'Legacy feedback detail', section: 'review' },
-  { key: 'locale', label: 'Legacy review language', section: 'review' },
+  { key: 'locale', label: 'Review language', section: 'review' },
   { key: 'runOnSave', label: 'Review saved changes', section: 'automatic' },
   { key: 'runOnStage', label: 'Review staged changes', section: 'automatic' },
   { key: 'runOnCommit', label: 'Review commits in the background', section: 'automatic' },

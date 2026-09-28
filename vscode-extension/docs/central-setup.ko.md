@@ -4,13 +4,9 @@
 
 Commit Defender(CD)는 Git Code Reviewer(GCR)에 저장된 리뷰 이력·Skill·프롬프트·발행된 지침을 내려받아 사용합니다. 리뷰는 CD에서 선택한 계정과 모델로 실행하며, GCR 연결은 provider·모델·reasoning 설정을 바꾸지 않습니다.
 
-이 문서는 확장에 포함되어 있어 인터넷이나 GCR 연결 없이도 읽을 수 있습니다. 명령 팔레트의 **Commit Defender: GCR Connection Guide**, 설정 화면의 **Setup Guide**, 또는 **Central Review Connection → GCR connection guide**에서 다시 여실 수 있습니다. VS Code 표시 언어가 한국어이면 이 문서를, 그 외에는 영문 가이드를 엽니다. 상단 링크로 언어를 바꿀 수도 있습니다.
+이 문서는 확장에 포함되어 있어 인터넷이나 GCR 연결 없이도 읽을 수 있습니다. 명령 팔레트의 **Commit Defender: GCR Connection Settings** 또는 **Central Review Connection → Memory & GCR settings**를 선택하면 **Commit Defender Settings → Memory & GCR**이 열립니다. 여기서 **GCR connection & sync…**를 선택해 연결을 설정하십시오. 위 링크에서 영문 문서도 읽을 수 있습니다.
 
-가이드 명령은 VS Code 내장 **Walkthrough** 뷰어로 안내문과 흐름도를 렌더링합니다. 각 단계의 버튼에서 계정 선택·GCR 연결·설정 화면을 바로 열 수 있습니다. 텍스트 편집기나 Markdown 미리보기는 사용하지 않습니다. 첫 단계의 링크로 언어를 바꿀 수 있습니다. 단계 체크는 읽은 페이지를 표시하며 인증·리뷰 성공 여부를 나타내지 않습니다.
-
-**Commit Defender: Open Settings**는 제목이 **Commit Defender Settings**인 통합 설정 화면을 엽니다. **Account & Model**에서 계정·모델 선택이나 API 설정을 시작할 수 있습니다. reader key와 모델 API key는 전용 비밀번호 입력창에 넣습니다. 워크스페이스 override는 화면 상단의 **VS Code Settings**에서 편집하십시오. 화면을 여는 것만으로 기존 값은 바뀌지 않습니다.
-
-가이드의 정적 SVG는 내장 뷰어에서 Service Worker 등록 없이 표시합니다. 다른 웹뷰의 `Error loading webview`는 GCR 로그인이나 reader key 실패를 뜻하지 않습니다. CD 자체 오류 알림은 **Commit Defender:**와 발생 작업을 표시합니다. VS Code 내부 오류 화면에는 CD의 알림 처리가 적용되지 않습니다.
+**Commit Defender: Open Settings**도 같은 설정 화면을 엽니다. **Account & Model**에서 계정·모델 선택이나 API 설정을 시작할 수 있습니다. reader key와 모델 API key는 전용 비밀번호 입력창에 넣습니다. 워크스페이스 override는 화면 상단의 **VS Code Settings**에서 편집하십시오. 화면을 여는 것만으로 기존 값은 바뀌지 않습니다.
 
 ## 1. GCR에서 reader key와 연결 파일 준비
 
@@ -36,7 +32,7 @@ VS Code 1.90 이상에서 해당 Git 저장소 또는 worktree를 열고 워크�
 
 ## 3. CD의 계정·모델 선택
 
-**Commit Defender Settings → Account & Model → Choose account & model…** 또는 **Commit Defender: Use Account**를 실행합니다. Codex·Claude Code·Antigravity 중 하나를 선택하면 기존 CLI 로그인과 연결을 확인한 뒤 해당 계정의 모델 목록과 지원되는 effort를 표시합니다. 모델 ID를 직접 입력하지 않습니다. 로그인이 없으면 Sign in과 재시도를 안내하며 취소하면 기존 선택을 보존합니다. provider 행의 **Choose model…**과 **Sign in…**에서 해당 계정으로 바로 진입할 수도 있습니다. GCR에 등록된 분석용 계정은 CD에 자동 적용되지 않습니다.
+**Commit Defender Settings → Account & Model → Choose account & model…** 또는 **Commit Defender: Use Account**를 실행합니다. Codex·Claude Code·Antigravity 중 하나를 선택하면 기존 CLI 로그인과 연결을 확인한 뒤 해당 계정의 모델 목록과 지원되는 effort를 표시합니다. 모델 ID를 직접 입력하지 않습니다. 로그인이 없으면 로그인을 안내하며 취소하면 기존 선택을 보존합니다. provider 행의 **Choose model…**에서 모델을 다시 고르거나 **Sign in / switch…**에서 계정을 바꿀 수 있습니다. 이 버튼은 모델 선택 후에도 표시되며 현재 로그인 상태를 뜻하지 않습니다. GCR에 등록된 분석용 계정은 CD에 자동 적용되지 않습니다.
 
 OpenAI·Azure OpenAI·Anthropic·Gemini API는 **Configure API destination & key…** 또는 **Commit Defender: Use API Credential**에서 설정합니다. endpoint, deployment/model과 지원 effort를 선택하고 비밀번호 입력창으로 키를 등록하거나 해당 destination의 기존 키를 선택합니다. 모델 capability를 알 수 없거나 effort를 지원하지 않는 adapter는 서버 기본값을 사용합니다. [provider별 설정](standalone-review.md)과 [통합 설정 안내](settings.md)를 참고하십시오.
 

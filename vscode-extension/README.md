@@ -18,17 +18,13 @@ Reviews do not edit files, run tests, or create commits.
 
 ## Get started
 
-For the GCR setup guide inside VS Code, run **Commit Defender: GCR Connection
-Guide**, select **Setup Guide** in Settings, or use the sidebar view menu. The bundled
+Run **Commit Defender: GCR Connection Settings** or use the sidebar connection
+menu to open **Commit Defender Settings → Memory & GCR**. Choose **GCR
+connection & sync…** there to configure the connection. The bundled
 [English guide](docs/central-setup.md) and [한국어 연결 가이드](docs/central-setup.ko.md)
 cover reader keys, local model selection, synchronization, and the first
-review. The command follows the VS Code display language (Korean or English
-fallback), and both guides can be read offline.
-The guide uses VS Code's built-in Walkthrough viewer, with rendered steps and
-buttons for account selection, GCR connection, and Settings. Run **Commit
-Defender: Open Settings** or use the sidebar gear to open **Commit Defender
-Settings**, the integrated account, model and review-preferences editor.
-Guide rendering does not depend on the Markdown preview Service Worker.
+review, and can be read offline. **Commit Defender: Open Settings** and the
+sidebar gear open the same settings editor.
 
 1. Install **Commit Defender** (`pydemia.commit-defender`) from Marketplace, or
    use **Extensions → Install from VSIX…** with a supplied package. Open a
@@ -381,7 +377,7 @@ in **User Settings**.
 | `reviewMode` / `localProfile` | `standalone` / `default` | Context mode and storage profile |
 | `modelCredentialRef` | unset | Non-secret reference created by credential management |
 | `excludePatterns` | `[]` | Additional gitignore-style source exclusions |
-| `fileTimeoutSeconds` / `directoryTimeoutSeconds` | `120` / `360` | Run limits, maximum 600; zero uses the default; preparation has a separate equal limit |
+| `fileTimeoutSeconds` / `directoryTimeoutSeconds` | `300` / `360` | Run limits, maximum 600; zero uses the default; preparation has a separate equal limit |
 | `maxTokens` | `4096` | API output limit; not a hard Codex output-token cap |
 | `stagedFilesWarnThreshold` / `repoAnalysisWarnThreshold` | `20` / `80` | Large-review confirmation thresholds; zero disables the prompt |
 | `colorPalette` | `theme-adaptive` | Finding colors, including accessible palettes |
@@ -393,10 +389,10 @@ in **User Settings**.
 | `hookReviewWaitSeconds` | `0` | Optional Commit/Push wait, up to 600 seconds; does not change Git exit policy |
 | `preCommitHook` | `disable` | Separate legacy blocking hook |
 
-The legacy provider reviewer also exposes `severityLevel` (`moderate`),
-`richnessLevel` (`moderate`), and `locale` (`en`, with `ko` available). These
-prompt controls do not replace shared-core review criteria or grant source/tool
-access.
+`locale` (`en`, with `ko` available) controls model-written review text in the
+shared and legacy review paths. `severityLevel` (`moderate`) and
+`richnessLevel` (`moderate`) apply to the legacy reviewer. These preferences
+do not replace shared-core review criteria or grant source/tool access.
 
 ## Privacy and local data
 

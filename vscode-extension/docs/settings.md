@@ -2,7 +2,8 @@
 
 Run **Commit Defender: Open Settings** or select the gear in the Commit
 Defender Side Panel. The editor tab and page heading both read **Commit
-Defender Settings**. The GCR Setup Guide is a separate native Walkthrough.
+Defender Settings**. **Commit Defender: GCR Connection Settings** opens its
+**Memory & GCR** section.
 
 ## Choose an account or API destination
 
@@ -12,7 +13,9 @@ access is currently valid. Opening this page makes no model request.
 
 - **Choose account & model…** checks the existing Codex, Claude Code or
   Antigravity login, retrieves that account's models, and offers supported
-  effort. Each provider row also has **Choose model…** and **Sign in…**.
+  effort. Each provider row also has **Choose model…** and
+  **Sign in / switch…**. The sign-in action remains available after a model
+  is selected; its presence does not report the current login status.
   Missing authentication or a failed catalog query preserves the selection.
 - **Configure API destination & key…** chooses a provider, endpoint,
   deployment/model and supported effort. Keys are entered in a masked native
@@ -65,6 +68,7 @@ The page writes User Settings. For a window/resource setting, an existing
 workspace override is shown beneath its field. Edit that override with **VS
 Code Settings**; the page does not overwrite it. Fixed-source account, model,
 profile and executable choices are taken from User Settings by the runtime.
+Review language follows the effective workspace setting.
 Changing profile selects separate knowledge/history and destination-bound API
 credentials. Reconfigure the API destination after a profile change.
 
@@ -86,7 +90,7 @@ a storage/write failure.
 The Side Panel groups review actions, current findings, settings/connections
 and saved history. **Account / Provider** and **Model** lead directly to
 Account & Model. The gear opens the named editor; the refresh icon loads local
-history. Setup Guide is available from the view menu and settings header.
+history. **Memory & GCR** is available from the view menu and settings navigation.
 
 In the Command Palette, search **Commit Defender: Settings** to jump to
 Account and Model, Commit Message, Review and Display, Automatic Reviews,

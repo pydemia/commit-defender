@@ -19,10 +19,9 @@ exports.run = async () => {
   const tabs = () => vscode.window.tabGroups.all.flatMap(g => g.tabs).map(t => ({
     label: t.label, input: t.input?.constructor?.name ?? 'native',
   }));
+  const settingsTabs = () => vscode.window.tabGroups.all.flatMap(g => g.tabs)
+    .filter(t => t.label === 'Commit Defender Settings');
   await vscode.commands.executeCommand('commitDefender.openConnectionGuide', process.env.CD_GUIDE_INSPECT_LANGUAGE || 'en');
-  if (process.env.CD_GUIDE_INSPECT_VIEW === 'settings') {
-    await vscode.commands.executeCommand('commitDefender.openSettings');
-  }
   if (process.env.CD_GUIDE_INSPECT === '1') {
     fs.writeFileSync(process.env.CD_GUIDE_READY, 'ready');
     const deadline = Date.now() + 15 * 60_000;
@@ -34,20 +33,24 @@ exports.run = async () => {
   const observed = [];
   for (const language of [undefined, 'ko', 'en']) {
     await vscode.commands.executeCommand('commitDefender.openConnectionGuide', language);
-    await new Promise(r => setTimeout(r, 700));
+    for (let attempt = 0; attempt < 40 && settingsTabs().length === 0; attempt++) {
+      await new Promise(r => setTimeout(r, 50));
+    }
     observed.push({ requested: language ?? 'display-language', tabs: tabs() });
-    assert(!vscode.window.visibleTextEditors.some(e => /central-setup/.test(e.document.uri.path)), 'Guide must not open in a text editor');
+    const settings = settingsTabs();
+    assert.equal(settings.length, 1, 'Connection command must reuse one Commit Defender Settings tab');
+    assert(settings[0].input instanceof vscode.TabInputWebview);
+    assert(!tabs().some(t => /^(Welcome|Get Started)$/.test(t.label)),
+      'Connection command must not open the VS Code Welcome tab');
   }
-  await vscode.commands.executeCommand('commitDefender.openSettings');
-  await new Promise(r => setTimeout(r, 700));
-  const settingsTabs = tabs();
-  assert(settingsTabs.some(t => /Settings|설정/.test(t.label)), 'Native settings tab must open');
+  const observedTabs = tabs();
+  assert(observedTabs.some(t => t.label === 'Commit Defender Settings'));
   assert.equal(JSON.stringify(vscode.workspace.getConfiguration('commitDefender')), config);
   fs.writeFileSync(process.env.CD_GUIDE_PROOF, JSON.stringify({
     version: ext.packageJSON.version, vscodeVersion: vscode.version,
     delivery: process.env.CD_GUIDE_DELIVERY, realExtensionHost: true,
-    displayLanguage: vscode.env.language, walkthroughCommands: observed,
-    settingsTabs, modelCalls: 0, centralConnections: 0, settingsUnchanged: true,
+    displayLanguage: vscode.env.language, connectionSettingsCommands: observed,
+    settingsTabs: observedTabs, modelCalls: 0, centralConnections: 0, settingsUnchanged: true,
     configurationHash: crypto.createHash('sha256').update(config).digest('hex'),
     renderedContentEvidence: 'See the separate UI inspection record; tab creation alone is not rendering evidence.',
   }, null, 2) + '\n');

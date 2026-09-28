@@ -39,6 +39,7 @@ test("standalone execution uses only explicit user account choices and ignores r
     codexPath: "/user-chosen/codex",
     localProfile: "personal",
     fileTimeoutSeconds: 75,
+    locale: "ko",
   };
   values.repository = {
     aiProvider: "openai",
@@ -51,6 +52,7 @@ test("standalone execution uses only explicit user account choices and ignores r
     apiKey: "synthetic-unused-key",
     clientToken: "synthetic-unused-token",
     fileTimeoutSeconds: 600,
+    locale: "en",
     excludePatterns: ["private/**"],
   };
   values.reads = [];
@@ -63,12 +65,20 @@ test("standalone execution uses only explicit user account choices and ignores r
   assert.equal(resolved.profileId, "personal");
   assert.equal(resolved.mode, "standalone");
   assert.equal(resolved.durationMs, 75_000);
+  assert.equal(resolved.locale, "en");
   assert.deepEqual(resolved.excludePatterns, ["private/**"]);
   assert(
     !values.reads.some((key) =>
       ["serverUrl", "apiKey", "clientToken", "endpoint"].includes(key),
     ),
   );
+});
+
+test("review language follows the effective workspace setting", () => {
+  values.global = { locale: "en" };
+  values.repository = { locale: "ko" };
+  assert.equal(getStandaloneReviewSettings(1, "/synthetic/repo").locale, "ko");
+  assert.deepEqual(values.scope, { fsPath: "/synthetic/repo" });
 });
 
 test("repository-only legacy account settings are preserved but cannot authorize a new local review", () => {
@@ -87,6 +97,14 @@ test("repository-only legacy account settings are preserved but cannot authorize
   assert.equal(resolved.durationMs, 360_000);
   assert.equal(getConfig().runOnStage, false);
   assert.equal(values.repository.aiProvider, "codex");
+});
+
+test("a new installation allows five minutes for one file and six for several", () => {
+  values.global = {};
+  values.repository = {};
+  assert.equal(getConfig().fileTimeoutSeconds, 300);
+  assert.equal(getStandaloneReviewSettings(1).durationMs, 300_000);
+  assert.equal(getStandaloneReviewSettings(2).durationMs, 360_000);
 });
 
 test("new installations do not enable stage review; explicit user opt-in and workspace trust are respected", () => {

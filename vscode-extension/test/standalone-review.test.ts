@@ -725,6 +725,38 @@ test("independent preparations share one model review and encrypted history for 
   assert.deepEqual(reused.report, results[0].report);
 });
 
+test("Korean review language reaches the executor and changes the reuse key", async (t) => {
+  const f = setup(t);
+  const prompts: string[] = [];
+  const ports = {
+    dataDirectory: f.dataDirectory,
+    keys: f.keyStore,
+    prepareExecutor: async () => ({
+      descriptor,
+      review: async (input: Parameters<LocalReviewExecutor["review"]>[0]) => {
+        prompts.push(input.prompt);
+        return {
+          raw: JSON.stringify((await answer(input)).response),
+          model: descriptor.model,
+        };
+      },
+    }),
+  };
+  const english = await prepareStandaloneReview(
+    f.request, { ...settings, locale: "en" }, abort(), ports,
+  );
+  await english.run(abort());
+  const korean = await prepareStandaloneReview(
+    f.request, { ...settings, locale: "ko" }, abort(), ports,
+  );
+  assert.notEqual(korean.key, english.key);
+  await korean.run(abort());
+  assert.equal(prompts.length, 2);
+  assert(!prompts[0].includes("Write user-facing review summaries"));
+  assert(prompts[1].endsWith("exactly as required by the schema."));
+  assert(prompts[1].includes("Write user-facing review summaries"));
+});
+
 test("a cancelled follower saves its own attempt without completing the owner's request", async (t) => {
   const f = setup(t);
   let started!: () => void, release!: () => void;

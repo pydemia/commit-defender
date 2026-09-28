@@ -2,7 +2,7 @@
     "name": "commit-defender",
     "displayName": "Commit Defender",
     "description": "AI-powered pre-commit code review with priority-graded findings inline in VS Code. Ships its own self-contained git pre-commit hook.",
-    "version": "2.14.5",
+    "version": "2.14.6",
     "publisher": "pydemia",
     "license": "Apache-2.0",
     "engines": {
@@ -168,8 +168,8 @@
             },
             {
                 "command": "commitDefender.openConnectionGuide",
-                "title": "Commit Defender: GCR Connection Guide",
-                "icon": "$(question)"
+                "title": "Commit Defender: GCR Connection Settings",
+                "icon": "$(gear)"
             },
             {
                 "command": "commitDefender.openSettings",
@@ -310,11 +310,11 @@
                         "lean"
                     ],
                     "enumDescriptions": [
-                        "severe: Zero tolerance \u2014 nearly all findings become P2 (Warning) or P3 (Critical).",
-                        "rigorous: Strict \u2014 style issues escalate to P2 (Warning), most things flagged.",
-                        "moderate: Balanced \u2014 P1/P2/P3 assigned by genuine impact. (default)",
-                        "generous: Lenient \u2014 minor things become P1 (Info); only real risks reach P2/P3.",
-                        "lean: Minimal \u2014 only P3 Critical (security, syntax errors, data-loss) issues flagged."
+                        "severe: Zero tolerance — nearly all findings become P2 (Warning) or P3 (Critical).",
+                        "rigorous: Strict — style issues escalate to P2 (Warning), most things flagged.",
+                        "moderate: Balanced — P1/P2/P3 assigned by genuine impact. (default)",
+                        "generous: Lenient — minor things become P1 (Info); only real risks reach P2/P3.",
+                        "lean: Minimal — only P3 Critical (security, syntax errors, data-loss) issues flagged."
                     ],
                     "default": "moderate",
                     "description": "Controls how strictly the AI assigns priority levels. P1=Info, P2=Warning, P3=Critical. Manual and background shared-core reviews are advisory; commit blocking belongs to the separately enabled legacy hook."
@@ -332,9 +332,9 @@
                     "enumDescriptions": [
                         "colorful: Elaborate feedback with examples, alternatives, and detailed explanations.",
                         "chatty: Detailed feedback with helpful context for each finding.",
-                        "moderate: Standard amount of detail \u2014 clear but concise. (default)",
+                        "moderate: Standard amount of detail — clear but concise. (default)",
                         "simple: Brief, to-the-point findings with minimal explanation.",
-                        "silent: One-line summaries only \u2014 no elaboration."
+                        "silent: One-line summaries only — no elaboration."
                     ],
                     "default": "moderate",
                     "description": "Controls the verbosity and detail level of each priority comment's explanation."
@@ -348,10 +348,10 @@
                     ],
                     "enumDescriptions": [
                         "en: English",
-                        "ko: \ud55c\uad6d\uc5b4"
+                        "ko: 한국어"
                     ],
                     "default": "en",
-                    "description": "Language for AI reviews and generated commit-message titles and bodies. Commit type labels and code identifiers are preserved."
+                    "description": "Language for model-written review summaries, findings, questions, and generated commit-message titles and bodies. JSON fields, status labels, and code identifiers are preserved."
                 },
                 "commitDefender.commitMessageFormat": {
                     "type": "string",
@@ -388,23 +388,23 @@
                         "okabe-ito"
                     ],
                     "enumDescriptions": [
-                        "Theme Adaptive \u2014 inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
-                        "Cobalt9 \u2014 electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
-                        "Tailwind \u2014 modern web palette, high saturation, familiar.",
-                        "Pastel Soft \u2014 low saturation, gentle on the eyes. Best on light themes.",
-                        "Material \u2014 Google Material A-tones, punchy.",
-                        "Solarized \u2014 muted terminal-familiar tones, lower contrast.",
-                        "Muted Modern \u2014 Tailwind \u00d7 Solarized blend; works on both light and dark themes.",
-                        "Nord \u2014 arctic, cool, low visual noise.",
-                        "Dracula \u2014 classic purple/pink/cyan dark-theme accents.",
-                        "Gruvbox \u2014 70s retro, earthy warm tones.",
-                        "CVD Consensus (colorblind-safe) \u2014 balanced across light and dark themes.",
-                        "CVD Deep (colorblind-safe) \u2014 darker tones tuned for light themes.",
-                        "CVD Vivid (colorblind-safe) \u2014 electric tones tuned for dark themes.",
-                        "Okabe-Ito (colorblind-safe) \u2014 canonical palette from Nature methodology papers."
+                        "Theme Adaptive — inherits priority colors from your active VS Code theme via CSS variables. Recommended default.",
+                        "Cobalt9 — electric navy-friendly accents tuned for Cobalt2/Cobalt9 themes.",
+                        "Tailwind — modern web palette, high saturation, familiar.",
+                        "Pastel Soft — low saturation, gentle on the eyes. Best on light themes.",
+                        "Material — Google Material A-tones, punchy.",
+                        "Solarized — muted terminal-familiar tones, lower contrast.",
+                        "Muted Modern — Tailwind × Solarized blend; works on both light and dark themes.",
+                        "Nord — arctic, cool, low visual noise.",
+                        "Dracula — classic purple/pink/cyan dark-theme accents.",
+                        "Gruvbox — 70s retro, earthy warm tones.",
+                        "CVD Consensus (colorblind-safe) — balanced across light and dark themes.",
+                        "CVD Deep (colorblind-safe) — darker tones tuned for light themes.",
+                        "CVD Vivid (colorblind-safe) — electric tones tuned for dark themes.",
+                        "Okabe-Ito (colorblind-safe) — canonical palette from Nature methodology papers."
                     ],
                     "default": "theme-adaptive",
-                    "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only \u2014 no env var."
+                    "markdownDescription": "Color palette for priority badges and category chips in the Commit Defender summary panel.\n\n- **Default**: `theme-adaptive` inherits from your active VS Code theme.\n- **Normal-vision**: `cobalt9`, `tailwind`, `pastel-soft`, `material`, `solarized`, `muted-modern`, `nord`, `dracula`, `gruvbox`.\n- **Colorblind-safe**: `cvd-consensus`, `cvd-deep`, `cvd-vivid`, `okabe-ito`.\n\nChanges re-render the open summary panel automatically. Extension-only — no env var."
                 },
                 "commitDefender.runOnStage": {
                     "type": "boolean",
@@ -429,9 +429,9 @@
                 "commitDefender.fileTimeoutSeconds": {
                     "type": "number",
                     "scope": "application",
-                    "default": 120,
+                    "default": 300,
                     "minimum": 0,
-                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 120 seconds. Legacy commit-message behavior is unchanged."
+                    "description": "Standalone model-run time limit in seconds (maximum 600). Preparation has a separate limit of the same duration. Zero uses the default 300 seconds. Legacy commit-message behavior is unchanged."
                 },
                 "commitDefender.directoryTimeoutSeconds": {
                     "type": "number",
@@ -485,7 +485,7 @@
                         "max"
                     ],
                     "default": "xhigh",
-                    "description": "Use Account offers the authenticated model\u2019s supported effort levels. API effort is offered only for known model capabilities supported by this adapter. Empty sends no effort override. Codex fixed-source reviews support up to xhigh; Claude Code may offer max. Antigravity selects exact catalog variants."
+                    "description": "Use Account offers the authenticated model’s supported effort levels. API effort is offered only for known model capabilities supported by this adapter. Empty sends no effort override. Codex fixed-source reviews support up to xhigh; Claude Code may offer max. Antigravity selects exact catalog variants."
                 },
                 "commitDefender.modelCredentialRef": {
                     "type": "object",
@@ -787,7 +787,7 @@
                     {
                         "id": "overview",
                         "title": "How GCR and CD work together",
-                        "description": "GCR supplies review history, Skills, prompts, and published guidance. CD runs reviews with the account, provider, model, and reasoning you select. Connecting to GCR preserves those choices.\nLocal code and review results are not uploaded to GCR. Review source and context go to your selected model provider; account providers can use cloud inference.\nThis guide works offline. Step checks track pages read, not connection or review success.\n[\ud55c\uad6d\uc5b4](command:commitDefender.openConnectionGuide?%5B%22ko%22%5D)",
+                        "description": "GCR supplies review history, Skills, prompts, and published guidance. CD runs reviews with the account, provider, model, and reasoning you select. Connecting to GCR preserves those choices.\nLocal code and review results are not uploaded to GCR. Review source and context go to your selected model provider; account providers can use cloud inference.\nThis guide works offline. Step checks track pages read, not connection or review success.",
                         "media": {
                             "svg": "media/guide/flow.en.svg"
                         },
@@ -798,7 +798,7 @@
                     {
                         "id": "reader",
                         "title": "Prepare a GCR API key",
-                        "description": "On your GCR website, open Profile \u2192 Clients. Choose Commit Defender and one or more repositories, or all repositories currently accessible in the selected tenant. Issue a knowledge:read API key with a suitable expiry. New repositories need a new key.\nCopy the HTTPS server URL shown on that page. No connection JSON is required. For a private CA, download the public CA certificate. The API key is separate from your GCR password, GitHub token, or model API key.",
+                        "description": "On your GCR website, open Profile → Clients. Choose Commit Defender and one or more repositories, or all repositories currently accessible in the selected tenant. Issue a knowledge:read API key with a suitable expiry. New repositories need a new key.\nCopy the HTTPS server URL shown on that page. No connection JSON is required. For a private CA, download the public CA certificate. The API key is separate from your GCR password, GitHub token, or model API key.",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -831,7 +831,7 @@
                     {
                         "id": "connect",
                         "title": "Connect with the API key",
-                        "description": "Open Central Review Connection \u2192 Connect with API key\u2026. Enter the HTTPS server URL and the API key in the password field. Confirm the server connection. All sources authorized by the key are included automatically; no repository selection is required. Use View downloaded review knowledge to inspect content and Reference sources\u2026 to limit optional sources later.\nIf a private CA is required, choose its public certificate file when prompted. TLS verification stays enabled. Import connection JSON\u2026 remains available for older servers.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "description": "Open Central Review Connection → Connect with API key…. Enter the HTTPS server URL and the API key in the password field. Confirm the server connection. All sources authorized by the key are included automatically; no repository selection is required. Use View downloaded review knowledge to inspect content and Reference sources… to limit optional sources later.\nIf a private CA is required, choose its public certificate file when prompted. TLS verification stays enabled. Import connection JSON… remains available for older servers.\nCD stores the key in the OS credential store. Do not enter it in Settings. Initial publication and verification can take up to 60 seconds and can be cancelled.\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.en.svg"
                         },
@@ -853,7 +853,7 @@
                     {
                         "id": "review",
                         "title": "Run a review and inspect its sources",
-                        "description": "Save and stage a small change, then run Analyze Staged Files from the Command Palette. For an unstaged saved file, choose Analyze Current File. A review calls your selected model provider.\nCheck the completed, partial or failed state before reading findings. Show Summary Panel displays source references, snapshots and guidance versions. Each run pins its material versions. Past comments are observations: current code, applicability conditions and counter-evidence determine whether they apply.\nCentralized \u00b7 online uses online-verified material; centralized \u00b7 cached uses a valid signed cache. Standalone \u00b7 fallback shows the reason for reviewing without central material.\n[Open review summary](command:commitDefender.showSummary)",
+                        "description": "Save and stage a small change, then run Analyze Staged Files from the Command Palette. For an unstaged saved file, choose Analyze Current File. A review calls your selected model provider.\nCheck the completed, partial or failed state before reading findings. Show Summary Panel displays source references, snapshots and guidance versions. Each run pins its material versions. Past comments are observations: current code, applicability conditions and counter-evidence determine whether they apply.\nCentralized · online uses online-verified material; centralized · cached uses a valid signed cache. Standalone · fallback shows the reason for reviewing without central material.\n[Open review summary](command:commitDefender.showSummary)",
                         "media": {
                             "svg": "media/guide/review.en.svg"
                         },
@@ -864,7 +864,7 @@
                     {
                         "id": "troubleshooting",
                         "title": "Resolve connection or model errors",
-                        "description": "401/403: check the reader client, repository permission, expiry and revocation. Repository mismatch: check Git remotes and reconnect. Certificate errors: check the HTTPS URL and administrator-provided CA; do not disable verification.\nMissing central material and server outages differ from model failures. For model errors, check CD login, provider, model, reasoning, CLI support and usage limits. In Central Review Connection, Offline and fallback behavior\u2026 controls outages; Use standalone review retains the connection.\nCD error notifications identify Commit Defender and the operation. Error loading webview is a VS Code viewer error, not a reader-key rejection. This native guide does not depend on the Markdown preview Service Worker.\n[Open Settings](command:commitDefender.openSettings)\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
+                        "description": "401/403: check the reader client, repository permission, expiry and revocation. Repository mismatch: check Git remotes and reconnect. Certificate errors: check the HTTPS URL and administrator-provided CA; do not disable verification.\nMissing central material and server outages differ from model failures. For model errors, check CD login, provider, model, reasoning, CLI support and usage limits. In Central Review Connection, Offline and fallback behavior… controls outages; Use standalone review retains the connection.\nCD error notifications identify Commit Defender and the operation. Error loading webview is a VS Code viewer error, not a reader-key rejection. This native guide does not depend on the Markdown preview Service Worker.\n[Open Settings](command:commitDefender.openSettings)\n[Open GCR connection](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/review.en.svg"
                         },
@@ -876,13 +876,13 @@
             },
             {
                 "id": "gcrConnectionKO",
-                "title": "Commit Defender: GCR \uc5f0\uacb0 \uac00\uc774\ub4dc",
-                "description": "\uac00\uc774\ub4dc\ub97c \uc77d\uace0 \uacc4\uc815\u00b7\uc5f0\uacb0\u00b7\uae30\ubcf8 \uc124\uc815 \ud654\uba74\uc744 \uc5fd\ub2c8\ub2e4.",
+                "title": "Commit Defender: GCR 연결 가이드",
+                "description": "가이드를 읽고 계정·연결·기본 설정 화면을 엽니다.",
                 "steps": [
                     {
                         "id": "overview",
-                        "title": "GCR\uacfc CD\uc758 \uc5ed\ud560",
-                        "description": "GCR\uc5d0\uc11c \ub9ac\ubdf0 \uc774\ub825\u00b7Skill\u00b7\ud504\ub86c\ud504\ud2b8\u00b7\ubc1c\ud589\ub41c \uc9c0\uce68\uc744 \ub0b4\ub824\ubc1b\uace0, CD\uc5d0\uc11c \uc120\ud0dd\ud55c \uacc4\uc815\u00b7provider\u00b7\ubaa8\ub378\u00b7reasoning\uc73c\ub85c \ub9ac\ubdf0\ud569\ub2c8\ub2e4. GCR\uc5d0 \uc5f0\uacb0\ud574\ub3c4 \ubaa8\ub378 \uc120\ud0dd\uc740 \uc720\uc9c0\ub429\ub2c8\ub2e4.\n\ub85c\uceec \ucf54\ub4dc\uc640 \ub9ac\ubdf0 \uacb0\uacfc\ub294 GCR\uc5d0 \uc5c5\ub85c\ub4dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \ub9ac\ubdf0\uc5d0 \ud544\uc694\ud55c \uc18c\uc2a4\uc640 \ubb38\ub9e5\uc740 \uc120\ud0dd\ud55c \ubaa8\ub378 provider\ub85c \uc804\ub2ec\ub429\ub2c8\ub2e4. \uacc4\uc815 provider\ub294 \ud074\ub77c\uc6b0\ub4dc\uc5d0\uc11c \ucd94\ub860\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.\n\uc774 \uac00\uc774\ub4dc\ub294 \uc624\ud504\ub77c\uc778\uc5d0\uc11c\ub3c4 \uc5f4\ub9bd\ub2c8\ub2e4. \ub2e8\uacc4 \uccb4\ud06c\ub294 \uc77d\uc740 \ud398\uc774\uc9c0\ub97c \ud45c\uc2dc\ud558\uba70 \uc5f0\uacb0\u00b7\ub9ac\ubdf0 \uc131\uacf5 \uc5ec\ubd80\ub97c \ub098\ud0c0\ub0b4\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.\n[English](command:commitDefender.openConnectionGuide?%5B%22en%22%5D)",
+                        "title": "GCR과 CD의 역할",
+                        "description": "GCR에서 리뷰 이력·Skill·프롬프트·발행된 지침을 내려받고, CD에서 선택한 계정·provider·모델·reasoning으로 리뷰합니다. GCR에 연결해도 모델 선택은 유지됩니다.\n로컬 코드와 리뷰 결과는 GCR에 업로드하지 않습니다. 리뷰에 필요한 소스와 문맥은 선택한 모델 provider로 전달됩니다. 계정 provider는 클라우드에서 추론할 수 있습니다.\n이 가이드는 오프라인에서도 열립니다. 단계 체크는 읽은 페이지를 표시하며 연결·리뷰 성공 여부를 나타내지 않습니다.",
                         "media": {
                             "svg": "media/guide/flow.ko.svg"
                         },
@@ -892,8 +892,8 @@
                     },
                     {
                         "id": "reader",
-                        "title": "GCR API key \uc900\ube44",
-                        "description": "GCR \uc6f9\uc0ac\uc774\ud2b8\uc758 \ub0b4 \ud504\ub85c\ud544 \u2192 \ud074\ub77c\uc774\uc5b8\ud2b8 \uc124\uc815\uc5d0\uc11c Commit Defender\uc640 \uc5ec\ub7ec \uc800\uc7a5\uc18c \ub610\ub294 \uc120\ud0dd\ud55c tenant\uc5d0\uc11c \ud604\uc7ac \uc811\uadfc \uac00\ub2a5\ud55c \ubaa8\ub4e0 \uc800\uc7a5\uc18c\ub97c \uc120\ud0dd\ud574 API key\ub97c \ubc1c\uae09\ud569\ub2c8\ub2e4. \ubc1c\uae09 \uc774\ud6c4 \ucd94\uac00\ub418\ub294 \uc800\uc7a5\uc18c\ub294 \uc0c8 key\uac00 \ud544\uc694\ud569\ub2c8\ub2e4.\n\ud654\uba74\uc758 HTTPS \uc11c\ubc84 \uc8fc\uc18c\ub97c \ubcf5\uc0ac\ud569\ub2c8\ub2e4. JSON\uc740 \ud544\uc694\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \uc0ac\uc124 CA\ub97c \uc0ac\uc6a9\ud558\ub294 \uacbd\uc6b0 \uacf5\uac1c CA \uc778\uc99d\uc11c\ub97c \ub0b4\ub824\ubc1b\uc2b5\ub2c8\ub2e4. API key\ub294 GCR \ube44\ubc00\ubc88\ud638\u00b7GitHub \ud1a0\ud070\u00b7\ubaa8\ub378 API key\uc640 \ubcc4\uac1c\uc785\ub2c8\ub2e4.",
+                        "title": "GCR API key 준비",
+                        "description": "GCR 웹사이트의 내 프로필 → 클라이언트 설정에서 Commit Defender와 여러 저장소 또는 선택한 tenant에서 현재 접근 가능한 모든 저장소를 선택해 API key를 발급합니다. 발급 이후 추가되는 저장소는 새 key가 필요합니다.\n화면의 HTTPS 서버 주소를 복사합니다. JSON은 필요하지 않습니다. 사설 CA를 사용하는 경우 공개 CA 인증서를 내려받습니다. API key는 GCR 비밀번호·GitHub 토큰·모델 API key와 별개입니다.",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -903,8 +903,8 @@
                     },
                     {
                         "id": "workspace",
-                        "title": "\uc77c\uce58\ud558\ub294 Git \uc800\uc7a5\uc18c \uc5f4\uae30",
-                        "description": "VS Code\uc5d0\uc11c \ub85c\uceec Git \uc800\uc7a5\uc18c \ub610\ub294 worktree\ub97c \uc5f4\uace0 \uc6cc\ud06c\uc2a4\ud398\uc774\uc2a4\ub97c \uc2e0\ub8b0\ud569\ub2c8\ub2e4. Git remote\ub294 \ud604\uc7ac \uc800\uc7a5\uc18c\ub97c \ub85c\uceec\uc5d0\uc11c \uc2dd\ubcc4\ud558\ub294 \ub370 \uc0ac\uc6a9\ud569\ub2c8\ub2e4. \ub2e4\ub978 \uc800\uc7a5\uc18c\uc758 \ucc38\uace0 \uc790\ub8cc\ub97c \uc870\ud68c\ud558\ub294 \ubc94\uc704\ub97c \uc81c\ud55c\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.\n\uc5f0\uacb0\uc740 \ud604\uc7ac \ub85c\uceec profile\uacfc worktree\uc5d0 \uc801\uc6a9\ub429\ub2c8\ub2e4. \ud604\uc7ac \uc800\uc7a5\uc18c\uc758 \uc815\ucc45\uc740 \uc790\ub3d9\uc73c\ub85c \ub300\uc870\ud558\uace0 \ub2e4\ub978 \ucd9c\ucc98\uc758 \uc790\ub8cc\ub294 \ucc38\uace0 \uc790\ub8cc\ub85c \uad6c\ubd84\ud569\ub2c8\ub2e4.",
+                        "title": "일치하는 Git 저장소 열기",
+                        "description": "VS Code에서 로컬 Git 저장소 또는 worktree를 열고 워크스페이스를 신뢰합니다. Git remote는 현재 저장소를 로컬에서 식별하는 데 사용합니다. 다른 저장소의 참고 자료를 조회하는 범위를 제한하지 않습니다.\n연결은 현재 로컬 profile과 worktree에 적용됩니다. 현재 저장소의 정책은 자동으로 대조하고 다른 출처의 자료는 참고 자료로 구분합니다.",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -914,8 +914,8 @@
                     },
                     {
                         "id": "model",
-                        "title": "\uacc4\uc815 \ub610\ub294 API credential \uc120\ud0dd",
-                        "description": "Use Account: Codex\u00b7Claude Code\u00b7Antigravity\uc758 \uae30\uc874 CLI \uc778\uc99d\uacfc \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uace0 \uc2e4\uc81c \ubaa8\ub378 \ubaa9\ub85d \u2192 \uc9c0\uc6d0 effort\ub97c \uc120\ud0dd\ud569\ub2c8\ub2e4. auth.json \ub610\ub294 OS credential store\ub294 CLI\uac00 \uad00\ub9ac\ud569\ub2c8\ub2e4. \ubaa8\ub378 ID\ub97c \uc9c1\uc811 \uc785\ub825\ud560 \ud544\uc694\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.\nUse API Credential: provider \u2192 endpoint \u2192 deployment/model \u2192 \uc9c0\uc6d0 effort \u2192 API \ud0a4\ub97c \uc124\uc815\ud569\ub2c8\ub2e4. \ud0a4\ub294 OS \uae30\ubc18 \uc554\ud638\ud654 \uc800\uc7a5\uc18c\uc5d0 \ubcf4\uad00\ud569\ub2c8\ub2e4. Azure\ub294 deployment\uc758 \uc2e4\uc81c \ubaa8\ub378\uba85\uc744 \uc120\ud0dd\uc801\uc73c\ub85c \uc785\ub825\ud569\ub2c8\ub2e4. \uc9c0\uc6d0\uc744 \ud655\uc778\ud560 \uc218 \uc5c6\uc73c\uba74 effort\ub97c \ubcf4\ub0b4\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.\nGCR reader key\ub294 \uc911\uc559 \uc790\ub8cc\ub97c \uc77d\ub294 \ubcc4\ub3c4 \ud0a4\uc774\uba70 \ubaa8\ub378 \uacc4\uc815\u00b7API \ud0a4\uc640 \ub2e4\ub985\ub2c8\ub2e4. \uc124\uc815\uc740 \ubaa8\ub4e0 \uc120\ud0dd\uc744 \ub9c8\uce5c \ub4a4 \uc800\uc7a5\ud569\ub2c8\ub2e4.\n[Use Account](command:commitDefender.selectAccountProviderAndModel)\n[Use API Credential](command:commitDefender.manageModelCredential)\n[\uc124\uc815 \uc5f4\uae30](command:commitDefender.openSettings)",
+                        "title": "계정 또는 API credential 선택",
+                        "description": "Use Account: Codex·Claude Code·Antigravity의 기존 CLI 인증과 연결을 확인하고 실제 모델 목록 → 지원 effort를 선택합니다. auth.json 또는 OS credential store는 CLI가 관리합니다. 모델 ID를 직접 입력할 필요가 없습니다.\nUse API Credential: provider → endpoint → deployment/model → 지원 effort → API 키를 설정합니다. 키는 OS 기반 암호화 저장소에 보관합니다. Azure는 deployment의 실제 모델명을 선택적으로 입력합니다. 지원을 확인할 수 없으면 effort를 보내지 않습니다.\nGCR reader key는 중앙 자료를 읽는 별도 키이며 모델 계정·API 키와 다릅니다. 설정은 모든 선택을 마친 뒤 저장합니다.\n[Use Account](command:commitDefender.selectAccountProviderAndModel)\n[Use API Credential](command:commitDefender.manageModelCredential)\n[설정 열기](command:commitDefender.openSettings)",
                         "media": {
                             "svg": "media/guide/flow.ko.svg"
                         },
@@ -925,8 +925,8 @@
                     },
                     {
                         "id": "connect",
-                        "title": "API key\ub85c \uc5f0\uacb0",
-                        "description": "Central Review Connection \u2192 Connect with API key\u2026\uc5d0\uc11c HTTPS \uc11c\ubc84 \uc8fc\uc18c\uc640 API key\ub97c \ube44\ubc00\ubc88\ud638 \uc785\ub825\ub780\uc5d0 \uc785\ub825\ud569\ub2c8\ub2e4. \uc11c\ubc84 \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uba74 key\ub85c \ud5c8\uc6a9\ub41c \ubaa8\ub4e0 \uc790\ub8cc \ucd9c\ucc98\ub97c \uc790\ub3d9\uc73c\ub85c \ud3ec\ud568\ud569\ub2c8\ub2e4. \uc800\uc7a5\uc18c\ub97c \uc120\ud0dd\ud560 \ud544\uc694\ub294 \uc5c6\uc2b5\ub2c8\ub2e4. View downloaded review knowledge\uc5d0\uc11c \ub0b4\uc6a9\uc744 \ud655\uc778\ud558\uace0 Reference sources\u2026\uc5d0\uc11c \uc120\ud0dd\uc801\uc73c\ub85c \ucc38\uace0 \ubc94\uc704\ub97c \uc870\uc808\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.\n\uc0ac\uc124 CA\uac00 \ud544\uc694\ud558\uba74 \uc548\ub0b4\uc5d0 \ub530\ub77c \uacf5\uac1c \uc778\uc99d\uc11c \ud30c\uc77c\uc744 \uc120\ud0dd\ud569\ub2c8\ub2e4. TLS \uac80\uc99d\uc740 \uc720\uc9c0\ud569\ub2c8\ub2e4. \uc774\uc804 \uc11c\ubc84\uc6a9 Import connection JSON\u2026\ub3c4 \uc9c0\uc6d0\ud569\ub2c8\ub2e4.\n\ud0a4\ub294 OS \uc790\uaca9 \uc99d\uba85 \uc800\uc7a5\uc18c\uc5d0 \ubcf4\uad00\ud569\ub2c8\ub2e4. \uc124\uc815 \ud30c\uc77c\uc5d0 \ub123\uc9c0 \ub9c8\uc2ed\uc2dc\uc624. \ucd5c\ucd08 \ubc1c\ud589\u00b7\uc11c\uba85 \uac80\uc99d\uc740 \ucd5c\ub300 60\ucd08 \uc815\ub3c4 \uac78\ub9b4 \uc218 \uc788\uc73c\uba70 \ucde8\uc18c\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.\n[GCR \uc5f0\uacb0 \uc5f4\uae30](command:commitDefender.manageCentralConnection)",
+                        "title": "API key로 연결",
+                        "description": "Central Review Connection → Connect with API key…에서 HTTPS 서버 주소와 API key를 비밀번호 입력란에 입력합니다. 서버 연결을 확인하면 key로 허용된 모든 자료 출처를 자동으로 포함합니다. 저장소를 선택할 필요는 없습니다. View downloaded review knowledge에서 내용을 확인하고 Reference sources…에서 선택적으로 참고 범위를 조절할 수 있습니다.\n사설 CA가 필요하면 안내에 따라 공개 인증서 파일을 선택합니다. TLS 검증은 유지합니다. 이전 서버용 Import connection JSON…도 지원합니다.\n키는 OS 자격 증명 저장소에 보관합니다. 설정 파일에 넣지 마십시오. 최초 발행·서명 검증은 최대 60초 정도 걸릴 수 있으며 취소할 수 있습니다.\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/connection.ko.svg"
                         },
@@ -936,8 +936,8 @@
                     },
                     {
                         "id": "knowledge",
-                        "title": "\uc911\uc559 \uc790\ub8cc\uc640 \uc6d0\ubb38 \ud655\uc778",
-                        "description": "Central Review Connection\uc758 Connection status\uc5d0\uc11c \uc800\uc7a5\uc18c\u00b7\uc0ac\uc6a9\uc790\u00b7\ud0a4 \uc720\ud6a8\uae30\uac04\u00b7\ucd5c\uadfc \ub3d9\uae30\ud654\u00b7snapshot\uc744 \ud655\uc778\ud569\ub2c8\ub2e4. Synchronize knowledge\ub294 \ubaa8\ub378 \ud638\ucd9c \uc5c6\uc774 \ubc1c\ud589 \uc790\ub8cc\ub97c \ub0b4\ub824\ubc1b\uace0 \uac80\uc99d\ud569\ub2c8\ub2e4.\nView downloaded review knowledge\uc5d0\uc11c Skill\u00b7\ud504\ub86c\ud504\ud2b8\u00b7\uc9c0\uce68\uc744, Browse PR review history\uc5d0\uc11c \uc6d0\ubb38\u00b7\ub2f5\uae00\u00b7\ubcf8\ubb38 \ubc84\uc804\u00b7\ucd9c\ucc98\ub97c \ud655\uc778\ud569\ub2c8\ub2e4. \uc628\ub77c\uc778 \uc790\ub8cc\ub294 \ucd5c\ub300 5\ubd84 \uc548\uc5d0 \uac31\uc2e0\ud558\uba70 \ucca0\ud68c\u00b7\ub9cc\ub8cc\u00b7\uc11c\uba85 \uc624\ub958 \uc790\ub8cc\ub294 \uc7ac\uc0ac\uc6a9\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.\n[\uc5f0\uacb0\uacfc \uc774\ub825 \uc5f4\uae30](command:commitDefender.manageCentralConnection)",
+                        "title": "중앙 자료와 원문 확인",
+                        "description": "Central Review Connection의 Connection status에서 저장소·사용자·키 유효기간·최근 동기화·snapshot을 확인합니다. Synchronize knowledge는 모델 호출 없이 발행 자료를 내려받고 검증합니다.\nView downloaded review knowledge에서 Skill·프롬프트·지침을, Browse PR review history에서 원문·답글·본문 버전·출처를 확인합니다. 온라인 자료는 최대 5분 안에 갱신하며 철회·만료·서명 오류 자료는 재사용하지 않습니다.\n[연결과 이력 열기](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/review.ko.svg"
                         },
@@ -947,8 +947,8 @@
                     },
                     {
                         "id": "review",
-                        "title": "\ub9ac\ubdf0 \uc2e4\ud589\uacfc \ucd9c\ucc98 \ud655\uc778",
-                        "description": "\uc791\uc740 \ubcc0\uacbd\uc744 \uc800\uc7a5\ud558\uace0 stage\ud55c \ub4a4 \uba85\ub839 \ud314\ub808\ud2b8\uc5d0\uc11c Analyze Staged Files\ub97c \uc2e4\ud589\ud569\ub2c8\ub2e4. stage\ud558\uc9c0 \uc54a\uc740 \uc800\uc7a5 \ud30c\uc77c\uc740 Analyze Current File\uc744 \uc0ac\uc6a9\ud569\ub2c8\ub2e4. \ub9ac\ubdf0\ub294 \uc120\ud0dd\ud55c \ubaa8\ub378 provider\ub97c \ud638\ucd9c\ud569\ub2c8\ub2e4.\n\uc644\ub8cc\u00b7\ubd80\ubd84 \uc644\ub8cc\u00b7\uc2e4\ud328 \uc0c1\ud0dc\ub97c \uba3c\uc800 \ud655\uc778\ud569\ub2c8\ub2e4. Show Summary Panel\uc5d0\uc11c \uc9c0\uc801 \uc0ac\ud56d\u00b7\ucd9c\ucc98\u00b7snapshot\u00b7\uc9c0\uce68 \ubc84\uc804\uc744 \ud655\uc778\ud569\ub2c8\ub2e4. \uc2e4\ud589 \uc911\uc5d0\ub294 \uc790\ub8cc \ubc84\uc804\uc774 \uace0\uc815\ub429\ub2c8\ub2e4. \uacfc\uac70 \ucf54\uba58\ud2b8\ub294 \ub2f9\uc2dc \uad00\uce21\uc774\uba70 \ud604\uc7ac \ucf54\ub4dc\u00b7\uc801\uc6a9 \uc870\uac74\u00b7\ubc18\uc99d\uc73c\ub85c \uc801\uc6a9 \uc5ec\ubd80\ub97c \ud310\ub2e8\ud569\ub2c8\ub2e4.\nCentralized \u00b7 online\uc740 \uc628\ub77c\uc778 \uac80\uc99d \uc790\ub8cc, centralized \u00b7 cached\ub294 \uc720\ud6a8\ud55c \uc11c\uba85 \uce90\uc2dc\ub97c \uc0ac\uc6a9\ud569\ub2c8\ub2e4. Standalone \u00b7 fallback\uc740 \uc911\uc559 \uc790\ub8cc \uc5c6\uc774 \ub9ac\ubdf0\ud55c \uc774\uc720\ub97c \ud45c\uc2dc\ud569\ub2c8\ub2e4.\n[\ub9ac\ubdf0 \uc694\uc57d \uc5f4\uae30](command:commitDefender.showSummary)",
+                        "title": "리뷰 실행과 출처 확인",
+                        "description": "작은 변경을 저장하고 stage한 뒤 명령 팔레트에서 Analyze Staged Files를 실행합니다. stage하지 않은 저장 파일은 Analyze Current File을 사용합니다. 리뷰는 선택한 모델 provider를 호출합니다.\n완료·부분 완료·실패 상태를 먼저 확인합니다. Show Summary Panel에서 지적 사항·출처·snapshot·지침 버전을 확인합니다. 실행 중에는 자료 버전이 고정됩니다. 과거 코멘트는 당시 관측이며 현재 코드·적용 조건·반증으로 적용 여부를 판단합니다.\nCentralized · online은 온라인 검증 자료, centralized · cached는 유효한 서명 캐시를 사용합니다. Standalone · fallback은 중앙 자료 없이 리뷰한 이유를 표시합니다.\n[리뷰 요약 열기](command:commitDefender.showSummary)",
                         "media": {
                             "svg": "media/guide/review.ko.svg"
                         },
@@ -958,8 +958,8 @@
                     },
                     {
                         "id": "troubleshooting",
-                        "title": "\uc5f0\uacb0\u00b7\ubaa8\ub378 \uc624\ub958 \ud655\uc778",
-                        "description": "401/403\uc774\uba74 reader client\u00b7\uc800\uc7a5\uc18c \uad8c\ud55c\u00b7\ub9cc\ub8cc\u00b7\ucca0\ud68c\ub97c \ud655\uc778\ud569\ub2c8\ub2e4. \uc800\uc7a5\uc18c \ubd88\uc77c\uce58\uc774\uba74 Git remote\ub97c \ud655\uc778\ud558\uace0 \uc7ac\uc5f0\uacb0\ud569\ub2c8\ub2e4. \uc778\uc99d\uc11c \uc624\ub958\uc774\uba74 HTTPS \uc8fc\uc18c\uc640 \uad00\ub9ac\uc790 \uc81c\uacf5 CA\ub97c \ud655\uc778\ud558\uba70 \uac80\uc99d\uc744 \ub044\uc9c0 \ub9c8\uc2ed\uc2dc\uc624.\n\uc911\uc559 \uc790\ub8cc \uc5c6\uc74c\u00b7\uc11c\ubc84 \uc7a5\uc560\uc640 \ubaa8\ub378 \uc2e4\ud328\ub294 \ubcc4\ub3c4\uc785\ub2c8\ub2e4. \ubaa8\ub378 \uc624\ub958\uc774\uba74 CD \ub85c\uadf8\uc778\u00b7provider\u00b7\ubaa8\ub378\u00b7reasoning\u00b7\uc9c0\uc6d0 CLI\u00b7\uc0ac\uc6a9\ub7c9\uc744 \ud655\uc778\ud569\ub2c8\ub2e4. \uc5f0\uacb0 \uba54\ub274\uc758 Offline and fallback behavior\u2026\ub85c \uc7a5\uc560 \uc2dc \ub3d9\uc791\uc744 \uc815\ud569\ub2c8\ub2e4. Use standalone review\ub294 \uc5f0\uacb0 \uc815\ubcf4\ub97c \ubcf4\uc874\ud569\ub2c8\ub2e4.\nCD \uc624\ub958 \uc54c\ub9bc\uc740 Commit Defender\uc640 \uc791\uc5c5\uba85\uc744 \ud45c\uc2dc\ud569\ub2c8\ub2e4. Error loading webview\ub294 reader key \uac70\ubd80\uac00 \uc544\ub2cc VS Code \ubdf0\uc5b4 \uc624\ub958\uc785\ub2c8\ub2e4. \uc774 \ub0b4\uc7a5 \uac00\uc774\ub4dc\ub294 Markdown \ubbf8\ub9ac\ubcf4\uae30\uc758 Service Worker\uc5d0 \uc758\uc874\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.\n[\uc124\uc815 \uc5f4\uae30](command:commitDefender.openSettings)\n[GCR \uc5f0\uacb0 \uc5f4\uae30](command:commitDefender.manageCentralConnection)",
+                        "title": "연결·모델 오류 확인",
+                        "description": "401/403이면 reader client·저장소 권한·만료·철회를 확인합니다. 저장소 불일치이면 Git remote를 확인하고 재연결합니다. 인증서 오류이면 HTTPS 주소와 관리자 제공 CA를 확인하며 검증을 끄지 마십시오.\n중앙 자료 없음·서버 장애와 모델 실패는 별도입니다. 모델 오류이면 CD 로그인·provider·모델·reasoning·지원 CLI·사용량을 확인합니다. 연결 메뉴의 Offline and fallback behavior…로 장애 시 동작을 정합니다. Use standalone review는 연결 정보를 보존합니다.\nCD 오류 알림은 Commit Defender와 작업명을 표시합니다. Error loading webview는 reader key 거부가 아닌 VS Code 뷰어 오류입니다. 이 내장 가이드는 Markdown 미리보기의 Service Worker에 의존하지 않습니다.\n[설정 열기](command:commitDefender.openSettings)\n[GCR 연결 열기](command:commitDefender.manageCentralConnection)",
                         "media": {
                             "svg": "media/guide/review.ko.svg"
                         },

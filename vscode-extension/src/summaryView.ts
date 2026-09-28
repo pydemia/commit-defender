@@ -33,6 +33,7 @@ export class SummaryView {
     readonly repoRoot: string,
     private readonly links: ReviewLinks,
     palette?: Palette,
+    readonly locale: 'en' | 'ko' = 'en',
   ) {
     this.html = buildSummaryHtml(report, this, palette);
   }
@@ -154,6 +155,7 @@ function buildSummaryHtml(
   const outcome = OUTCOME_META[status];
   const grade = status === "completed" ? report.review.grade : "";
   const isError = status === "failed";
+  const isCancelled = status === "cancelled";
   const wp = worstPriority(blocks);
   const wpMeta = wp ? PRIORITY_META[wp] : undefined;
   const headerBadge = `<span class="badge" style="background:var(--vscode-${outcome.color.replaceAll(".", "-")})">${outcome.label.toUpperCase()}</span>`;
@@ -235,15 +237,27 @@ function buildSummaryHtml(
   }
 
   if (report.review.summary) {
-    if (isError) {
-      const txt = report.review.summary.replace(
+    if (isCancelled) {
+      const detail = view.locale === 'ko' && report.review.summary === 'Review did not complete.'
+        ? '리뷰가 완료되지 않았습니다.' : report.review.summary;
+      body += `<section><h2>${view.locale === 'ko' ? '취소된 리뷰' : 'Cancelled review'}</h2>
+        <div class="summary-error">${view.markdown(detail)}</div></section>`;
+    } else if (isError) {
+      const original = report.review.summary.replace(
         /^AI review unavailable:\s*/i,
         "",
       );
-      body += `<section><h2>⚠ AI Review Error</h2>
+      const timedOut = report.gcr?.report.problems.some(problem => problem.code === 'timeout');
+      const txt = timedOut
+        ? view.locale === 'ko'
+          ? '모델 리뷰가 제한 시간에 도달해 완료되지 않았습니다. Review & Display에서 단일 파일 제한 시간을 늘린 뒤 다시 실행하십시오.'
+          : 'The model review exceeded its time limit. Increase the single-file timeout in Review & Display, then retry.'
+        : view.locale === 'ko' && original === 'Review did not complete.'
+          ? '리뷰가 완료되지 않았습니다.' : original;
+      body += `<section><h2>⚠ ${view.locale === 'ko' ? '리뷰 실패' : 'AI Review Error'}</h2>
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
-      body += `<section><h2>📋 Overall Summary</h2>
+      body += `<section><h2>📋 ${view.locale === 'ko' ? '전체 요약' : 'Overall Summary'}</h2>
         ${report.review.per_file_summaries?.length && report.gcr?.report.identity.context.entries.some(entry => entry.id.startsWith("history-")) ? `<div class="per-file-summary">${view.markdown(report.review.summary)}</div>` : ""}
         ${_renderOverallSummary(report.review, blocks, view, pal)}</section>`;
     }
@@ -264,7 +278,7 @@ function buildSummaryHtml(
   }
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${view.locale}">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${view.id}'; style-src 'nonce-${view.id}'; style-src-attr 'unsafe-inline'; base-uri 'none'; form-action 'none'">

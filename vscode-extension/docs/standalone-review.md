@@ -39,7 +39,7 @@ Repository account settings do not authorize an executable, model or profile. Ex
 
 Use the existing Analyze Current File, Analyze Staged Files, Analyze Directory or Analyze Repository commands. Staged reviews capture the index; other commands capture saved working-tree files. The core can read captured base and related repository source through its limited source tools. Unsaved editor changes are not part of the captured view.
 
-Preparation runs in a worker. The status bar can cancel preparation or execution. The model-run limit defaults to 120 seconds for one file and 360 seconds for multiple files, with a maximum of 600 seconds. Preparation has a separate limit of the same duration. Cancellation waits for owned resources to close. `maxTokens` limits API output. It does not impose an output-token cap on Codex.
+Preparation runs in a worker. The status bar can cancel preparation or execution. The model-run limit defaults to 300 seconds for one file and 360 seconds for multiple files, with a maximum of 600 seconds. Preparation has a separate limit of the same duration. Cancellation waits for owned resources to close. `maxTokens` limits API output. It does not impose an output-token cap on Codex.
 
 The summary preserves incomplete, failed and cancelled outcomes. Standalone findings are advisory. It shows the source/context hashes, criteria revisions, source-read observations, anchor checks and evidence assessment. A source-read observation records a returned range; it does not claim a test was executed. Changed editor content invalidates inline source positions.
 
