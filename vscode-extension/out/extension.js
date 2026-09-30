@@ -6943,7 +6943,7 @@ async function discoverCentralConnections(serverUrl, apiKey, clientId, options =
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.53",
+  version: "0.1.0-alpha.54",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 

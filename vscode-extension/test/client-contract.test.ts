@@ -32,10 +32,10 @@ const bytes = fs.readFileSync(path.join(fixtureDir, "reports.json"));
 const provenance = JSON.parse(
   fs.readFileSync(path.join(fixtureDir, "provenance.json"), "utf8"),
 );
-const deliveryVersion = "0.1.0-alpha.54";
+const deliveryVersion = "0.1.0-alpha.55";
 const packageVersions: Record<string, string> = {
   "@gcr/client-contract": "0.1.0-alpha.51",
-  "@gcr/client-core": "0.1.0-alpha.53",
+  "@gcr/client-core": "0.1.0-alpha.54",
   "@gcr/client-executors": deliveryVersion,
 };
 const corpus = JSON.parse(bytes.toString("utf8")) as {
@@ -222,7 +222,7 @@ test("uses a pinned installed package and the byte-identical GCR fixture", () =>
   );
   assert.equal(
     packageJson.dependencies["@gcr/client-contract"],
-    "file:vendor/gcr/0.1.0-alpha.54/gcr-client-contract-0.1.0-alpha.51.tgz",
+    "file:vendor/gcr/0.1.0-alpha.55/gcr-client-contract-0.1.0-alpha.51.tgz",
   );
   const vendor = path.resolve(__dirname, "../vendor/gcr", deliveryVersion);
   const manifest = JSON.parse(

@@ -293,6 +293,47 @@ test("standalone mode makes no central requests even when a connected selection 
   assert.equal(f.central.calls, before);
 });
 
+test("central online current-file review corrects an unknown read ID", async t => {
+  const f = await setup(t);
+  let calls = 0;
+  const job = await prepareStandaloneReview(
+    { ...f.request, scope: "file" }, f.settings, signal(), {
+      ...f.ports,
+      prepareExecutor: async () => ({
+        descriptor: { ...descriptor, id: "codex-account" },
+        async review(input) {
+          calls++;
+          assert(input.prompt.includes("CD_CENTRAL_POLICY"));
+          const data = JSON.parse(input.prompt.slice(input.prompt.lastIndexOf("\n") + 1));
+          const reads = data.fixedSourceReads;
+          if (calls === 2) assert(input.prompt.includes("validSourceReads"));
+          return {
+            model: descriptor.model,
+            raw: JSON.stringify({
+              summary: "Reviewed fixed source and base",
+              files: [{
+                path: "sum.ts", side: "source", complete: true,
+                summary: "Inspected",
+                readIds: calls === 1
+                  ? ["invented-read-id", reads[1].readId]
+                  : reads.map((read: any) => read.readId),
+              }],
+              findings: [], questions: [],
+            }),
+          };
+        },
+      }),
+    },
+  );
+  const result = await job.run(signal());
+  assert.equal(calls, 2);
+  assert.equal(result.report.gcr?.report.status, "completed");
+  assert.equal(
+    result.report.gcr?.report.identity.client.execution?.knowledgeSource,
+    "central-online",
+  );
+});
+
 test("explicit offline review survives service unavailability but confirmed revocation prevents any model", async (t) => {
   const f = await setup(t);
   let calls = 0;

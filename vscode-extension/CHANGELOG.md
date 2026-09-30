@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.14.11
+
+- When a model cites a source read ID that the review did not issue, retry once
+  with the actual read IDs and their ranges. Keep the same source snapshot,
+  account, model, deadline and review budget; still reject invalid responses.
+- Include both model calls in review timing when this correction is needed.
+
 ## 2.14.10
 
 - Show the recorded review failure cause in Summary, the failure notification,

@@ -166,6 +166,53 @@ for (const omitBase of [false, true]) {
   });
 }
 
+test("current-file review corrects an unknown preloaded read ID", async t => {
+  const f = setup(t);
+  let modelRuns = 0;
+  let firstReadId = "";
+  const prepared = await prepareStandaloneReview(
+    { ...f.request, scope: "file" }, settings, abort(), {
+      dataDirectory: f.dataDirectory,
+      keys: f.keyStore,
+      prepareExecutor: async () => ({
+        descriptor: { ...descriptor, id: "codex-account" },
+        async review(input) {
+          modelRuns++;
+          const data = JSON.parse(input.prompt.slice(input.prompt.lastIndexOf("\n") + 1));
+          const reads = data.fixedSourceReads;
+          assert.equal(reads.length, 2);
+          if (modelRuns === 1) firstReadId = reads[0].readId;
+          else {
+            assert(input.prompt.includes(firstReadId));
+            assert(input.prompt.includes("validSourceReads"));
+          }
+          return {
+            model: descriptor.model,
+            raw: JSON.stringify({
+              summary: "Reviewed fixed supplied source",
+              files: [{
+                path: "sum.ts", side: "source", complete: true,
+                summary: "Checked supplied reads",
+                readIds: modelRuns === 1
+                  ? ["invented-read-id", reads[1].readId]
+                  : reads.map((read: any) => read.readId),
+              }],
+              findings: [], questions: [],
+            }),
+          };
+        },
+      }),
+    },
+  );
+  try {
+    const result = await prepared.run(abort());
+    assert.equal(modelRuns, 2);
+    assert.equal(result.report.gcr?.report.status, "completed");
+    assert.equal(result.performance?.reads, 4);
+    assert(!JSON.stringify(result.report).includes("invented-read-id"));
+  } finally { prepared.dispose(); }
+});
+
 for (const failure of ["history", "request"] as const) {
   test(`a ${failure} persistence failure cannot acknowledge automatic completion`, async t => {
     const f = setup(t);

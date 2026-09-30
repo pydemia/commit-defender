@@ -6610,7 +6610,7 @@ async function runReviewConversation(input) {
 // node_modules/@gcr/client-core/dist/index.js
 var clientCorePackage = Object.freeze({
   name: "@gcr/client-core",
-  version: "0.1.0-alpha.53",
+  version: "0.1.0-alpha.54",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
@@ -7635,7 +7635,7 @@ async function prepareCodexAccountExecutor(options) {
 // node_modules/@gcr/client-executors/dist/index.js
 var clientExecutorsPackage = Object.freeze({
   name: "@gcr/client-executors",
-  version: "0.1.0-alpha.54",
+  version: "0.1.0-alpha.55",
   contractVersion: CLIENT_CONTRACT_VERSION
 });
 
