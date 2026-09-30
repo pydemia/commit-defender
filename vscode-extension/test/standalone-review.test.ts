@@ -30,6 +30,7 @@ import {
   sourceViews,
 } from "../src/reviewSource.js";
 import { fixture } from "./helpers/review-fixture.js";
+import { compareBranch, listBranchTargets } from "../src/branchComparison.js";
 import {
   checkLocalContextFreshness,
   saveKnowledgeFromEditor,
@@ -137,6 +138,57 @@ async function answer(input: Parameters<LocalReviewExecutor["review"]>[0]) {
   return { reads, response };
 }
 const abort = () => new AbortController().signal;
+
+for (const kind of ["changes", "merge-impact"] as const) {
+  test(`${kind} uses committed source and the shared review executor`, async t => {
+    const f = setup(t);
+    f.git("switch", "-c", "feature");
+    f.git("commit", "-m", "change sum");
+    if (kind === "merge-impact") {
+      f.git("switch", "main");
+      f.write("consumer.ts", "export const consumer = 2;\n");
+      f.git("add", ".");
+      f.git("commit", "-m", "change consumer");
+      f.git("switch", "feature");
+    }
+    f.write("sum.ts", "uncommitted source must not enter the review\n");
+    const target = (await listBranchTargets(f.repo)).targets.find(
+      item => item.name === "main",
+    )!;
+    const comparison = await compareBranch(f.repo, target, kind);
+    let prompt = "";
+    const prepared = await prepareStandaloneReview({
+      repoRoot: f.repo,
+      files: [],
+      scope: kind === "changes" ? "branch" : "merge-impact",
+      branchComparison: comparison,
+    }, settings, abort(), {
+      dataDirectory: f.dataDirectory,
+      keys: f.keyStore,
+      prepareExecutor: async () => ({
+        descriptor,
+        async review(input) {
+          prompt = input.prompt;
+          const source = JSON.parse(await input.source.execute(
+            "read_file", { path: "sum.ts", side: "source" },
+          ));
+          assert.match(source.text, /reduce\(\(a, b\) => a \+ b\)/);
+          assert(!source.text.includes("uncommitted source"));
+          return { model: descriptor.model,
+            raw: JSON.stringify((await answer(input)).response) };
+        },
+      }),
+    });
+    try {
+      const result = await prepared.run(abort());
+      assert.equal(result.report.gcr?.report.status, "completed");
+      assert.equal(result.report.source_snapshot?.kind, "commit-tree");
+      assert.match(prompt, kind === "changes"
+        ? /Review committed changes/
+        : /Review the virtual merge result/);
+    } finally { prepared.dispose(); }
+  });
+}
 
 for (const omitBase of [false, true]) {
   test(`Codex preload receipts preserve full source/base coverage validation (omit base=${omitBase})`, async t => {

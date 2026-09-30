@@ -147,11 +147,17 @@ command. Do not put keys in repository settings. See
 | Analyze Current File | The active file's saved working-tree content |
 | Analyze Directory… | Eligible saved files in the selected directory |
 | Analyze Repository | Eligible saved repository files, subject to confirmation and source limits |
+| Review Branch Changes | Committed changes from the merge base with a selected target branch to current HEAD |
+| Review Merge Impact | A virtual merge of current HEAD into the selected target, compared with the target commit |
 
 The review captures source, base, and relevant repository context. Unsaved
 buffers are not captured. Sensitive-file exclusions and source limits apply;
 `excludePatterns` can narrow the selection. The model's source tools read only
 captured material and cannot execute shell commands or edit files.
+Branch commands ignore uncommitted edits. Merge Impact stops before model
+execution if Git reports a merge conflict; it does not update either branch,
+the index or the working tree. Both reviews use the selected account/model and
+the same local or connected review policy as other manual reviews.
 
 Use **Cancel Analysis** or the status bar to stop preparation or execution.
 Cancellation waits for owned work to close. Cancelled and timed-out attempts
@@ -207,6 +213,12 @@ range is broader than fixed-source review, as shown above.
 The `commitDefender.locale` setting also controls the generated title and body:
 `ko` produces Korean text and `en` produces English text. Type labels such as
 `[Fix]`, code identifiers and file paths keep their original spelling.
+
+**Generate PR Description** asks for a target branch and drafts a title and
+Markdown body from committed branch changes. The draft opens in an editable
+document; copy it into your PR after checking its claims. This command does
+not create a PR or include uncommitted work. A long diff is truncated to the
+input limit, and the draft then warns you to check omitted changes.
 
 Use **Commit Defender Settings → Commit Message** to define the final layout.
 The multiline format supports model fields (`$type`, `$scope`, `$title`,
@@ -348,6 +360,8 @@ All names below have the **Commit Defender:** prefix in the Command Palette.
 | Refresh Local History / Local Review Activity | Reload reports or inspect recorded activity |
 | Discuss Review | Ask about a report and captured source |
 | Generate Commit Message | Draft a message in the SCM input box |
+| Generate PR Description | Draft a PR title and Markdown body from committed changes |
+| Review Branch Changes / Review Merge Impact | Review committed diff or a virtual merge result |
 | Install / Uninstall Pre-commit Hook | Manage the separate legacy hook |
 
 ## Settings

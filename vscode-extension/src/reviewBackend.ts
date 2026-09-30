@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { Reviewer, type ProgressCb } from "./ai/reviewer.js";
 import type { ResolvedConfig } from "./config.js";
-import { truncate } from "./diff.js";
+import { MAX_CONTENT_CHARS, truncate } from "./diff.js";
 import { captureStagedSnapshot, type StagedSnapshot } from "./gitSnapshot.js";
 import { captureWorkingFiles, type CapturedFiles } from "./reviewInput.js";
 import { sourceHash } from "./reviewSource.js";
@@ -10,14 +10,19 @@ import { loadSkillMaterial } from "./skills.js";
 import type { CommitMessageResult, RunResult } from "./types.js";
 import { prepareStandaloneWorker } from "./standaloneWorkerClient.js";
 import type { StandaloneReviewSettings } from "./standaloneReviewProtocol.js";
+import { captureLocalSource } from "@gcr/client-core";
+import type { BranchComparison } from "./branchComparison.js";
+import type { PullRequestMessageResult } from "./types.js";
 
 export type ReviewScope =
-  "staged" | "file" | "directory" | "repository" | "selection";
+  "staged" | "file" | "directory" | "repository" | "selection" |
+  "branch" | "merge-impact";
 export interface ReviewRequest {
   repoRoot: string;
   files: string[];
   scope: ReviewScope;
   scopeTarget?: string;
+  branchComparison?: BranchComparison;
   sourceExclusions?: SourceExclusion[];
   automatic?: {
     reason: "save" | "stage";
@@ -192,5 +197,46 @@ class LegacyReviewBackend {
       run: (signal) =>
         reviewer.generateCommitMessage(repoRoot, signal, captured),
     };
+  }
+
+  preparePullRequestMessage(
+    repoRoot: string,
+    comparison: BranchComparison,
+  ): PreparedExecution<PullRequestMessageResult> {
+    if (comparison.kind !== "changes")
+      throw new Error("A PR description requires a branch changes comparison.");
+    const snapshot = captureLocalSource({
+      cwd: repoRoot,
+      kind: "commit-tree",
+      sourceCommit: comparison.sourceCommit,
+      baseCommit: comparison.baseCommit,
+      targetBranch: comparison.targetBranch,
+      excludePatterns: this.config.excludePatterns,
+    });
+    try {
+      if (!snapshot.selected.length || !snapshot.diff.trim())
+        throw new Error("No reviewable committed branch changes were found.");
+      const truncated = snapshot.diff.length > MAX_CONTENT_CHARS;
+      const diff = truncate(snapshot.diff);
+      const reviewer = new Reviewer(this.config);
+      return {
+        backendId: "legacy",
+        key: this.key("pull-request-message", {
+          repoRoot, comparison, source: snapshot.identity.hash,
+        }),
+        run: async signal => {
+          const result = await reviewer.generatePullRequestMessage(
+            repoRoot, comparison, diff, signal,
+          );
+          if (!truncated || result.is_error) return result;
+          const notice = this.config.locale === "ko"
+            ? "> 입력 diff가 길어 일부만 사용했습니다. 누락된 변경사항을 확인하세요."
+            : "> The input diff was truncated. Check for omitted changes.";
+          return { ...result, body: `${notice}\n\n${result.body}` };
+        },
+      };
+    } finally {
+      snapshot.close();
+    }
   }
 }

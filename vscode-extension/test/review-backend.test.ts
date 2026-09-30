@@ -14,6 +14,7 @@ import {
 import type { RunResult, CommitMessageResult } from "../src/types.js";
 import { fixture } from "./helpers/review-fixture.js";
 import { captureStagedSnapshot } from "../src/gitSnapshot.js";
+import { compareBranch, listBranchTargets } from "../src/branchComparison.js";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -471,6 +472,38 @@ for (const locale of ["ko", "en"] as const) {
     } finally { f.cleanup(); }
   });
 }
+
+test("PR description uses only committed branch changes and the selected locale", async t => {
+  const f = fixture(); t.after(f.cleanup);
+  fs.writeFileSync(f.executable, `#!/usr/bin/env node
+const fs = require('node:fs'); let text = '';
+process.stdin.on('data', chunk => text += chunk);
+process.stdin.on('end', () => {
+  fs.appendFileSync(${JSON.stringify(f.capture)}, JSON.stringify({text})+'\\n');
+  process.stdout.write(JSON.stringify({title:'변경 요약',body:'기능 변경 설명'}));
+});\n`);
+  f.cfg.locale = "ko";
+  f.write("source.ts", "export const value = 1;\n");
+  f.git("add", "."); f.git("commit", "-m", "base");
+  f.git("switch", "-c", "feature");
+  f.write("source.ts", "export const value = 2;\n");
+  f.git("add", "."); f.git("commit", "-m", "change");
+  f.write("source.ts", "export const value = 999;\n");
+  const target = (await listBranchTargets(f.repo)).targets.find(
+    item => item.name === "main",
+  )!;
+  const comparison = await compareBranch(f.repo, target, "changes");
+  const prepared = createLegacyReviewBackend(f.cfg)
+    .preparePullRequestMessage(f.repo, comparison);
+  const result = await prepared.run(new AbortController().signal);
+  assert.deepEqual(result, {
+    title: "변경 요약", body: "기능 변경 설명", is_error: false, error: "",
+  });
+  const request = calls(f)[0].text;
+  assert.match(request, /value = 2/);
+  assert(!request.includes("value = 999"));
+  assert.match(request, /제목과 본문을 한국어로 작성하세요/);
+});
 
 test('commit-message generation applies the saved variable format after model output', async () => {
   const f = fixture();

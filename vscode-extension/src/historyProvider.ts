@@ -193,6 +193,9 @@ export class HistoryProvider implements vscode.TreeDataProvider<TreeNode> {
   private _buildCommands(): TreeNode {
     const children: TreeNode[] = [
       { kind: 'command', id: 'cmd-commit-msg',    label: 'Generate Commit Message',  desc: 'Draft a message from staged diff', icon: 'wand',      command: 'commitDefender.generateCommitMessage' },
+      { kind: 'command', id: 'cmd-pr-msg', label: 'Generate PR Description', desc: 'Draft from committed branch changes', icon: 'git-pull-request', command: 'commitDefender.generatePullRequestMessage' },
+      { kind: 'command', id: 'cmd-branch-review', label: 'Review Branch Changes', desc: 'Review commits against a target branch', icon: 'git-compare', command: 'commitDefender.reviewBranchChanges' },
+      { kind: 'command', id: 'cmd-merge-impact', label: 'Review Merge Impact…', desc: 'Review the virtual merged result', icon: 'git-merge', command: 'commitDefender.reviewMergeImpact' },
       { kind: 'command', id: 'cmd-analyze',        label: 'Analyze Staged Files',     desc: 'Review git staged changes',        icon: 'checklist', command: 'commitDefender.analyze' },
       { kind: 'command', id: 'cmd-analyze-file',   label: 'Analyze Current File',     desc: 'Review the open file',             icon: 'file-code',  command: 'commitDefender.analyzeCurrentFile' },
       { kind: 'command', id: 'cmd-analyze-dir',    label: 'Analyze Directory…',       desc: 'Pick a folder to review',          icon: 'folder',     command: 'commitDefender.analyzeDirectory' },
@@ -315,6 +318,8 @@ function scopeIcon(scope: AnalysisScope): string {
     case 'directory':  return 'folder';
     case 'repository': return 'repo';
     case 'selection': return 'files';
+    case 'branch': return 'git-compare';
+    case 'merge-impact': return 'git-merge';
   }
 }
 
@@ -325,6 +330,8 @@ function scopeTag(scope: AnalysisScope): string {
     case 'directory':  return 'dir';
     case 'repository': return 'repo';
     case 'selection': return 'saved files';
+    case 'branch': return 'branch';
+    case 'merge-impact': return 'merge impact';
   }
 }
 

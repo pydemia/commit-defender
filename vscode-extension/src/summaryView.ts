@@ -203,6 +203,13 @@ function buildSummaryHtml(
 
   const metaParts: string[] = [
     reviewCoverage(report),
+    report.branch_comparison
+      ? `${report.branch_comparison.kind === 'merge-impact'
+        ? (view.locale === 'ko' ? '병합 영향도' : 'Merge impact')
+        : (view.locale === 'ko' ? '브랜치 변경사항' : 'Branch changes')}: ` +
+        `${report.branch_comparison.sourceBranch} → ` +
+        report.branch_comparison.targetBranch
+      : '',
     blocks.length > 0 ? `${blocks.length} comment(s)` : "",
     report.gcr ? `${reviewExecutionLabel(report.gcr.report.identity.client)} · advisory` : `Legacy hook: ${resolveExitCode(report) === 1 ? "would block" : "allows commit"}`,
     `${report.duration_ms} ms`,

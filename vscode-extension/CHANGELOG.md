@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.14.12
+
+- Draft an editable PR title and description from committed branch changes
+  against a selected target branch. The draft excludes uncommitted edits and
+  warns when the diff exceeds the model input limit.
+- Review committed branch changes through the shared fixed-source reviewer,
+  using the selected account, model and local or central review knowledge.
+- Review the impact of a virtual merge into a target branch without changing
+  either branch, the index or the working tree. Report merge conflicts before
+  calling the model.
+
 ## 2.14.11
 
 - When a model cites a source read ID that the review did not issue, retry once

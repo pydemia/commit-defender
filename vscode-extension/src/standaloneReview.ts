@@ -171,7 +171,16 @@ export async function prepareStandaloneReview(
         ))
     )
       throw new StandaloneReviewError("executor-unavailable");
-    if (!request.files.length) throw new StandaloneReviewError("no-source");
+    const branchComparison = request.branchComparison;
+    const branchScope = request.scope === "branch" ||
+      request.scope === "merge-impact";
+    if (branchScope !== !!branchComparison ||
+      (branchComparison && (request.files.length || request.automatic ||
+        branchComparison.kind !== (request.scope === "branch"
+          ? "changes" : "merge-impact"))))
+      throw new StandaloneReviewError("request-invalid");
+    if (!branchScope && !request.files.length)
+      throw new StandaloneReviewError("no-source");
     const localClient = discoverLocalIdentity(
       request.repoRoot,
       settings.profileId,
@@ -227,7 +236,14 @@ export async function prepareStandaloneReview(
     };
     const automaticSource = await assertAutomaticSource();
     checkAbort(signal);
-    snapshot = captureLocalSource({
+    snapshot = captureLocalSource(branchComparison ? {
+      cwd: request.repoRoot,
+      kind: "commit-tree",
+      sourceCommit: branchComparison.reviewSourceCommit,
+      baseCommit: branchComparison.baseCommit,
+      targetBranch: branchComparison.targetBranch,
+      excludePatterns: settings.excludePatterns,
+    } : {
       cwd: request.repoRoot,
       kind: request.scope === "staged" ? "index" : "working-tree",
       paths: request.files,
@@ -419,6 +435,33 @@ export async function prepareStandaloneReview(
       executor = prefetchReviewSource(executor, reviewPrefetchTargets(snapshot, context.context.sources), performanceMetrics);
     }
     executor = applyReviewLocale(executor, settings.locale);
+    if (branchComparison) {
+      const instruction = branchComparison.kind === "merge-impact"
+        ? "Review the virtual merge result against the target branch. " +
+          "Focus on behavior that would break when these branches are " +
+          "combined, including changed interfaces and affected consumers. " +
+          "Do not claim the merge was applied to the working tree."
+        : "Review committed changes on the source branch since its merge " +
+          "base with the target branch. Focus on defects introduced by " +
+          "those changes, including affected consumers.";
+      const original = executor;
+      executor = {
+        descriptor: {
+          ...original.descriptor,
+          configHash: contentHash({
+            executor: original.descriptor.configHash,
+            branchComparison,
+          }),
+        },
+        review: input => original.review({
+          ...input,
+          prompt: input.prompt + "\n\nCommit Defender branch review: " +
+            instruction + " Source: " +
+            JSON.stringify(branchComparison.sourceBranch) +
+            "; target: " + JSON.stringify(branchComparison.targetBranch) + ".",
+        }),
+      };
+    }
     const resolution = resolveLocalExecutionPolicy({
       context,
       snapshot,

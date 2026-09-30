@@ -49,3 +49,13 @@ export const COMMIT_MESSAGE_OUTPUT_SCHEMA: JsonSchema = {
   required: ['commit_message', 'type', 'scope', 'title', 'body'],
   additionalProperties: false,
 };
+
+export const PULL_REQUEST_MESSAGE_OUTPUT_SCHEMA: JsonSchema = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    body: { type: 'string' },
+  },
+  required: ['title', 'body'],
+  additionalProperties: false,
+};

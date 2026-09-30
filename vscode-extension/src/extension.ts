@@ -44,6 +44,8 @@ import { resolvePalette } from './palette.js';
 import { normalizeReport } from './commentFormatter.js';
 import { openReviewChat, settleReviewChats } from './reviewChat.js';
 import { DEFAULT_COMMIT_MESSAGE_FORMAT, unavailableRepositoryVariables } from './gitTemplates.js';
+import { compareBranch, listBranchTargets, type BranchComparison,
+  type BranchReviewKind, type BranchTarget } from './branchComparison.js';
 
 const ALL_FILES: vscode.DocumentSelector = { scheme: 'file' };
 let settleExecutions: (() => Promise<void>) | undefined;
@@ -407,10 +409,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     sourceExclusions: SourceExclusion[] = [],
     automatic?: AutomaticTask<ReviewRequest>,
     feedback?: { connectionId: string; profileId: string; snapshotId: string; signal: AbortSignal; current: () => boolean },
+    branchComparison?: BranchComparison,
   ): Promise<void | { retryAt?: number; completionConfirmed?: boolean }> {
     if (!automatic) lastManualStartedAt = Date.now();
+    if (branchComparison) getOutputChannel().appendLine(
+      `[Commit Defender] ${branchComparison.kind === 'merge-impact'
+        ? 'Merge impact' : 'Branch changes'}: ` +
+      `${branchComparison.sourceBranch} (${branchComparison.sourceCommit}) → ` +
+      `${branchComparison.targetBranch} (${branchComparison.targetCommit}); ` +
+      `review source ${branchComparison.reviewSourceCommit}.`,
+    );
     const cfg = getConfig();
-    let localSettings = getStandaloneReviewSettings(relPaths.length, repoRoot);
+    let localSettings = getStandaloneReviewSettings(
+      branchComparison ? 2 : relPaths.length, repoRoot,
+    );
     try {
       const scope = knowledgeScope({ repoRoot, profileId: localSettings.profileId, scope: 'repository' });
       localSettings = selectedReviewSettings(localSettings, readSelection(context.globalState, scope));
@@ -435,6 +447,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await execution.prepare(signal => withReviewSignals(signal, ownerSignal, async combined => {
       if (feedback && !feedback.current()) throw new StandaloneReviewError('cancelled');
       const job = await backend.prepareReview({repoRoot, files:relPaths, scope, scopeTarget, sourceExclusions,
+        ...(branchComparison ? { branchComparison } : {}),
         ...(automatic?.value.automatic ? { automatic: automatic.value.automatic } : {})}, combined);
       return { ...job, run: (runSignal: AbortSignal, progress?: Parameters<typeof job.run>[1]) =>
         withReviewSignals(runSignal, ownerSignal, merged => {
@@ -487,6 +500,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           panelProvider.setRunning(false);
         }
         retainCapturedSources(result.report, result.capturedSources);
+        if (branchComparison) result.report.branch_comparison = branchComparison;
         result.report.source_exclusions = [...new Map(
           [...sourceExclusions, ...(result.report.source_exclusions ?? [])].map(entry => [`${entry.path}\0${entry.reason}`, entry]),
         ).values()];
@@ -868,6 +882,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           }
           case 'selection':
           case 'file': {
+            if (histEntry.report.source_snapshot?.kind === 'commit-tree') {
+              const choice = await vscode.window.showQuickPick([
+                { label: 'Review Branch Changes', reviewKind: 'changes' as const },
+                { label: 'Review Merge Impact', reviewKind: 'merge-impact' as const },
+              ], { title: 'Choose a new branch review' });
+              if (!choice || intent !== reviewIntent) return;
+              const selected = await chooseBranchComparison(choice.reviewKind);
+              if (!selected || intent !== reviewIntent) return;
+              await analyze([], selected.repoRoot,
+                choice.reviewKind === 'changes' ? 'branch' : 'merge-impact',
+                selected.comparison.targetBranch, [], undefined, undefined,
+                selected.comparison);
+              return;
+            }
             const files = histEntry.report.staged_files;
             if (!files.length) {
               vscode.window.showWarningMessage('Commit Defender: No file recorded in this history entry.');
@@ -913,12 +941,169 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             await analyze(allFiles, rawRoot, 'repository', undefined, sourceExclusions);
             break;
           }
+          case 'branch':
+          case 'merge-impact': {
+            const kind = histEntry.scope === 'branch'
+              ? 'changes' : 'merge-impact';
+            const selected = await chooseBranchComparison(kind);
+            if (!selected || intent !== reviewIntent) return;
+            await analyze([], selected.repoRoot, histEntry.scope,
+              selected.comparison.targetBranch, [], undefined, undefined,
+              selected.comparison);
+            break;
+          }
         }
       } catch (err) {
         handleError(err, statusBar, intent === reviewIntent && !execution.isRunning);
       }
     }
   ));
+
+  async function chooseBranchComparison(
+    kind: BranchReviewKind,
+  ): Promise<{ repoRoot: string; comparison: BranchComparison } | undefined> {
+    if (!vscode.workspace.isTrusted) {
+      void vscode.window.showWarningMessage(
+        'Commit Defender: Trust this workspace before comparing branches.',
+      );
+      return;
+    }
+    const repoRoot = await resolveRepoRoot();
+    if (!repoRoot) {
+      void vscode.window.showWarningMessage(
+        'Commit Defender: Open a Git repository before comparing branches.',
+      );
+      return;
+    }
+    let sourceBranch: string;
+    let targets: BranchTarget[];
+    try {
+      ({ sourceBranch, targets } = await listBranchTargets(repoRoot));
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        `Commit Defender: ${(error as Error).message}`,
+      );
+      return;
+    }
+    if (!targets.length) {
+      void vscode.window.showWarningMessage(
+        'Commit Defender: No target branch is available. Create or fetch a target branch first.',
+      );
+      return;
+    }
+    const selected = await vscode.window.showQuickPick(
+      targets.map(target => ({
+        label: target.name,
+        description: target.preferred ? 'Default remote branch' : '',
+        detail: `${sourceBranch} → ${target.name}`,
+        target,
+      })),
+      {
+        title: kind === 'merge-impact'
+          ? 'Review impact after merging into which branch?'
+          : 'Compare current branch against which target?',
+        placeHolder: 'Choose the PR target branch',
+      },
+    );
+    if (!selected) return;
+    try {
+      const comparison = await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: kind === 'merge-impact'
+          ? 'Commit Defender: Preparing virtual merge…'
+          : 'Commit Defender: Comparing committed branches…',
+      }, () => compareBranch(repoRoot, selected.target, kind));
+      return {
+        repoRoot,
+        comparison,
+      };
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        `Commit Defender: ${(error as Error).message}`,
+      );
+      return;
+    }
+  }
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'commitDefender.reviewBranchChanges',
+      async () => {
+        const selected = await chooseBranchComparison('changes');
+        if (!selected) return;
+        await analyze([], selected.repoRoot, 'branch',
+          selected.comparison.targetBranch, [], undefined, undefined,
+          selected.comparison);
+      },
+    ),
+    vscode.commands.registerCommand(
+      'commitDefender.reviewMergeImpact',
+      async () => {
+        const selected = await chooseBranchComparison('merge-impact');
+        if (!selected) return;
+        await analyze([], selected.repoRoot, 'merge-impact',
+          selected.comparison.targetBranch, [], undefined, undefined,
+          selected.comparison);
+      },
+    ),
+    vscode.commands.registerCommand(
+      'commitDefender.generatePullRequestMessage',
+      async () => {
+        const selected = await chooseBranchComparison('changes');
+        if (!selected) return;
+        const { repoRoot, comparison } = selected;
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: 'Commit Defender: Generating PR description…',
+          cancellable: true,
+        }, async (_, token) => {
+          const controller = new AbortController();
+          const seconds = getConfig().fileTimeoutSeconds;
+          const timeoutMs = seconds > 0 && Number.isFinite(seconds)
+            ? Math.min(600_000, Math.floor(seconds * 1000)) : 180_000;
+          const timeoutMessage = `The selected model exceeded the ${
+            Math.ceil(timeoutMs / 1000)}-second limit.`;
+          const timer = setTimeout(() => controller.abort('timeout'), timeoutMs);
+          const cancellation = token.onCancellationRequested(
+            () => controller.abort('cancelled'),
+          );
+          try {
+            const runtime = await resolveModelRuntimeConfig(
+              getConfig(), localProfile(),
+            );
+            if (controller.signal.reason === 'timeout')
+              throw new Error(timeoutMessage);
+            if (controller.signal.aborted) return;
+            const job = createLegacyReviewBackend(runtime)
+              .preparePullRequestMessage(repoRoot, comparison);
+            const result = await job.run(controller.signal);
+            if (controller.signal.reason === 'timeout')
+              throw new Error(timeoutMessage);
+            if (controller.signal.aborted) return;
+            if (result.is_error) throw new Error(result.error);
+            const document = await vscode.workspace.openTextDocument({
+              language: 'markdown',
+              content: `# ${result.title}\n\n${result.body}\n`,
+            });
+            await vscode.window.showTextDocument(document, { preview: false });
+            void vscode.window.showInformationMessage(
+              'Commit Defender: PR description draft opened for editing.',
+            );
+          } catch (error) {
+            if (!controller.signal.aborted ||
+              controller.signal.reason === 'timeout') {
+              void vscode.window.showErrorMessage(
+                `Commit Defender: PR description failed — ${(error as Error).message}`,
+              );
+            }
+          } finally {
+            clearTimeout(timer);
+            cancellation.dispose();
+          }
+        });
+      },
+    ),
+  );
 
   // ── Generate commit message ────────────────────────────────────────────
   context.subscriptions.push(vscode.commands.registerCommand(

@@ -2,6 +2,7 @@
 import type { SourceExclusion } from './sourcePolicy.js';
 import type { CommitDefenderProjection } from '@gcr/client-contract';
 import type { LocalContextFreshness } from './localKnowledge.js';
+import type { BranchComparison } from './branchComparison.js';
 
 export type Severity = 'error' | 'warning' | 'info';
 
@@ -101,6 +102,8 @@ export interface AnalysisReport {
   gcr?: CommitDefenderProjection['gcr'];
   /** Display-time observation, separate from the immutable report and encrypted history. */
   local_context_freshness?: LocalContextFreshness;
+  /** Display context for a manual branch review; the core identity owns source OIDs. */
+  branch_comparison?: BranchComparison;
   schema_version: 1;
   staged_files: string[];
   duration_ms: number;
@@ -131,6 +134,13 @@ export interface RunResult {
   stderr: string;
   timedOut: boolean;
   cancelled: boolean;
+}
+
+export interface PullRequestMessageResult {
+  title: string;
+  body: string;
+  is_error: boolean;
+  error: string;
 }
 
 /** Result from the commit message generator (CD_COMMIT_MESSAGE=1 mode). */

@@ -8,6 +8,9 @@ This document describes the current source, not every version previously publish
 | --- | --- | --- |
 | Analyze Staged Files | Current Git index, including partial staging | Fixed source/base; later editor bytes do not replace the reviewed snapshot |
 | Analyze Current File / Directory / Repository | Selected saved working-tree files | Exclusions and source limits apply; unsaved buffers are not reviewed |
+| Review Branch Changes | Current HEAD against the merge base with a selected target branch | Committed branch changes; uncommitted edits stay out of the captured source |
+| Review Merge Impact | Virtual merge of HEAD into the selected target commit | Target-to-merge result is reviewed; conflicts stop before model execution and no Git refs or worktree files change |
+| Generate PR Description | Committed branch diff against the selected target | Editable Markdown title/body draft; no PR is created |
 | Cancel Analysis | Active preparation or run | Owned work stops; cancellation is recorded, not converted to clean success |
 | Summary / Problems / inline findings | Validated local result | Advisory findings, coverage/status, anchors, source/context provenance |
 | Show History Entry / Refresh Local History | Selected profile/worktree/audience | Encrypted saved reports; refresh does not start a model or restore stale diagnostics |
