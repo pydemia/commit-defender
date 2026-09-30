@@ -7049,6 +7049,31 @@ function reviewStatus2(review) {
   if (review.is_error) return "failed";
   return review.status ?? "completed";
 }
+function reviewFailureMessage(report, locale) {
+  const problem = report.gcr?.report.problems[0];
+  if (problem?.code === "invalid-output") {
+    const reason = /^Review response rejected \(([a-z-]+)\):/.exec(
+      problem.message
+    )?.[1];
+    if (locale === "ko") {
+      if (reason === "unknown-read-id")
+        return "\uBAA8\uB378 \uC751\uB2F5\uC774 \uC774\uBC88 \uB9AC\uBDF0\uC5D0\uC11C \uBC1C\uAE09\uB418\uC9C0 \uC54A\uC740 source read ID\uB97C \uCC38\uC870\uD588\uC2B5\uB2C8\uB2E4 (unknown-read-id). \uACB0\uACFC\uAC00 \uAC70\uBD80\uB410\uC73C\uBBC0\uB85C \uB2E4\uC2DC \uBD84\uC11D\uD574 \uC8FC\uC138\uC694.";
+      if (reason === "invalid-json")
+        return "\uBAA8\uB378 \uC751\uB2F5\uC774 \uC62C\uBC14\uB978 JSON\uC774 \uC544\uB2C8\uC5B4\uC11C \uACB0\uACFC\uAC00 \uAC70\uBD80\uB410\uC2B5\uB2C8\uB2E4 (invalid-json). \uB2E4\uC2DC \uBD84\uC11D\uD574 \uC8FC\uC138\uC694.";
+      if (reason === "invalid-schema")
+        return "\uBAA8\uB378 \uC751\uB2F5\uC774 \uB9AC\uBDF0 \uC751\uB2F5 \uD615\uC2DD\uC5D0 \uB9DE\uC9C0 \uC54A\uC544 \uACB0\uACFC\uAC00 \uAC70\uBD80\uB410\uC2B5\uB2C8\uB2E4 (invalid-schema). \uB2E4\uC2DC \uBD84\uC11D\uD574 \uC8FC\uC138\uC694.";
+      return `\uBAA8\uB378 \uC751\uB2F5\uC774 \uAC80\uC99D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. ${problem.message}`;
+    }
+    return problem.message;
+  }
+  if (problem && !problem.message.startsWith("No complete review is available"))
+    return problem.message;
+  const summary = report.review.summary.replace(/^AI review unavailable:\s*/i, "");
+  if (summary !== "Review did not complete.") return summary;
+  if (!problem)
+    return locale === "ko" ? "\uB9AC\uBDF0\uAC00 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4." : summary;
+  return locale === "ko" ? `\uB9AC\uBDF0\uAC00 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4 (${problem.code}). \uC138\uBD80 \uC6D0\uC778\uC740 \uBCF4\uACE0\uC11C\uC5D0 \uAE30\uB85D\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.` : `Review did not complete (${problem.code}). The report has no further cause.`;
+}
 var OUTCOME_META = {
   completed: { label: "Completed", icon: "check", color: "terminal.ansiGreen" },
   partial: { label: "Partial", icon: "warning", color: "terminal.ansiYellow" },
@@ -18325,12 +18350,8 @@ function buildSummaryHtml(report, view, palette) {
       body2 += `<section><h2>${view.locale === "ko" ? "\uCDE8\uC18C\uB41C \uB9AC\uBDF0" : "Cancelled review"}</h2>
         <div class="summary-error">${view.markdown(detail)}</div></section>`;
     } else if (isError) {
-      const original = report.review.summary.replace(
-        /^AI review unavailable:\s*/i,
-        ""
-      );
       const timedOut = report.gcr?.report.problems.some((problem) => problem.code === "timeout");
-      const txt = timedOut ? view.locale === "ko" ? "\uBAA8\uB378 \uB9AC\uBDF0\uAC00 \uC81C\uD55C \uC2DC\uAC04\uC5D0 \uB3C4\uB2EC\uD574 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. Review & Display\uC5D0\uC11C \uB2E8\uC77C \uD30C\uC77C \uC81C\uD55C \uC2DC\uAC04\uC744 \uB298\uB9B0 \uB4A4 \uB2E4\uC2DC \uC2E4\uD589\uD558\uC2ED\uC2DC\uC624." : "The model review exceeded its time limit. Increase the single-file timeout in Review & Display, then retry." : view.locale === "ko" && original === "Review did not complete." ? "\uB9AC\uBDF0\uAC00 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4." : original;
+      const txt = timedOut ? view.locale === "ko" ? "\uBAA8\uB378 \uB9AC\uBDF0\uAC00 \uC81C\uD55C \uC2DC\uAC04\uC5D0 \uB3C4\uB2EC\uD574 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. Review & Display\uC5D0\uC11C \uB2E8\uC77C \uD30C\uC77C \uC81C\uD55C \uC2DC\uAC04\uC744 \uB298\uB9B0 \uB4A4 \uB2E4\uC2DC \uC2E4\uD589\uD558\uC2ED\uC2DC\uC624." : "The model review exceeded its time limit. Increase the single-file timeout in Review & Display, then retry." : reviewFailureMessage(report, view.locale);
       body2 += `<section><h2>\u26A0 ${view.locale === "ko" ? "\uB9AC\uBDF0 \uC2E4\uD328" : "AI Review Error"}</h2>
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {
@@ -28099,7 +28120,14 @@ async function activate(context) {
         }
         const core = result.report.gcr?.report;
         getOutputChannel().appendLine(
-          `[Commit Defender] Review result: ${reviewStatus2(result.report.review)}; problems ${core?.problems.map((problem) => problem.code).join(", ") || "none"}; knowledge ${core?.identity.client.execution?.knowledgeSource ?? "unknown"}; executor ${core?.identity.executor.id ?? "unknown"}.`
+          `[Commit Defender] Review result: ${reviewStatus2(result.report.review)}; problems ${core?.problems.map((problem) => problem.code).join(", ") || "none"}.`
+        );
+        for (const problem of core?.problems ?? [])
+          getOutputChannel().appendLine(
+            `[Commit Defender] Review problem ${problem.code}: ${problem.message}`
+          );
+        getOutputChannel().appendLine(
+          `[Commit Defender] Review context: knowledge ${core?.identity.client.execution?.knowledgeSource ?? "unknown"}; executor ${core?.identity.executor.id ?? "unknown"}.`
         );
         const displayBlocks = liveBlocks(result.report, repoRoot, normalizeReport(result.report), (file) => {
           const uri = vscode24.Uri.file(path40.join(repoRoot, file)).toString();
@@ -28113,13 +28141,14 @@ async function activate(context) {
         applyDiagnostics(displayBlocks, repoRoot, diagnostics);
         commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
         if (status === "failed" && !automatic) {
-          const msg = result.timedOut ? `Model review exceeded the ${Math.ceil(localSettings.durationMs / 1e3)}-second limit.` : result.report.review.summary.replace(/^AI review unavailable:\s*/i, "");
-          const provider = accountProvider(cfg2.aiProvider);
-          const signIn2 = !result.timedOut && provider ? signInLabel(provider) : void 0;
-          const actions = result.timedOut ? ["Open Review Settings", "Show Summary", "Show Output"] : signIn2 ? [signIn2, "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
+          const locale = vscode24.workspace.getConfiguration(
+            "commitDefender",
+            vscode24.Uri.file(repoRoot)
+          ).get("locale") ?? cfg2.locale;
+          const msg = result.timedOut ? `Model review exceeded the ${Math.ceil(localSettings.durationMs / 1e3)}-second limit.` : reviewFailureMessage(result.report, locale);
+          const actions = result.timedOut ? ["Open Review Settings", "Show Summary", "Show Output"] : ["Show Summary", "Show Output"];
           void vscode24.window.showErrorMessage(`Commit Defender: Review failed \u2014 ${msg}`, ...actions).then(async (action) => {
             if (action === "Open Review Settings") await vscode24.commands.executeCommand("commitDefender.openReviewSettings");
-            else if (action === signIn2 && provider) await vscode24.commands.executeCommand(signInCommand(provider));
             else if (action === "Show Summary") showSummaryPanel(result.report, repoRoot, context);
             else if (action === "Show Output") getOutputChannel().show();
           });
@@ -28713,17 +28742,8 @@ async function deactivate() {
   findingsStore.clear();
   disposeOutputChannel();
 }
-function accountProvider(provider) {
-  return provider === "codex" || provider === "claudecode" || provider === "geminicli" || provider === "antigravity" ? provider : void 0;
-}
 function accountProviderName(provider) {
   return provider === "codex" ? "Codex" : provider === "claudecode" ? "Claude Code" : provider === "geminicli" ? "Gemini CLI" : "Antigravity";
-}
-function signInLabel(provider) {
-  return provider === "codex" ? "Sign in with Codex" : provider === "claudecode" ? "Sign in with Claude Code" : provider === "geminicli" ? "Sign in with Gemini" : "Sign in with Antigravity";
-}
-function signInCommand(provider) {
-  return provider === "codex" ? "commitDefender.signInCodex" : provider === "claudecode" ? "commitDefender.signInClaudeCode" : provider === "geminicli" ? "commitDefender.signInGeminiCli" : "commitDefender.signInAntigravity";
 }
 async function pickDirectory(root2) {
   let current = root2;

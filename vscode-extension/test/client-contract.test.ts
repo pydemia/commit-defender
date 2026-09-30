@@ -14,7 +14,11 @@ import { clientCorePackage } from "@gcr/client-core";
 import { clientExecutorsPackage } from "@gcr/client-executors";
 import { normalizeReport } from "../src/commentFormatter.js";
 import { resolveExitCode } from "../src/exitResolver.js";
-import { reviewCoverage, reviewStatus } from "../src/reviewOutcome.js";
+import {
+  reviewCoverage,
+  reviewFailureMessage,
+  reviewStatus,
+} from "../src/reviewOutcome.js";
 import { liveBlocks, sourceAnchor } from "../src/reviewSource.js";
 import type { AnalysisReport } from "../src/types.js";
 import { fixture } from "./helpers/review-fixture.js";
@@ -93,11 +97,33 @@ test("failed standalone summary exposes the stored problem and escapes message m
   assert(view.html.includes("Review problems"));
   assert(view.html.includes("invalid-output"));
   assert(view.html.includes("(invalid-json)"));
+  assert(view.html.indexOf("(invalid-json)") < view.html.indexOf("Review problems"));
   assert(view.html.includes("&lt;img src=x onerror="));
   assert(!view.html.includes('<img src=x onerror="alert(1)">'));
   assert.deepEqual(projected.gcr?.report, core);
   assert.equal(projected.review.status, "failed");
   assert.equal(projected.review.blocking, false);
+});
+
+test("unknown source read IDs show the recorded cause in Korean", () => {
+  const core = clientReviewReport({
+    ...reportFor("failed"),
+    problems: [{
+      code: "invalid-output",
+      message: "Review response rejected (unknown-read-id): The response "
+        + "references a source read that this review did not perform.",
+    }],
+  });
+  const report = projectCommitDefender(core);
+  const reason = reviewFailureMessage(report, "ko");
+  assert(reason.includes("이번 리뷰에서 발급되지 않은 source read ID"));
+  assert(reason.includes("unknown-read-id"));
+  const view = new SummaryView(
+    report, "/synthetic", new ReviewLinks(), undefined, "ko",
+  );
+  assert(view.html.includes(reason));
+  assert(view.html.indexOf(reason) < view.html.indexOf("Review problems"));
+  assert(!reason.includes("로그인"));
 });
 
 test("timeout and cancellation render as incomplete outcomes in Korean", () => {

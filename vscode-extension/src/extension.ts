@@ -2,7 +2,7 @@ import { LocalReviewActivity } from './localReviewActivity.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { reviewStatus } from './reviewOutcome.js';
+import { reviewFailureMessage, reviewStatus } from './reviewOutcome.js';
 import { SummaryView } from './summaryView.js';
 import { reviewNavigation } from './reviewNavigation.js';
 import { liveBlocks, liveSource, retainCapturedSources } from './reviewSource.js';
@@ -28,7 +28,7 @@ import { useAccount, useApiCredential } from './modelSetupView.js';
 import { AccountProvider } from './ai/providers.js';
 import { SuggestionCodeLensProvider } from './codeLens.js';
 import { CommentManager } from './comments.js';
-import { ExtensionConfig, getConfig, getStandaloneReviewSettings, waitForModelConfiguration } from './config.js';
+import { getConfig, getStandaloneReviewSettings, waitForModelConfiguration } from './config.js';
 import { applyDiagnostics } from './diagnostics.js';
 import { findingsStore } from './findingsStore.js';
 import { collectFiles, getRepoRoot, getStagedFiles } from './gitHelper.js';
@@ -499,8 +499,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const core = result.report.gcr?.report;
         getOutputChannel().appendLine(
           `[Commit Defender] Review result: ${reviewStatus(result.report.review)}; ` +
-          `problems ${core?.problems.map(problem => problem.code).join(', ') || 'none'}; ` +
-          `knowledge ${core?.identity.client.execution?.knowledgeSource ?? 'unknown'}; ` +
+          `problems ${core?.problems.map(problem => problem.code).join(', ') || 'none'}.`,
+        );
+        for (const problem of core?.problems ?? [])
+          getOutputChannel().appendLine(
+            `[Commit Defender] Review problem ${problem.code}: ${problem.message}`,
+          );
+        getOutputChannel().appendLine(
+          `[Commit Defender] Review context: knowledge ` +
+          `${core?.identity.client.execution?.knowledgeSource ?? 'unknown'}; ` +
           `executor ${core?.identity.executor.id ?? 'unknown'}.`,
         );
 
@@ -517,16 +524,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         commentManager.apply(displayBlocks, repoRoot, commentCtrl, result.report);
 
         if (status === 'failed' && !automatic) {
+          const locale = vscode.workspace.getConfiguration(
+            'commitDefender', vscode.Uri.file(repoRoot),
+          ).get<'en' | 'ko'>('locale') ?? cfg.locale;
           const msg = result.timedOut
             ? `Model review exceeded the ${Math.ceil(localSettings.durationMs / 1000)}-second limit.`
-            : result.report.review.summary.replace(/^AI review unavailable:\s*/i, '');
-          const provider = accountProvider(cfg.aiProvider);
-          const signIn = !result.timedOut && provider ? signInLabel(provider) : undefined;
+            : reviewFailureMessage(result.report, locale);
           const actions = result.timedOut ? ['Open Review Settings', 'Show Summary', 'Show Output']
-            : signIn ? [signIn, 'Show Summary', 'Show Output'] : ['Show Summary', 'Show Output'];
+            : ['Show Summary', 'Show Output'];
           void vscode.window.showErrorMessage(`Commit Defender: Review failed — ${msg}`, ...actions).then(async action => {
             if (action === 'Open Review Settings') await vscode.commands.executeCommand('commitDefender.openReviewSettings');
-            else if (action === signIn && provider) await vscode.commands.executeCommand(signInCommand(provider));
             else if (action === 'Show Summary') showSummaryPanel(result.report, repoRoot, context);
             else if (action === 'Show Output') getOutputChannel().show();
           });
@@ -1149,12 +1156,6 @@ export async function deactivate(): Promise<void> {
   disposeOutputChannel();
 }
 
-function accountProvider(provider: ExtensionConfig['aiProvider']): AccountProvider | undefined {
-  return provider === 'codex' || provider === 'claudecode' || provider === 'geminicli' || provider === 'antigravity'
-    ? provider
-    : undefined;
-}
-
 function accountProviderName(provider: AccountProvider): string {
   return provider === 'codex'
     ? 'Codex'
@@ -1163,26 +1164,6 @@ function accountProviderName(provider: AccountProvider): string {
       : provider === 'geminicli'
         ? 'Gemini CLI'
         : 'Antigravity';
-}
-
-function signInLabel(provider: AccountProvider): string {
-  return provider === 'codex'
-    ? 'Sign in with Codex'
-    : provider === 'claudecode'
-      ? 'Sign in with Claude Code'
-      : provider === 'geminicli'
-        ? 'Sign in with Gemini'
-        : 'Sign in with Antigravity';
-}
-
-function signInCommand(provider: AccountProvider): string {
-  return provider === 'codex'
-    ? 'commitDefender.signInCodex'
-    : provider === 'claudecode'
-      ? 'commitDefender.signInClaudeCode'
-      : provider === 'geminicli'
-        ? 'commitDefender.signInGeminiCli'
-        : 'commitDefender.signInAntigravity';
 }
 
 // ── Directory quick-pick browser ──────────────────────────────────────────────

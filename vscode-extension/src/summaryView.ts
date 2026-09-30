@@ -18,7 +18,12 @@ import {
   resolvePalette,
   gradeColor as paletteGradeColor,
 } from "./palette.js";
-import { OUTCOME_META, reviewCoverage, reviewStatus } from "./reviewOutcome.js";
+import {
+  OUTCOME_META,
+  reviewCoverage,
+  reviewFailureMessage,
+  reviewStatus,
+} from "./reviewOutcome.js";
 import { resolveExitCode } from "./exitResolver.js";
 import { ReviewLinks, reviewMessage } from "./reviewLinks.js";
 import { safeMarkdownHtml } from "./reviewMarkdown.js";
@@ -279,17 +284,12 @@ function buildSummaryHtml(
       body += `<section><h2>${view.locale === 'ko' ? '취소된 리뷰' : 'Cancelled review'}</h2>
         <div class="summary-error">${view.markdown(detail)}</div></section>`;
     } else if (isError) {
-      const original = report.review.summary.replace(
-        /^AI review unavailable:\s*/i,
-        "",
-      );
       const timedOut = report.gcr?.report.problems.some(problem => problem.code === 'timeout');
       const txt = timedOut
         ? view.locale === 'ko'
           ? '모델 리뷰가 제한 시간에 도달해 완료되지 않았습니다. Review & Display에서 단일 파일 제한 시간을 늘린 뒤 다시 실행하십시오.'
           : 'The model review exceeded its time limit. Increase the single-file timeout in Review & Display, then retry.'
-        : view.locale === 'ko' && original === 'Review did not complete.'
-          ? '리뷰가 완료되지 않았습니다.' : original;
+        : reviewFailureMessage(report, view.locale);
       body += `<section><h2>⚠ ${view.locale === 'ko' ? '리뷰 실패' : 'AI Review Error'}</h2>
         <div class="summary-error">${view.markdown(txt)}</div></section>`;
     } else {

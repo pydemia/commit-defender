@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.14.10
+
+- Show the recorded review failure cause in Summary, the failure notification,
+  and Output. For invalid model output, name the rejected response condition;
+  Korean reviews explain unknown source read IDs in Korean.
+- Remove the account sign-in action from failed review notifications. Model
+  response validation failures are not evidence of an expired login.
+
 ## 2.14.9
 
 - Show the exact reviewed source range above each finding in Commit Defender
