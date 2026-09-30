@@ -19,14 +19,16 @@ export const REVIEW_OUTPUT_SCHEMA: JsonSchema = {
         properties: {
           file: { type: 'string' },
           line: { type: 'integer', minimum: 0 },
+          end_line: { type: 'integer', minimum: 0 },
           category: {
             type: 'string',
             enum: ['correctness', 'security', 'maintenance', 'optimization', 'review-history', 'setting'],
           },
           priority: { type: 'string', enum: ['P0', 'P1', 'P2', 'P3'] },
           comment: { type: 'string' },
+          recommendation: { type: 'string' },
         },
-        required: ['file', 'line', 'category', 'priority', 'comment'],
+        required: ['file', 'line', 'end_line', 'category', 'priority', 'comment', 'recommendation'],
         additionalProperties: false,
       },
     },

@@ -32,7 +32,9 @@ const text = "export const first = 1;\nexport const second = 2;";
 const finding = (file = "source.ts", line = 2): FileComment => ({
   file,
   line,
+  end_line: line,
   comment: "Required value is missing.",
+  recommendation: "Pass the required value explicitly.",
   priority: "P2",
   category: "correctness",
 });
@@ -70,6 +72,19 @@ process.stdin.on('end', () => {
 });\n`,
   );
 }
+
+test("Summary places recorded code before a separate suggested-change box", () => {
+  const r = report();
+  r.review.file_comments[0].recommendation =
+    "Pass the value explicitly.\n\n```ts\nuseValue(second);\n```";
+  const view = new SummaryView(r, "/synthetic", new ReviewLinks(), undefined, "ko");
+  assert(view.html.includes('<figure class="review-code">'));
+  assert(view.html.includes("export const second = 2;"));
+  assert(view.html.includes('<div class="review-recommendation">'));
+  assert(view.html.includes("수정 제안"));
+  assert(view.html.indexOf('<figure class="review-code">') < view.html.indexOf("수정 제안"));
+  assert(view.html.includes('<pre><code class="language-ts">'));
+});
 
 test("Markdown strips executable links, images and HTML while preserving ordinary code and allowed links", () => {
   const input = `**Strong** and _emphasis_. [source](source.ts#L2) [docs][safe]
@@ -479,6 +494,8 @@ test("repository Skill instructions remain user material and cannot change CLI a
       .map((line) => JSON.parse(line));
     assert.deepEqual(calls[0].args, calls[1].args);
     assert.deepEqual(calls[0].schema, calls[1].schema);
+    assert(calls[1].schema.properties.file_comments.items.required.includes("end_line"));
+    assert(calls[1].schema.properties.file_comments.items.required.includes("recommendation"));
     assert(calls[1].text.includes("SYNTHETIC_SKILL_ATTACK"));
     assert(calls[1].args.includes("read-only"));
     assert(!calls[1].args.includes("danger-full-access"));

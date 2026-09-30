@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.14.9
+
+- Show the exact reviewed source range above each finding in Commit Defender
+  Summary when the recorded source hash still matches. Long ranges are bounded
+  without substituting current working-tree content.
+- Separate the problem and impact from a concrete suggested change. Standalone
+  reviews require suggestions for actionable findings, and central GCR results
+  retain their structured recommendation when available.
+- Keep earlier saved reports compatible when the new end-line and recommendation
+  fields are absent.
+
 ## 2.14.8
 
 - Retry with local review criteria when central knowledge becomes unavailable

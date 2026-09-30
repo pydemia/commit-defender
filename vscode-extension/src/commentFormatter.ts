@@ -106,6 +106,7 @@ export function metaForPriority(p: CommentPriority) {
  */
 export function normalizeReport(report: AnalysisReport): CommentBlock[] {
   const blocks: CommentBlock[] = [];
+  const usedFindings = new Set<number>();
 
   for (const f of report.lint_findings) {
     blocks.push({
@@ -122,12 +123,25 @@ export function normalizeReport(report: AnalysisReport): CommentBlock[] {
 
   for (const fc of report.review.file_comments) {
     if (!hasValidPriority(fc)) { continue; }
+    const findingIndex = report.gcr?.report.findings.findIndex((finding, index) =>
+      !usedFindings.has(index) &&
+      finding.anchor.path === fc.file &&
+      finding.anchor.startLine === fc.line &&
+      finding.severity === fc.priority,
+    ) ?? -1;
+    const finding = findingIndex >= 0
+      ? report.gcr?.report.findings[findingIndex]
+      : undefined;
+    if (findingIndex >= 0) usedFindings.add(findingIndex);
     blocks.push({
       file:     fc.file,
       line:     fc.line,
+      endLine:  finding?.anchor.endLine ?? fc.end_line ?? fc.line,
       priority: fc.priority,
-      category: fc.category || '',
-      comment:  fc.comment,
+      category: finding?.category || fc.category || '',
+      comment:  finding?.problem || fc.comment,
+      impact:   finding?.impact || undefined,
+      recommendation: finding?.recommendation || fc.recommendation || undefined,
       source:   'ai',
     });
   }
@@ -165,6 +179,14 @@ export function normalizeReport(report: AnalysisReport): CommentBlock[] {
     if (a.source !== b.source) { return a.source === 'lint' ? -1 : 1; }
     return a.line - b.line;
   });
+}
+
+/** Markdown body used outside the Summary, where the separated UI boxes are unavailable. */
+export function blockMarkdown(block: CommentBlock): string {
+  const parts = [block.comment];
+  if (block.impact) parts.push(`**Impact**\n\n${block.impact}`);
+  if (block.recommendation) parts.push(`**Suggested change**\n\n${block.recommendation}`);
+  return parts.filter(Boolean).join('\n\n');
 }
 
 /**

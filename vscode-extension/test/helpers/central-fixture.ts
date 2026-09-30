@@ -237,6 +237,8 @@ export async function centralFixture(
     "[req]\nprompt=no\ndistinguished_name=dn\nx509_extensions=ext\n[dn]\nCN=Fixture\n[ext]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,digitalSignature,keyEncipherment,keyCertSign\nextendedKeyUsage=serverAuth\nsubjectAltName=IP:127.0.0.1\n",
   );
   // Keep the disposable TLS private key in the captured pipe, never a file.
+  // macOS LibreSSL treats `-` as a literal filename for these output flags.
+  const opensslStdout = process.platform === "win32" ? "-" : "/dev/stdout";
   const tlsOutput = execFileSync(
     "openssl",
     [
@@ -250,9 +252,9 @@ export async function centralFixture(
       "-config",
       configFile,
       "-keyout",
-      "-",
+      opensslStdout,
       "-out",
-      "-",
+      opensslStdout,
     ],
     {
       stdio: ["ignore", "pipe", "ignore"],

@@ -10,7 +10,9 @@ export interface ParsedReview {
   file_comments: Array<{
     file: string;
     line: number;
+    end_line: number;
     comment: string;
+    recommendation: string;
     category: string;
     priority: string;
   }>;
@@ -40,10 +42,13 @@ export function parseReviewJson(raw: string): ParsedReview {
   const file_comments = fcRaw
     .filter(fc => fc && typeof fc.file === 'string' && typeof fc.comment === 'string'
       && Number.isSafeInteger(fc.line) && fc.line >= 0
+      && (fc.end_line === undefined || (Number.isSafeInteger(fc.end_line) && fc.end_line >= fc.line))
+      && (fc.recommendation === undefined || typeof fc.recommendation === 'string')
       && typeof fc.priority === 'string' && validPriorities.has(fc.priority.toUpperCase()))
     .map(fc => {
       const rawCat = String(fc.category ?? '').toLowerCase();
-      return { file: fc.file, line: fc.line, comment: fc.comment,
+      return { file: fc.file, line: fc.line, end_line: fc.end_line ?? fc.line,
+        comment: fc.comment, recommendation: fc.recommendation ?? '',
         category: validCategories.has(rawCat) ? rawCat : '', priority: fc.priority.toUpperCase() };
     });
 

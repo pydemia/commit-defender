@@ -133,7 +133,10 @@ export function validateFindingAnchors(
     if (
       !normalizedSourcePath(file) ||
       content === undefined ||
-      !validLine(comment.line, content.split(/\r?\n/).length)
+      !validLine(comment.line, content.split(/\r?\n/).length) ||
+      (comment.end_line !== undefined &&
+        (!validLine(comment.end_line, content.split(/\r?\n/).length) ||
+          comment.end_line < comment.line))
     ) {
       rejected++;
       return [];
@@ -213,6 +216,9 @@ export function liveBlocks(
       );
     const text = lines.get(block.file);
     if (!text || !validLine(block.line, text.length) || block.line === 0)
+      return false;
+    if (block.endLine !== undefined &&
+        (!validLine(block.endLine, text.length) || block.endLine < block.line))
       return false;
     return (
       block.col === undefined ||

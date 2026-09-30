@@ -7585,7 +7585,7 @@ function validateFindingAnchors(review, sources, singleFile) {
   review.file_comments = review.file_comments.flatMap((comment) => {
     const file = singleFile && comment.file === path14.posix.basename(singleFile) ? singleFile : comment.file;
     const content3 = sources.get(file);
-    if (!normalizedSourcePath(file) || content3 === void 0 || !validLine(comment.line, content3.split(/\r?\n/).length)) {
+    if (!normalizedSourcePath(file) || content3 === void 0 || !validLine(comment.line, content3.split(/\r?\n/).length) || comment.end_line !== void 0 && (!validLine(comment.end_line, content3.split(/\r?\n/).length) || comment.end_line < comment.line)) {
       rejected++;
       return [];
     }
@@ -7642,6 +7642,8 @@ function liveBlocks(report, repoRoot, blocks, editorText) {
     const text9 = lines2.get(block.file);
     if (!text9 || !validLine(block.line, text9.length) || block.line === 0)
       return false;
+    if (block.endLine !== void 0 && (!validLine(block.endLine, text9.length) || block.endLine < block.line))
+      return false;
     return block.col === void 0 || Number.isSafeInteger(block.col) && block.col >= 1 && block.col <= text9[block.line - 1].length + 1;
   });
 }
@@ -7692,6 +7694,7 @@ function metaForBlock(b) {
 }
 function normalizeReport(report) {
   const blocks = [];
+  const usedFindings = /* @__PURE__ */ new Set();
   for (const f of report.lint_findings) {
     blocks.push({
       file: f.file,
@@ -7708,12 +7711,20 @@ function normalizeReport(report) {
     if (!hasValidPriority(fc)) {
       continue;
     }
+    const findingIndex = report.gcr?.report.findings.findIndex(
+      (finding2, index2) => !usedFindings.has(index2) && finding2.anchor.path === fc.file && finding2.anchor.startLine === fc.line && finding2.severity === fc.priority
+    ) ?? -1;
+    const finding = findingIndex >= 0 ? report.gcr?.report.findings[findingIndex] : void 0;
+    if (findingIndex >= 0) usedFindings.add(findingIndex);
     blocks.push({
       file: fc.file,
       line: fc.line,
+      endLine: finding?.anchor.endLine ?? fc.end_line ?? fc.line,
       priority: fc.priority,
-      category: fc.category || "",
-      comment: fc.comment,
+      category: finding?.category || fc.category || "",
+      comment: finding?.problem || fc.comment,
+      impact: finding?.impact || void 0,
+      recommendation: finding?.recommendation || fc.recommendation || void 0,
       source: "ai"
     });
   }
@@ -7744,6 +7755,16 @@ function normalizeReport(report) {
     }
     return a.line - b.line;
   });
+}
+function blockMarkdown(block) {
+  const parts2 = [block.comment];
+  if (block.impact) parts2.push(`**Impact**
+
+${block.impact}`);
+  if (block.recommendation) parts2.push(`**Suggested change**
+
+${block.recommendation}`);
+  return parts2.filter(Boolean).join("\n\n");
 }
 function worstPriority(blocks) {
   let worst;
@@ -18194,14 +18215,34 @@ function _renderFileBlocks(blocks, view, palette) {
       const catBadge = b.priority !== "P0" && b.category ? `<span class="cat cat-${esc(catSlug)}">${esc(cat)}</span>` : "";
       const lineRef = b.line > 0 ? view.source(b.file, b.line, `line ${b.line}`) : '<span class="line-label">file-level</span>';
       const bodyHtml = view.markdown(b.comment, b.file);
+      const codeHtml = _renderCodeSnippet(b, view);
+      const impactHtml = b.impact ? `<div class="suggestion-impact"><b>${view.locale === "ko" ? "\uC601\uD5A5" : "Impact"}</b>${view.markdown(b.impact, b.file)}</div>` : "";
+      const recommendationHtml = b.recommendation ? `<div class="review-recommendation"><b>${view.locale === "ko" ? "\uC218\uC815 \uC81C\uC548" : "Suggested change"}</b><div class="recommendation-body">${view.markdown(b.recommendation, b.file)}</div></div>` : "";
       html2 += `<div class="suggestion priority-${esc(b.priority)}">
         <div class="suggestion-header">${pBadge} ${catBadge} &nbsp;${lineRef}</div>
+        ${codeHtml}
         <div class="suggestion-body">${bodyHtml}</div>
+        ${impactHtml}
+        ${recommendationHtml}
       </div>`;
     }
     html2 += "</div>";
   }
   return html2;
+}
+function _renderCodeSnippet(block, view) {
+  if (block.line <= 0) return "";
+  const source2 = readRecordedSource(view.repoRoot, view.report, block.file);
+  if (source2 === void 0) return "";
+  const lines2 = source2.split(/\r?\n/);
+  if (block.line > lines2.length) return "";
+  const requestedEnd = Math.max(block.line, block.endLine ?? block.line);
+  const end = Math.min(requestedEnd, lines2.length, block.line + 23);
+  const snippet = lines2.slice(block.line - 1, end).join("\n");
+  const range = view.locale === "ko" ? end === block.line ? `${block.line}\uD589` : `${block.line}\u2013${end}\uD589` : end === block.line ? `line ${block.line}` : `lines ${block.line}\u2013${end}`;
+  const label = view.locale === "ko" ? `\uAC80\uD1A0 \uCF54\uB4DC \xB7 ${range}` : `Reviewed code \xB7 ${range}`;
+  const truncated = end < requestedEnd ? `<div class="code-truncated">${view.locale === "ko" ? "\uCF54\uB4DC \uAD6C\uAC04\uC758 \uCCAB 24\uC904\uB9CC \uD45C\uC2DC\uD569\uB2C8\uB2E4." : "Showing the first 24 lines of this code range."}</div>` : "";
+  return `<figure class="review-code"><figcaption>${esc(label)}</figcaption><pre><code>${esc(snippet)}</code></pre>${truncated}</figure>`;
 }
 function buildSummaryHtml(report, view, palette) {
   const pal = palette ?? resolvePalette("theme-adaptive");
@@ -18374,6 +18415,59 @@ function buildSummaryHtml(report, view, palette) {
   .suggestion.priority-P1 { border-left: 3px solid var(--cd-p1); padding-left: 8px; }
   .suggestion.priority-P0 { border-left: 3px solid var(--cd-p0); padding-left: 8px; }
   .suggestion-body p { margin: 4px 0; }
+  .review-code {
+    margin: 8px 0 10px;
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: var(--radius);
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background));
+    overflow: hidden;
+  }
+  .review-code figcaption {
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+  }
+  .review-code pre,
+  .suggestion-body pre,
+  .recommendation-body pre {
+    margin: 0;
+    padding: 10px 12px;
+    overflow-x: auto;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background));
+  }
+  .suggestion-body pre,
+  .recommendation-body pre { margin: 8px 0; border-radius: var(--radius); }
+  .review-code pre code,
+  .suggestion-body pre code,
+  .recommendation-body pre code {
+    display: block;
+    padding: 0;
+    background: transparent;
+    white-space: pre;
+  }
+  .code-truncated {
+    padding: 0 10px 6px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+  }
+  .suggestion-impact { margin-top: 10px; }
+  .suggestion-impact > b,
+  .review-recommendation > b {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.84em;
+  }
+  .suggestion-impact p,
+  .review-recommendation p { margin: 4px 0; }
+  .review-recommendation {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: var(--radius);
+    background: var(--vscode-diffEditor-insertedTextBackground, rgba(46, 160, 67, 0.12));
+  }
   .line-label { color: var(--vscode-descriptionForeground); font-size: 0.82em; }
   .cat {
     display: inline-block; font-size: 0.72em; font-weight: 600;
@@ -18739,12 +18833,14 @@ function parseReviewJson(raw) {
   ]);
   const validGrades = /* @__PURE__ */ new Set(["exceptional", "proficient", "adequate", "insufficient", "critical"]);
   const fcRaw = Array.isArray(data?.file_comments) ? data.file_comments : [];
-  const file_comments = fcRaw.filter((fc) => fc && typeof fc.file === "string" && typeof fc.comment === "string" && Number.isSafeInteger(fc.line) && fc.line >= 0 && typeof fc.priority === "string" && validPriorities.has(fc.priority.toUpperCase())).map((fc) => {
+  const file_comments = fcRaw.filter((fc) => fc && typeof fc.file === "string" && typeof fc.comment === "string" && Number.isSafeInteger(fc.line) && fc.line >= 0 && (fc.end_line === void 0 || Number.isSafeInteger(fc.end_line) && fc.end_line >= fc.line) && (fc.recommendation === void 0 || typeof fc.recommendation === "string") && typeof fc.priority === "string" && validPriorities.has(fc.priority.toUpperCase())).map((fc) => {
     const rawCat = String(fc.category ?? "").toLowerCase();
     return {
       file: fc.file,
       line: fc.line,
+      end_line: fc.end_line ?? fc.line,
       comment: fc.comment,
+      recommendation: fc.recommendation ?? "",
       category: validCategories.has(rawCat) ? rawCat : "",
       priority: fc.priority.toUpperCase()
     };
@@ -18903,9 +18999,11 @@ var LOCALE_PROMPTS = {
 var COMMENT_SCHEMA = `    {
       "file": "<path relative to repo root, e.g. src/main.py>",
       "line": <1-based line number; 0 for a file-level comment>,
+      "end_line": <1-based inclusive end line; same as line for a single-line comment>,
       "category": "<one of: correctness | security | maintenance | optimization | review-history | setting>",
       "priority": "<one of: P0 | P1 | P2 | P3>",
-      "comment": "<actionable suggestion, markdown allowed>"
+      "comment": "<problem and impact, markdown allowed>",
+      "recommendation": "<concrete change, markdown allowed; empty only for P0 Praise>"
     }`;
 var SHARED_RUBRIC = `## Review categories
 Every file comment must be tagged with one of these categories:
@@ -18975,9 +19073,10 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
 - For additions, modifications and renames, use the new path and new-side line number. For a deleted file, use its old path and old-side line number.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Review deletions and renamed APIs for broken consumers. Do not assume unchanged callers were updated.
 - Limit to at most 15 comments total.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
@@ -18992,8 +19091,9 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 
 Rules for file_comments:
 - You may reference any line number in the file \u2014 not limited to changed lines.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Limit to at most 20 comments total across all files.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
@@ -19814,14 +19914,16 @@ var REVIEW_OUTPUT_SCHEMA = {
         properties: {
           file: { type: "string" },
           line: { type: "integer", minimum: 0 },
+          end_line: { type: "integer", minimum: 0 },
           category: {
             type: "string",
             enum: ["correctness", "security", "maintenance", "optimization", "review-history", "setting"]
           },
           priority: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
-          comment: { type: "string" }
+          comment: { type: "string" },
+          recommendation: { type: "string" }
         },
-        required: ["file", "line", "category", "priority", "comment"],
+        required: ["file", "line", "end_line", "category", "priority", "comment", "recommendation"],
         additionalProperties: false
       }
     }
@@ -26243,7 +26345,7 @@ var CommentManager = class {
     const meta = metaForBlock(b);
     const pov = b.category && b.priority !== "P0" ? ` \xB7 ${formatCategory(b.category)}` : "";
     const header2 = `${meta.emoji} ${b.priority} ${meta.label}${pov}`;
-    const bodyText = b.source === "lint" && b.rule ? `\`${b.rule}\` \u2014 ${b.comment}` : b.comment;
+    const bodyText = b.source === "lint" && b.rule ? `\`${b.rule}\` \u2014 ${b.comment}` : blockMarkdown(b);
     const md = reviewNavigation.markdown(bodyText, repoRoot, report, b.file);
     const comment = {
       author: { name: "Commit Defender" },
@@ -26931,7 +27033,7 @@ var PanelProvider = class {
         item.description = lineRef;
         const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** \xB7 _@${author}_
 
-${b.comment}`;
+${blockMarkdown(b)}`;
         item.tooltip = this._report ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file) : new vscode21.MarkdownString(safeMarkdown(tooltip, () => void 0));
         item.command = this._report ? reviewNavigation.sourceCommand(this._repoRoot, this._report, b.file, b.line) : void 0;
         item.id = node2.id;

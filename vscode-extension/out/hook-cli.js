@@ -3594,7 +3594,7 @@ function validateFindingAnchors(review, sources, singleFile) {
   review.file_comments = review.file_comments.flatMap((comment) => {
     const file = singleFile && comment.file === path10.posix.basename(singleFile) ? singleFile : comment.file;
     const content = sources.get(file);
-    if (!normalizedSourcePath(file) || content === void 0 || !validLine(comment.line, content.split(/\r?\n/).length)) {
+    if (!normalizedSourcePath(file) || content === void 0 || !validLine(comment.line, content.split(/\r?\n/).length) || comment.end_line !== void 0 && (!validLine(comment.end_line, content.split(/\r?\n/).length) || comment.end_line < comment.line)) {
       rejected++;
       return [];
     }
@@ -3722,12 +3722,14 @@ function parseReviewJson(raw) {
   ]);
   const validGrades = /* @__PURE__ */ new Set(["exceptional", "proficient", "adequate", "insufficient", "critical"]);
   const fcRaw = Array.isArray(data?.file_comments) ? data.file_comments : [];
-  const file_comments = fcRaw.filter((fc) => fc && typeof fc.file === "string" && typeof fc.comment === "string" && Number.isSafeInteger(fc.line) && fc.line >= 0 && typeof fc.priority === "string" && validPriorities.has(fc.priority.toUpperCase())).map((fc) => {
+  const file_comments = fcRaw.filter((fc) => fc && typeof fc.file === "string" && typeof fc.comment === "string" && Number.isSafeInteger(fc.line) && fc.line >= 0 && (fc.end_line === void 0 || Number.isSafeInteger(fc.end_line) && fc.end_line >= fc.line) && (fc.recommendation === void 0 || typeof fc.recommendation === "string") && typeof fc.priority === "string" && validPriorities.has(fc.priority.toUpperCase())).map((fc) => {
     const rawCat = String(fc.category ?? "").toLowerCase();
     return {
       file: fc.file,
       line: fc.line,
+      end_line: fc.end_line ?? fc.line,
       comment: fc.comment,
+      recommendation: fc.recommendation ?? "",
       category: validCategories.has(rawCat) ? rawCat : "",
       priority: fc.priority.toUpperCase()
     };
@@ -3886,9 +3888,11 @@ var LOCALE_PROMPTS = {
 var COMMENT_SCHEMA = `    {
       "file": "<path relative to repo root, e.g. src/main.py>",
       "line": <1-based line number; 0 for a file-level comment>,
+      "end_line": <1-based inclusive end line; same as line for a single-line comment>,
       "category": "<one of: correctness | security | maintenance | optimization | review-history | setting>",
       "priority": "<one of: P0 | P1 | P2 | P3>",
-      "comment": "<actionable suggestion, markdown allowed>"
+      "comment": "<problem and impact, markdown allowed>",
+      "recommendation": "<concrete change, markdown allowed; empty only for P0 Praise>"
     }`;
 var SHARED_RUBRIC = `## Review categories
 Every file comment must be tagged with one of these categories:
@@ -3958,9 +3962,10 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
 - For additions, modifications and renames, use the new path and new-side line number. For a deleted file, use its old path and old-side line number.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Review deletions and renamed APIs for broken consumers. Do not assume unchanged callers were updated.
 - Limit to at most 15 comments total.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
@@ -3975,8 +3980,9 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 
 Rules for file_comments:
 - You may reference any line number in the file \u2014 not limited to changed lines.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Limit to at most 20 comments total across all files.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
@@ -4790,14 +4796,16 @@ var REVIEW_OUTPUT_SCHEMA = {
         properties: {
           file: { type: "string" },
           line: { type: "integer", minimum: 0 },
+          end_line: { type: "integer", minimum: 0 },
           category: {
             type: "string",
             enum: ["correctness", "security", "maintenance", "optimization", "review-history", "setting"]
           },
           priority: { type: "string", enum: ["P0", "P1", "P2", "P3"] },
-          comment: { type: "string" }
+          comment: { type: "string" },
+          recommendation: { type: "string" }
         },
-        required: ["file", "line", "category", "priority", "comment"],
+        required: ["file", "line", "end_line", "category", "priority", "comment", "recommendation"],
         additionalProperties: false
       }
     }
@@ -5361,6 +5369,10 @@ function printReport(report, blocked) {
         const cat = c.category ? ` [${c.category}]` : "";
         eprintln(`    ${label}${cat} ${file}${where}`);
         eprintln(indent(c.comment, "      "));
+        if (c.recommendation) {
+          eprintln("      Suggested change:");
+          eprintln(indent(c.recommendation, "        "));
+        }
       }
     }
   }

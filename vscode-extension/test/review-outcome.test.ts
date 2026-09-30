@@ -32,9 +32,11 @@ import { configToHookJson } from '../src/hook/config.js';
 const comment: FileComment = {
   file: 'first.ts',
   line: 1,
+  end_line: 1,
   category: 'correctness',
   priority: 'P3',
   comment: 'Caller loses a required value.',
+  recommendation: 'Preserve the required value at the call site.',
 };
 const clean = {
   summary: 'Reviewed selected source.',

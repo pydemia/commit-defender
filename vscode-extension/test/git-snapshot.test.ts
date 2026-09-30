@@ -12,7 +12,9 @@ import type { FileComment } from '../src/types.js';
 import { fixture } from './helpers/review-fixture.js';
 
 const finding = (file = 'source.py', line = 1): FileComment => ({
-  file, line, comment: 'Deletion breaks the caller.', category: 'correctness', priority: 'P3',
+  file, line, end_line: line, comment: 'Deletion breaks the caller.',
+  recommendation: 'Restore the deleted API or update its caller.',
+  category: 'correctness', priority: 'P3',
 });
 const response = (file = 'source.py', line = 1) => ({
   summary: 'Snapshot finding.', blocking: false, grade: 'insufficient', file_comments: [finding(file, line)],

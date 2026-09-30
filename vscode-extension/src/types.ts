@@ -35,8 +35,12 @@ export interface FileComment {
   file: string;
   /** 1-based line number; 0 = file-level comment */
   line: number;
-  /** Markdown-formatted actionable suggestion */
+  /** Inclusive end line for the reviewed code segment. Defaults to line. */
+  end_line?: number;
+  /** Markdown-formatted problem description */
   comment: string;
+  /** Markdown-formatted concrete change. Empty or absent for praise/legacy reports. */
+  recommendation?: string;
   /** Review category tag */
   category: CommentCategory;
   /** Acceptance level: P0=Praise P1=Nitpick P2=Suggestion P3=Critical */
@@ -47,10 +51,13 @@ export interface FileComment {
 export interface CommentBlock {
   file: string;
   line: number;       // 1-based; 0 = file-level
+  endLine?: number;   // 1-based inclusive; defaults to line
   col?: number;       // 1-based, optional (lint only)
   priority: CommentPriority;
   category: string;   // e.g. correctness, security, maintenance, optimization, setting
   comment: string;    // plain text or markdown body (no rule prefix)
+  impact?: string;
+  recommendation?: string;
   source: 'lint' | 'ai';
   rule?: string;      // lint rule code only, e.g. "E501"
 }

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { AnalysisReport, CommentBlock } from './types.js';
-import { metaForBlock, formatCategory } from './commentFormatter.js';
+import { blockMarkdown, metaForBlock, formatCategory } from './commentFormatter.js';
 import { reviewNavigation } from './reviewNavigation.js';
 
 export class CommentManager {
@@ -52,7 +52,7 @@ export class CommentManager {
 
     const bodyText = b.source === 'lint' && b.rule
       ? `\`${b.rule}\` — ${b.comment}`
-      : b.comment;
+      : blockMarkdown(b);
     const md = reviewNavigation.markdown(bodyText, repoRoot, report, b.file);
 
     const comment: vscode.Comment = {

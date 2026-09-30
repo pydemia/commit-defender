@@ -84,6 +84,10 @@ function printReport(report: AnalysisReport, blocked: boolean): void {
         const cat = c.category ? ` [${c.category}]` : '';
         eprintln(`    ${label}${cat} ${file}${where}`);
         eprintln(indent(c.comment, '      '));
+        if (c.recommendation) {
+          eprintln('      Suggested change:');
+          eprintln(indent(c.recommendation, '        '));
+        }
       }
     }
   }

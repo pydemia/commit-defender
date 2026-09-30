@@ -22,6 +22,7 @@ import { OUTCOME_META, reviewCoverage, reviewStatus } from "./reviewOutcome.js";
 import { resolveExitCode } from "./exitResolver.js";
 import { ReviewLinks, reviewMessage } from "./reviewLinks.js";
 import { safeMarkdownHtml } from "./reviewMarkdown.js";
+import { readRecordedSource } from "./reviewSource.js";
 
 /** Each render has its own message nonce and exact set of permitted link IDs. */
 export class SummaryView {
@@ -132,14 +133,43 @@ function _renderFileBlocks(
           ? view.source(b.file, b.line, `line ${b.line}`)
           : '<span class="line-label">file-level</span>';
       const bodyHtml = view.markdown(b.comment, b.file);
+      const codeHtml = _renderCodeSnippet(b, view);
+      const impactHtml = b.impact
+        ? `<div class="suggestion-impact"><b>${view.locale === 'ko' ? '영향' : 'Impact'}</b>${view.markdown(b.impact, b.file)}</div>`
+        : '';
+      const recommendationHtml = b.recommendation
+        ? `<div class="review-recommendation"><b>${view.locale === 'ko' ? '수정 제안' : 'Suggested change'}</b><div class="recommendation-body">${view.markdown(b.recommendation, b.file)}</div></div>`
+        : '';
       html += `<div class="suggestion priority-${esc(b.priority)}">
         <div class="suggestion-header">${pBadge} ${catBadge} &nbsp;${lineRef}</div>
+        ${codeHtml}
         <div class="suggestion-body">${bodyHtml}</div>
+        ${impactHtml}
+        ${recommendationHtml}
       </div>`;
     }
     html += "</div>";
   }
   return html;
+}
+
+function _renderCodeSnippet(block: CommentBlock, view: SummaryView): string {
+  if (block.line <= 0) return '';
+  const source = readRecordedSource(view.repoRoot, view.report, block.file);
+  if (source === undefined) return '';
+  const lines = source.split(/\r?\n/);
+  if (block.line > lines.length) return '';
+  const requestedEnd = Math.max(block.line, block.endLine ?? block.line);
+  const end = Math.min(requestedEnd, lines.length, block.line + 23);
+  const snippet = lines.slice(block.line - 1, end).join('\n');
+  const range = view.locale === 'ko'
+    ? end === block.line ? `${block.line}행` : `${block.line}–${end}행`
+    : end === block.line ? `line ${block.line}` : `lines ${block.line}–${end}`;
+  const label = view.locale === 'ko' ? `검토 코드 · ${range}` : `Reviewed code · ${range}`;
+  const truncated = end < requestedEnd
+    ? `<div class="code-truncated">${view.locale === 'ko' ? '코드 구간의 첫 24줄만 표시합니다.' : 'Showing the first 24 lines of this code range.'}</div>`
+    : '';
+  return `<figure class="review-code"><figcaption>${esc(label)}</figcaption><pre><code>${esc(snippet)}</code></pre>${truncated}</figure>`;
 }
 
 function buildSummaryHtml(
@@ -348,6 +378,59 @@ function buildSummaryHtml(
   .suggestion.priority-P1 { border-left: 3px solid var(--cd-p1); padding-left: 8px; }
   .suggestion.priority-P0 { border-left: 3px solid var(--cd-p0); padding-left: 8px; }
   .suggestion-body p { margin: 4px 0; }
+  .review-code {
+    margin: 8px 0 10px;
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: var(--radius);
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background));
+    overflow: hidden;
+  }
+  .review-code figcaption {
+    padding: 4px 10px;
+    border-bottom: 1px solid var(--vscode-widget-border);
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+  }
+  .review-code pre,
+  .suggestion-body pre,
+  .recommendation-body pre {
+    margin: 0;
+    padding: 10px 12px;
+    overflow-x: auto;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editorWidget-background));
+  }
+  .suggestion-body pre,
+  .recommendation-body pre { margin: 8px 0; border-radius: var(--radius); }
+  .review-code pre code,
+  .suggestion-body pre code,
+  .recommendation-body pre code {
+    display: block;
+    padding: 0;
+    background: transparent;
+    white-space: pre;
+  }
+  .code-truncated {
+    padding: 0 10px 6px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+  }
+  .suggestion-impact { margin-top: 10px; }
+  .suggestion-impact > b,
+  .review-recommendation > b {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.84em;
+  }
+  .suggestion-impact p,
+  .review-recommendation p { margin: 4px 0; }
+  .review-recommendation {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: var(--radius);
+    background: var(--vscode-diffEditor-insertedTextBackground, rgba(46, 160, 67, 0.12));
+  }
   .line-label { color: var(--vscode-descriptionForeground); font-size: 0.82em; }
   .cat {
     display: inline-block; font-size: 0.72em; font-weight: 600;

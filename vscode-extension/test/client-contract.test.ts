@@ -243,6 +243,19 @@ for (const entry of corpus.cases)
     assert.equal(report.exit_code, 0);
     assert.equal(report.review.blocking, false);
     assert.deepEqual(projected.gcr.report, original);
+    for (const block of blocks) {
+      const finding = original.findings.find((item) =>
+        item.anchor.path === block.file &&
+        item.anchor.startLine === block.line &&
+        item.severity === block.priority,
+      );
+      if (finding) {
+        assert.equal(block.endLine, finding.anchor.endLine);
+        assert.equal(block.comment, finding.problem);
+        assert.equal(block.impact, finding.impact || undefined);
+        assert.equal(block.recommendation, finding.recommendation || undefined);
+      }
+    }
     assert.deepEqual(
       report.review.incomplete_reasons,
       original.problems.map((problem) => problem.code),

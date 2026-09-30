@@ -13,7 +13,7 @@ import { AnalysisReport, CommentBlock, CommentPriority, PRIORITY_META } from './
 import { OUTCOME_META, reviewCoverage, reviewStatus } from './reviewOutcome.js';
 import { reviewNavigation } from './reviewNavigation.js';
 import { safeMarkdown } from './reviewMarkdown.js';
-import { formatCategory, PRIORITY_RANK } from './commentFormatter.js';
+import { blockMarkdown, formatCategory, PRIORITY_RANK } from './commentFormatter.js';
 
 type PanelNode =
   | { kind: 'file';    id: string; file: string; absPath: string; blocks: CommentBlock[]; uri: vscode.Uri }
@@ -136,7 +136,7 @@ export class PanelProvider implements vscode.TreeDataProvider<PanelNode> {
           ? `Ln ${b.line}${b.col ? `, Col ${b.col}` : ''}`
           : 'file-level';
         item.description = lineRef;
-        const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** · _@${author}_\n\n${b.comment}`;
+        const tooltip = `**${meta.emoji} ${b.priority} ${meta.label}** · _@${author}_\n\n${blockMarkdown(b)}`;
         item.tooltip = this._report
           ? reviewNavigation.markdown(tooltip, this._repoRoot, this._report, b.file)
           : new vscode.MarkdownString(safeMarkdown(tooltip, () => undefined));

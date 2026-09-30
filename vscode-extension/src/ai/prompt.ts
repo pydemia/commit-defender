@@ -70,9 +70,11 @@ const LOCALE_PROMPTS: Record<Locale, string> = {
 const COMMENT_SCHEMA = `    {
       "file": "<path relative to repo root, e.g. src/main.py>",
       "line": <1-based line number; 0 for a file-level comment>,
+      "end_line": <1-based inclusive end line; same as line for a single-line comment>,
       "category": "<one of: correctness | security | maintenance | optimization | review-history | setting>",
       "priority": "<one of: P0 | P1 | P2 | P3>",
-      "comment": "<actionable suggestion, markdown allowed>"
+      "comment": "<problem and impact, markdown allowed>",
+      "recommendation": "<concrete change, markdown allowed; empty only for P0 Praise>"
     }`;
 
 const SHARED_RUBRIC = `## Review categories
@@ -145,9 +147,10 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 Rules for file_comments:
 - Only reference lines that appear in the provided diff.
 - For additions, modifications and renames, use the new path and new-side line number. For a deleted file, use its old path and old-side line number.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Review deletions and renamed APIs for broken consumers. Do not assume unchanged callers were updated.
 - Limit to at most 15 comments total.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
@@ -163,8 +166,9 @@ ${OUTPUT_SCHEMA_PREAMBLE}
 
 Rules for file_comments:
 - You may reference any line number in the file — not limited to changed lines.
+- Use line and end_line for the smallest code segment that demonstrates the issue. The host renders that exact source range as a code block.
 - Limit to at most 20 comments total across all files.
-- Every comment must include both "category" and "priority" fields.
+- Every comment must include "category", "priority", "end_line", and "recommendation". For P1-P3, recommendation must be a concrete change and must not repeat comment. Use an empty recommendation only for P0 Praise.
 - Omit the array (or use []) if there is nothing specific to annotate.
 - Do not include anything outside the JSON object.
 `;
